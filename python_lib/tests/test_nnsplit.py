@@ -1,7 +1,8 @@
 import nnsplit
 from pathlib import Path
+import numpy as np
 import torch
-from nnsplit import train, tokenizer, utils
+from nnsplit import train, tokenizer, utils, models
 
 
 def test_external_tokenizer():
@@ -40,27 +41,38 @@ def test_load_model():
     y = torch.zeros([10, nnsplit.CUT_LENGTH, 2])
     learner = train.train_from_tensors(x, y, n_epochs=2)
 
-    utils.store_model(learner, "model.pt")
-    model = utils.load_model("model.pt")
+    utils.store_model(learner, "model")
+    model = utils.load_model("model/ts_cpu.pt")
 
     model(torch.zeros([10, nnsplit.defaults.CUT_LENGTH]))
 
 
-# def test_split_german():
-#     samples = [
-#         [
-#             "Das ist ein Test. Das ist noch ein Test.",
-#             ["Das ist ein Test .", "Das ist noch ein Test ."],
-#         ],
-#         [
-#             "Das ist ein Test Das ist auch ein Test.",
-#             ["Das ist ein Test", "Das ist auch ein Test ."],
-#         ],
-#     ]
-#     splitter = nnsplit.NNSplit("de")
+def test_keras_and_pytorch_same():
+    model = models.Network()
+    keras_model = model.get_keras_equivalent()
+    inp = np.random.randint(0, 127 + 2, [1, 100])
 
-#     for inp, out in samples:
-#         result = splitter.split([inp])
+    torch_output = model(torch.from_numpy(inp)).detach().cpu().detach().numpy()
+    keras_output = keras_model.predict(inp)
 
-#         for sentence in result:
-#             print(sentence)
+    assert np.allclose(torch_output, keras_output, rtol=0.0, atol=1e-5)
+
+
+def test_split_german():
+    samples = [
+        [
+            "Das ist ein Test. Das ist noch ein Test.",
+            ["Das ist ein Test .", "Das ist noch ein Test ."],
+        ],
+        [
+            "Das ist ein Test Das ist auch ein Test.",
+            ["Das ist ein Test", "Das ist auch ein Test ."],
+        ],
+    ]  # whitespaces in the expected string denote token splits
+    splitter = nnsplit.NNSplit("de")
+
+    for inp, out in samples:
+        result = splitter.split([inp])[0]
+
+        for i, sentence in enumerate(result):
+            assert " ".join(x.text for x in sentence) == out[i]

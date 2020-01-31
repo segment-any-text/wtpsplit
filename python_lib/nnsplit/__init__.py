@@ -1,17 +1,26 @@
 __version__ = "0.1.0"
 __all__ = ["NNSplit"]
 
+import re
 import numpy as np
 import torch
 from .defaults import CUT_LENGTH, DEVICE
 from .utils import load_model, text_to_id
-from .tokenizer import Tokenizer
+from .tokenizer import Tokenizer, Token
+
+
+def _get_token(text):
+    match = re.match("([\S]*)(\s*)", text)
+    text = match.group(1)
+    whitespace = match.group(2)
+
+    return Token(text, whitespace)
 
 
 class NNSplit(Tokenizer):
     def __init__(
         self,
-        model_name_or_path,
+        model_or_model_name,
         threshold=0.5,
         stride=50,
         cut_length=CUT_LENGTH,
@@ -22,7 +31,10 @@ class NNSplit(Tokenizer):
         self.cut_length = cut_length
         self.device = device
 
-        self.model = load_model(model_name_or_path)
+        if isinstance(model_or_model_name, (torch.nn.Module, torch.jit.TracedModule)):
+            self.model = model_or_model_name
+        else:
+            self.model = load_model(model_or_model_name)
 
     def split(self, texts, batch_size=32, max_length=4000):
         all_inputs = []
@@ -58,7 +70,7 @@ class NNSplit(Tokenizer):
 
             n_cuts_per_text.append(i)
 
-        batched_inputs = torch.tensor(all_inputs, dtype=torch.int64)
+        batched_inputs = torch.tensor(all_inputs, dtype=torch.int64, device=self.device)
         preds = torch.sigmoid(self.model(batched_inputs).detach().cpu()).numpy()
 
         all_avg_preds = np.zeros(
@@ -90,7 +102,7 @@ class NNSplit(Tokenizer):
                 token += char
 
                 if pred[0] > self.threshold:
-                    tokens.append(token)
+                    tokens.append(_get_token(token))
                     token = ""
 
                 if pred[1] > self.threshold:
@@ -98,7 +110,7 @@ class NNSplit(Tokenizer):
                     tokens = []
 
             if len(token) > 0:
-                tokens.append(token)
+                tokens.append(_get_token(token))
 
             if len(tokens) > 0:
                 sentences.append(tokens)

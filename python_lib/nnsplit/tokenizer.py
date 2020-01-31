@@ -1,7 +1,13 @@
-__all__ = ["Tokenizer", "SoMaJoTokenizer"]
+__all__ = ["Token", "Tokenizer", "SoMaJoTokenizer"]
 
 from abc import ABC, abstractmethod
-from somajo import SoMaJo
+from dataclasses import dataclass
+
+
+@dataclass
+class Token:
+    text: str
+    whitespace: str
 
 
 class Tokenizer(ABC):
@@ -9,14 +15,14 @@ class Tokenizer(ABC):
     def split(self, texts):
         """
         `split` returns an iterable over texts. Every text is an iterable over sentences.
-        Every sentence is an iterable over tokens. A token must have a `space_after` boolean
-        attribute and a `text` string attribute.
+        Every sentence is an iterable over `Token` instances.
         """
         pass
 
 
 class SoMaJoTokenizer(Tokenizer):
     def __init__(self, language):
+        from somajo import SoMaJo
 
         tokenizer_type = {"de": "de_CMC", "en": "en_PTB"}[language]
         self.tokenizer = SoMaJo(
@@ -26,6 +32,18 @@ class SoMaJoTokenizer(Tokenizer):
     def split(self, texts):
         tokenized_texts = []
         for text in texts:
-            tokenized_texts.append(self.tokenizer.tokenize_text([text]))
+            sentences = []
+            for sentence in self.tokenizer.tokenize_text([text]):
+                sentences.append(
+                    [
+                        Token(token.text, " " if token.space_after else "")
+                        for token in sentence
+                    ]
+                )
+
+            if not text[-1].isspace():
+                sentences[-1][-1].whitespace = ""
+
+            tokenized_texts.append(sentences)
 
         return tokenized_texts

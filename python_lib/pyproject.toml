@@ -16,6 +16,7 @@ tqdm = "^4.42.0"
 lxml = "^4.5.0"
 tensorflow = "^2.1.0"
 somajo = "^2.0.1"
+ipython = "^7.11.1"
 
 [build-system]
 requires = ["poetry>=0.12"]

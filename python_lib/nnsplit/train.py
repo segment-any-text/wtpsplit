@@ -6,16 +6,14 @@ import numpy as np
 from lxml.etree import iterparse
 from tqdm import tqdm
 import torch
-from torch import nn
 from torch.nn import functional as F
 from torch.utils import data
 from fastai.train import Learner, DataBunch
-from tensorflow.keras import layers, models
 from .tokenizer import SoMaJoTokenizer
 from .utils import text_to_id
 from .defaults import CUT_LENGTH
+from .models import Network
 
-MAX_N_SENTENCES = 100_000
 REMOVE_DOT_CHANCE = 0.5
 LOWERCASE_START_CHANCE = 0.5
 MIN_LENGTH = 600
@@ -30,20 +28,19 @@ def label_paragraph(paragraph, tokenizer):
 
     for sentence in tokenized_p:
         for i, token in enumerate(sentence):
-            whitespace = " " if token.space_after else ""
-            text_to_append = token.text + whitespace
+            text_to_append = token.text + token.whitespace
 
             if (
                 token.text == "."
                 and i == len(sentence) - 1
                 and random.random() < REMOVE_DOT_CHANCE
             ):
-                text_to_append = whitespace
+                text_to_append = token.whitespace
                 if len(text_to_append) > 0 and len(labels) > 1:
-                    labels[-2][0] = 0.0
+                    labels[-1][0] = 0.0
 
             if i == 0 and random.random() < LOWERCASE_START_CHANCE:
-                text_to_append = token.text.lower() + whitespace
+                text_to_append = token.text.lower() + token.whitespace
 
             for _ in range(len(text_to_append)):
                 labels.append([0.0, 0.0])
@@ -106,8 +103,8 @@ def fast_iter(context):
 def prepare_data(
     corpus,
     language,
+    max_n_sentences,
     data_directory=None,
-    max_n_sentences=MAX_N_SENTENCES,
     remove_dot_chance=REMOVE_DOT_CHANCE,
     lowercase_start_chance=LOWERCASE_START_CHANCE,
     min_length=MIN_LENGTH,
@@ -154,49 +151,6 @@ def prepare_data(
         torch.save(all_labels, data_directory / "all_labels.pt")
 
     return all_sentences, all_labels
-
-
-class Network(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.embedding = nn.Embedding(127 + 2, 25)
-        self.lstm1 = nn.LSTM(25, 50, bidirectional=True, batch_first=True, bias=False)
-        self.lstm2 = nn.LSTM(100, 50, bidirectional=True, batch_first=True, bias=False)
-        self.out = nn.Linear(100, 2)
-
-    def get_keras_equivalent(self):
-        k_model = models.Sequential()
-        k_model.add(layers.Input(shape=(None,)))
-
-        k_model.add(layers.Embedding(127 + 2, 25))
-        k_model.layers[-1].set_weights([self.embedding.weight.detach().cpu().numpy()])
-
-        k_model.add(
-            layers.Bidirectional(layers.LSTM(50, return_sequences=True, use_bias=False))
-        )
-        k_model.layers[-1].set_weights(
-            [np.transpose(x.detach().cpu().numpy()) for x in self.lstm1.parameters()]
-        )
-
-        k_model.add(
-            layers.Bidirectional(layers.LSTM(50, return_sequences=True, use_bias=False))
-        )
-        k_model.layers[-1].set_weights(
-            [np.transpose(x.detach().cpu().numpy()) for x in self.lstm2.parameters()]
-        )
-
-        k_model.add(layers.Dense(2))
-        k_model.layers[-1].set_weights(
-            [np.transpose(x.detach().cpu().numpy()) for x in self.out.parameters()]
-        )
-        return k_model
-
-    def forward(self, x):
-        h = self.embedding(x.long())
-        h, _ = self.lstm1(h)
-        h, _ = self.lstm2(h)
-        h = self.out(h)
-        return h
 
 
 def loss(inputs, targets):

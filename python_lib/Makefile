@@ -8,4 +8,5 @@ test:
 
 publish:
 	$(call copy_data)
+	poetry build
 	poetry publish
