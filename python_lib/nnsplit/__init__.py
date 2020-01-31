@@ -3,7 +3,8 @@ __all__ = ["NNSplit"]
 
 import numpy as np
 import torch
-from .utils import text_to_id, load_model, DEFAULT_CUT_LENGTH, DEVICE
+from .defaults import CUT_LENGTH, DEVICE
+from .utils import load_model, text_to_id
 from .tokenizer import Tokenizer
 
 
@@ -13,7 +14,7 @@ class NNSplit(Tokenizer):
         model_name_or_path,
         threshold=0.5,
         stride=50,
-        cut_length=DEFAULT_CUT_LENGTH,
+        cut_length=CUT_LENGTH,
         device=DEVICE,
     ):
         self.threshold = threshold

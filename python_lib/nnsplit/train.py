@@ -12,7 +12,8 @@ from torch.utils import data
 from fastai.train import Learner, DataBunch
 from tensorflow.keras import layers, models
 from .tokenizer import SoMaJoTokenizer
-from .utils import text_to_id, DEFAULT_CUT_LENGTH
+from .utils import text_to_id
+from .defaults import CUT_LENGTH
 
 MAX_N_SENTENCES = 100_000
 REMOVE_DOT_CHANCE = 0.5
@@ -111,10 +112,11 @@ def prepare_data(
     lowercase_start_chance=LOWERCASE_START_CHANCE,
     min_length=MIN_LENGTH,
     n_cuts=N_CUTS,
-    cut_length=DEFAULT_CUT_LENGTH,
+    cut_length=CUT_LENGTH,
 ):
-    data_directory = Path(data_directory)
-    data_directory.mkdir(exist_ok=True, parents=True)
+    if data_directory is not None:
+        data_directory = Path(data_directory)
+        data_directory.mkdir(exist_ok=True, parents=True)
 
     all_sentences = torch.zeros([max_n_sentences, cut_length], dtype=torch.uint8)
     all_labels = torch.zeros([max_n_sentences, cut_length, 2], dtype=torch.bool)
@@ -123,7 +125,7 @@ def prepare_data(
     bar = tqdm(total=max_n_sentences)
 
     i = 0
-    for paragraph in fast_iter(iterparse(corpus, tag="p")):
+    for paragraph in fast_iter(iterparse(str(corpus), tag="p")):
         text, labels = generate_data(
             paragraph, tokenizer, min_length, n_cuts, cut_length
         )

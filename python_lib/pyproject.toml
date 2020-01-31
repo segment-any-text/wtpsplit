@@ -1,14 +1,21 @@
 [tool.poetry]
 name = "nnsplit"
 version = "0.1.0"
-description = ""
+description = "Fast, robust sentence splitting with bindings for Python, Rust and Javascript."
 authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
+torch = "^1"
+numpy = "^1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
+fastai = "^1.0.60"
+tqdm = "^4.42.0"
+lxml = "^4.5.0"
+tensorflow = "^2.1.0"
+somajo = "^2.0.1"
 
 [build-system]
 requires = ["poetry>=0.12"]

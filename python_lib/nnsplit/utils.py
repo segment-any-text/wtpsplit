@@ -1,8 +1,7 @@
+import io
 from pathlib import Path
+import pkgutil
 import torch
-
-ROOT = (Path(__file__) / "..").resolve()
-DEFAULT_DATA_DIRECTORY = ROOT / "data"
 
 
 def text_to_id(char):
@@ -15,6 +14,7 @@ def id_to_text(x):
 
 
 def store_model(learner, path):
+    path = Path(path)
     path.parents[0].mkdir(exist_ok=True, parents=True)
 
     # always store on CPU for compatibility, can still convert to CUDA after loading
@@ -26,6 +26,7 @@ def load_model(name_or_path):
     if isinstance(name_or_path, Path) or "." in name_or_path:  # assume path
         traced = torch.jit.load(str(name_or_path))
     else:  # assume name
-        traced = torch.jit.load(str(DEFAULT_DATA_DIRECTORY / f"{name_or_path}.pt"))
+        buffer = io.BytesIO(pkgutil.get_data(__package__, f"data/{name_or_path}.pt"))
+        traced = torch.jit.load(buffer)
 
     return traced
