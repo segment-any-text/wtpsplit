@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nnsplit"
-version = "0.1.0"
+version = "0.1.1"
 description = "Fast, robust sentence splitting with bindings for Python, Rust and Javascript."
 authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
 
