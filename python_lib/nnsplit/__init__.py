@@ -5,7 +5,7 @@ import re
 import numpy as np
 import torch
 from .defaults import CUT_LENGTH, DEVICE
-from .utils import load_model, text_to_id
+from .utils import load_provided_model, text_to_id
 from .tokenizer import Tokenizer, Token
 
 
@@ -34,7 +34,7 @@ class NNSplit(Tokenizer):
         if isinstance(model_or_model_name, (torch.nn.Module, torch.jit.TracedModule)):
             self.model = model_or_model_name
         else:
-            self.model = load_model(model_or_model_name)
+            self.model = load_provided_model(model_or_model_name)
 
     def split(self, texts, batch_size=32, max_length=4000):
         all_inputs = []

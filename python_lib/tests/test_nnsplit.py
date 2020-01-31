@@ -42,7 +42,7 @@ def test_load_model():
     learner = train.train_from_tensors(x, y, n_epochs=2)
 
     utils.store_model(learner, "model")
-    model = utils.load_model("model/ts_cpu.pt")
+    model = utils.load_model("model", torch.device("cpu"))
 
     model(torch.zeros([10, nnsplit.defaults.CUT_LENGTH]))
 

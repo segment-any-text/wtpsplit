@@ -44,7 +44,7 @@ def _get_filename(device):
 
 
 def load_provided_model(name, device=DEVICE):
-    bin_data = pkgutil.get_data(__package__, f"data/{_get_filename(device)}")
+    bin_data = pkgutil.get_data(__package__, f"data/{name}/{_get_filename(device)}")
     buffer = io.BytesIO(bin_data)
 
     return torch.jit.load(buffer)
