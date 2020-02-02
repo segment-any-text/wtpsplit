@@ -10,7 +10,7 @@ from .tokenizer import Tokenizer, Token
 
 
 def _get_token(text):
-    match = re.match("([\S]*)(\s*)", text)
+    match = re.match(r"(.*?)(\s*)$", text)
     text = match.group(1)
     whitespace = match.group(2)
 
@@ -36,21 +36,15 @@ class NNSplit(Tokenizer):
         else:
             self.model = load_provided_model(model_or_model_name)
 
-    def split(self, texts, batch_size=32, max_length=4000):
+    def split(self, texts, batch_size=128):
         all_inputs = []
         all_idx = []
         n_cuts_per_text = []
 
-        raw_max_length = max(map(len, texts))
-        max_effective_length = min(max_length, raw_max_length)
-        max_effective_length = max(
-            self.cut_length, max_effective_length
-        )  # has to be at least 1 cut long
-
         for text in texts:
             inputs = [text_to_id(x) for x in text]
 
-            while len(inputs) < max_effective_length:
+            while len(inputs) < self.cut_length:
                 inputs.append(0)
 
             start = 0
@@ -71,25 +65,31 @@ class NNSplit(Tokenizer):
             n_cuts_per_text.append(i)
 
         batched_inputs = torch.tensor(all_inputs, dtype=torch.int64, device=self.device)
-        preds = torch.sigmoid(self.model(batched_inputs).detach().cpu()).numpy()
+        preds = np.zeros((len(batched_inputs), self.cut_length, 2), dtype=np.float32)
 
-        all_avg_preds = np.zeros(
-            (len(texts), max_effective_length, 3), dtype=np.float32
-        )
+        for start in range(0, len(batched_inputs), batch_size):
+            end = start + batch_size
+            preds[start:end] = torch.sigmoid(
+                self.model(batched_inputs[start:end]).detach().cpu()
+            ).numpy()
+
+        all_avg_preds = [np.zeros((len(text), 3), dtype=np.float32) for text in texts]
 
         current_text = 0
         current_i = 0
         for pred, idx in zip(preds, all_idx):
+            current_preds = all_avg_preds[current_text]
+
+            current_preds[idx, :2] += pred[: len(current_preds)]
+            current_preds[idx, 2] += 1
+
             current_i += 1
 
             if current_i == n_cuts_per_text[current_text]:
-                all_avg_preds[current_text, idx, :2] += pred
-                all_avg_preds[current_text, idx, 2] += 1
+                current_preds[:, :2] /= current_preds[:, [2]]
 
                 current_text += 1
                 current_i = 0
-
-        all_avg_preds = all_avg_preds[:, :, :2] / all_avg_preds[:, :, [2]]
 
         tokenized_texts = []
 
