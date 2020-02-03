@@ -3,7 +3,7 @@
 ![PyPI](https://img.shields.io/pypi/v/nnsplit)
 ![Crates.io](https://img.shields.io/crates/v/nnsplit)
 ![npm](https://img.shields.io/npm/v/nnsplit)
-![GitHub](https://img.shields.io/github/license/bminixhofer/nnsplit)
+![License MIT/Apache-2.0](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)
 
 __This project is a work in progress, I do not recommend using it yet.__
 
