@@ -8,4 +8,6 @@ edition = "2018"
 
 [dependencies]
 failure="0.1.6"
-tch="0.1.5"
+tch="0.1"
+ndarray = "0.13"
+unicode-segmentation="1.6"

@@ -224,7 +224,9 @@ name = "nnsplit"
 version = "0.1.0"
 dependencies = [
  "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ndarray 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tch 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "unicode-segmentation 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -494,6 +496,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "unicode-segmentation"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "unicode-xid"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -592,6 +599,7 @@ dependencies = [
 "checksum tch 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "8ac75db478cea40ade89e14917bcd404cf44edd9466d4dd6fcd1f32a148894e2"
 "checksum time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)" = "db8dcfca086c1143c9270ac42a2bbd8a7ee477b78ac8e45b19abfb0cbede4b6f"
 "checksum torch-sys 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "6b84f3252394792b66644165adfe24f26ff54a9e4ad7b70274b3264c96ddcd94"
+"checksum unicode-segmentation 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e83e153d1053cbb5a118eeff7fd5be06ed99153f00dbcd8ae310c5fb2b22edc0"
 "checksum unicode-xid 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "826e7639553986605ec5979c7dd957c7895e93eabed50ab2ffa7f6128a75097c"
 "checksum vcpkg 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "3fc439f2794e98976c88a2a2dafce96b930fe8010b0a256b3c2199a773933168"
 "checksum winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)" = "8093091eeb260906a183e6ae1abdba2ef5ef2257a21801128899c3fc699229c6"
