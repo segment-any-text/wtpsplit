@@ -4,6 +4,13 @@ version = "0.1.0"
 authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
 edition = "2018"
 
+description = "Rust bindings for fast, robust sentence splitting using machine learning."
+repository = "https://github.com/bminixhofer/nnsplit"
+keywords = ["pytorch", "deep-learning", "machine-learning", "tokenizer", "sentencizer"]
+categories = ["science"]
+license = "MIT/Apache-2.0"
+readme = "README.md"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
