@@ -9,7 +9,8 @@ macro_rules! token {
 
 #[test]
 fn it_splits_german_correctly() -> failure::Fallible<()> {
-    let splitter = NNSplit::new("../data/de/ts_cpu.pt")?;
+    let splitter = NNSplit::new("de")?;
+
     let result = splitter.split(vec!["Das ist ein Test Das ist noch ein Test."]);
 
     assert_eq!(vec![vec![

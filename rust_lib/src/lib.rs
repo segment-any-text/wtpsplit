@@ -1,8 +1,8 @@
-use std::path::Path;
 use std::vec::Vec;
 use std::ops::Range;
 use std::cmp;
 use std::convert::{TryInto, TryFrom};
+use std::io::Cursor;
 
 use ndarray::prelude::*;
 use ndarray::Array2;
@@ -48,6 +48,9 @@ pub struct NNSplit {
     device: Device,
 }
 
+static DE_DATA_CPU: &'static [u8]  = include_bytes!("../data/de/ts_cpu.pt");
+static DE_DATA_CUDA: &'static [u8]  = include_bytes!("../data/de/ts_cuda.pt");
+
 impl NNSplit {
     const THRESHOLD: f32 = 0.5;
     const STRIDE: usize = 50;
@@ -55,9 +58,21 @@ impl NNSplit {
     const BATCH_SIZE: usize = 32;
 
     pub fn new(model_name: &str) -> failure::Fallible<NNSplit> {
-        let model = tch::CModule::load(model_name)?;
         let device = Device::cuda_if_available();
+        
+        let source = if model_name == "de" {
+            if device == Device::Cpu {
+                DE_DATA_CPU
+            } else {
+                DE_DATA_CUDA
+            }
+        } else {
+            panic!(format!("unknown model name: {}.", model_name));
+        };
 
+        let mut cursor = Cursor::new(source);
+        let model = tch::CModule::load_data(&mut cursor)?;
+        
         Ok(NNSplit { 
             model, 
             threshold: NNSplit::THRESHOLD, 
@@ -67,7 +82,7 @@ impl NNSplit {
             device
         })
     }
-    
+
     pub fn from_model(model: tch::CModule) -> failure::Fallible<NNSplit> {
         let device = Device::cuda_if_available();
 
