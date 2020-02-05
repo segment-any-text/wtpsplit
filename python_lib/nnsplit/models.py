@@ -6,9 +6,8 @@ class Network(nn.Module):
     def __init__(self):
         super().__init__()
         self.embedding = nn.Embedding(127 + 2, 25)
-        self.lstm1 = nn.LSTM(25, 50, bidirectional=True, batch_first=True, bias=False)
-        self.lstm2 = nn.LSTM(100, 50, bidirectional=True, batch_first=True, bias=False)
-        self.out = nn.Linear(100, 2)
+        self.lstm1 = nn.LSTM(25, 128, bidirectional=True, batch_first=True, bias=False)
+        self.out = nn.Linear(256, 2)
 
     def get_keras_equivalent(self):
         from tensorflow.keras import layers, models
@@ -42,6 +41,5 @@ class Network(nn.Module):
     def forward(self, x):
         h = self.embedding(x.long())
         h, _ = self.lstm1(h)
-        h, _ = self.lstm2(h)
         h = self.out(h)
         return h

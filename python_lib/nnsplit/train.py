@@ -178,7 +178,7 @@ def train_from_tensors(
     )
 
     databunch = DataBunch(train_dl=train_loader, valid_dl=valid_loader)
-    learn = Learner(databunch, model, loss_func=loss)
+    learn = Learner(databunch, model, loss_func=loss).to_fp16()
     learn.fit_one_cycle(n_epochs)
 
     return learn
