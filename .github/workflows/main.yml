@@ -1,0 +1,21 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install poetry
+      run: |
+        curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+    - name: Install library
+      working-directory: ./python_lib
+      run: |
+        make install
+    - name: Run tests
+      working-directory: ./python_lib
+      run: |
+        make test
