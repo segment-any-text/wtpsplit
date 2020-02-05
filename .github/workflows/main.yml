@@ -8,16 +8,19 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - uses: actions/setup-python@v1
+      with:
+        python-version: '3.7'
+        architecture: 'x64'
     - name: Install poetry
       run: |
         curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+        source $HOME/.poetry/env
     - name: Install library
       working-directory: ./python_lib
       run: |
-        source $HOME/.poetry/env
         make install
     - name: Run tests
       working-directory: ./python_lib
       run: |
-        source $HOME/.poetry/env
         make test
