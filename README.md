@@ -3,7 +3,8 @@
 ![PyPI](https://img.shields.io/pypi/v/nnsplit)
 ![Crates.io](https://img.shields.io/crates/v/nnsplit)
 ![npm](https://img.shields.io/npm/v/nnsplit)
-![License MIT/Apache-2.0](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)
+![CI](https://github.com/bminixhofer/nnsplit/workflows/CI/badge.svg)
+![License](https://img.shields.io/github/license/bminixhofer/nnsplit)
 
 __This project is a work in progress, I do not recommend using it yet.__
 
@@ -87,8 +88,10 @@ In general, NNSplit might be useful for:
 
 NNSplit uses wikipedia dumps in the [Linguatools format](https://linguatools.org/tools/corpora/wikipedia-monolingual-corpora/) to train.
 1. ) Paragraphs are extracted from the dump.
-2. ) Every character in the paragraph is labeled with 2 numbers: 1. whether it is the end of a token, 2. whether it is the end of a sentence. This sentence annotation is done using a very accurate existing rule based sentencizer and tokenizer: [SoMaJo](https://github.com/tsproisl/SoMaJo).
+2. ) Split the paragraphs into tokens and sentences using a very accurate existing rule based sentencizer and tokenizer: [SoMaJo](https://github.com/tsproisl/SoMaJo).
 3. ) With some probability, words at the start of a sentence are converted from uppercase to lowercase, and dots at the end of a sentence are removed. __This is the step that allows NNSplit to be more tolerant to errors than SoMaJo. For a rule-based system, it is nearly impossible to split sentences that don't have proper separation in the form of punctuation and casing. NNSplit solves this problem__.
 4. ) Multiple "cuts" with a fixed length (default 100 characters) are extracted from a paragraph. This makes NNSplit invariant to input length. 
 5. ) A simple sequence labeling RNN is trained to predict the two labels for each character. Because the NN works on character-level, embedding sizes are very small.
 6. ) At inference time, the input text is split into multiple cuts with the same length of 100 characters so that the entire text is covered. NNSplit predicts each cut separately. The predictions are then averaged together for the final result.
+
+![How NNSplit works](https://user-images.githubusercontent.com/13353204/73847685-0f8c5180-4827-11ea-8cfb-9d859715c767.png)
