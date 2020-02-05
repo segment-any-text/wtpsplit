@@ -14,8 +14,10 @@ jobs:
     - name: Install library
       working-directory: ./python_lib
       run: |
+        source $HOME/.poetry/env
         make install
     - name: Run tests
       working-directory: ./python_lib
       run: |
+        source $HOME/.poetry/env
         make test
