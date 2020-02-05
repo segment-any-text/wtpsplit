@@ -3,7 +3,8 @@ name: CI
 on: [push]
 
 jobs:
-  build:
+  python_ci:
+    name: Python Library CI
     runs-on: ubuntu-latest
 
     steps:
@@ -25,3 +26,17 @@ jobs:
       run: |
         source $HOME/.poetry/env
         make test
+  rust_ci:
+    name: Rust Library CI
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --release --all-features --manifest-path ./rust_lib/Cargo.toml
+    - uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --manifest-path ./rust_lib/Cargo.toml
