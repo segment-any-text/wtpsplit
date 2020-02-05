@@ -31,7 +31,7 @@ Install it with pip: `pip install nnsplit`
 
 Models for German (`NNSplit("de")`) and English (`NNSplit("en")`) come prepackaged with NNSplit. Alternatively, you can also load your own model:
 
-```
+```python
 import torch
 model = torch.jit.load("/path/to/your/model.pt") # a regular nn.Module works too
 
