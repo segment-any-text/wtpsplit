@@ -1,0 +1,36 @@
+{
+  "name": "nnsplit",
+  "version": "0.1.0",
+  "description": "Fast, robust sentence splitting with bindings for Python, Rust and Javascript.",
+  "main": "src/nnsplit.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bminixhofer/nnsplit.git"
+  },
+  "keywords": [
+    "pytorch",
+    "deep-learning",
+    "machine-learning",
+    "tokenizer",
+    "sentencizer"
+  ],
+  "author": "Benjamin Minixhofer",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bminixhofer/nnsplit/issues"
+  },
+  "homepage": "https://github.com/bminixhofer/nnsplit#readme",
+  "dependencies": {
+    "@tensorflow/tfjs-core": "^1.5.2",
+    "@tensorflow/tfjs-layers": "^1.5.2",
+    "@tensorflow/tfjs-node": "^1.5.2"
+  },
+  "devDependencies": {
+    "webpack": "^4.41.5",
+    "webpack-cli": "^3.3.10",
+    "webpack-dev-server": "^3.10.2"
+  }
+}
