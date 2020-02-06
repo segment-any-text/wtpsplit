@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "description": "Fast, robust sentence splitting with bindings for Python, Rust and Javascript.",
   "main": "src/nnsplit.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bminixhofer/nnsplit.git"
@@ -29,8 +26,11 @@
     "@tensorflow/tfjs-node": "^1.5.2"
   },
   "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^7.0.1",
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
-    "webpack-dev-server": "^3.10.2"
+    "webpack-dev-server": "^3.10.2",
+    "worker-loader": "^2.0.0"
   }
 }

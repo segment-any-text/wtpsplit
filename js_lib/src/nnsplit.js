@@ -32,6 +32,10 @@ class NNSplit {
     }
 
     async split(texts) {
+        if (texts.length === 0) {
+            return [];
+        }
+
         const allInputs = [];
         const allIdx = [];
         const nCutsPerText = [];
@@ -83,7 +87,7 @@ class NNSplit {
 
             currentI += 1;
 
-            if (currentI == nCutsPerText[currentText]) {
+            if (currentI === nCutsPerText[currentText]) {
                 for (let j = 0; j < allAvgPredCounts[currentText].length; j++) {
                     allAvgPreds[currentText][0][j] /= allAvgPredCounts[currentText][j];
                 }
@@ -103,7 +107,7 @@ class NNSplit {
             for (let i = 0; i < texts[index].length; i++) {
                 token += texts[index][i];
 
-                if (avgPreds[0][i] > this.threshold || avgPreds[0][i] > this.threshold) {
+                if (avgPreds[0][i] > this.threshold || avgPreds[1][i] > this.threshold) {
                     tokens.push(get_token(token));
                     token = "";
                 }
