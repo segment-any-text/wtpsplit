@@ -5,6 +5,7 @@ description = "Fast, robust sentence splitting with bindings for Python, Rust an
 readme = "README.md"
 authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
 include = ["nnsplit/data", "README.md"]
+license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.7"

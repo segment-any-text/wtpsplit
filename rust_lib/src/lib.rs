@@ -145,7 +145,7 @@ impl NNSplit {
                 start = end - self.cut_length;
 
                 let range = Range { start, end };
-                all_inputs.extend(inputs[range.clone()].iter()); // TODO: maybe better with slices?
+                all_inputs.extend(inputs[range.clone()].iter());
                 all_idx.push(range);
                 
                 start += self.stride;
@@ -156,9 +156,22 @@ impl NNSplit {
             n_cuts_per_text.push(i);
         }
 
-        let batched_inputs = Tensor::of_slice(&all_inputs).view((-1, self.cut_length as i64));
-        let preds = self.model.forward_ts(&[batched_inputs]).unwrap().sigmoid(); // TODO: batch properly
-        let preds : ArrayD<f32> = (&preds).try_into().unwrap();
+        let mut preds = Array3::<f32>::zeros((all_idx.len(), self.cut_length, 2));
+        
+        for i in (0..all_idx.len()).step_by(self.batch_size) {
+            let batch_start = i;
+            let batch_end = cmp::min(i + self.batch_size, all_idx.len());
+
+            let range = Range { 
+                start: batch_start * self.cut_length, 
+                end: batch_end * self.cut_length
+            };
+            let batch_inputs = Tensor::of_slice(&all_inputs[range]).view((-1, self.cut_length as i64));
+            let batch_preds = self.model.forward_ts(&[batch_inputs]).unwrap().sigmoid();
+            let batch_preds: ArrayD<f32> = (&batch_preds).try_into().unwrap();
+            
+            preds.slice_mut(s![batch_start..batch_end, .., ..]).assign(&batch_preds);
+        }
 
         let mut all_avg_preds = text_lengths.iter().map(|x| Array2::<f32>::zeros((*x, 2))).collect::<Vec<_>>();
         let mut all_avg_pred_counts = text_lengths.iter().map(|x| Array2::<f32>::zeros((*x, 1))).collect::<Vec<_>>();
@@ -166,7 +179,6 @@ impl NNSplit {
         let mut current_text = 0;
         let mut current_i = 0;
 
-        // TODO: maybe less slices?
         for i in 0..total_cuts {
             let current_preds = &mut all_avg_preds[current_text];
             let current_pred_counts = &mut all_avg_pred_counts[current_text];
@@ -200,8 +212,9 @@ impl NNSplit {
 
             for (i, character) in text.graphemes(true).enumerate() {
                 token += character;
-
-                if avg_preds[[i, 0]] > self.threshold {
+                
+                // also consider sentence end as token end
+                if avg_preds[[i, 0]] > self.threshold || avg_preds[[i, 1]] > self.threshold {
                     tokens.push(Token::new(token));
                     token = String::new();
                 }

@@ -51,6 +51,8 @@ class NNSplit(Tokenizer):
             end = -1
             i = 0
 
+            # split the inputs into partially overlapping slices which all have the same length
+            # allows efficient batching
             while end != len(inputs):
                 end = min(start + self.cut_length, len(inputs))
                 start = end - self.cut_length
@@ -80,12 +82,14 @@ class NNSplit(Tokenizer):
         for pred, idx in zip(preds, all_idx):
             current_preds = all_avg_preds[current_text]
 
+            # add current slice to average preds
             current_preds[idx, :2] += pred[: len(current_preds)]
             current_preds[idx, 2] += 1
 
             current_i += 1
 
             if current_i == n_cuts_per_text[current_text]:
+                # divide predictions by number of predictions so they are on the same scale
                 current_preds[:, :2] /= current_preds[:, [2]]
 
                 current_text += 1
@@ -101,7 +105,7 @@ class NNSplit(Tokenizer):
             for char, pred in zip(texts[i], avg_preds):
                 token += char
 
-                if pred[0] > self.threshold:
+                if pred[0] > self.threshold or pred[1] > self.threshold:
                     tokens.append(_get_token(token))
                     token = ""
 

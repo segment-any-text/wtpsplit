@@ -34,3 +34,33 @@ fn it_splits_german_correctly() -> failure::Fallible<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_it_batches_correctly() -> failure::Fallible<()> {
+    let mut splitter = NNSplit::new("de")?;
+    splitter.with_batch_size(2);
+
+    let result = splitter.split(vec!["First", "Second", "Third"]);
+
+    assert_eq!(
+        vec![
+            vec![
+                vec![
+                    token!("First", ""),
+                ]
+            ],
+            vec![
+                vec![
+                    token!("Second", ""),
+                ]
+            ],
+            vec![
+                vec![
+                    token!("Third", ""),
+                ]
+            ],
+        ], result
+    );
+
+    Ok(())
+}

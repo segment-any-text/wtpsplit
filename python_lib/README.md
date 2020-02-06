@@ -1,6 +1,8 @@
 # NNSplit Python Bindings
 
 ![PyPI](https://img.shields.io/pypi/v/nnsplit)
+![CI](https://github.com/bminixhofer/nnsplit/workflows/CI/badge.svg)
+![License](https://img.shields.io/github/license/bminixhofer/nnsplit)
 
 Fast, robust sentence splitting with bindings for Python, Rust and Javascript and pretrained models for English and German.
 
@@ -39,3 +41,7 @@ splitter = NNSplit(model)
 ```
 
 See `train.ipynb` for the code used to train the pretrained models.
+
+## Development
+
+NNSplit uses [Poetry](https://python-poetry.org/) for dependency management. I made a small `Makefile` to automate some steps. Take a look at the `Makefile` and run `make install`, `make build`, `make test` to install, build and test the library, respectively.

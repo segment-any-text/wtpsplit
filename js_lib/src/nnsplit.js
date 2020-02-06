@@ -103,7 +103,7 @@ class NNSplit {
             for (let i = 0; i < texts[index].length; i++) {
                 token += texts[index][i];
 
-                if (avgPreds[0][i] > this.threshold) {
+                if (avgPreds[0][i] > this.threshold || avgPreds[0][i] > this.threshold) {
                     tokens.push(get_token(token));
                     token = "";
                 }
