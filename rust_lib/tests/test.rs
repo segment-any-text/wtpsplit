@@ -11,21 +11,22 @@ macro_rules! token {
 fn it_splits_german_correctly() -> failure::Fallible<()> {
     let splitter = NNSplit::new("de")?;
 
-    let result = splitter.split(vec!["Das ist ein Test Das ist noch ein Test."]);
+    let result = splitter.split(vec!["Das ist ein Test. das ist auch ein Beispiel."]);
 
     assert_eq!(vec![vec![
                 vec![
                     token!("Das", " "), 
                     token!("ist", " "),
                     token!("ein", " "),
-                    token!("Test", " "),
+                    token!("Test", ""),
+                    token!(".", " "),
                 ],
                 vec![
-                    token!("Das", " "), 
+                    token!("das", " "), 
                     token!("ist", " "),
-                    token!("noch", " "),
+                    token!("auch", " "),
                     token!("ein", " "),
-                    token!("Test", ""),
+                    token!("Beispiel", ""),
                     token!(".", ""),
                 ],
             ]

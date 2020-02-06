@@ -61,12 +61,12 @@ def test_keras_and_pytorch_same():
 def test_split_german():
     samples = [
         [
-            "Das ist ein Test. Das ist noch ein Test.",
-            ["Das ist ein Test .", "Das ist noch ein Test ."],
+            "Das ist ein Test. das ist auch ein Beispiel.",
+            ["Das ist ein Test .", "das ist auch ein Beispiel ."],
         ],
         [
-            "Das ist ein Test Das ist auch ein Test.",
-            ["Das ist ein Test", "Das ist auch ein Test ."],
+            "Das ist ein Test Das ist noch ein Test.",
+            ["Das ist ein Test", "Das ist noch ein Test ."],
         ],
     ]  # whitespaces in the expected string denote token splits
     splitter = nnsplit.NNSplit("de")

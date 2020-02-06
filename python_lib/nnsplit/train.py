@@ -84,6 +84,7 @@ def fast_iter(context):
         text = ElementTree.tostring(elem, encoding="utf8").decode("utf-8")
         text = re.sub(r"(<h>(.*?)<\/h>)", "\n", text)
         text = re.sub(r"<.*?>", "", text)
+        text = text.strip()
         yield text
 
         # It's safe to call clear() here because no descendants will be

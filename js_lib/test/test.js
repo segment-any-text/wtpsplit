@@ -17,7 +17,7 @@ describe("NNSplit", function () {
         const modelPath = __dirname + "/../example/data/de/tfjs_model/model.json";
         const splitter = new NNSplit("file://" + modelPath);
 
-        const result = await splitter.split(["Das ist ein Test Das ist noch ein Test."]);
+        const result = await splitter.split(["Das ist ein Test. das ist auch ein Beispiel."]);
         chai.expect(result).to.deep.equal(
             [ // texts
                 [ // sentences
@@ -36,12 +36,16 @@ describe("NNSplit", function () {
                         },
                         {
                             text: "Test",
+                            whitespace: "",
+                        },
+                        {
+                            text: ".",
                             whitespace: " ",
                         }
                     ],
                     [
                         {
-                            text: "Das",
+                            text: "das",
                             whitespace: " ",
                         },
                         {
@@ -49,7 +53,7 @@ describe("NNSplit", function () {
                             whitespace: " ",
                         },
                         {
-                            text: "noch",
+                            text: "auch",
                             whitespace: " ",
                         },
                         {
@@ -57,7 +61,7 @@ describe("NNSplit", function () {
                             whitespace: " ",
                         },
                         {
-                            text: "Test",
+                            text: "Beispiel",
                             whitespace: "",
                         },
                         {
