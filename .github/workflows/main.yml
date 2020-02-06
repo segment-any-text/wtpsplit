@@ -8,38 +8,66 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v1
-      with:
-        python-version: '3.7'
-        architecture: 'x64'
-    - name: Install poetry
-      run: |
-        curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
-    - name: Install library
-      working-directory: ./python_lib
-      run: |
-        source $HOME/.poetry/env
-        make install
-    - name: Run tests
-      working-directory: ./python_lib
-      run: |
-        source $HOME/.poetry/env
-        make test
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: '3.7'
+          architecture: 'x64'
+      - name: Install poetry
+        run: |
+          curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+      - name: Cache poetry
+        uses: actions/cache@v1
+        id: cache
+        with:
+          path: ~/.virtualenvs
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+      - name: Configure Poetry
+        run: |
+          poetry config settings.virtualenvs.in-project false
+          poetry config settings.virtualenvs.path ~/.virtualenvs
+      - name: Install library
+        working-directory: ./python_lib
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          source $HOME/.poetry/env
+          make install
+      - name: Run tests
+        working-directory: ./python_lib
+        run: |
+          source $HOME/.poetry/env
+          make test
   rust_ci:
     name: Rust Library CI
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --release --all-features --manifest-path ./rust_lib/Cargo.toml
-    - uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --manifest-path ./rust_lib/Cargo.toml
+      - uses: actions/checkout@v2
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: rust_lib/target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features --manifest-path ./rust_lib/Cargo.toml
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path ./rust_lib/Cargo.toml
   javascript_ci:
     name: Javascript Library CI
     runs-on: ubuntu-latest
