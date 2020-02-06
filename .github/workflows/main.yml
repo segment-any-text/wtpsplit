@@ -40,3 +40,14 @@ jobs:
       with:
         command: test
         args: --manifest-path ./rust_lib/Cargo.toml
+  javascript_ci:
+    name: Javascript Library CI
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '10.x'
+      - run: make install
+      - run: make test
