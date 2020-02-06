@@ -49,5 +49,9 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: '10.x'
-      - run: make install
-      - run: make test
+      - name: Install library
+        working-directory: ./js_lib
+        run: make install
+      - name: Run tests
+        working-directory: ./js_lib
+        run: make test
