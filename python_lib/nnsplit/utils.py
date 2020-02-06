@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 import pkgutil
 import torch
+import numpy as np
 from .defaults import DEVICE
 
 
@@ -19,19 +20,28 @@ def store_model(learner, store_directory):
     store_directory = Path(store_directory)
     store_directory.mkdir(exist_ok=True, parents=True)
 
+    # model is trained with fp16, so it can be safely quantized to 16 bit
+    # CPU tensors do not support 16 bit embeddings yet so ts_cpu.pt has 32 bit weights
     traced = torch.jit.trace(learner.model.float().cpu(), learner.data.train_ds[:1][0])
     traced.save(str(store_directory / "ts_cpu.pt"))
 
     if torch.cuda.is_available():
         traced = torch.jit.trace(
-            learner.model.cuda(), learner.data.train_ds[:1][0].cuda()
+            learner.model.half().cuda(), learner.data.train_ds[:1][0].cuda()
         )
         traced.save(str(store_directory / "ts_cuda.pt"))
     else:
         logging.warn(
             "CUDA is not available. CUDA version of model could not be stored."
         )
-    # TODO: store tfjs version
+
+    import tensorflowjs as tfjs  # noqa: F401
+
+    tfjs.converters.save_keras_model(
+        learner.model.get_keras_equivalent(),
+        str(store_directory / "tfjs_model"),
+        quantization_dtype=np.uint16,
+    )
 
 
 def _get_filename(device):

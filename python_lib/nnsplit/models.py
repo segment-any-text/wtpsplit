@@ -19,17 +19,12 @@ class Network(nn.Module):
         k_model.layers[-1].set_weights([self.embedding.weight.detach().cpu().numpy()])
 
         k_model.add(
-            layers.Bidirectional(layers.LSTM(50, return_sequences=True, use_bias=False))
+            layers.Bidirectional(
+                layers.LSTM(128, return_sequences=True, use_bias=False)
+            )
         )
         k_model.layers[-1].set_weights(
             [np.transpose(x.detach().cpu().numpy()) for x in self.lstm1.parameters()]
-        )
-
-        k_model.add(
-            layers.Bidirectional(layers.LSTM(50, return_sequences=True, use_bias=False))
-        )
-        k_model.layers[-1].set_weights(
-            [np.transpose(x.detach().cpu().numpy()) for x in self.lstm2.parameters()]
         )
 
         k_model.add(layers.Dense(2))
