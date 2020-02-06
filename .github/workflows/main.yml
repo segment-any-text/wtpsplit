@@ -27,8 +27,8 @@ jobs:
       - name: Configure Poetry
         run: |
           source $HOME/.poetry/env
-          poetry config settings.virtualenvs.in-project false
-          poetry config settings.virtualenvs.path ~/.virtualenvs
+          poetry config virtualenvs.in-project false
+          poetry config virtualenvs.path ~/.virtualenvs
       - name: Install library
         working-directory: ./python_lib
         if: steps.cache.outputs.cache-hit != 'true'
