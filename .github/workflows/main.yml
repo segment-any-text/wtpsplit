@@ -26,6 +26,7 @@ jobs:
             ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
       - name: Configure Poetry
         run: |
+          source $HOME/.poetry/env
           poetry config settings.virtualenvs.in-project false
           poetry config settings.virtualenvs.path ~/.virtualenvs
       - name: Install library
