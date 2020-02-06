@@ -19,7 +19,7 @@ def store_model(learner, store_directory):
     store_directory = Path(store_directory)
     store_directory.mkdir(exist_ok=True, parents=True)
 
-    traced = torch.jit.trace(learner.model.cpu(), learner.data.train_ds[:1][0])
+    traced = torch.jit.trace(learner.model.float().cpu(), learner.data.train_ds[:1][0])
     traced.save(str(store_directory / "ts_cpu.pt"))
 
     if torch.cuda.is_available():
