@@ -77,7 +77,7 @@
 /******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
 /******/
 /******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "";
+/******/ 	__webpack_require__.p = "./dist/";
 /******/
 /******/
 /******/ 	// Load entry module and return exports
@@ -93,7 +93,7 @@
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-eval("const NNSplit = __webpack_require__(/*! ../src/nnsplit.js */ \"./src/nnsplit.js\");\nconst nnsplit = new NNSplit(\"./data/de/tfjs_model/model.json\");\n\nself.addEventListener('message', (event) => {\n    nnsplit.split([event.data.text]).then((result) => {\n        self.postMessage(result[0]);\n    });\n});\n\n//# sourceURL=webpack:///./example/model.worker.js?");
+eval("const NNSplit = __webpack_require__(/*! ../src/nnsplit.js */ \"./src/nnsplit.js\");\nconsole.log(self.location);\nconst nnsplit = new NNSplit(`${self.location.origin}/nnsplit/data/de/tfjs_model/model.json`);\n\nself.addEventListener('message', (event) => {\n    nnsplit.split([event.data.text]).then((result) => {\n        self.postMessage(result[0]);\n    });\n});\n\n//# sourceURL=webpack:///./example/model.worker.js?");
 
 /***/ }),
 

@@ -77,7 +77,7 @@
 /******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
 /******/
 /******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "";
+/******/ 	__webpack_require__.p = "./dist/";
 /******/
 /******/
 /******/ 	// Load entry module and return exports
@@ -105,7 +105,7 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _mod
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-eval("module.exports = function() {\n  return new Worker(__webpack_require__.p + \"6a7716afeb1f52389e4e.worker.js\");\n};\n\n//# sourceURL=webpack:///./example/model.worker.js?");
+eval("module.exports = function() {\n  return new Worker(__webpack_require__.p + \"f865e600d16c7af4c381.worker.js\");\n};\n\n//# sourceURL=webpack:///./example/model.worker.js?");
 
 /***/ })
 
