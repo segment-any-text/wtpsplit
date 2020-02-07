@@ -46,13 +46,15 @@ Install it with pip: `pip install nnsplit`
    Token(text='.', whitespace='')]]]
 ```
 
+See the [Python README](./python_lib/README.md) for more information.
+
 ### Javascript
 
 #### Installation
 
 The Javascript bindings for NNSplit have TensorFlow.js as the only dependency.
 
-Install it with npm: `npm install nnsplit`
+Install them with npm: `npm install nnsplit`
 
 #### Usage
 
@@ -72,9 +74,39 @@ require("@tensorflow/tfjs-node");
 const NNSplit = require("nnsplit");
 ```
 
+See the [Javascript README](./js_lib/README.md) for more information.
+
 ### Rust
 
-__TODO__
+#### Installation
+
+Add NNSplit as a dependency to your `Cargo.toml`:
+
+```toml
+[dependencies]
+...
+nnsplit = "<version>"
+...
+```
+
+#### Usage
+
+```rust
+use nnsplit::NNSplit;
+
+fn main() -> failure::Fallible<()> {
+    let splitter = NNSplit::new("de")?;
+
+    let input = vec!["Das ist ein Test. Das ist noch ein Test."];
+    println!("{:#?}", splitter.split(input));
+
+    Ok(())
+}
+```
+
+Models for German (`NNSplit::new("de")`) and English (`NNSplit::new("en")`) come prepackaged with NNSplit. Alternatively, you can also load your own model with `NNSplit::from_model(model: tch::CModule)`.
+
+See the [Rust README](./rust_lib/README.md) for more information.
 
 ## Why?
 

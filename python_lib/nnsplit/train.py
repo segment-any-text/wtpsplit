@@ -59,7 +59,13 @@ def generate_data(paragraph, tokenizer, min_length, n_cuts, cut_length):
     if len(paragraph) < min_length:
         return [], []
 
-    p_text, p_labels = label_paragraph(paragraph, tokenizer)
+    try:
+        p_text, p_labels = label_paragraph(paragraph, tokenizer)
+    except IndexError:
+        print("Faulty paragraph:")
+        print(paragraph)
+        return [], []
+
     assert len(p_text) == len(p_labels)
 
     inputs = [[] for _ in range(n_cuts)]
