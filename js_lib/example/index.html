@@ -4,13 +4,34 @@
 <head>
     <title>NNSplit Demo</title>
     <script async defer src="dist/main.js"></script>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        main {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+        }
+    </style>
 </head>
 
 <body style="font-family: Arial, Helvetica, sans-serif;">
-    <h2>Input:</h2>
-    <input id="to-split" type="textarea" style="width: 40em; max-width: 100%; height: 20em;" />
-    <h2>Output:</h2>
-    <pre style="width: 40em; max-width: 100%; height: 20em; display: inline-block;" id="output"></pre>
+    <h1>NNSplit Browser Demo</h1>
+    <p>Fast, robust sentence splitting with bindings for Python, Rust and Javascript. <a
+            href="https://github.com/bminixhofer/nnsplit">Github Repo</a>.</p>
+    <main>
+        <div>
+            <h2>Input</h2>
+            <input id="to-split" type="textarea"
+                style="width: 40em; max-width: 100%; height: 20em; margin-right: 10px;" />
+        </div>
+        <div>
+            <h2>Output</h2>
+            <pre style="width: 40em; max-width: 100%; height: 20em; display: inline-block;" id="output"></pre>
+        </div c>
+    </main>
 </body>
 
 </html>

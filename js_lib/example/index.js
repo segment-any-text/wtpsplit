@@ -6,6 +6,8 @@ const outputElement = document.querySelector("#output");
 const worker = new Worker();
 let timeout = null;
 
+worker.postMessage({ "text": inputElement.value });
+
 inputElement.addEventListener("input", (e) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => {
