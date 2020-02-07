@@ -17,17 +17,15 @@ Fast, robust sentence splitting with bindings for Python, Rust and Javascript an
 - __Portable__: Models are trained in Python, but inference can be done from Javascript, Rust and Python.
 - __Small__: NNSplit uses a character-level LSTM, so weights are very small (~ __TODO__ kB) which makes it easy to run in the browser.
 
-## Usage
+## Python Usage
 
-### Python
-
-#### Installation
+### Installation
 
 NNSplit has PyTorch as the only dependency.
 
 Install it with pip: `pip install nnsplit`
 
-#### Usage
+### Usage
 
 ```python
 >>> from nnsplit import NNSplit
@@ -46,17 +44,26 @@ Install it with pip: `pip install nnsplit`
    Token(text='.', whitespace='')]]]
 ```
 
+Models for German (`NNSplit("de")`) and English (`NNSplit("en")`) come prepackaged with NNSplit. Alternatively, you can also load your own model:
+
+```python
+import torch
+model = torch.jit.load("/path/to/your/model.pt") # a regular nn.Module works too
+
+splitter = NNSplit(model)
+```
+
 See the [Python README](./python_lib/README.md) for more information.
 
-### Javascript
+## Javascript Usage
 
-#### Installation
+### Installation
 
 The Javascript bindings for NNSplit have TensorFlow.js as the only dependency.
 
 Install them with npm: `npm install nnsplit`
 
-#### Usage
+### Usage
 
 
 ```javascript
@@ -76,20 +83,20 @@ const NNSplit = require("nnsplit");
 
 See the [Javascript README](./js_lib/README.md) for more information.
 
-### Rust
+## Rust Usage
 
-#### Installation
+### Installation
 
 Add NNSplit as a dependency to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-...
+# ...
 nnsplit = "<version>"
-...
+# ...
 ```
 
-#### Usage
+### Usage
 
 ```rust
 use nnsplit::NNSplit;
