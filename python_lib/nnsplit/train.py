@@ -2,12 +2,13 @@ from pathlib import Path
 import random
 import re
 from xml.etree import ElementTree
-import numpy as np
 from lxml.etree import iterparse
 from tqdm import tqdm
+import numpy as np
 import torch
 from torch.nn import functional as F
 from torch.utils import data
+from sklearn import metrics
 from fastai.train import Learner, DataBunch
 from .tokenizer import SoMaJoTokenizer
 from .utils import text_to_id
@@ -161,19 +162,20 @@ def prepare_data(
 
 
 def loss(inputs, targets):
-    return F.binary_cross_entropy_with_logits(inputs, targets.float())
+    weight = torch.tensor([1, 20]).view((1, 1, 2)).cuda()
+    return F.binary_cross_entropy_with_logits(inputs, targets.float(), weight=weight)
 
 
-def train_from_tensors(
-    all_sentences, all_labels, valid_percent=0.1, batch_size=128, n_epochs=10
+def train(
+    sentences_train,
+    labels_train,
+    sentences_valid,
+    labels_valid,
+    batch_size=128,
+    n_epochs=10,
 ):
-    n_valid = int(len(all_sentences) * valid_percent)
-
-    permutation = np.random.permutation(np.arange(len(all_sentences)))
-    valid_idx, train_idx = permutation[:n_valid], permutation[n_valid:]
-
-    train_dataset = data.TensorDataset(all_sentences[train_idx], all_labels[train_idx])
-    valid_dataset = data.TensorDataset(all_sentences[valid_idx], all_labels[valid_idx])
+    train_dataset = data.TensorDataset(sentences_train, labels_train)
+    valid_dataset = data.TensorDataset(sentences_valid, labels_valid)
 
     model = Network()
 
@@ -192,11 +194,35 @@ def train_from_tensors(
 
     learn.fit_one_cycle(n_epochs)
 
-    return learn
+    return learn.model
 
 
-def train_from_directory(data_directory, *args, **kwargs):
-    all_sentences = torch.load(Path(data_directory) / "all_sentences.pt")
-    all_labels = torch.load(Path(data_directory) / "all_labels.pt")
+def evaluate(model, sentences_valid, labels_valid, threshold=0.5, batch_size=1024):
+    assert len(sentences_valid) == len(labels_valid)
 
-    return train_from_tensors(all_sentences, all_labels, *args, **kwargs)
+    preds = np.zeros(labels_valid.shape)
+
+    for i in tqdm(range((len(sentences_valid) // batch_size) + 1)):
+        idx = slice(i * batch_size, (i + 1) * batch_size)
+
+        if next(model.parameters()).is_cuda:
+            out = model(sentences_valid[idx].cuda())
+        else:
+            out = model(sentences_valid[idx])
+
+        preds[idx] = out.detach().cpu().numpy()
+
+    preds = preds.reshape((-1, 2)) > threshold
+    labels_valid = labels_valid.cpu().numpy().reshape((-1, 2))
+
+    for (i, name) in zip([0, 1], ["Tokenize", "Sentencize"]):
+        print(f"Target: {name} \n")
+
+        for (metric, name) in [
+            [metrics.f1_score, "F1"],
+            [metrics.precision_score, "Precision"],
+            [metrics.recall_score, "Recall"],
+        ]:
+            print(f"{name}:", metric(preds[:, i], labels_valid[:, i]))
+
+        print("\n\n")

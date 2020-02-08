@@ -103,7 +103,6 @@ class NNSplit(Tokenizer):
             token = ""
 
             for char, pred in zip(texts[i], avg_preds):
-                print(char, pred)
                 token += char
 
                 if pred[0] > self.threshold or pred[1] > self.threshold:

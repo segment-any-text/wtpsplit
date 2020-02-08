@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 import pkgutil
 import torch
+from torch import nn
 import numpy as np
 from .defaults import DEVICE
 
@@ -16,19 +17,22 @@ def id_to_text(x):
     return chr(x - 2) if (x - 2) <= 127 and x > 1 else "X"
 
 
-def store_model(learner, store_directory):
+def store_model(model, store_directory):
     store_directory = Path(store_directory)
     store_directory.mkdir(exist_ok=True, parents=True)
 
+    sample = torch.zeros([1, 100])
     # model is trained with fp16, so it can be safely quantized to 16 bit
-    # CPU tensors do not support 16 bit embeddings yet so ts_cpu.pt has 32 bit weights
-    traced = torch.jit.trace(learner.model.float().cpu(), learner.data.train_ds[:1][0])
+    # CPU model is quantized to 8 bit, with minimal loss in accuracy
+    # according to tests in train.ipynb
+    quantized_model = torch.quantization.quantize_dynamic(
+        model.float().cpu(), {nn.LSTM, nn.Linear}, dtype=torch.qint8
+    )
+    traced = torch.jit.trace(quantized_model, sample)
     traced.save(str(store_directory / "ts_cpu.pt"))
 
     if torch.cuda.is_available():
-        traced = torch.jit.trace(
-            learner.model.half().cuda(), learner.data.train_ds[:1][0].cuda()
-        )
+        traced = torch.jit.trace(model.half().cuda(), sample.cuda())
         traced.save(str(store_directory / "ts_cuda.pt"))
     else:
         logging.warn(
@@ -38,9 +42,9 @@ def store_model(learner, store_directory):
     import tensorflowjs as tfjs  # noqa: F401
 
     tfjs.converters.save_keras_model(
-        learner.model.get_keras_equivalent(),
+        model.get_keras_equivalent(),
         str(store_directory / "tfjs_model"),
-        quantization_dtype=np.uint16,
+        quantization_dtype=np.uint8,
     )
 
 
