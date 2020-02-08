@@ -162,7 +162,7 @@ def prepare_data(
 
 
 def loss(inputs, targets):
-    weight = torch.tensor([1, 20]).view((1, 1, 2)).cuda()
+    weight = torch.tensor([1, 20]).view((1, 1, 2)).to(targets.device)
     return F.binary_cross_entropy_with_logits(inputs, targets.float(), weight=weight)
 
 
