@@ -72,7 +72,7 @@ class NNSplit(Tokenizer):
         for start in range(0, len(batched_inputs), batch_size):
             end = start + batch_size
             preds[start:end] = torch.sigmoid(
-                self.model(batched_inputs[start:end]).detach().cpu()
+                self.model(batched_inputs[start:end]).detach().float().cpu()
             ).numpy()
 
         all_avg_preds = [np.zeros((len(text), 3), dtype=np.float32) for text in texts]

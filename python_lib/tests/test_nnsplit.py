@@ -33,13 +33,13 @@ def test_prepare_data():
 def test_train_model():
     x = torch.zeros([10, nnsplit.defaults.CUT_LENGTH])
     y = torch.zeros([10, nnsplit.CUT_LENGTH, 2])
-    _ = train.train_from_tensors(x, y, n_epochs=2)
+    _ = train.train(x, y, x, y, n_epochs=2)
 
 
 def test_load_model():
     x = torch.zeros([10, nnsplit.defaults.CUT_LENGTH])
     y = torch.zeros([10, nnsplit.CUT_LENGTH, 2])
-    learner = train.train_from_tensors(x, y, n_epochs=2)
+    learner = train.train(x, y, x, y, n_epochs=2)
 
     utils.store_model(learner, "model")
     model = utils.load_model("model", torch.device("cpu"))

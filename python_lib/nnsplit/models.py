@@ -14,9 +14,9 @@ class Network(nn.Module):
         super().__init__()
         self.embedding = nn.Embedding(127 + 2, 25)
         self.lstm1 = nn.LSTM(25, 128, bidirectional=True, batch_first=True)
-        # _freeze_bias(self.lstm1)
+        _freeze_bias(self.lstm1)
         self.lstm2 = nn.LSTM(256, 64, bidirectional=True, batch_first=True)
-        # _freeze_bias(self.lstm2)
+        _freeze_bias(self.lstm2)
         self.out = nn.Linear(128, 2)
 
     def get_keras_equivalent(self):
