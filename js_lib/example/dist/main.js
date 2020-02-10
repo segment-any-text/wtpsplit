@@ -94,7 +94,7 @@
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _model_worker_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./model.worker.js */ \"./example/model.worker.js\");\n/* harmony import */ var _model_worker_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_model_worker_js__WEBPACK_IMPORTED_MODULE_0__);\n\n\nconst inputElement = document.querySelector(\"#to-split\");\nconst outputElement = document.querySelector(\"#output\");\n\nconst worker = new _model_worker_js__WEBPACK_IMPORTED_MODULE_0___default.a();\nlet timeout = null;\n\nworker.postMessage({ \"text\": inputElement.value });\n\ninputElement.addEventListener(\"input\", (e) => {\n    clearTimeout(timeout);\n    timeout = setTimeout(() => {\n        worker.postMessage({ \"text\": inputElement.value });\n    }, 100);\n});\n\nworker.addEventListener(\"message\", (e) => {\n    outputElement.textContent = JSON.stringify(e.data, null, \"\\t\");\n});\n\n//# sourceURL=webpack:///./example/index.js?");
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _model_worker_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./model.worker.js */ \"./example/model.worker.js\");\n/* harmony import */ var _model_worker_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_model_worker_js__WEBPACK_IMPORTED_MODULE_0__);\n\n\nconst inputElement = document.querySelector(\"#to-split\");\nconst outputElement = document.querySelector(\"#output\");\nconst languageButtons = document.querySelectorAll(\"input[name=language]\");\n\nconst worker = new _model_worker_js__WEBPACK_IMPORTED_MODULE_0___default.a();\nlet timeout = null;\nlet language = Array.from(languageButtons).filter((x) => x.checked)[0].value;\n\nfunction startInference() {\n    worker.postMessage({ \"text\": inputElement.value, \"language\": language });\n}\n\nstartInference();\n\ninputElement.addEventListener(\"input\", (e) => {\n    clearTimeout(timeout);\n    timeout = setTimeout(() => {\n        startInference();\n    }, 500);\n});\n\nlanguageButtons.forEach((button) => {\n    button.addEventListener(\"click\", (e) => {\n        language = button.value;\n        startInference();\n    });\n})\n\nworker.addEventListener(\"message\", (e) => {\n    outputElement.textContent = JSON.stringify(e.data, null, 2);\n});\n\n//# sourceURL=webpack:///./example/index.js?");
 
 /***/ }),
 
@@ -105,7 +105,7 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _mod
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-eval("module.exports = function() {\n  return new Worker(__webpack_require__.p + \"f865e600d16c7af4c381.worker.js\");\n};\n\n//# sourceURL=webpack:///./example/model.worker.js?");
+eval("module.exports = function() {\n  return new Worker(__webpack_require__.p + \"5ea0ba50de1ba03b6ebc.worker.js\");\n};\n\n//# sourceURL=webpack:///./example/model.worker.js?");
 
 /***/ })
 
