@@ -19,8 +19,49 @@ Install them with npm: `npm install nnsplit`
 >>> const NNSplit = require("nnsplit");
 // pass URL to the model.json, see https://www.tensorflow.org/js/tutorials/conversion/import_keras#step_2_load_the_model_into_tensorflowjs for details
 >>> const splitter = NNSplit("path/to/model.json");
->>> await splitter.split(["Das ist ein Test Das ist noch ein Test."]);
-__TODO__
+>>> await splitter.split(["This is a test This is another test."]);
+[
+  [
+    {
+      "text": "This",
+      "whitespace": " "
+    },
+    {
+      "text": "is",
+      "whitespace": " "
+    },
+    {
+      "text": "a",
+      "whitespace": " "
+    },
+    {
+      "text": "test",
+      "whitespace": " "
+    }
+  ],
+  [
+    {
+      "text": "This",
+      "whitespace": " "
+    },
+    {
+      "text": "is",
+      "whitespace": " "
+    },
+    {
+      "text": "another",
+      "whitespace": " "
+    },
+    {
+      "text": "test",
+      "whitespace": ""
+    },
+    {
+      "text": ".",
+      "whitespace": ""
+    }
+  ]
+]
 ```
 
 Note: when running NNSplit from Node.js, you'll have to manually import `@tensorflow/tfjs-node` before instantiating `NNSplit`.
@@ -29,6 +70,14 @@ Note: when running NNSplit from Node.js, you'll have to manually import `@tensor
 require("@tensorflow/tfjs-node");
 const NNSplit = require("nnsplit");
 ```
+
+For size reasons, the Javascript bindings do note come prepackaged with any models. Instead, download models from the Github Repo:
+
+| Model Name  |  |
+| ------------- | ------------- |
+| __en__  | [Path](https://github.com/bminixhofer/nnsplit/tree/master/data/de/tfjs_model)  |
+| __de__ | [Path](https://github.com/bminixhofer/nnsplit/tree/master/data/en/tfjs_model)  |
+
 
 ## Development
 

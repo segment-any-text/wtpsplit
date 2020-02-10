@@ -8,25 +8,100 @@ macro_rules! token {
 }
 
 #[test]
+fn it_splits_english_correctly() -> failure::Fallible<()> {
+    let splitter = NNSplit::new("en")?;
+
+    let result = splitter.split(vec!["This is a test This is another test."]);
+
+    assert_eq!(vec![vec![
+                vec![
+                    token!("This", " "), 
+                    token!("is", " "),
+                    token!("a", " "),
+                    token!("test", " "),
+                ],
+                vec![
+                    token!("This", " "), 
+                    token!("is", " "),
+                    token!("another", " "),
+                    token!("test", ""),
+                    token!(".", ""),
+                ],
+            ]
+        ], result
+    );
+
+    Ok(())
+}
+
+#[test]
 fn it_splits_german_correctly() -> failure::Fallible<()> {
     let splitter = NNSplit::new("de")?;
 
-    let result = splitter.split(vec!["Das ist ein Test. das ist auch ein Beispiel."]);
+    let result = splitter.split(vec!["Das ist ein Test Das ist noch ein Test."]);
 
     assert_eq!(vec![vec![
                 vec![
                     token!("Das", " "), 
                     token!("ist", " "),
                     token!("ein", " "),
-                    token!("Test", ""),
-                    token!(".", " "),
+                    token!("Test", " "),
                 ],
                 vec![
-                    token!("das", " "), 
+                    token!("Das", " "), 
                     token!("ist", " "),
-                    token!("auch", " "),
+                    token!("noch", " "),
                     token!("ein", " "),
-                    token!("Beispiel", ""),
+                    token!("Test", ""),
+                    token!(".", ""),
+                ],
+            ]
+        ], result
+    );
+
+    Ok(())
+}
+
+#[test]
+fn it_splits_long_text_correctly() -> failure::Fallible<()> {
+    let splitter = NNSplit::new("en")?;
+
+    let result = splitter.split(vec!["Fast, robust sentence splitting with bindings for Python, Rust and Javascript Punctuation is not necessary to split sentences correctly sometimes even incorrect case is split correctly."]);
+
+    assert_eq!(vec![vec![
+                vec![
+                    token!("Fast", ""), 
+                    token!(",", " "),
+                    token!("robust", " "),
+                    token!("sentence", " "),
+                    token!("splitting", " "),
+                    token!("with", " "),
+                    token!("bindings", " "),
+                    token!("for", " "),
+                    token!("Python", ""),
+                    token!(",", " "),
+                    token!("Rust", " "),
+                    token!("and", " "),
+                    token!("Javascript", " "),
+                ],
+                vec![
+                    token!("Punctuation", " "), 
+                    token!("is", " "),
+                    token!("not", " "),
+                    token!("necessary", " "),
+                    token!("to", " "),
+                    token!("split", " "),
+                    token!("sentences", " "),
+                    token!("correctly", " "),
+                ],
+                vec![
+                    token!("sometimes", " "), 
+                    token!("even", " "),
+                    token!("incorrect", " "),
+                    token!("case", " "),
+                    token!("is", " "),
+                    token!("split", " "),
+                    token!("correctly", ""),
                     token!(".", ""),
                 ],
             ]

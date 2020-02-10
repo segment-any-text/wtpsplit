@@ -1,3 +1,4 @@
+import pickle
 import nnsplit
 from pathlib import Path
 import numpy as np
@@ -14,7 +15,7 @@ def test_external_tokenizer():
         "Das ist noch ein Test .",
     ]  # note that the dot is a separate token
 
-    splitted = tok.split([raw_text])[0]
+    splitted = list(tok.split([raw_text]))[0]
     for i, sentence in enumerate(splitted):
         assert " ".join(x.text for x in sentence) == tokenized_sentences[i]
 
@@ -24,10 +25,17 @@ def test_prepare_data():
         Path(__file__) / ".." / ".." / ".." / "data" / "sample-monolingual.xml"
     ).resolve()
 
-    max_n_sentences = 10
-    x, y = train.prepare_data(sample_path, "en", max_n_sentences=max_n_sentences)
+    max_n_paragraphs = 10
+    n_cuts = 4
+    paragraphs = train.xml_to_paragraphs(sample_path, max_n_paragraphs)
+
+    with open("paragraphs.pkl", "wb") as f:
+        for p in tokenizer.SoMaJoTokenizer("en").split(paragraphs):
+            f.write(pickle.dumps(p))
+
+    x, y = train.prepare_tokenized_paragraphs("paragraphs.pkl", n_cuts=n_cuts)
     assert isinstance(x, torch.Tensor) and isinstance(y, torch.Tensor)
-    assert len(x) == len(y) and len(x) <= max_n_sentences
+    assert len(x) == len(y) and len(x) <= max_n_paragraphs * n_cuts
 
 
 def test_train_model():
@@ -58,18 +66,52 @@ def test_keras_and_pytorch_same():
     assert np.allclose(torch_output, keras_output, rtol=0.0, atol=1e-5)
 
 
-def test_split_german():
+def test_split_english_correctly():
     samples = [
         [
-            "Das ist ein Test. das ist auch ein Beispiel.",
-            ["Das ist ein Test .", "das ist auch ein Beispiel ."],
+            "This is a test This is another test.",
+            ["This is a test", "This is another test ."],
         ],
+    ]  # whitespaces in the expected string denote token splits
+    splitter = nnsplit.NNSplit("en")
+
+    for inp, out in samples:
+        result = splitter.split([inp])[0]
+
+        for i, sentence in enumerate(result):
+            assert " ".join(x.text for x in sentence) == out[i]
+
+
+def test_split_german_correctly():
+    samples = [
         [
             "Das ist ein Test Das ist noch ein Test.",
             ["Das ist ein Test", "Das ist noch ein Test ."],
         ],
     ]  # whitespaces in the expected string denote token splits
     splitter = nnsplit.NNSplit("de")
+
+    for inp, out in samples:
+        result = splitter.split([inp])[0]
+
+        for i, sentence in enumerate(result):
+            assert " ".join(x.text for x in sentence) == out[i]
+
+
+def test_split_long_text_correctly():
+    samples = [
+        [
+            "Fast, robust sentence splitting with bindings for Python, Rust and Javascript "
+            "Punctuation is not necessary to split sentences correctly "
+            "sometimes even incorrect case is split correctly.",
+            [
+                "Fast , robust sentence splitting with bindings for Python , Rust and Javascript",
+                "Punctuation is not necessary to split sentences correctly",
+                "sometimes even incorrect case is split correctly .",
+            ],
+        ],
+    ]  # whitespaces in the expected string denote token splits
+    splitter = nnsplit.NNSplit("en")
 
     for inp, out in samples:
         result = splitter.split([inp])[0]

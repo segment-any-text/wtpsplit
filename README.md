@@ -15,7 +15,7 @@ Fast, robust sentence splitting with bindings for Python, Rust and Javascript an
 - __Robust__: Does not depend on proper punctuation and casing to split text into sentences.
 - __Fast__: Can run on your GPU to split one million paragraphs from wikipedia in __TODO__ seconds (on an RTX 2080 TI).
 - __Portable__: Models are trained in Python, but inference can be done from Javascript, Rust and Python.
-- __Small__: NNSplit uses a character-level LSTM, so weights are very small (~ __TODO__ kB) which makes it easy to run in the browser.
+- __Small__: NNSplit uses a character-level LSTM, so weights are very small (~ __350 kB__) which makes it easy to run in the browser.
 
 ## Python Usage
 
@@ -29,18 +29,17 @@ Install it with pip: `pip install nnsplit`
 
 ```python
 >>> from nnsplit import NNSplit
->>> splitter = NNSplit("de")
+>>> splitter = NNSplit("en")
 # NNSplit does not depend on proper punctuation and casing to split sentences
->>> splitter.split(["Das ist ein Test Das ist noch ein Test."])
-[[[Token(text='Das', whitespace=' '),
-   Token(text='ist', whitespace=' '),
-   Token(text='ein', whitespace=' '),
-   Token(text='Test', whitespace=' ')],
-  [Token(text='Das', whitespace=' '),
-   Token(text='ist', whitespace=' '),
-   Token(text='noch', whitespace=' '),
-   Token(text='ein', whitespace=' '),
-   Token(text='Test', whitespace=''),
+>>> splitter.split(["This is a test This is another test."])
+[[[Token(text='This', whitespace=' '),
+   Token(text='is', whitespace=' '),
+   Token(text='a', whitespace=' '),
+   Token(text='test', whitespace=' ')],
+  [Token(text='This', whitespace=' '),
+   Token(text='is', whitespace=' '),
+   Token(text='another', whitespace=' '),
+   Token(text='test', whitespace=''),
    Token(text='.', whitespace='')]]]
 ```
 
@@ -70,8 +69,49 @@ Install them with npm: `npm install nnsplit`
 >>> const NNSplit = require("nnsplit");
 // pass URL to the model.json, see https://www.tensorflow.org/js/tutorials/conversion/import_keras#step_2_load_the_model_into_tensorflowjs for details
 >>> const splitter = NNSplit("path/to/model.json");
->>> await splitter.split(["Das ist ein Test Das ist noch ein Test."]);
-__TODO__
+>>> await splitter.split(["This is a test This is another test."]);
+[
+  [
+    {
+      "text": "This",
+      "whitespace": " "
+    },
+    {
+      "text": "is",
+      "whitespace": " "
+    },
+    {
+      "text": "a",
+      "whitespace": " "
+    },
+    {
+      "text": "test",
+      "whitespace": " "
+    }
+  ],
+  [
+    {
+      "text": "This",
+      "whitespace": " "
+    },
+    {
+      "text": "is",
+      "whitespace": " "
+    },
+    {
+      "text": "another",
+      "whitespace": " "
+    },
+    {
+      "text": "test",
+      "whitespace": ""
+    },
+    {
+      "text": ".",
+      "whitespace": ""
+    }
+  ]
+]
 ```
 
 Note: when running NNSplit from Node.js, you'll have to manually import `@tensorflow/tfjs-node` before instantiating `NNSplit`.
@@ -80,6 +120,14 @@ Note: when running NNSplit from Node.js, you'll have to manually import `@tensor
 require("@tensorflow/tfjs-node");
 const NNSplit = require("nnsplit");
 ```
+
+For size reasons, the Javascript bindings do note come prepackaged with any models. Instead, download models from the Github Repo:
+
+| Model Name  |                               |
+| ----------- | ----------------------------- |
+| __en__      | [Path](./data/de/tfjs_model)  |
+| __de__      | [Path](./data/en/tfjs_model)  |
+
 
 See the [Javascript README](./js_lib/README.md) for more information.
 
@@ -102,9 +150,9 @@ nnsplit = "<version>"
 use nnsplit::NNSplit;
 
 fn main() -> failure::Fallible<()> {
-    let splitter = NNSplit::new("de")?;
+    let splitter = NNSplit::new("en")?;
 
-    let input = vec!["Das ist ein Test. Das ist noch ein Test."];
+    let input = vec!["This is a test This is another test."];
     println!("{:#?}", splitter.split(input));
 
     Ok(())
@@ -134,3 +182,25 @@ NNSplit uses wikipedia dumps in the [Linguatools format](https://linguatools.org
 6. ) At inference time, the input text is split into multiple cuts with the same length of 100 characters so that the entire text is covered. NNSplit predicts each cut separately. The predictions are then averaged together for the final result.
 
 ![How NNSplit works](https://user-images.githubusercontent.com/13353204/73847685-0f8c5180-4827-11ea-8cfb-9d859715c767.png)
+
+## Evaluation
+
+It is not trivial to evaluate NNSplit since I do not have a dataset of human-annotated data to use as ground truth. What can be done is just reporting metrics on some held out data from the auto-annotated data used for training.
+
+See F1 Score, Precision and Recall averaged over the predictions for every character at threshold 0.5 below on ~ 1200000 held out text cuts.
+
+__Tokenization__
+
+| Model Name  | F1@0.5 | Precision@0.5 | Recall@0.5 |
+| ----------- | ------ | ------------- | ---------- |
+| __en__      | TODO   | TODO          | TODO       |
+| __de__      | TODO   | TODO          | TODO       |
+
+__Sentence Splitting__
+
+| Model Name  | F1@0.5 | Precision@0.5 | Recall@0.5 |
+| ----------- | ------ | ------------- | ---------- |
+| __en__      | TODO   | TODO          | TODO       |
+| __de__      | TODO   | TODO          | TODO       |
+
+These metrics are __not__ comparable to human-level sentence splitting. [SoMaJo](https://github.com/tsproisl/SoMaJo), the tool used to annotate paragraphs, is a good tool though so I do consider the results to be solid.

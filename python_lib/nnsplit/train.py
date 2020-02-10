@@ -146,7 +146,6 @@ def xml_to_paragraphs(
 
 def prepare_tokenized_paragraphs(
     tokenized_paragraph_path,
-    language,
     data_directory=None,
     remove_dot_chance=REMOVE_DOT_CHANCE,
     lowercase_start_chance=LOWERCASE_START_CHANCE,

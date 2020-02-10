@@ -12,9 +12,9 @@ Add NNSplit as a dependency to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-...
+# ...
 nnsplit = "<version>"
-...
+# ...
 ```
 
 ## Usage
@@ -23,9 +23,9 @@ nnsplit = "<version>"
 use nnsplit::NNSplit;
 
 fn main() -> failure::Fallible<()> {
-    let splitter = NNSplit::new("de");
+    let splitter = NNSplit::new("en")?;
 
-    let input = vec!["Das ist ein Test. Das ist noch ein Test."];
+    let input = vec!["This is a test This is another test."];
     println!("{:#?}", splitter.split(input));
 
     Ok(())
@@ -46,7 +46,7 @@ cargo run --example cli -- <text> <language>
 for example:
 
 ```bash
-cargo run --example cli -- "Das ist ein Test." de
+cargo run --example cli -- "This is a test This is another test." en
 ```
 
 You can run a benchmark of the Rust Bindings with `cargo bench`.

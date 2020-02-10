@@ -16,18 +16,17 @@ Install it with pip: `pip install nnsplit`
 
 ```python
 >>> from nnsplit import NNSplit
->>> splitter = NNSplit("de")
+>>> splitter = NNSplit("en")
 # NNSplit does not depend on proper punctuation and casing to split sentences
->>> splitter.split(["Das ist ein Test Das ist noch ein Test."])
-[[[Token(text='Das', whitespace=' '),
-   Token(text='ist', whitespace=' '),
-   Token(text='ein', whitespace=' '),
-   Token(text='Test', whitespace=' ')],
-  [Token(text='Das', whitespace=' '),
-   Token(text='ist', whitespace=' '),
-   Token(text='noch', whitespace=' '),
-   Token(text='ein', whitespace=' '),
-   Token(text='Test', whitespace=''),
+>>> splitter.split(["This is a test This is another test."])
+[[[Token(text='This', whitespace=' '),
+   Token(text='is', whitespace=' '),
+   Token(text='a', whitespace=' '),
+   Token(text='test', whitespace=' ')],
+  [Token(text='This', whitespace=' '),
+   Token(text='is', whitespace=' '),
+   Token(text='another', whitespace=' '),
+   Token(text='test', whitespace=''),
    Token(text='.', whitespace='')]]]
 ```
 
