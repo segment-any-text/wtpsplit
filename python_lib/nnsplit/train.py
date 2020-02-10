@@ -1,47 +1,57 @@
 from pathlib import Path
 import random
 import re
+import pickle
 from xml.etree import ElementTree
 from lxml.etree import iterparse
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import numpy as np
 import torch
 from torch.nn import functional as F
 from torch.utils import data
 from sklearn import metrics
 from fastai.train import Learner, DataBunch
-from .tokenizer import SoMaJoTokenizer
 from .utils import text_to_id
 from .defaults import CUT_LENGTH
 from .models import Network
 
 REMOVE_DOT_CHANCE = 0.5
 LOWERCASE_START_CHANCE = 0.5
-MIN_LENGTH = 600
+MIN_LENGTH = 300
+MAX_LENGTH = 5000
 N_CUTS = 4
 
 
-def label_paragraph(paragraph, tokenizer):
-    tokenized_p = tokenizer.split([paragraph])[0]
-
-    text = ""
+def label_paragraph(tokenized_paragraph):
+    full_text = ""
     labels = []
 
-    for sentence in tokenized_p:
+    for sentence in tokenized_paragraph:
         for i, token in enumerate(sentence):
-            text_to_append = token.text + token.whitespace
+            text = token.text
+            whitespace = token.whitespace
+
+            # add more whitespace with a small chance so that multiple whitespace is split
+            # correctly too
+            while True:
+                if random.random() < 0.8:
+                    break
+
+                whitespace += " "
+
+            text_to_append = text + whitespace
 
             if (
-                token.text == "."
+                text == "."
                 and i == len(sentence) - 1
                 and random.random() < REMOVE_DOT_CHANCE
             ):
-                text_to_append = token.whitespace
+                text_to_append = whitespace
                 if len(text_to_append) > 0 and len(labels) > 1:
                     labels[-1][0] = 0.0
 
             if i == 0 and random.random() < LOWERCASE_START_CHANCE:
-                text_to_append = token.text.lower() + token.whitespace
+                text_to_append = text.lower() + whitespace
 
             for _ in range(len(text_to_append)):
                 labels.append([0.0, 0.0])
@@ -49,19 +59,16 @@ def label_paragraph(paragraph, tokenizer):
             if len(labels) > 0:
                 labels[-1][0] = 1.0
 
-            text += text_to_append
+            full_text += text_to_append
 
         labels[-1][1] = 1.0
 
-    return text, labels
+    return full_text, labels
 
 
-def generate_data(paragraph, tokenizer, min_length, n_cuts, cut_length):
-    if len(paragraph) < min_length:
-        return [], []
-
+def paragraph_to_text_and_labels(paragraph, n_cuts, cut_length):
     try:
-        p_text, p_labels = label_paragraph(paragraph, tokenizer)
+        p_text, p_labels = label_paragraph(paragraph)
     except IndexError:
         print("Faulty paragraph:")
         print(paragraph)
@@ -86,36 +93,65 @@ def generate_data(paragraph, tokenizer, min_length, n_cuts, cut_length):
     return inputs, labels
 
 
-def fast_iter(context):
-    for event, elem in context:
-        text = ElementTree.tostring(elem, encoding="utf8").decode("utf-8")
-        text = re.sub(r"(<h>(.*?)<\/h>)", "\n", text)
-        text = re.sub(r"<.*?>", "", text)
-        text = text.strip()
-        yield text
-
-        # It's safe to call clear() here because no descendants will be
-        # accessed
-        elem.clear()
-        # Also eliminate now-empty references from the root node to elem
-        for ancestor in elem.xpath("ancestor-or-self::*"):
-            while ancestor.getprevious() is not None:
-                parent = ancestor.getparent()
-
-                if parent is not None:
-                    del parent[0]
-                else:
-                    break
-
-
-def prepare_data(
+def xml_to_paragraphs(
     corpus,
+    max_n_paragraphs,
+    min_length=MIN_LENGTH,
+    max_length=MAX_LENGTH,
+    store_path=None,
+):
+    def fast_iter(context):
+        for event, elem in context:
+            text = ElementTree.tostring(elem, encoding="utf8").decode("utf-8")
+            text = re.sub(r"(<h>(.*?)<\/h>)", "\n", text)
+            text = re.sub(r"<.*?>", "", text)
+            text = text.strip()
+            yield text
+
+            # It's safe to call clear() here because no descendants will be
+            # accessed
+            elem.clear()
+            # Also eliminate now-empty references from the root node to elem
+            for ancestor in elem.xpath("ancestor-or-self::*"):
+                while ancestor.getprevious() is not None:
+                    parent = ancestor.getparent()
+
+                    if parent is not None:
+                        del parent[0]
+                    else:
+                        break
+
+    i = 0
+    paragraphs = []
+    bar = tqdm(total=max_n_paragraphs)
+
+    for p in fast_iter(iterparse(str(corpus), tag="p")):
+        if not (min_length <= len(p) <= max_length):
+            continue
+
+        paragraphs.append(p)
+        i += 1
+        bar.update(1)
+
+        if i >= max_n_paragraphs:
+            break
+
+    if store_path is not None:
+        store_path = Path(store_path)
+        store_path.parents[0].mkdir(exist_ok=True, parents=True)
+        torch.save(paragraphs, store_path)
+
+    return paragraphs
+
+
+def prepare_tokenized_paragraphs(
+    tokenized_paragraph_path,
     language,
-    max_n_sentences,
     data_directory=None,
     remove_dot_chance=REMOVE_DOT_CHANCE,
     lowercase_start_chance=LOWERCASE_START_CHANCE,
     min_length=MIN_LENGTH,
+    max_length=MAX_LENGTH,
     n_cuts=N_CUTS,
     cut_length=CUT_LENGTH,
 ):
@@ -123,36 +159,25 @@ def prepare_data(
         data_directory = Path(data_directory)
         data_directory.mkdir(exist_ok=True, parents=True)
 
-    all_sentences = torch.zeros([max_n_sentences, cut_length], dtype=torch.uint8)
-    all_labels = torch.zeros([max_n_sentences, cut_length, 2], dtype=torch.bool)
+    all_sentences = []
+    all_labels = []
 
-    tokenizer = SoMaJoTokenizer(language)
-    bar = tqdm(total=max_n_sentences)
+    bar = tqdm()
+    with open(tokenized_paragraph_path, "rb") as f:
+        while True:
+            try:
+                paragraph = pickle.load(f)
+                bar.update(1)
+            except EOFError:
+                break
 
-    i = 0
-    for paragraph in fast_iter(iterparse(str(corpus), tag="p")):
-        text, labels = generate_data(
-            paragraph, tokenizer, min_length, n_cuts, cut_length
-        )
+            text, labels = paragraph_to_text_and_labels(paragraph, n_cuts, cut_length)
 
-        length = min(len(text), max_n_sentences - i)
+            all_sentences.append(torch.tensor(text, dtype=torch.uint8))
+            all_labels.append(torch.tensor(labels, dtype=torch.bool))
 
-        if length > 0:
-            all_sentences[i : i + length] = torch.tensor(
-                text[:length], dtype=torch.uint8
-            )
-            all_labels[i : i + length] = torch.tensor(labels[:length], dtype=torch.bool)
-
-        i = i + length
-
-        if i == max_n_sentences:
-            break
-
-        bar.update(length)
-
-    if i < max_n_sentences:
-        all_sentences = all_sentences[:i]
-        all_labels = all_labels[:i]
+    all_sentences = torch.cat(all_sentences, 0)
+    all_labels = torch.cat(all_labels, 0)
 
     if data_directory is not None:
         torch.save(all_sentences, data_directory / "all_sentences.pt")

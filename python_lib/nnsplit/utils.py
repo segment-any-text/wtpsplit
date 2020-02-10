@@ -17,6 +17,11 @@ def id_to_text(x):
     return chr(x - 2) if (x - 2) <= 127 and x > 1 else "X"
 
 
+def print_sentence_and_label(sentence, label):
+    for char_id, label in zip(sentence, label):
+        print(id_to_text(char_id), int(label[0]), int(label[1]))
+
+
 def store_model(model, store_directory):
     store_directory = Path(store_directory)
     store_directory.mkdir(exist_ok=True, parents=True)
