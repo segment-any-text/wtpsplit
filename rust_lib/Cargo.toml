@@ -33,3 +33,4 @@ criterion = "0.3"
 [[bench]]
 name = "bench_nnsplit"
 harness = false
+path = "benches/bench_nnsplit.rs"
