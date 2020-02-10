@@ -23,7 +23,7 @@ function get_token(text) {
 }
 
 class NNSplit {
-    constructor(modelPath, threshold = 0.5, stride = 50, cutLength = CUT_LENGTH) {
+    constructor(modelPath, threshold = 0.5, stride = 90, cutLength = CUT_LENGTH) {
         this.threshold = threshold;
         this.stride = stride;
         this.cutLength = cutLength;
@@ -78,10 +78,9 @@ class NNSplit {
 
         for (let i = 0; i < allIdx.length; i++) {
             let [start, end] = allIdx[i];
-
             for (let j = start; j < end; j++) {
-                allAvgPreds[currentText][0][j] += preds.get(i, j, 0);
-                allAvgPreds[currentText][1][j] += preds.get(i, j, 1);
+                allAvgPreds[currentText][0][j] += preds.get(i, j - start, 0);
+                allAvgPreds[currentText][1][j] += preds.get(i, j - start, 1);
                 allAvgPredCounts[currentText][j] += 1;
             }
 
