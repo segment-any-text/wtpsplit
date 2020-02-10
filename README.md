@@ -125,8 +125,8 @@ For size reasons, the Javascript bindings do note come prepackaged with any mode
 
 | Model Name  |                               |
 | ----------- | ----------------------------- |
-| __en__      | [Path](./data/de/tfjs_model)  |
-| __de__      | [Path](./data/en/tfjs_model)  |
+| __en__      | [Path](./data/en/tfjs_model)  |
+| __de__      | [Path](./data/de/tfjs_model)  |
 
 
 See the [Javascript README](./js_lib/README.md) for more information.

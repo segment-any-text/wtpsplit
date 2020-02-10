@@ -75,8 +75,8 @@ For size reasons, the Javascript bindings do note come prepackaged with any mode
 
 | Model Name  |  |
 | ------------- | ------------- |
-| __en__  | [Path](https://github.com/bminixhofer/nnsplit/tree/master/data/de/tfjs_model)  |
-| __de__ | [Path](https://github.com/bminixhofer/nnsplit/tree/master/data/en/tfjs_model)  |
+| __en__  | [Path](https://github.com/bminixhofer/nnsplit/tree/master/data/en/tfjs_model)  |
+| __de__ | [Path](https://github.com/bminixhofer/nnsplit/tree/master/data/de/tfjs_model)  |
 
 
 ## Development
