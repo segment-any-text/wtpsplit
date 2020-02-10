@@ -1,14 +1,14 @@
 # NNSplit
 
-![PyPI](https://img.shields.io/pypi/v/nnsplit)
-![Crates.io](https://img.shields.io/crates/v/nnsplit)
-![npm](https://img.shields.io/npm/v/nnsplit)
+[![PyPI](https://img.shields.io/pypi/v/nnsplit)](https://pypi.org/project/nnsplit/)
+[![Crates.io](https://img.shields.io/crates/v/nnsplit)](https://crates.io/crates/nnsplit)
+[![npm](https://img.shields.io/npm/v/nnsplit)](https://www.npmjs.com/package/nnsplit)
 ![CI](https://github.com/bminixhofer/nnsplit/workflows/CI/badge.svg)
 ![License](https://img.shields.io/github/license/bminixhofer/nnsplit)
 
-__This project is a work in progress, I do not recommend using it yet.__
-
 Fast, robust sentence splitting with bindings for Python, Rust and Javascript and pretrained models for English and German.
+
+[Browser demo.](https://bminixhofer.github.io/nnsplit/js_lib/example/)
 
 ### Features
 
