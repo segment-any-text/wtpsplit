@@ -433,7 +433,7 @@ dependencies = [
  "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "fs_extra 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ndarray 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tch 0.1.5 (git+https://github.com/LaurentMazare/tch-rs)",
+ "tch 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-segmentation 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -814,15 +814,15 @@ dependencies = [
 
 [[package]]
 name = "tch"
-version = "0.1.5"
-source = "git+https://github.com/LaurentMazare/tch-rs#312a28dfd28abccff9a2c14dbd98ff5c50da1af2"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
  "ndarray 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "torch-sys 0.1.5 (git+https://github.com/LaurentMazare/tch-rs)",
+ "torch-sys 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "zip 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -855,8 +855,8 @@ dependencies = [
 
 [[package]]
 name = "torch-sys"
-version = "0.1.5"
-source = "git+https://github.com/LaurentMazare/tch-rs#312a28dfd28abccff9a2c14dbd98ff5c50da1af2"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cc 1.0.50 (registry+https://github.com/rust-lang/crates.io-index)",
  "cmake 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1121,11 +1121,11 @@ dependencies = [
 "checksum sourcefile 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "4bf77cb82ba8453b42b6ae1d692e4cdc92f9a47beaf89a847c8be83f4e328ad3"
 "checksum syn 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)" = "af6f3550d8dff9ef7dc34d384ac6f107e5d31c8f57d9f28e0081503f547ac8f5"
 "checksum synstructure 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)" = "67656ea1dc1b41b1451851562ea232ec2e5a80242139f7e679ceccfb5d61f545"
-"checksum tch 0.1.5 (git+https://github.com/LaurentMazare/tch-rs)" = "<none>"
+"checksum tch 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "c0abf5b44aca0c6dad4708c043f1f9fa1d458d621e30ef20ff7cd734e631a273"
 "checksum textwrap 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d326610f408c7a4eb6f51c37c330e496b08506c9457c9d34287ecc38809fb060"
 "checksum time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)" = "db8dcfca086c1143c9270ac42a2bbd8a7ee477b78ac8e45b19abfb0cbede4b6f"
 "checksum tinytemplate 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "57a3c6667d3e65eb1bc3aed6fd14011c6cbc3a0665218ab7f5daf040b9ec371a"
-"checksum torch-sys 0.1.5 (git+https://github.com/LaurentMazare/tch-rs)" = "<none>"
+"checksum torch-sys 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "93d3c024f63dfdb6a3f692769dcdcd9002de2f071682963191729116f379cd14"
 "checksum unicode-segmentation 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e83e153d1053cbb5a118eeff7fd5be06ed99153f00dbcd8ae310c5fb2b22edc0"
 "checksum unicode-width 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "caaa9d531767d1ff2150b9332433f32a24622147e5ebb1f26409d5da67afd479"
 "checksum unicode-xid 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "826e7639553986605ec5979c7dd957c7895e93eabed50ab2ffa7f6128a75097c"

@@ -17,7 +17,7 @@ include = ["src/*.rs", "tests/*.rs", "build.rs", "data"]
 
 [dependencies]
 failure = "0.1.6"
-tch = {git = "https://github.com/LaurentMazare/tch-rs"}
+tch = "0.1.6"
 ndarray = "0.13"
 unicode-segmentation = "1.6"
 
