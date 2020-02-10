@@ -60,9 +60,13 @@ impl NNSplit {
     const CUT_LENGTH: usize = 100;
     const BATCH_SIZE: usize = 32;
 
+    /// Returns an An NNSplit sentencizer and tokenizer.
+    ///
+    /// # Arguments
+    ///
+    /// * `model_name` - Name of the prepackaged model to use. Either `en` or `de`.
     pub fn new(model_name: &str) -> failure::Fallible<NNSplit> {
         let device = Device::cuda_if_available();
-        
         let source = if model_name == "de" {
             if device == Device::Cpu {
                 DE_DATA_CPU
@@ -92,6 +96,11 @@ impl NNSplit {
         })
     }
 
+    /// Returns an An NNSplit sentencizer and tokenizer.
+    ///
+    /// # Arguments
+    ///
+    /// * `model` - tch::CModule that will be used as the model.
     pub fn from_model(model: tch::CModule) -> failure::Fallible<NNSplit> {
         let device = Device::cuda_if_available();
 
@@ -130,6 +139,16 @@ impl NNSplit {
         self
     }
 
+    /// Split texts into sentences and tokens.
+    ///
+    /// # Arguments
+    ///
+    /// * `texts` - Vector of `&str`s with texts to split.
+    ///
+    /// Returns a vector with the same length as `texts`.
+    /// Each element is a vector of sentences.
+    /// Each sentence is a vector of `Token`s.
+    /// Each token is a struct with fields `text` and `whitespace`.
     pub fn split(&self, texts: Vec<&str>) -> Vec<Vec<Vec<Token>>> {
         let mut all_inputs: Vec<u8> = Vec::new();
         let mut all_idx: Vec<Range<usize>> = Vec::new();
