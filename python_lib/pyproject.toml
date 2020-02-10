@@ -8,8 +8,8 @@ include = ["nnsplit/data", "README.md"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.7"
-torch = "^1"
+python = "^3.6"
+torch = "^1.4"
 numpy = "^1"
 
 [tool.poetry.dev-dependencies]
