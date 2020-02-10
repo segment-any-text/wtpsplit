@@ -22,7 +22,7 @@ class NNSplit(Tokenizer):
         self,
         model_or_model_name,
         threshold=0.5,
-        stride=50,
+        stride=90,
         cut_length=CUT_LENGTH,
         device=DEVICE,
     ):

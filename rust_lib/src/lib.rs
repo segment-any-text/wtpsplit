@@ -51,9 +51,12 @@ pub struct NNSplit {
 static DE_DATA_CPU: &'static [u8]  = include_bytes!("../data/de/ts_cpu.pt");
 static DE_DATA_CUDA: &'static [u8]  = include_bytes!("../data/de/ts_cuda.pt");
 
+static EN_DATA_CPU: &'static [u8]  = include_bytes!("../data/en/ts_cpu.pt");
+static EN_DATA_CUDA: &'static [u8]  = include_bytes!("../data/en/ts_cuda.pt");
+
 impl NNSplit {
     const THRESHOLD: f32 = 0.5;
-    const STRIDE: usize = 50;
+    const STRIDE: usize = 90;
     const CUT_LENGTH: usize = 100;
     const BATCH_SIZE: usize = 32;
 
@@ -65,6 +68,12 @@ impl NNSplit {
                 DE_DATA_CPU
             } else {
                 DE_DATA_CUDA
+            }
+        } else if model_name == "en" {
+            if device == Device::Cpu {
+                EN_DATA_CPU
+            } else {
+                EN_DATA_CUDA
             }
         } else {
             panic!(format!("unknown model name: {}.", model_name));
@@ -189,7 +198,7 @@ impl NNSplit {
             };
 
             let mut slice = current_preds.slice_mut(s![range.clone(), ..]);
-            slice += &preds.slice(s![i, 0..text_lengths[current_text], ..]);
+            slice += &preds.slice(s![i, 0..range.end - range.start, ..]);
 
             let mut n_slice = current_pred_counts.slice_mut(s![range, 0]);
             n_slice += 1.;
