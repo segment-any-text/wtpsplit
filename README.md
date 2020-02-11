@@ -13,9 +13,9 @@ Fast, robust sentence splitting with bindings for Python, Rust and Javascript an
 ### Features
 
 - __Robust__: Does not depend on proper punctuation and casing to split text into sentences.
-- __Fast__: Can run on your GPU to split one million paragraphs from wikipedia in __TODO__ seconds (on an RTX 2080 TI).
-- __Portable__: Models are trained in Python, but inference can be done from Javascript, Rust and Python.
 - __Small__: NNSplit uses a character-level LSTM, so weights are very small (~ __350 kB__) which makes it easy to run in the browser.
+- __Portable__: Models are trained in Python, but inference can be done from Javascript, Rust and Python.
+- __Fast__: Can run on your GPU to __split 100k paragraphs__ from wikipedia __in less than 50 seconds__. <sub>With RTX 2080 TI and i5 8700k. Paragraphs have an average length of ~ 800 characters. See `benchmark.ipynb` for the code.</sub>
 
 ## Python Usage
 
