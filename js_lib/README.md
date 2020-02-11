@@ -1,4 +1,4 @@
-# NNSplit Python Bindings
+# NNSplit Javascript Bindings
 
 ![npm](https://img.shields.io/npm/v/nnsplit)
 ![CI](https://github.com/bminixhofer/nnsplit/workflows/CI/badge.svg)

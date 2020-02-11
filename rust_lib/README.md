@@ -1,4 +1,4 @@
-# NNSplit Python Bindings
+# NNSplit Rust Bindings
 
 ![Crates.io](https://img.shields.io/crates/v/nnsplit)
 ![CI](https://github.com/bminixhofer/nnsplit/workflows/CI/badge.svg)
