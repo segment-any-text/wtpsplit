@@ -23,6 +23,14 @@ function get_token(text) {
 }
 
 class NNSplit {
+    /**
+     * An NNSplit sentencizer and tokenizer.
+     * 
+     * @param {string} modelPath - path to the model.json from which to load the TensorFlow.js model.
+     * @param {float} [threshold=0.5] - Cutoff above which predictions will be considered as 1. 
+     * @param {*} stride - How much to move the window after each prediction. Comparable to stride in a 1d convolution.
+     * @param {*} cutLength - The number of characters in each cut.
+     */
     constructor(modelPath, threshold = 0.5, stride = 90, cutLength = CUT_LENGTH) {
         this.threshold = threshold;
         this.stride = stride;
@@ -31,7 +39,19 @@ class NNSplit {
         this.model = tfl.loadLayersModel(modelPath);
     }
 
-    async split(texts) {
+    /**
+     * Split texts into sentences and tokens.
+     * 
+     * @param {string[]} texts - A list of texts to split. Passing multiple texts at once allows for parallelization of the model.
+     * @param {int} [batchSize=128] - Batch size with which cuts are processed by the model.
+     * 
+     * @return {string[][][]}
+     *  - A list with the same length as `texts`.
+     *  - Each element is a list of sentences.
+     *  - Each sentence is a list of tokens.
+     *  - Each token is a `Token` class with properties `text` and `whitespace`.
+     */
+    async split(texts, batchSize = 128) {
         if (texts.length === 0) {
             return [];
         }
@@ -67,8 +87,7 @@ class NNSplit {
         });
 
         const batchedInputs = tf.tensor(allInputs);
-        // TODO: batch properly
-        let preds = (await this.model).predict(batchedInputs).sigmoid();
+        let preds = (await this.model).predict(batchedInputs, { batchSize }).sigmoid();
         preds = await preds.buffer();
 
         const allAvgPreds = texts.map((x) => [new Float32Array(x.length), new Float32Array(x.length)]);

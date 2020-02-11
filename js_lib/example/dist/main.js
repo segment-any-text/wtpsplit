@@ -105,7 +105,7 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _mod
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-eval("module.exports = function() {\n  return new Worker(__webpack_require__.p + \"5ea0ba50de1ba03b6ebc.worker.js\");\n};\n\n//# sourceURL=webpack:///./example/model.worker.js?");
+eval("module.exports = function() {\n  return new Worker(__webpack_require__.p + \"776d12897b66f635ea59.worker.js\");\n};\n\n//# sourceURL=webpack:///./example/model.worker.js?");
 
 /***/ })
 
