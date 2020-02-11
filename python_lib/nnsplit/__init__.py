@@ -9,11 +9,15 @@ from .tokenizer import Tokenizer, Token
 
 
 def _get_token(text):
-    try:
-        last_char_index = next(i for i, x in enumerate(text[::-1]) if not x.isspace())
-    except StopIteration:  # only spaces in text
-        last_char_index = len(text)
-    last_char_index = len(text) - last_char_index
+    last_char_index = 0
+    index = len(text) - 1
+
+    while index >= 0:
+        if not text[index].isspace():
+            last_char_index = index + 1
+            break
+
+        index -= 1
 
     return Token(text[:last_char_index], text[last_char_index:])
 
@@ -102,9 +106,8 @@ class NNSplit(Tokenizer):
 
         batched_inputs = torch.tensor(all_inputs, dtype=torch.int64)
         preds = np.zeros((len(batched_inputs), self.cut_length, 2), dtype=np.float32)
-        from tqdm.auto import tqdm
 
-        for start in tqdm(range(0, len(batched_inputs), batch_size)):
+        for start in range(0, len(batched_inputs), batch_size):
             end = start + batch_size
             preds[start:end] = torch.sigmoid(
                 self.model(batched_inputs[start:end].to(self.device))
@@ -128,31 +131,37 @@ class NNSplit(Tokenizer):
 
             if current_i == n_cuts_per_text[current_text]:
                 # divide predictions by number of predictions so they are on the same scale
-                current_preds[:, :2] /= current_preds[:, [2]]
+                all_avg_preds[current_text] = (
+                    (current_preds[:, :2] / current_preds[:, [2]]) > self.threshold
+                ).astype(np.bool)
+                # for better handling with np.where, so that each index is only interated over once
+                all_avg_preds[current_text][:, 0] &= ~all_avg_preds[current_text][:, 1]
 
                 current_text += 1
                 current_i = 0
 
         tokenized_texts = []
 
-        for i, avg_preds in enumerate(all_avg_preds):
+        for text, avg_preds in zip(texts, all_avg_preds):
             sentences = []
             tokens = []
-            token = ""
 
-            for char, pred in zip(texts[i], avg_preds):
-                token += char
+            prev_index = 0
+            index = 0
 
-                if pred[0] > self.threshold or pred[1] > self.threshold:
-                    tokens.append(_get_token(token))
-                    token = ""
+            for index, kind in zip(*np.where(avg_preds)):
+                index = index + 1
 
-                if pred[1] > self.threshold:
+                tokens.append(_get_token(text[prev_index:index]))
+
+                if kind == 1:
                     sentences.append(tokens)
                     tokens = []
 
-            if len(token) > 0:
-                tokens.append(_get_token(token))
+                prev_index = index
+
+            if index != len(text):
+                tokens.append(_get_token(text[index:]))
 
             if len(tokens) > 0:
                 sentences.append(tokens)
