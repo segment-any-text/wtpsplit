@@ -194,7 +194,9 @@ impl NNSplit {
                 start: batch_start * self.cut_length, 
                 end: batch_end * self.cut_length
             };
-            let batch_inputs = Tensor::of_slice(&all_inputs[range]).view((-1, self.cut_length as i64));
+            let batch_inputs = Tensor::of_slice(&all_inputs[range])
+                .view((-1, self.cut_length as i64))
+                .to_device(self.device);
             let batch_preds = self.model.forward_ts(&[batch_inputs]).unwrap().sigmoid();
             let batch_preds: ArrayD<f32> = (&batch_preds).try_into().unwrap();
             
