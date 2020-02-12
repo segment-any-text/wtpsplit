@@ -1,4 +1,6 @@
+import math
 import numpy as np
+import torch
 from torch import nn
 
 
@@ -9,11 +11,34 @@ def _freeze_bias(lstm):
             param[:] = 0
 
 
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, max_len):
+        super(PositionalEncoding, self).__init__()
+
+        self.d_model = d_model
+        self.max_len = max_len
+        self.div_term = torch.exp(
+            torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)
+        )
+
+    def forward(self, x, positions):
+        pe = torch.zeros(
+            [positions.size(0), self.max_len, self.d_model], device=x.device
+        )
+
+        pe[:, :, 0::2] = torch.sin(positions.unsqueeze(-1) * self.div_term)
+        pe[:, :, 1::2] = torch.cos(positions.unsqueeze(-1) * self.div_term)
+
+        x = x + pe
+        return x
+
+
 class Network(nn.Module):
     def __init__(self):
         super().__init__()
-        self.embedding = nn.Embedding(127 + 2, 25)
-        self.lstm1 = nn.LSTM(25, 128, bidirectional=True, batch_first=True)
+        self.embedding = nn.Embedding(127 + 2, 32)
+        self.pe = PositionalEncoding(32, 100)
+        self.lstm1 = nn.LSTM(32, 128, bidirectional=True, batch_first=True)
         _freeze_bias(self.lstm1)
         self.lstm2 = nn.LSTM(256, 64, bidirectional=True, batch_first=True)
         _freeze_bias(self.lstm2)
@@ -59,7 +84,8 @@ class Network(nn.Module):
         return k_model
 
     def forward(self, x):
-        h = self.embedding(x.long())
+        h = self.embedding(x[:, :, 0].long())
+        h = self.pe(h, x[:, :, 1])
         h, _ = self.lstm1(h)
         h, _ = self.lstm2(h)
         h = self.out(h)

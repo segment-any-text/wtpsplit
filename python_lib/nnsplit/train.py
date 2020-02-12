@@ -1,3 +1,4 @@
+import string
 from pathlib import Path
 import random
 import re
@@ -34,10 +35,10 @@ def label_paragraph(tokenized_paragraph):
             # add more whitespace with a small chance so that multiple whitespace is split
             # correctly too
             while True:
-                if random.random() < 0.8:
+                if random.random() < 0.9:
                     break
 
-                whitespace += " "
+                whitespace += random.choice(string.whitespace)
 
             text_to_append = text + whitespace
 
@@ -83,12 +84,15 @@ def paragraph_to_text_and_labels(paragraph, n_cuts, cut_length):
         start = random.randint(0, len(p_text))
 
         for k in range(cut_length):
-            if start + k >= len(p_text):
-                inputs[j].append(0)
-                labels[j].append([0.0, 0.0])
-            else:
-                inputs[j].append(text_to_id(p_text[start + k]))
-                labels[j].append(p_labels[start + k])
+            cur_input = [0, start + k]
+            cur_label = [0.0, 0.0]
+
+            if start + k < len(p_text):
+                cur_input[0] = text_to_id(p_text[start + k])
+                cur_label = p_labels[start + k]
+
+            inputs[j].append(cur_input)
+            labels[j].append(cur_label)
 
     return inputs, labels
 
