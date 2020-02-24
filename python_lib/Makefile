@@ -11,6 +11,7 @@ test:
 	poetry run pytest -s tests
 
 build:
+	$(call copy_data)
 	# Workaround for https://github.com/python-poetry/poetry/issues/1338#issuecomment-571618450
 	mv .gitignore .gitignore-invalid
 	poetry build || mv .gitignore-invalid .gitignore

@@ -19,7 +19,7 @@ REMOVE_DOT_CHANCE = 0.5
 LOWERCASE_START_CHANCE = 0.5
 MIN_LENGTH = 300
 MAX_LENGTH = 5000
-N_CUTS = 4
+N_CUTS = 2
 
 
 def label_paragraph(tokenized_paragraph):
@@ -80,10 +80,10 @@ def paragraph_to_text_and_labels(paragraph, n_cuts, cut_length):
     labels = [[] for _ in range(n_cuts)]
 
     for j in range(n_cuts):
-        start = random.randint(0, len(p_text))
+        start = random.randint(0, len(p_text) + cut_length) - cut_length
 
         for k in range(cut_length):
-            if start + k >= len(p_text):
+            if start + k < 0 or start + k >= len(p_text):
                 inputs[j].append(0)
                 labels[j].append([0.0, 0.0])
             else:
@@ -147,6 +147,7 @@ def xml_to_paragraphs(
 def prepare_tokenized_paragraphs(
     tokenized_paragraph_path,
     data_directory=None,
+    subsample=None,
     remove_dot_chance=REMOVE_DOT_CHANCE,
     lowercase_start_chance=LOWERCASE_START_CHANCE,
     min_length=MIN_LENGTH,
@@ -162,11 +163,18 @@ def prepare_tokenized_paragraphs(
     all_labels = []
 
     bar = tqdm()
+    i = 0
+
     with open(tokenized_paragraph_path, "rb") as f:
         while True:
             try:
                 paragraph = pickle.load(f)
                 bar.update(1)
+
+                i += 1
+
+                if subsample is not None and i >= subsample:
+                    break
             except EOFError:
                 break
 

@@ -43,8 +43,8 @@ class NNSplit(Tokenizer):
     def __init__(
         self,
         model_or_model_name,
-        threshold=0.5,
-        stride=90,
+        threshold=0.1,
+        stride=CUT_LENGTH // 2,
         cut_length=CUT_LENGTH,
         device=DEVICE,
     ):
@@ -52,35 +52,22 @@ class NNSplit(Tokenizer):
         self.stride = stride
         self.cut_length = cut_length
         self.device = device
+        self.padding = 10
 
         if isinstance(model_or_model_name, (torch.nn.Module, torch.jit.TracedModule)):
             self.model = model_or_model_name
         else:
             self.model = load_provided_model(model_or_model_name, device)
 
-    def split(self, texts, batch_size=128):
-        """
-        Split texts into sentences and tokens.
-
-        Parameters:
-            texts (List[str]):
-                A list of texts to split.
-                Passing multiple texts at once allows for parallelization of the model.
-            batch_size (int, Optional):
-                Batch size with which cuts are processed by the model.
-
-        Returns:
-            A list with the same length as `texts`.
-            - Each element is a list of sentences.
-            - Each sentence is a list of tokens.
-            - Each token is a namedtuple with `text` and `whitespace`.
-        """
+    def _get_raw_preds(self, texts, batch_size):
         all_inputs = []
         all_idx = []
         n_cuts_per_text = []
 
         for text in texts:
-            inputs = [text_to_id(x) for x in text]
+            inputs = (
+                [0] * self.padding + [text_to_id(x) for x in text] + [0] * self.padding
+            )
 
             while len(inputs) < self.cut_length:
                 inputs.append(0)
@@ -116,7 +103,13 @@ class NNSplit(Tokenizer):
                 .cpu()
             ).numpy()
 
-        all_avg_preds = [np.zeros((len(text), 3), dtype=np.float32) for text in texts]
+        return preds, all_idx, n_cuts_per_text
+
+    def _average_preds(self, texts, preds, all_idx, n_cuts_per_text):
+        all_avg_preds = [
+            np.zeros((self.padding * 2 + len(text), 3), dtype=np.float32)
+            for text in texts
+        ]
 
         current_text = 0
         current_i = 0
@@ -132,17 +125,23 @@ class NNSplit(Tokenizer):
             if current_i == n_cuts_per_text[current_text]:
                 # divide predictions by number of predictions so they are on the same scale
                 all_avg_preds[current_text] = (
-                    (current_preds[:, :2] / current_preds[:, [2]]) > self.threshold
-                ).astype(np.bool)
-                # for better handling with np.where, so that each index is only interated over once
-                all_avg_preds[current_text][:, 0] &= ~all_avg_preds[current_text][:, 1]
+                    current_preds[self.padding : -self.padding, :2]
+                    / current_preds[self.padding : -self.padding, [2]]
+                )
 
                 current_text += 1
                 current_i = 0
 
+        return all_avg_preds
+
+    def _split_text_from_preds(self, texts, all_avg_preds):
         tokenized_texts = []
 
         for text, avg_preds in zip(texts, all_avg_preds):
+            avg_preds = avg_preds > self.threshold
+            # for better handling with np.where, so that each index is only interated over once
+            avg_preds[:, 0] &= ~avg_preds[:, 1]
+
             sentences = []
             tokens = []
 
@@ -169,3 +168,25 @@ class NNSplit(Tokenizer):
             tokenized_texts.append(sentences)
 
         return tokenized_texts
+
+    def split(self, texts, batch_size=128):
+        """
+        Split texts into sentences and tokens.
+
+        Parameters:
+            texts (List[str]):
+                A list of texts to split.
+                Passing multiple texts at once allows for parallelization of the model.
+            batch_size (int, Optional):
+                Batch size with which cuts are processed by the model.
+
+        Returns:
+            A list with the same length as `texts`.
+            - Each element is a list of sentences.
+            - Each sentence is a list of tokens.
+            - Each token is a namedtuple with `text` and `whitespace`.
+        """
+        preds, all_idx, n_cuts_per_text = self._get_raw_preds(texts, batch_size)
+        all_avg_preds = self._average_preds(texts, preds, all_idx, n_cuts_per_text)
+
+        return self._split_text_from_preds(texts, all_avg_preds)

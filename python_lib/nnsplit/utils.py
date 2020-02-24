@@ -22,6 +22,25 @@ def print_sentence_and_label(sentence, label):
         print(id_to_text(char_id), int(label[0]), int(label[1]))
 
 
+def label_tokens(tokenized_p):
+    text = ""
+    token_labels, sentence_labels = [], []
+
+    for sentence in tokenized_p:
+        for token in sentence:
+            raw_token = token.text + token.whitespace
+
+            text += raw_token
+            token_labels += [0] * len(raw_token)
+            sentence_labels += [0] * len(raw_token)
+
+            token_labels[-1] = 1.0
+
+        sentence_labels[-1] = 1.0
+
+    return text, np.stack([token_labels, sentence_labels], -1)
+
+
 def store_model(model, store_directory):
     store_directory = Path(store_directory)
     store_directory.mkdir(exist_ok=True, parents=True)
