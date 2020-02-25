@@ -15,7 +15,7 @@ Fast, robust sentence splitting with bindings for Python, Rust and Javascript an
 - __Robust__: Does not depend on proper punctuation and casing to split text into sentences.
 - __Small__: NNSplit uses a character-level LSTM, so weights are very small (~ __350 kB__) which makes it easy to run in the browser.
 - __Portable__: Models are trained in Python, but inference can be done from Javascript, Rust and Python.
-- __Fast__: Can run on your GPU to __split 100k paragraphs__ from wikipedia __in less than 50 seconds__. <sub>With RTX 2080 TI and i5 8700k. Paragraphs have an average length of ~ 800 characters. See `benchmark.ipynb` for the code.</sub>
+- __Fast__: Can run on your GPU to __split 100k paragraphs__ from wikipedia __50 seconds__. <sub>With RTX 2080 TI and i5 8700k. Paragraphs have an average length of ~ 800 characters. See `benchmark.ipynb` for the code.</sub>
 
 ## Python Usage
 
@@ -177,9 +177,9 @@ NNSplit uses wikipedia dumps in the [Linguatools format](https://linguatools.org
 1. ) Paragraphs are extracted from the dump.
 2. ) Split the paragraphs into tokens and sentences using a very accurate existing rule based sentencizer and tokenizer: [SoMaJo](https://github.com/tsproisl/SoMaJo).
 3. ) With some probability, words at the start of a sentence are converted from uppercase to lowercase, and dots at the end of a sentence are removed. __This is the step that allows NNSplit to be more tolerant to errors than SoMaJo. For a rule-based system, it is nearly impossible to split sentences that don't have proper separation in the form of punctuation and casing. NNSplit solves this problem__.
-4. ) Multiple "cuts" with a fixed length (default 100 characters) are extracted from a paragraph. This makes NNSplit invariant to input length. 
+4. ) Multiple "cuts" with a fixed length (default 500 characters) are extracted from a paragraph. This makes NNSplit invariant to input length. 
 5. ) A simple sequence labeling RNN is trained to predict the two labels for each character. Because the NN works on character-level, embedding sizes are very small.
-6. ) At inference time, the input text is split into multiple cuts with the same length of 100 characters so that the entire text is covered. NNSplit predicts each cut separately. The predictions are then averaged together for the final result.
+6. ) At inference time, the input text is split into multiple cuts with the same length of 500 characters so that the entire text is covered. NNSplit predicts each cut separately. The predictions are then averaged together for the final result.
 
 ### Training
 
