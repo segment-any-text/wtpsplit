@@ -52,7 +52,7 @@ class NNSplit(Tokenizer):
         self.stride = stride
         self.cut_length = cut_length
         self.device = device
-        self.padding = 10
+        self.padding = 5
 
         if isinstance(model_or_model_name, (torch.nn.Module, torch.jit.TracedModule)):
             self.model = model_or_model_name

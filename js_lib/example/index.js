@@ -18,7 +18,7 @@ inputElement.addEventListener("input", (e) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => {
         startInference();
-    }, 500);
+    }, 150);
 });
 
 languageButtons.forEach((button) => {
