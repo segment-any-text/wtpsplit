@@ -181,7 +181,13 @@ NNSplit uses wikipedia dumps in the [Linguatools format](https://linguatools.org
 5. ) A simple sequence labeling RNN is trained to predict the two labels for each character. Because the NN works on character-level, embedding sizes are very small.
 6. ) At inference time, the input text is split into multiple cuts with the same length of 100 characters so that the entire text is covered. NNSplit predicts each cut separately. The predictions are then averaged together for the final result.
 
+### Training
+
 ![How NNSplit works](https://user-images.githubusercontent.com/13353204/73847685-0f8c5180-4827-11ea-8cfb-9d859715c767.png)
+
+### Inference
+
+![How NNSplit inference works](https://user-images.githubusercontent.com/13353204/75252193-6fe63180-57dc-11ea-85f4-7fe3b2b7ce7b.png)
 
 ## Evaluation
 
