@@ -101,11 +101,11 @@ def test_split_german_correctly():
 def test_split_long_text_correctly():
     samples = [
         [
-            "Fast, robust sentence splitting with bindings for Python, Rust and Javascript "
+            "Fast, robust sentence splitting with Javascript, Rust and Python bindings "
             "Punctuation is not necessary to split sentences correctly "
             "sometimes even incorrect case is split correctly.",
             [
-                "Fast , robust sentence splitting with bindings for Python , Rust and Javascript",
+                "Fast , robust sentence splitting with Javascript , Rust and Python bindings",
                 "Punctuation is not necessary to split sentences correctly",
                 "sometimes even incorrect case is split correctly .",
             ],

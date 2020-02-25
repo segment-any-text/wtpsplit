@@ -129,7 +129,7 @@ describe("NNSplit", function () {
         const modelPath = __dirname + "/../example/nnsplit/data/en/tfjs_model/model.json";
         const splitter = new NNSplit("file://" + modelPath);
 
-        const result = await splitter.split(["Fast, robust sentence splitting with bindings for Python, Rust and Javascript Punctuation is not necessary to split sentences correctly sometimes even incorrect case is split correctly."]);
+        const result = await splitter.split(["Fast, robust sentence splitting with Javascript, Rust and Python bindings Punctuation is not necessary to split sentences correctly sometimes even incorrect case is split correctly."]);
         chai.expect(result).to.deep.equal(
             [ // texts
                 [ // sentences
@@ -159,15 +159,7 @@ describe("NNSplit", function () {
                             whitespace: " ",
                         },
                         {
-                            text: "bindings",
-                            whitespace: " ",
-                        },
-                        {
-                            text: "for",
-                            whitespace: " ",
-                        },
-                        {
-                            text: "Python",
+                            text: "Javascript",
                             whitespace: "",
                         },
                         {
@@ -183,9 +175,13 @@ describe("NNSplit", function () {
                             whitespace: " ",
                         },
                         {
-                            text: "Javascript",
+                            text: "Python",
                             whitespace: " ",
-                        }
+                        },
+                        {
+                            text: "bindings",
+                            whitespace: " ",
+                        },
                     ],
                     [
                         {

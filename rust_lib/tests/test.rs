@@ -66,7 +66,7 @@ fn it_splits_german_correctly() -> failure::Fallible<()> {
 fn it_splits_long_text_correctly() -> failure::Fallible<()> {
     let splitter = NNSplit::new("en")?;
 
-    let result = splitter.split(vec!["Fast, robust sentence splitting with bindings for Python, Rust and Javascript Punctuation is not necessary to split sentences correctly sometimes even incorrect case is split correctly."]);
+    let result = splitter.split(vec!["Fast, robust sentence splitting with Javascript, Rust and Python bindings Punctuation is not necessary to split sentences correctly sometimes even incorrect case is split correctly."]);
 
     assert_eq!(vec![vec![
                 vec![
@@ -76,13 +76,12 @@ fn it_splits_long_text_correctly() -> failure::Fallible<()> {
                     token!("sentence", " "),
                     token!("splitting", " "),
                     token!("with", " "),
-                    token!("bindings", " "),
-                    token!("for", " "),
-                    token!("Python", ""),
+                    token!("Javascript", ""),
                     token!(",", " "),
                     token!("Rust", " "),
                     token!("and", " "),
-                    token!("Javascript", " "),
+                    token!("Python", " "),
+                    token!("bindings", " "),
                 ],
                 vec![
                     token!("Punctuation", " "), 
