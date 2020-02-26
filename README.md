@@ -199,14 +199,14 @@ __Tokenization__
 
 | Model Name  | F1@0.5 | Precision@0.5 | Recall@0.5 |
 | ----------- | ------ | ------------- | ---------- |
-| __en__      | 0.998  | 0.998         | 0.997      |
-| __de__      | 0.998  | 0.998         | 0.997      |
+| __en__      | 0.999  | 0.999         | 0.999      |
+| __de__      | 0.999  | 0.999         | 0.999      |
 
 __Sentence Splitting__
 
 | Model Name  | F1@0.5 | Precision@0.5 | Recall@0.5 |
 | ----------- | ------ | ------------- | ---------- |
-| __en__      | 0.941  | 0.912         | 0.973      |
-| __de__      | 0.958  | 0.937         | 0.980      |
+| __en__      | 0.963  | 0.948         | 0.979      |
+| __de__      | 0.978  | 0.969         | 0.988      |
 
 These metrics are __not__ comparable to human-level sentence splitting. [SoMaJo](https://github.com/tsproisl/SoMaJo), the tool used to annotate paragraphs, is a good tool though so I do consider the results to be solid.
