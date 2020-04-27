@@ -17,7 +17,7 @@ def _freeze_bias(lstm):
 
 
 class Network(pl.LightningModule):
-    def __init__(self):
+    def __init__(self, hparams={}):
         super().__init__()
         # init datasets
         text_data = MemoryMapDataset("texts.txt", "slices.pkl")
@@ -26,8 +26,8 @@ class Network(pl.LightningModule):
         train_indices, valid_indeces = train_test_split(
             np.arange(len(dataset)), test_size=0.1
         )
-        self.train_dataset = data.Subset(dataset, train_indices[:100_000])
-        self.valid_dataset = data.Subset(dataset, valid_indeces[:100_000])
+        self.train_dataset = data.Subset(dataset, train_indices)
+        self.valid_dataset = data.Subset(dataset, valid_indeces)
 
         # init network
         self.embedding = nn.Embedding(127 + 2, 32)

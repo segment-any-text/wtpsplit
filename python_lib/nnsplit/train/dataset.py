@@ -7,11 +7,11 @@ import random
 
 def text_to_id(char):
     x = ord(char)
-    return x + 2 if x <= 127 else 1
+    return x + 2 if x < 127 else 1
 
 
 def id_to_text(x):
-    return chr(x - 2) if (x - 2) <= 127 and x > 1 else "X"
+    return chr(x - 2) if (x - 2) < 127 and x > 1 else "X"
 
 
 class SplitDataset(data.Dataset):
@@ -60,8 +60,8 @@ class SplitDataset(data.Dataset):
     def collate_fn(batch):
         inputs, labels = zip(*batch)
 
-        inputs = pad_sequence(inputs)
-        labels = pad_sequence(labels)
+        inputs = pad_sequence(inputs, batch_first=True)
+        labels = pad_sequence(labels, batch_first=True)
 
         return inputs, labels
 
