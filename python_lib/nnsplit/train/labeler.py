@@ -5,9 +5,8 @@ import spacy
 import string
 import random
 import requests
-from functools import lru_cache
-import numpy as np
 import pandas as pd
+import diskcache
 
 
 def has_space(text: str) -> bool:
@@ -15,6 +14,15 @@ def has_space(text: str) -> bool:
 
 
 class Tokenizer(ABC):
+    def __init__(self):
+        self.training = True
+
+    def train(self, mode=True):
+        self.training = mode
+
+    def eval(self):
+        self.train(False)
+
     @abstractmethod
     def tokenize(self, text: str) -> List[str]:
         pass
@@ -37,6 +45,7 @@ class SpacySentenceTokenizer(Tokenizer):
         lower_start_prob: Fraction,
         remove_end_punct_prob: Fraction,
     ):
+        super().__init__()
         self.nlp = spacy.load(model_name, disable=["tagger", "parser", "ner"])
         self.nlp.add_pipe(self.nlp.create_pipe("sentencizer"))
 
@@ -56,7 +65,7 @@ class SpacySentenceTokenizer(Tokenizer):
                 end_sentence = True
 
             if end_sentence and not text.isspace():
-                if random.random() < self.remove_end_punct_prob:
+                if self.training and random.random() < self.remove_end_punct_prob:
                     current_sentence = self.remove_last_punct(current_sentence)
 
                 out_sentences.append(current_sentence)
@@ -64,7 +73,11 @@ class SpacySentenceTokenizer(Tokenizer):
                 current_sentence = ""
                 end_sentence = False
 
-            if len(current_sentence) == 0 and random.random() < self.lower_start_prob:
+            if (
+                self.training
+                and len(current_sentence) == 0
+                and random.random() < self.lower_start_prob
+            ):
                 text = text.lower()
 
             current_sentence += text + whitespace
@@ -76,6 +89,7 @@ class SpacySentenceTokenizer(Tokenizer):
 
 class SpacyWordTokenizer(Tokenizer):
     def __init__(self, model_name: str):
+        super().__init__()
         self.nlp = spacy.load(model_name, disable=["tagger", "parser", "ner"])
 
     def tokenize(self, text: str) -> List[str]:
@@ -106,23 +120,45 @@ class WhitespaceTokenizer(Tokenizer):
         if out is None:
             out = [text, ""]
 
-        assert not has_space(out[0])
         return out
 
 
 class SECOSCompoundTokenizer(Tokenizer):
     def __init__(self, server_url: str):
+        super().__init__()
         self.server_url = server_url
 
-    @lru_cache(maxsize=2 ** 16)
+        self.disk_cache = diskcache.Index("secos_cache")
+        self.cache = {}
+
+        for key in self.disk_cache:
+            self.cache[key] = self.disk_cache[key]
+
     def tokenize(self, text: str) -> List[str]:
         if text.isspace():
             return [text]
 
-        assert not has_space(text)
+        text_bytes = text.encode("utf-8")
 
-        response = requests.get(self.server_url, params={"sentence": text})
-        return response.text.split()
+        compounds = self.cache.get(text_bytes)
+
+        if compounds is None:
+            assert not has_space(text), text
+
+            response = requests.get(self.server_url, params={"sentence": text})
+            compounds = response.text
+
+            if len(compounds) == 0:
+                compounds = text
+
+            compound_bytes = compounds.encode("utf-8")
+
+            self.disk_cache[text_bytes] = compound_bytes
+            self.cache[text_bytes] = compound_bytes
+        else:
+            compounds = compounds.decode("utf-8")
+
+        return compounds.split()
 
 
 class Labeler:
@@ -152,7 +188,7 @@ class Labeler:
             for idx in annotation:
                 label[-1][idx] = 1
 
-        return text, np.array(label)
+        return text, label
 
     def label(self, text):
         return self._to_dense_label(self._annotate(text))
@@ -175,15 +211,19 @@ class Labeler:
             print(df)
 
 
-labeler = Labeler(
-    [
-        SpacySentenceTokenizer(
-            "de_core_news_sm", lower_start_prob=0.5, remove_end_punct_prob=0.5
-        ),
-        SpacyWordTokenizer("de_core_news_sm"),
-        WhitespaceTokenizer(),
-        SECOSCompoundTokenizer("http://localhost:2020"),
-    ]
-)
+def get_default_labeler():
+    return Labeler(
+        [
+            SpacySentenceTokenizer(
+                "de_core_news_sm", lower_start_prob=0.5, remove_end_punct_prob=0.5
+            ),
+            # SpacyWordTokenizer("de_core_news_sm"),
+            # WhitespaceTokenizer(),
+            # SECOSCompoundTokenizer("http://localhost:2020"),
+        ]
+    )
 
-labeler.visualize("Das ist ein Dampfschiff.   Das ist noch ein Test.")
+
+if __name__ == "__main__":
+    labeler = get_default_labeler()
+    labeler.visualize("Die erste Million Jahre vergeht schnell, die zweite Million...")
