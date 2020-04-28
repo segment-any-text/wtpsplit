@@ -21,129 +21,59 @@ fn text_to_id(character: &str) -> u8 {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Token {
-    pub text: String,
-    pub whitespace: String,
+enum Split<'a> {
+    Text(&'a str),
+    Split(Vec<Box<Split<'a>>>),
 }
 
-impl Token {
-    fn new(text: String) -> Token {
-        let last_char_index = match text.chars().rev().position(|x| !x.is_whitespace()) {
-            Some(x) => x,
-            None => 0,
-        };
-        let last_char_index = text.len() - last_char_index;
-
-        Token {
-            text: text[..last_char_index].to_string(),
-            whitespace: text[last_char_index..].to_string(),
-        }
-    }
-}
-
-pub struct NNSplit {
-    model: tch::CModule,
+pub struct NNSplitOptions {
     threshold: f32,
     stride: usize,
     cut_length: usize,
     batch_size: usize,
     padding: usize,
-    device: Device,
 }
 
-static DE_DATA_CPU: &'static [u8] = include_bytes!("../data/de/ts_cpu.pt");
-static DE_DATA_CUDA: &'static [u8] = include_bytes!("../data/de/ts_cuda.pt");
+impl Default for NNSplitOptions {
+    fn default() -> Self {
+        let cut_length = 500;
 
-static EN_DATA_CPU: &'static [u8] = include_bytes!("../data/en/ts_cpu.pt");
-static EN_DATA_CUDA: &'static [u8] = include_bytes!("../data/en/ts_cuda.pt");
+        NNSplitOptions {
+            threshold: 0.1,
+            stride: cut_length / 2,
+            cut_length,
+            batch_size: 32,
+            padding: 5,
+        }
+    }
+}
 
-impl NNSplit {
-    const THRESHOLD: f32 = 0.1;
-    const CUT_LENGTH: usize = 500;
-    const STRIDE: usize = NNSplit::CUT_LENGTH / 2;
-    const BATCH_SIZE: usize = 32;
-    const PADDING: usize = 5;
+trait Backend {
+    fn predict(&self, input: Array2<f32>) -> Array2<f32>;
+}
 
-    /// Returns an An NNSplit sentencizer and tokenizer.
+pub struct NNSplit<'a> {
+    backend: &'a dyn Backend,
+    options: NNSplitOptions,
+}
+
+static DE_DATA_CPU: &'static [u8] = include_bytes!("../../data/de/ts_cpu.pt");
+static DE_DATA_CUDA: &'static [u8] = include_bytes!("../../data/de/ts_cuda.pt");
+
+static EN_DATA_CPU: &'static [u8] = include_bytes!("../../data/en/ts_cpu.pt");
+static EN_DATA_CUDA: &'static [u8] = include_bytes!("../../data/en/ts_cuda.pt");
+
+impl<'a> NNSplit<'a> {
+    /// Returns an NNSplit sentencizer and tokenizer.
     ///
     /// # Arguments
     ///
     /// * `model_name` - Name of the prepackaged model to use. Either `en` or `de`.
-    pub fn new(model_name: &str) -> failure::Fallible<NNSplit> {
-        let device = Device::cuda_if_available();
-        let source = if model_name == "de" {
-            if device == Device::Cpu {
-                DE_DATA_CPU
-            } else {
-                DE_DATA_CUDA
-            }
-        } else if model_name == "en" {
-            if device == Device::Cpu {
-                EN_DATA_CPU
-            } else {
-                EN_DATA_CUDA
-            }
-        } else {
-            panic!(format!("unknown model name: {}.", model_name));
-        };
-
-        let mut cursor = Cursor::new(source);
-        let model = tch::CModule::load_data(&mut cursor)?;
-
+    pub fn new(backend: &dyn Backend) -> failure::Fallible<NNSplit> {
         Ok(NNSplit {
-            model,
-            threshold: NNSplit::THRESHOLD,
-            stride: NNSplit::STRIDE,
-            cut_length: NNSplit::CUT_LENGTH,
-            batch_size: NNSplit::BATCH_SIZE,
-            padding: NNSplit::PADDING,
-            device,
+            backend,
+            options: NNSplitOptions::default(),
         })
-    }
-
-    /// Returns an An NNSplit sentencizer and tokenizer.
-    ///
-    /// # Arguments
-    ///
-    /// * `model` - tch::CModule that will be used as the model.
-    pub fn from_model(model: tch::CModule) -> failure::Fallible<NNSplit> {
-        let device = Device::cuda_if_available();
-
-        Ok(NNSplit {
-            model,
-            threshold: NNSplit::THRESHOLD,
-            stride: NNSplit::STRIDE,
-            cut_length: NNSplit::CUT_LENGTH,
-            batch_size: NNSplit::BATCH_SIZE,
-            padding: NNSplit::PADDING,
-            device,
-        })
-    }
-
-    pub fn with_threshold(&mut self, threshold: f32) -> &mut Self {
-        self.threshold = threshold;
-        self
-    }
-
-    pub fn with_stride(&mut self, stride: usize) -> &mut Self {
-        self.stride = stride;
-        self
-    }
-
-    pub fn with_cut_length(&mut self, cut_length: usize) -> &mut Self {
-        self.cut_length = cut_length;
-        self
-    }
-
-    pub fn with_batch_size(&mut self, batch_size: usize) -> &mut Self {
-        self.batch_size = batch_size;
-        self
-    }
-
-    pub fn with_device(&mut self, device: Device) -> &mut Self {
-        self.device = device;
-        self
     }
 
     fn get_raw_preds(
@@ -173,6 +103,7 @@ impl NNSplit {
                 let range = Range { start, end };
                 all_inputs.extend(inputs[range.clone()].iter());
                 all_idx.push(range);
+
                 start += self.stride;
                 i += 1;
             }

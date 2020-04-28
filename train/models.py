@@ -148,5 +148,6 @@ class Network(pl.LightningModule):
             self.valid_dataset,
             batch_size=256,
             shuffle=False,
+            num_workers=6,
             collate_fn=SplitDataset.collate_fn,
         )

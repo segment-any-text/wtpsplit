@@ -15,8 +15,6 @@ readme = "README.md"
 
 include = ["src/*.rs", "tests/*.rs", "build.rs", "data"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 failure = "0.1.6"
 tch = "0.1.6"
