@@ -6,10 +6,105 @@ use std::vec::Vec;
 use ndarray::prelude::*;
 use ndarray::Array2;
 
+fn split_whitespace(input: &str) -> Vec<&str> {
+    let offset = input.trim_end().len();
+    vec![&input[..offset], &input[offset..]]
+}
+
 #[derive(Debug)]
 pub enum Split<'a> {
     Text(&'a str),
-    Split(Vec<Box<Split<'a>>>),
+    Split(Vec<Split<'a>>),
+}
+
+enum SplitInstruction {
+    PredictionIndex(usize),
+    Function(fn(&str) -> Vec<&str>),
+}
+
+struct SplitSequence {
+    instructions: Vec<SplitInstruction>,
+}
+
+impl SplitSequence {
+    pub fn new(instructions: Vec<SplitInstruction>) -> Self {
+        SplitSequence { instructions }
+    }
+
+    fn inner_apply<'a>(
+        &self,
+        text: &'a str,
+        predictions: ArrayView2<f32>,
+        threshold: f32,
+        instruction_idx: usize,
+    ) -> Split<'a> {
+        if let Some(instruction) = self.instructions.get(instruction_idx) {
+            match instruction {
+                SplitInstruction::PredictionIndex(idx) => {
+                    let mut indices: Vec<_> = predictions
+                        .slice(s![.., *idx])
+                        .indexed_iter()
+                        .filter_map(|(index, &item)| {
+                            if item > threshold {
+                                Some(index + 1)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect();
+
+                    if indices.len() == 0 || indices[indices.len() - 1] != text.len() {
+                        indices.push(text.len());
+                    }
+
+                    let mut parts = Vec::new();
+                    let mut prev = 0;
+
+                    for idx in indices {
+                        let part = &text[prev..idx];
+
+                        parts.push(self.inner_apply(
+                            part,
+                            predictions.slice(s![prev..idx, ..]),
+                            threshold,
+                            instruction_idx + 1,
+                        ));
+
+                        prev = idx;
+                    }
+
+                    Split::Split(parts)
+                }
+                SplitInstruction::Function(func) => Split::Split(
+                    func(text)
+                        .iter()
+                        .map(|part| {
+                            let start = part.as_ptr() as usize - text.as_ptr() as usize;
+                            let end = start + part.len();
+
+                            self.inner_apply(
+                                part,
+                                predictions.slice(s![start..end, ..]),
+                                threshold,
+                                instruction_idx + 1,
+                            )
+                        })
+                        .collect(),
+                ),
+            }
+        } else {
+            Split::Text(text)
+        }
+    }
+
+    pub fn apply<'a>(
+        &self,
+        text: &'a str,
+        predictions: ArrayView2<f32>,
+        threshold: f32,
+    ) -> Split<'a> {
+        self.inner_apply(text, predictions, threshold, 0)
+    }
 }
 
 pub struct NNSplitOptions {
@@ -21,7 +116,7 @@ pub struct NNSplitOptions {
 
 impl Default for NNSplitOptions {
     fn default() -> Self {
-        let max_length = 20;
+        let max_length = 500;
 
         NNSplitOptions {
             threshold: 0.1,
@@ -85,6 +180,7 @@ impl Backend for TchRsBackend {
 pub struct NNSplit<'a> {
     backend: &'a dyn Backend,
     options: NNSplitOptions,
+    split_sequence: SplitSequence,
 }
 
 impl<'a> NNSplit<'a> {
@@ -97,6 +193,7 @@ impl<'a> NNSplit<'a> {
         Ok(NNSplit {
             backend,
             options: NNSplitOptions::default(),
+            split_sequence: SplitSequence::new(vec![SplitInstruction::PredictionIndex(0)]),
         })
     }
 
@@ -174,11 +271,9 @@ impl<'a> NNSplit<'a> {
 
         preds_and_counts
             .into_iter()
-            .map(|(pred, count): (Array2<f32>, Array2<f32>)| pred / count)
+            .map(|(pred, count): (Array2<f32>, Array2<f32>)| (pred / count))
             .collect()
     }
-
-    fn split_from_preds(&self, texts: &Vec<&'a str>, predictions: Vec<ArrayView2<f32>>) {}
 
     /// Split texts into sentences and tokens.
     ///
@@ -190,7 +285,7 @@ impl<'a> NNSplit<'a> {
     /// Each element is a vector of sentences.
     /// Each sentence is a vector of `Token`s.
     /// Each token is a struct with fields `text` and `whitespace`.
-    pub fn split(&self, texts: Vec<&'a str>) -> Split<'a> {
+    pub fn split(&self, texts: Vec<&'a str>) -> Vec<Split<'a>> {
         let (inputs, indices) = self.get_inputs_and_indeces(&texts);
         let slice_preds = self.backend.predict(inputs);
 
@@ -214,8 +309,13 @@ impl<'a> NNSplit<'a> {
             })
             .collect::<Vec<_>>();
 
-        self.split_from_preds(&texts, preds);
-
-        Split::Text(texts[0])
+        texts
+            .iter()
+            .zip(preds)
+            .map(|(text, pred)| {
+                self.split_sequence
+                    .apply(text, pred, self.options.threshold)
+            })
+            .collect()
     }
 }
