@@ -1,24 +1,10 @@
 use std::cmp;
-use std::convert::AsRef;
-use std::convert::{TryFrom, TryInto};
-use std::io::Cursor;
+use std::convert::TryInto;
 use std::ops::Range;
 use std::vec::Vec;
 
 use ndarray::prelude::*;
 use ndarray::Array2;
-
-fn text_to_id(character: &str) -> u8 {
-    if character.chars().count() != 1 {
-        return 1;
-    }
-    let ord = character.chars().next().unwrap() as u32;
-    if ord <= 127 {
-        u8::try_from(ord + 2).unwrap()
-    } else {
-        1
-    }
-}
 
 #[derive(Debug)]
 pub enum Split<'a> {
@@ -35,7 +21,7 @@ pub struct NNSplitOptions {
 
 impl Default for NNSplitOptions {
     fn default() -> Self {
-        let max_length = 500;
+        let max_length = 20;
 
         NNSplitOptions {
             threshold: 0.1,
@@ -164,8 +150,35 @@ impl<'a> NNSplit<'a> {
         (input_array, all_indices)
     }
 
-    // fn combine_predictions(predictions: Array3<f32>, input_indices: Vec<(usize, Range<usize>)) {
-    // }
+    fn combine_predictions(
+        &self,
+        slice_predictions: ArrayView3<f32>,
+        indices: Vec<(usize, Range<usize>)>,
+        lengths: Vec<usize>,
+    ) -> Vec<Array2<f32>> {
+        let pred_dim = slice_predictions.shape()[2];
+        let mut preds_and_counts = lengths
+            .iter()
+            .map(|x| (Array2::zeros((*x, pred_dim)), Array2::zeros((*x, 1))))
+            .collect::<Vec<_>>();
+
+        for (slice_pred, (index, range)) in slice_predictions.outer_iter().zip(indices) {
+            let (pred, count) = preds_and_counts.get_mut(index).unwrap();
+
+            let mut pred_slice = pred.slice_mut(s![range.start..range.end, ..]);
+            pred_slice += &slice_pred;
+
+            let mut count_slice = count.slice_mut(s![range.start..range.end, ..]);
+            count_slice += 1f32;
+        }
+
+        preds_and_counts
+            .into_iter()
+            .map(|(pred, count): (Array2<f32>, Array2<f32>)| pred / count)
+            .collect()
+    }
+
+    fn split_from_preds(&self, texts: &Vec<&'a str>, predictions: Vec<ArrayView2<f32>>) {}
 
     /// Split texts into sentences and tokens.
     ///
@@ -178,10 +191,30 @@ impl<'a> NNSplit<'a> {
     /// Each sentence is a vector of `Token`s.
     /// Each token is a struct with fields `text` and `whitespace`.
     pub fn split(&self, texts: Vec<&'a str>) -> Split<'a> {
-        let (all_inputs, all_indeces) = self.get_inputs_and_indeces(&texts);
-        let preds = self.backend.predict(all_inputs);
+        let (inputs, indices) = self.get_inputs_and_indeces(&texts);
+        let slice_preds = self.backend.predict(inputs);
 
-        println!("{:#?} {:#?}", preds, all_indeces);
+        // TODO: pad once at beginning
+        let padded_preds = self.combine_predictions(
+            (&slice_preds).into(),
+            indices,
+            texts
+                .iter()
+                .map(|x| x.len() + self.options.padding * 2)
+                .collect(),
+        );
+
+        let preds = padded_preds
+            .iter()
+            .map(|x| {
+                x.slice(s![
+                    self.options.padding..x.shape()[0] - self.options.padding,
+                    ..
+                ])
+            })
+            .collect::<Vec<_>>();
+
+        self.split_from_preds(&texts, preds);
 
         Split::Text(texts[0])
     }
