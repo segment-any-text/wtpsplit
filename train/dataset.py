@@ -5,15 +5,6 @@ from labeler import get_default_labeler
 import random
 
 
-def text_to_id(char):
-    x = ord(char)
-    return x + 2 if x < 127 else 1
-
-
-def id_to_text(x):
-    return chr(x - 2) if (x - 2) < 127 and x > 1 else "X"
-
-
 class SplitDataset(data.Dataset):
     def __init__(self, text_dataset, min_len, max_len, max_pad):
         self.text_dataset = text_dataset
@@ -41,20 +32,19 @@ class SplitDataset(data.Dataset):
         )
         end = start + length
 
-        text, label = self.labeler.label(
+        ids, label = self.labeler.label(
             original_text[max(start, 0) : min(end, len(original_text))]
         )
-        inp = [text_to_id(char) for char in text]
 
         for _ in range(start, 0):
-            inp.insert(0, 0)
+            ids.insert(0, 0)
             label.insert(0, [0] * len(self.labeler.tokenizers))
 
         for _ in range(len(original_text), end):
-            inp.append(0)
+            ids.append(0)
             label.append([0] * len(self.labeler.tokenizers))
 
-        return torch.tensor(inp), torch.tensor(label)
+        return torch.tensor(ids), torch.tensor(label)
 
     @staticmethod
     def collate_fn(batch):

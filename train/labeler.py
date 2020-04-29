@@ -178,17 +178,20 @@ class Labeler:
         return out
 
     def _to_dense_label(self, annotations):
-        text = ""
+        input_bytes = []
         label = []
 
+        all_zeros = [0] * len(self.tokenizers)
+
         for (token, annotation) in annotations:
-            text += token
-            label += [[0] * len(self.tokenizers) for _ in range(len(token))]
+            token_bytes = token.encode("utf-8")
+            input_bytes += token_bytes
+            label += [all_zeros.copy() for _ in range(len(token_bytes))]
 
             for idx in annotation:
                 label[-1][idx] = 1
 
-        return text, label
+        return input_bytes, label
 
     def label(self, text):
         return self._to_dense_label(self._annotate(text))
