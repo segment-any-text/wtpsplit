@@ -184,11 +184,6 @@ pub struct NNSplit<'a> {
 }
 
 impl<'a> NNSplit<'a> {
-    /// Returns an NNSplit sentencizer and tokenizer.
-    ///
-    /// # Arguments
-    ///
-    /// * `model_name` - Name of the prepackaged model to use. Either `en` or `de`.
     pub fn new(backend: &dyn Backend) -> failure::Fallible<NNSplit> {
         Ok(NNSplit {
             backend,
@@ -217,7 +212,6 @@ impl<'a> NNSplit<'a> {
             let length = text.len() + self.options.padding * 2;
             let mut inputs = vec![0; length];
 
-            // TODO: maybe copy_from_slice
             for (j, byte) in text.bytes().enumerate() {
                 inputs[j + self.options.padding] = byte;
             }
@@ -275,21 +269,10 @@ impl<'a> NNSplit<'a> {
             .collect()
     }
 
-    /// Split texts into sentences and tokens.
-    ///
-    /// # Arguments
-    ///
-    /// * `texts` - Vector of `&str`s with texts to split.
-    ///
-    /// Returns a vector with the same length as `texts`.
-    /// Each element is a vector of sentences.
-    /// Each sentence is a vector of `Token`s.
-    /// Each token is a struct with fields `text` and `whitespace`.
     pub fn split(&self, texts: Vec<&'a str>) -> Vec<Split<'a>> {
         let (inputs, indices) = self.get_inputs_and_indeces(&texts);
         let slice_preds = self.backend.predict(inputs);
 
-        // TODO: pad once at beginning
         let padded_preds = self.combine_predictions(
             (&slice_preds).into(),
             indices,
