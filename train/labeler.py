@@ -90,13 +90,15 @@ class SpacySentenceTokenizer(Tokenizer):
 class SpacyWordTokenizer(Tokenizer):
     def __init__(self, model_name: str):
         super().__init__()
-        self.nlp = spacy.load(model_name, disable=["tagger", "parser", "ner"])
+        self.tokenizer = spacy.load(
+            model_name, disable=["tagger", "parser", "ner"]
+        ).tokenizer
 
     def tokenize(self, text: str) -> List[str]:
         out_tokens = []
         current_token = ""
 
-        for token in self.nlp(text):
+        for token in self.tokenizer(text):
             if not token.text.isspace():
                 out_tokens.append(current_token)
                 current_token = ""
@@ -218,9 +220,9 @@ def get_default_labeler():
     return Labeler(
         [
             SpacySentenceTokenizer(
-                "de_core_news_sm", lower_start_prob=0.5, remove_end_punct_prob=0.5
+                "de_core_news_sm", lower_start_prob=0.7, remove_end_punct_prob=0.7
             ),
-            # SpacyWordTokenizer("de_core_news_sm"),
+            SpacyWordTokenizer("de_core_news_sm"),
             # WhitespaceTokenizer(),
             # SECOSCompoundTokenizer("http://localhost:2020"),
         ]

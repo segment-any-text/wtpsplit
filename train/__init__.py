@@ -23,11 +23,13 @@ if __name__ == "__main__":
     parser = Network.add_model_specific_args(parser)
     parser = Trainer.add_argparse_args(parser)
     parser.set_defaults(
-        gpus=1, max_epochs=1, amp_level="O1", precision=16, logger=wandb_logger
+        gpus=1, max_epochs=1, reload_dataloaders_every_epoch=True, logger=wandb_logger,
     )
 
     hparams = parser.parse_args()
-    store_code(wandb_logger.experiment)
+
+    if hparams.logger:
+        store_code(wandb_logger.experiment)
 
     model = Network(hparams)
     n_params = np.sum([np.prod(x.shape) for x in model.parameters()])
@@ -36,4 +38,5 @@ if __name__ == "__main__":
     print(f"Training model with {n_params} parameters.")
     trainer.fit(model)
 
-    model.store(Path(wandb_logger.experiment.dir) / "model")
+    if hparams.logger:
+        model.store(Path(wandb_logger.experiment.dir) / "model")

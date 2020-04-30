@@ -26,25 +26,25 @@ class Network(pl.LightningModule):
     def __init__(self, hparams):
         super().__init__()
         self.hparams = hparams
-        # init datasets
-        text_data = MemoryMapDataset("texts.txt", "slices.pkl")
-        dataset = SplitDataset(text_data, 500, 800, 20)
 
-        train_indices, valid_indeces = train_test_split(
-            np.arange(len(dataset)), test_size=0.1, random_state=1234
-        )
-        self.train_dataset = data.Subset(dataset, train_indices)
-        self.valid_dataset = data.Subset(dataset, valid_indeces)
-
-        # init network
         self.embedding = nn.Embedding(256, 32)
         self.lstm1 = nn.LSTM(32, 128, bidirectional=True, batch_first=True)
         _freeze_bias(self.lstm1)
         self.lstm2 = nn.LSTM(256, 64, bidirectional=True, batch_first=True)
         _freeze_bias(self.lstm2)
-        self.out = nn.Linear(128, 1)
+        self.out = nn.Linear(128, 2)
 
         assert self.keras_outputs_are_close()
+
+    def prepare_data(self):
+        text_data = MemoryMapDataset("texts.txt", "slices.pkl")
+        dataset = SplitDataset(text_data, 500, 800, 20)
+
+        train_indices, valid_indeces = train_test_split(
+            np.arange(len(dataset)), test_size=200_000, random_state=1234
+        )
+        self.train_dataset = data.Subset(dataset, train_indices)
+        self.valid_dataset = data.Subset(dataset, valid_indeces)
 
     def get_keras_equivalent(self):
         from tensorflow.keras import layers, models
@@ -79,7 +79,7 @@ class Network(pl.LightningModule):
             ]
         )
 
-        k_model.add(layers.Dense(1))
+        k_model.add(layers.Dense(2))
         k_model.layers[-1].set_weights(
             [np.transpose(x.detach().cpu().numpy()) for x in self.out.parameters()]
         )
@@ -105,8 +105,10 @@ class Network(pl.LightningModule):
 
     @staticmethod
     def loss(y_hat, y):
+        weight = torch.tensor([2.0, 0.1]).view((1, 1, 2)).to(y_hat.device)
+
         return F.binary_cross_entropy_with_logits(
-            y_hat, y.float(), pos_weight=torch.tensor(20.0)
+            y_hat, y.float(), pos_weight=torch.tensor(10.0), weight=weight
         )
 
     def training_step(self, batch, batch_idx):
@@ -145,6 +147,8 @@ class Network(pl.LightningModule):
 
         f1 = 2 * (precision * recall) / (precision + recall + 1e-9)
 
+        print()
+
         for i in range(len(f1)):
             print(
                 f"f1={f1[i]:.3f}\tprecision={precision[i]:.3f}\trecall={recall[i]:.3f}"
@@ -157,8 +161,16 @@ class Network(pl.LightningModule):
         return torch.optim.Adam(self.parameters())
 
     def train_dataloader(self):
+        # define 1 epoch = n random samples from train data
+        # multiprocessing with spacy leaks memory so could go OOM without a sample limit
+        # reload_dataloaders_every_epoch must be True in trainer
+        # so that memory is cleaned up after each epoch
+
+        epoch_indices = np.random.choice(np.arange(len(self.train_dataset)), 3_000_000)
+        epoch_sample = data.Subset(self.train_dataset, epoch_indices)
+
         return data.DataLoader(
-            self.train_dataset,
+            epoch_sample,
             batch_size=128,
             shuffle=True,
             num_workers=6,
