@@ -1,10 +1,8 @@
 use std::cmp;
 use std::convert::TryInto;
 use std::ops::Range;
-use std::vec::Vec;
 
 use ndarray::prelude::*;
-use ndarray::Array2;
 
 fn split_whitespace(input: &str) -> Vec<&str> {
     let offset = input.trim_end().len();
@@ -188,7 +186,11 @@ impl<'a> NNSplit<'a> {
         Ok(NNSplit {
             backend,
             options: NNSplitOptions::default(),
-            split_sequence: SplitSequence::new(vec![SplitInstruction::PredictionIndex(0)]),
+            split_sequence: SplitSequence::new(vec![
+                SplitInstruction::PredictionIndex(0),
+                SplitInstruction::PredictionIndex(1),
+                SplitInstruction::Function(split_whitespace),
+            ]),
         })
     }
 
