@@ -9,10 +9,29 @@ fn split_whitespace(input: &str) -> Vec<&str> {
     vec![&input[..offset], &input[offset..]]
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct Level(&'static str);
+
 #[derive(Debug)]
 pub enum Split<'a> {
     Text(&'a str),
-    Split(Vec<Split<'a>>),
+    Split((&'a str, Vec<Split<'a>>)),
+}
+
+impl<'a> Split<'a> {
+    pub fn text(&self) -> &'a str {
+        match self {
+            Split::Split((text, _)) => text,
+            Split::Text(text) => text,
+        }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Split<'a>> {
+        match self {
+            Split::Split((_, splits)) => splits.iter(),
+            Split::Text(_) => panic!("Can not iterate over Split::Text."),
+        }
+    }
 }
 
 enum SplitInstruction {
@@ -21,11 +40,11 @@ enum SplitInstruction {
 }
 
 struct SplitSequence {
-    instructions: Vec<SplitInstruction>,
+    instructions: Vec<(Level, SplitInstruction)>,
 }
 
 impl SplitSequence {
-    pub fn new(instructions: Vec<SplitInstruction>) -> Self {
+    pub fn new(instructions: Vec<(Level, SplitInstruction)>) -> Self {
         SplitSequence { instructions }
     }
 
@@ -36,7 +55,7 @@ impl SplitSequence {
         threshold: f32,
         instruction_idx: usize,
     ) -> Split<'a> {
-        if let Some(instruction) = self.instructions.get(instruction_idx) {
+        if let Some((_, instruction)) = self.instructions.get(instruction_idx) {
             match instruction {
                 SplitInstruction::PredictionIndex(idx) => {
                     let mut indices: Vec<_> = predictions
@@ -71,9 +90,10 @@ impl SplitSequence {
                         prev = idx;
                     }
 
-                    Split::Split(parts)
+                    Split::Split((text, parts))
                 }
-                SplitInstruction::Function(func) => Split::Split(
+                SplitInstruction::Function(func) => Split::Split((
+                    text,
                     func(text)
                         .iter()
                         .map(|part| {
@@ -88,7 +108,7 @@ impl SplitSequence {
                             )
                         })
                         .collect(),
-                ),
+                )),
             }
         } else {
             Split::Text(text)
@@ -129,6 +149,7 @@ pub trait Backend {
     fn predict(&self, input: Array2<u8>) -> Array3<f32>;
 }
 
+#[cfg(feature = "tch-rs-backend")]
 pub struct TchRsBackend {
     model: tch::CModule,
     batch_size: usize,
@@ -136,6 +157,7 @@ pub struct TchRsBackend {
     n_outputs: usize,
 }
 
+#[cfg(feature = "tch-rs-backend")]
 impl TchRsBackend {
     pub fn new(model: tch::CModule, device: tch::Device, batch_size: usize) -> Self {
         let dummy_data = tch::Tensor::zeros(&[1, 1], (tch::Kind::Uint8, device));
@@ -150,6 +172,7 @@ impl TchRsBackend {
     }
 }
 
+#[cfg(feature = "tch-rs-backend")]
 impl Backend for TchRsBackend {
     fn predict(&self, input: Array2<u8>) -> Array3<f32> {
         let input_shape = input.shape();
@@ -175,21 +198,24 @@ impl Backend for TchRsBackend {
     }
 }
 
-pub struct NNSplit<'a> {
-    backend: &'a dyn Backend,
+pub struct NNSplit {
+    backend: Box<dyn Backend>,
     options: NNSplitOptions,
     split_sequence: SplitSequence,
 }
 
-impl<'a> NNSplit<'a> {
-    pub fn new(backend: &dyn Backend) -> failure::Fallible<NNSplit> {
+impl NNSplit {
+    pub fn new(backend: Box<dyn Backend>, options: NNSplitOptions) -> failure::Fallible<NNSplit> {
         Ok(NNSplit {
             backend,
-            options: NNSplitOptions::default(),
+            options,
             split_sequence: SplitSequence::new(vec![
-                SplitInstruction::PredictionIndex(0),
-                SplitInstruction::PredictionIndex(1),
-                SplitInstruction::Function(split_whitespace),
+                (Level("Sentence"), SplitInstruction::PredictionIndex(0)),
+                (Level("Token"), SplitInstruction::PredictionIndex(1)),
+                (
+                    Level("Whitespace"),
+                    SplitInstruction::Function(split_whitespace),
+                ),
             ]),
         })
     }
@@ -271,7 +297,7 @@ impl<'a> NNSplit<'a> {
             .collect()
     }
 
-    pub fn split(&self, texts: Vec<&'a str>) -> Vec<Split<'a>> {
+    pub fn split<'a>(&self, texts: Vec<&'a str>) -> Vec<Split<'a>> {
         let (inputs, indices) = self.get_inputs_and_indeces(&texts);
         let slice_preds = self.backend.predict(inputs);
 

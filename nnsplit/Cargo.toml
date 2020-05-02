@@ -17,17 +17,13 @@ include = ["src/*.rs", "tests/*.rs", "build.rs", "data"]
 
 [dependencies]
 failure = "0.1.6"
-tch = "0.1.6"
+tch = {version = "0.1.6", optional = true}
 ndarray = "0.13"
-
-[build-dependencies]
-failure = "0.1.6"
-fs_extra = "1.1.0"
 
 [dev-dependencies]
 criterion = "0.3"
 
-# [[bench]]
-# name = "bench_nnsplit"
-# harness = false
-# path = "benches/bench_nnsplit.rs"
+[features]
+default = ["tch-rs-backend"]
+
+tch-rs-backend = ["tch"]
