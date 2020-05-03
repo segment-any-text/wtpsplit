@@ -43,6 +43,6 @@ impl Backend for TchRsBackend {
             preds.slice_mut(s![start..end, .., ..]).assign(&batch_preds);
         }
 
-        return preds;
+        preds
     }
 }

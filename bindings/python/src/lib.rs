@@ -1,14 +1,14 @@
+mod pytorch_backend;
+
 use pyo3::class::basic::PyObjectProtocol;
 use pyo3::class::gc::{PyGCProtocol, PyTraverseError, PyVisit};
 use pyo3::class::sequence::PySequenceProtocol;
 use pyo3::conversion::FromPy;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use pytorch_backend::PytorchBackend;
 
 use nnsplit as core;
-
-mod pytorch_backend;
-use pytorch_backend::PytorchBackend;
 
 #[pyclass(gc)]
 pub struct Split {
@@ -168,7 +168,7 @@ impl NNSplit {
         })
     }
 
-    pub fn split<'a>(&self, py: Python, texts: Vec<&'a str>) -> Vec<Split> {
+    pub fn split(&self, py: Python, texts: Vec<&str>) -> Vec<Split> {
         let splits = self.inner.split(texts);
 
         splits.into_iter().map(|x| x.into_py(py)).collect()
