@@ -3,6 +3,7 @@ use pyo3::class::gc::{PyGCProtocol, PyTraverseError, PyVisit};
 use pyo3::class::sequence::PySequenceProtocol;
 use pyo3::conversion::FromPy;
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 
 use nnsplit as core;
 
@@ -24,6 +25,34 @@ fn join_method_output(items: &Vec<PyObject>, method: &str, joiner: &str) -> PyRe
     });
     let joined = string_parts.collect::<PyResult<Vec<_>>>()?[..].join(joiner);
     Ok(joined)
+}
+
+fn to_options(maybe_py_dict: Option<&PyDict>) -> PyResult<core::NNSplitOptions> {
+    let mut options = core::NNSplitOptions::default();
+
+    if let Some(py_dict) = maybe_py_dict {
+        if let Some(obj) = py_dict.get_item("threshold") {
+            options.threshold = obj.extract()?;
+        }
+
+        if let Some(obj) = py_dict.get_item("stride") {
+            options.stride = obj.extract()?;
+        }
+
+        if let Some(obj) = py_dict.get_item("max_length") {
+            options.max_length = obj.extract()?;
+        }
+
+        if let Some(obj) = py_dict.get_item("padding") {
+            options.padding = obj.extract()?;
+        }
+
+        if let Some(obj) = py_dict.get_item("batch_size") {
+            options.batch_size = obj.extract()?;
+        }
+    }
+
+    Ok(options)
 }
 
 #[pyproto]
@@ -99,7 +128,7 @@ impl PyGCProtocol for Split {
 impl<'a> FromPy<core::Split<'a>> for Split {
     fn from_py(split: core::Split, py: Python) -> Self {
         match split {
-            core::Split::Text(_) => unreachable!(),
+            core::Split::Text(_) => panic!("text can not be converted to a Split"),
             core::Split::Split((_, split_parts)) => {
                 let parts = split_parts
                     .into_iter()
@@ -125,17 +154,18 @@ pub struct NNSplit {
 
 #[pymethods]
 impl NNSplit {
-    #[staticmethod]
-    pub fn new(model: PyObject, device: PyObject, batch_size: usize) -> Self {
-        let backend = PytorchBackend::new(model, device, batch_size).unwrap();
+    #[new]
+    #[args(kwargs = "**")]
+    pub fn new(model: PyObject, device: PyObject, kwargs: Option<&PyDict>) -> PyResult<Self> {
+        let backend = PytorchBackend::new(model, device)?;
+        let options = to_options(kwargs)?;
 
-        NNSplit {
-            inner: core::NNSplit::new(
+        Ok(NNSplit {
+            inner: core::NNSplit::from_backend(
                 Box::new(backend) as Box<dyn core::Backend>,
-                core::NNSplitOptions::default(),
-            )
-            .unwrap(),
-        }
+                options,
+            ),
+        })
     }
 
     pub fn split<'a>(&self, py: Python, texts: Vec<&'a str>) -> Vec<Split> {

@@ -8,7 +8,6 @@ use nnsplit as core;
 
 pub struct PytorchBackend {
     model: PyObject,
-    batch_size: usize,
     device: PyObject,
     n_outputs: usize,
 }
@@ -33,7 +32,7 @@ impl PytorchBackend {
         .into_py_dict(py);
 
         let prediction = py.eval(
-            "model(torch.from_numpy(input).to(device)).numpy()",
+            "model(torch.from_numpy(input).to(device)).detach().float().sigmoid().cpu().numpy()",
             None,
             Some(locals),
         )?;
@@ -42,28 +41,27 @@ impl PytorchBackend {
         Ok(prediction.to_owned_array())
     }
 
-    pub fn new(model: PyObject, device: PyObject, batch_size: usize) -> PyResult<Self> {
+    pub fn new(model: PyObject, device: PyObject) -> PyResult<Self> {
         let dummy_data = Array2::<u8>::zeros((1, 1));
         let n_outputs = PytorchBackend::predict_batch((&dummy_data).into(), &model, &device)?.len();
 
         Ok(PytorchBackend {
             model,
             device,
-            batch_size,
             n_outputs,
         })
     }
 }
 
 impl core::Backend for PytorchBackend {
-    fn predict(&self, input: Array2<u8>) -> Array3<f32> {
+    fn predict(&self, input: Array2<u8>, batch_size: usize) -> Array3<f32> {
         let input_shape = input.shape();
 
         let mut preds = Array3::<f32>::zeros((input_shape[0], input_shape[1], self.n_outputs));
 
-        for i in (0..input_shape[0]).step_by(self.batch_size) {
+        for i in (0..input_shape[0]).step_by(batch_size) {
             let start = i;
-            let end = cmp::min(i + self.batch_size, input_shape[0]);
+            let end = cmp::min(i + batch_size, input_shape[0]);
 
             let batch_inputs = input.slice(s![start..end, ..]);
             let batch_preds =

@@ -1,8 +1,9 @@
+use ndarray::prelude::*;
 use std::cmp;
-use std::convert::TryInto;
 use std::ops::Range;
 
-use ndarray::prelude::*;
+#[cfg(feature = "tch-rs-backend")]
+mod tch_rs_backend;
 
 fn split_whitespace(input: &str) -> Vec<&str> {
     let offset = input.trim_end().len();
@@ -126,10 +127,11 @@ impl SplitSequence {
 }
 
 pub struct NNSplitOptions {
-    threshold: f32,
-    stride: usize,
-    max_length: usize,
-    padding: usize,
+    pub threshold: f32,
+    pub stride: usize,
+    pub max_length: usize,
+    pub padding: usize,
+    pub batch_size: usize,
 }
 
 impl Default for NNSplitOptions {
@@ -141,61 +143,13 @@ impl Default for NNSplitOptions {
             stride: max_length / 2,
             max_length,
             padding: 5,
+            batch_size: 128,
         }
     }
 }
 
 pub trait Backend {
-    fn predict(&self, input: Array2<u8>) -> Array3<f32>;
-}
-
-#[cfg(feature = "tch-rs-backend")]
-pub struct TchRsBackend {
-    model: tch::CModule,
-    batch_size: usize,
-    device: tch::Device,
-    n_outputs: usize,
-}
-
-#[cfg(feature = "tch-rs-backend")]
-impl TchRsBackend {
-    pub fn new(model: tch::CModule, device: tch::Device, batch_size: usize) -> Self {
-        let dummy_data = tch::Tensor::zeros(&[1, 1], (tch::Kind::Uint8, device));
-        let n_outputs = model.forward_ts(&[dummy_data]).unwrap().size()[2] as usize;
-
-        TchRsBackend {
-            model,
-            device,
-            batch_size,
-            n_outputs,
-        }
-    }
-}
-
-#[cfg(feature = "tch-rs-backend")]
-impl Backend for TchRsBackend {
-    fn predict(&self, input: Array2<u8>) -> Array3<f32> {
-        let input_shape = input.shape();
-
-        let mut preds = Array3::<f32>::zeros((input_shape[0], input_shape[1], self.n_outputs));
-
-        for i in (0..input_shape[0]).step_by(self.batch_size) {
-            let start = i;
-            let end = cmp::min(i + self.batch_size, input_shape[0]);
-
-            let batch_inputs = input.slice(s![start..end, ..]).to_slice().unwrap();
-            let batch_inputs = tch::Tensor::of_slice(batch_inputs)
-                .view((-1, input_shape[1] as i64))
-                .to_device(self.device);
-
-            let batch_preds = self.model.forward_ts(&[batch_inputs]).unwrap().sigmoid();
-            let batch_preds: ArrayD<f32> = (&batch_preds).try_into().unwrap();
-
-            preds.slice_mut(s![start..end, .., ..]).assign(&batch_preds);
-        }
-
-        return preds;
-    }
+    fn predict(&self, input: Array2<u8>, batch_size: usize) -> Array3<f32>;
 }
 
 pub struct NNSplit {
@@ -205,8 +159,20 @@ pub struct NNSplit {
 }
 
 impl NNSplit {
-    pub fn new(backend: Box<dyn Backend>, options: NNSplitOptions) -> failure::Fallible<NNSplit> {
-        Ok(NNSplit {
+    #[cfg(feature = "tch-rs-backend")]
+    pub fn new<P: AsRef<std::path::Path>>(
+        model_path: P,
+        device: tch::Device,
+        options: NNSplitOptions,
+    ) -> failure::Fallible<Self> {
+        let model = tch::CModule::load(model_path)?;
+        let backend = tch_rs_backend::TchRsBackend::new(model, device);
+
+        Ok(Self::from_backend(Box::new(backend), options))
+    }
+
+    pub fn from_backend(backend: Box<dyn Backend>, options: NNSplitOptions) -> Self {
+        NNSplit {
             backend,
             options,
             split_sequence: SplitSequence::new(vec![
@@ -217,7 +183,7 @@ impl NNSplit {
                     SplitInstruction::Function(split_whitespace),
                 ),
             ]),
-        })
+        }
     }
 
     fn get_inputs_and_indeces(
@@ -299,7 +265,7 @@ impl NNSplit {
 
     pub fn split<'a>(&self, texts: Vec<&'a str>) -> Vec<Split<'a>> {
         let (inputs, indices) = self.get_inputs_and_indeces(&texts);
-        let slice_preds = self.backend.predict(inputs);
+        let slice_preds = self.backend.predict(inputs, self.options.batch_size);
 
         let padded_preds = self.combine_predictions(
             (&slice_preds).into(),

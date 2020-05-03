@@ -3,11 +3,9 @@ use std::env;
 fn main() -> failure::Fallible<()> {
     let text = env::args().skip(1).next().unwrap();
 
-    let model = tch::CModule::load("../data/torchscript_cpu_model.pt")?;
-    let backend = nnsplit::TchRsBackend::new(model, tch::Device::Cpu, 32);
-
     let splitter = nnsplit::NNSplit::new(
-        Box::new(backend) as Box<dyn nnsplit::Backend>,
+        "../data/torchscript_cpu_model.pt",
+        tch::Device::Cpu,
         nnsplit::NNSplitOptions::default(),
     )?;
 
