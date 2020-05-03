@@ -27,8 +27,6 @@
   },
   "homepage": "https://github.com/rustwasm/create-wasm-app#readme",
   "dependencies": {
-    "@tensorflow/tfjs-core": "^1.7.4",
-    "@tensorflow/tfjs-layers": "^1.7.4",
     "nnsplit": "file:../pkg"
   },
   "devDependencies": {
