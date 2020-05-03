@@ -3,7 +3,7 @@ import * as tf from "@tensorflow/tfjs-core";
 import * as tfl from "@tensorflow/tfjs-layers";
 
 async function run() {
-    const model = await tfl.loadLayersModel("/tensorflowjs_model/model.json");
+    // const model = await tfl.loadLayersModel("/tensorflowjs_model/model.json");
 
     function predict(blob, shape, batchSize) {
         const input = tf.tensor(blob, shape);
@@ -12,7 +12,8 @@ async function run() {
         return [pred.dataSync(), new Uint32Array(pred.shape)];
     }
 
-    wasm.run(predict);
+    let splitter = await new wasm.NNSplit("/tensorflowjs_model/model.json");
+    console.log(splitter.split(["Das ist ein Test."]));
 }
 
 run();
