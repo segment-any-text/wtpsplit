@@ -7,34 +7,31 @@ use pyo3::prelude::*;
 mod pytorch_backend;
 use pytorch_backend::PytorchBackend;
 
-#[pyclass]
+#[pyclass(gc)]
 pub struct Split {
     parts: Vec<PyObject>,
+}
+
+fn join_method_result(items: &Vec<PyObject>, method: &str, joiner: &str) -> PyResult<String> {
+    let gil = Python::acquire_gil();
+    let py = gil.python();
+
+    let string_parts = items.iter().map(|x| {
+        x.call_method0(py, method)
+            .and_then(|x| x.extract::<String>(py))
+    });
+    let joined = string_parts.collect::<PyResult<Vec<_>>>()?[..].join(joiner);
+    Ok(joined)
 }
 
 #[pyproto]
 impl PyObjectProtocol for Split {
     fn __str__(&self) -> PyResult<String> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        let string_parts = self.parts.iter().map(|x| {
-            x.call_method0(py, "__str__")
-                .and_then(|x| x.extract::<String>(py))
-        });
-        let joined = string_parts.collect::<PyResult<Vec<_>>>()?[..].join("");
-        Ok(joined)
+        join_method_result(&self.parts, "__str__", "")
     }
 
     fn __repr__(&self) -> PyResult<String> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        let string_parts = self.parts.iter().map(|x| {
-            x.call_method0(py, "__repr__")
-                .and_then(|x| x.extract::<String>(py))
-        });
-        let joined = string_parts.collect::<PyResult<Vec<_>>>()?[..].join(", ");
+        let joined = join_method_result(&self.parts, "__repr__", ", ")?;
         Ok(format!("Split({})", joined))
     }
 }
@@ -46,20 +43,15 @@ impl PySequenceProtocol for Split {
     }
 
     fn __getitem__(&self, idx: isize) -> PyResult<PyObject> {
-        let real_index: usize = if idx >= 0 {
-            idx as usize
-        } else {
-            self.parts.len() - idx as usize
-        };
-
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        match self.parts.get(real_index) {
-            Some(x) => Ok(x.clone_ref(py)),
-            None => Err(PyErr::new::<pyo3::exceptions::IndexError, _>(
+        if idx >= 0 && (idx as usize) < self.parts.len() {
+            Ok(self.parts[idx as usize].clone_ref(py))
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::IndexError, _>(
                 "list index out of range",
-            )),
+            ))
         }
     }
 }
@@ -67,7 +59,22 @@ impl PySequenceProtocol for Split {
 #[pyproto]
 impl PyGCProtocol for Split {
     fn __traverse__(&'p self, visit: PyVisit) -> Result<(), PyTraverseError> {
-        self.parts.iter().map(|x| visit.call(x)).collect()
+        let gil = Python::acquire_gil();
+        let python = gil.python();
+
+        self.parts
+            .iter()
+            .map(|x| {
+                // TODO: clarify if this is required
+                if let Ok(split) = x.extract::<&PyCell<Split>>(python) {
+                    for part in &split.borrow().parts {
+                        visit.call(part)?;
+                    }
+                }
+
+                visit.call(x)
+            })
+            .collect()
     }
 
     fn __clear__(&'p mut self) {
@@ -75,6 +82,13 @@ impl PyGCProtocol for Split {
         let python = gil.python();
 
         for part in self.parts.drain(..) {
+            // TODO: clarify if this is required
+            if let Ok(split) = part.extract::<&PyCell<Split>>(python) {
+                for subpart in &split.borrow().parts {
+                    python.release(subpart);
+                }
+            }
+
             python.release(part);
         }
     }
@@ -90,7 +104,7 @@ impl<'a> FromPy<nnsplit::Split<'a>> for Split {
                     .map(|x| match &x {
                         nnsplit::Split::Split(_) => {
                             let split: Split = x.into_py(py);
-                            Py::new(py, split).unwrap().to_object(py)
+                            PyCell::new(py, split).unwrap().to_object(py)
                         }
                         nnsplit::Split::Text(text) => text.to_object(py),
                     })
