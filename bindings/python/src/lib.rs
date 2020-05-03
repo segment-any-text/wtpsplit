@@ -4,6 +4,8 @@ use pyo3::class::sequence::PySequenceProtocol;
 use pyo3::conversion::FromPy;
 use pyo3::prelude::*;
 
+use nnsplit as core;
+
 mod pytorch_backend;
 use pytorch_backend::PytorchBackend;
 
@@ -12,7 +14,7 @@ pub struct Split {
     parts: Vec<PyObject>,
 }
 
-fn join_method_result(items: &Vec<PyObject>, method: &str, joiner: &str) -> PyResult<String> {
+fn join_method_output(items: &Vec<PyObject>, method: &str, joiner: &str) -> PyResult<String> {
     let gil = Python::acquire_gil();
     let py = gil.python();
 
@@ -27,11 +29,11 @@ fn join_method_result(items: &Vec<PyObject>, method: &str, joiner: &str) -> PyRe
 #[pyproto]
 impl PyObjectProtocol for Split {
     fn __str__(&self) -> PyResult<String> {
-        join_method_result(&self.parts, "__str__", "")
+        join_method_output(&self.parts, "__str__", "")
     }
 
     fn __repr__(&self) -> PyResult<String> {
-        let joined = join_method_result(&self.parts, "__repr__", ", ")?;
+        let joined = join_method_output(&self.parts, "__repr__", ", ")?;
         Ok(format!("Split({})", joined))
     }
 }
@@ -94,19 +96,19 @@ impl PyGCProtocol for Split {
     }
 }
 
-impl<'a> FromPy<nnsplit::Split<'a>> for Split {
-    fn from_py(split: nnsplit::Split, py: Python) -> Self {
+impl<'a> FromPy<core::Split<'a>> for Split {
+    fn from_py(split: core::Split, py: Python) -> Self {
         match split {
-            nnsplit::Split::Text(_) => unreachable!(),
-            nnsplit::Split::Split((_, split_parts)) => {
+            core::Split::Text(_) => unreachable!(),
+            core::Split::Split((_, split_parts)) => {
                 let parts = split_parts
                     .into_iter()
                     .map(|x| match &x {
-                        nnsplit::Split::Split(_) => {
+                        core::Split::Split(_) => {
                             let split: Split = x.into_py(py);
                             PyCell::new(py, split).unwrap().to_object(py)
                         }
-                        nnsplit::Split::Text(text) => text.to_object(py),
+                        core::Split::Text(text) => text.to_object(py),
                     })
                     .collect();
 
@@ -118,7 +120,7 @@ impl<'a> FromPy<nnsplit::Split<'a>> for Split {
 
 #[pyclass]
 pub struct NNSplit {
-    inner: nnsplit::NNSplit,
+    inner: core::NNSplit,
 }
 
 #[pymethods]
@@ -128,9 +130,9 @@ impl NNSplit {
         let backend = PytorchBackend::new(model, device, batch_size).unwrap();
 
         NNSplit {
-            inner: nnsplit::NNSplit::new(
-                Box::new(backend) as Box<dyn nnsplit::Backend>,
-                nnsplit::NNSplitOptions::default(),
+            inner: core::NNSplit::new(
+                Box::new(backend) as Box<dyn core::Backend>,
+                core::NNSplitOptions::default(),
             )
             .unwrap(),
         }

@@ -4,6 +4,8 @@ use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
 use std::cmp;
 
+use nnsplit as core;
+
 pub struct PytorchBackend {
     model: PyObject,
     batch_size: usize,
@@ -53,7 +55,7 @@ impl PytorchBackend {
     }
 }
 
-impl nnsplit::Backend for PytorchBackend {
+impl core::Backend for PytorchBackend {
     fn predict(&self, input: Array2<u8>) -> Array3<f32> {
         let input_shape = input.shape();
 
