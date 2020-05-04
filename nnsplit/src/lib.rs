@@ -1,6 +1,12 @@
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck_macros;
+
 use ndarray::prelude::*;
 use std::cmp;
+use std::error::Error;
 use std::ops::Range;
+use thiserror::Error;
 
 #[cfg(feature = "tch-rs-backend")]
 mod tch_rs_backend;
@@ -33,14 +39,43 @@ impl<'a> Split<'a> {
             Split::Text(_) => panic!("Can not iterate over Split::Text."),
         }
     }
+
+    pub fn flatten(&self, level: usize) -> Vec<&str> {
+        match self {
+            Split::Text(text) => vec![text],
+            Split::Split((_, parts)) => {
+                let mut out = Vec::new();
+
+                for part in parts {
+                    if level == 0 {
+                        out.push(part.text());
+                    } else {
+                        out.extend(part.flatten(level - 1));
+                    }
+                }
+
+                out
+            }
+        }
+    }
 }
 
-enum SplitInstruction {
+pub enum SplitInstruction {
     PredictionIndex(usize),
     Function(fn(&str) -> Vec<&str>),
 }
 
-struct SplitSequence {
+#[derive(Error, Debug)]
+pub enum SplitCreationError {
+    #[error("indexing {text} from {start} to {end} failed (possible char boundary error)")]
+    IndexError {
+        text: String,
+        start: usize,
+        end: usize,
+    },
+}
+
+pub struct SplitSequence {
     instructions: Vec<(Level, SplitInstruction)>,
 }
 
@@ -55,7 +90,13 @@ impl SplitSequence {
         predictions: ArrayView2<f32>,
         threshold: f32,
         instruction_idx: usize,
-    ) -> Split<'a> {
+    ) -> Result<Split<'a>, SplitCreationError> {
+        assert_eq!(
+            predictions.shape()[0],
+            text.len(),
+            "length of predictions must be equal to the number of bytes in text"
+        );
+
         if let Some((_, instruction)) = self.instructions.get(instruction_idx) {
             match instruction {
                 SplitInstruction::PredictionIndex(idx) => {
@@ -79,21 +120,27 @@ impl SplitSequence {
                     let mut prev = 0;
 
                     for idx in indices {
-                        let part = &text[prev..idx];
+                        let part =
+                            text.get(prev..idx)
+                                .ok_or_else(|| SplitCreationError::IndexError {
+                                    text: text.to_owned(),
+                                    start: prev,
+                                    end: idx,
+                                })?;
 
                         parts.push(self.inner_apply(
                             part,
                             predictions.slice(s![prev..idx, ..]),
                             threshold,
                             instruction_idx + 1,
-                        ));
+                        )?);
 
                         prev = idx;
                     }
 
-                    Split::Split((text, parts))
+                    Ok(Split::Split((text, parts)))
                 }
-                SplitInstruction::Function(func) => Split::Split((
+                SplitInstruction::Function(func) => Ok(Split::Split((
                     text,
                     func(text)
                         .iter()
@@ -108,11 +155,11 @@ impl SplitSequence {
                                 instruction_idx + 1,
                             )
                         })
-                        .collect(),
-                )),
+                        .collect::<Result<Vec<Split>, SplitCreationError>>()?,
+                ))),
             }
         } else {
-            Split::Text(text)
+            Ok(Split::Text(text))
         }
     }
 
@@ -121,9 +168,17 @@ impl SplitSequence {
         text: &'a str,
         predictions: ArrayView2<f32>,
         threshold: f32,
-    ) -> Split<'a> {
+    ) -> Result<Split<'a>, SplitCreationError> {
         self.inner_apply(text, predictions, threshold, 0)
     }
+}
+
+#[derive(Error, Debug)]
+pub enum SplitError {
+    #[error(transparent)]
+    CreationError { source: SplitCreationError },
+    #[error(transparent)]
+    BackendError { source: Box<dyn Error> },
 }
 
 pub struct NNSplitOptions {
@@ -149,7 +204,7 @@ impl Default for NNSplitOptions {
 }
 
 pub trait Backend {
-    fn predict(&self, input: Array2<u8>, batch_size: usize) -> Array3<f32>;
+    fn predict(&self, input: Array2<u8>, batch_size: usize) -> Result<Array3<f32>, Box<dyn Error>>;
 }
 
 pub struct NNSplit {
@@ -164,7 +219,7 @@ impl NNSplit {
         model_path: P,
         device: tch::Device,
         options: NNSplitOptions,
-    ) -> failure::Fallible<Self> {
+    ) -> Result<Self, Box<dyn Error>> {
         let model = tch::CModule::load(model_path)?;
         let backend = tch_rs_backend::TchRsBackend::new(model, device);
 
@@ -248,10 +303,12 @@ impl NNSplit {
             .collect::<Vec<_>>();
 
         for (slice_pred, (index, range)) in slice_predictions.outer_iter().zip(indices) {
-            let (pred, count) = preds_and_counts.get_mut(index).unwrap();
+            let (pred, count) = preds_and_counts
+                .get_mut(index)
+                .expect("slice index must be in bounds");
 
             let mut pred_slice = pred.slice_mut(s![range.start..range.end, ..]);
-            pred_slice += &slice_pred;
+            pred_slice += &slice_pred.slice(s![..range.end - range.start, ..]);
 
             let mut count_slice = count.slice_mut(s![range.start..range.end, ..]);
             count_slice += 1f32;
@@ -263,9 +320,12 @@ impl NNSplit {
             .collect()
     }
 
-    pub fn split<'a>(&self, texts: Vec<&'a str>) -> Vec<Split<'a>> {
+    pub fn split<'a>(&self, texts: Vec<&'a str>) -> Result<Vec<Split<'a>>, SplitError> {
         let (inputs, indices) = self.get_inputs_and_indeces(&texts);
-        let slice_preds = self.backend.predict(inputs, self.options.batch_size);
+        let slice_preds = self
+            .backend
+            .predict(inputs, self.options.batch_size)
+            .map_err(|source| SplitError::BackendError { source })?;
 
         let padded_preds = self.combine_predictions(
             (&slice_preds).into(),
@@ -292,7 +352,113 @@ impl NNSplit {
             .map(|(text, pred)| {
                 self.split_sequence
                     .apply(text, pred, self.options.threshold)
+                    .map_err(|source| SplitError::CreationError { source })
             })
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::{thread_rng, Rng};
+
+    struct DummyBackend {}
+
+    impl Backend for DummyBackend {
+        fn predict(
+            &self,
+            input: Array2<u8>,
+            _batch_size: usize,
+        ) -> Result<Array3<f32>, Box<dyn Error>> {
+            let n = input.shape()[0];
+            let length = input.shape()[1];
+            let dim = 2usize;
+
+            let mut rng = thread_rng();
+
+            let mut blob = Vec::new();
+            for _ in 0..n * length * dim {
+                blob.push(rng.gen_range(0., 1.));
+            }
+
+            Ok(Array3::from_shape_vec((n, length, dim), blob)?)
+        }
+    }
+
+    fn dummy_nnsplit(options: NNSplitOptions) -> NNSplit {
+        NNSplit::from_backend(Box::new(DummyBackend {}), options)
+    }
+
+    #[test]
+    fn split_instructions_work() -> Result<(), SplitCreationError> {
+        let instructions = SplitSequence::new(vec![
+            (Level("Token"), SplitInstruction::PredictionIndex(0)),
+            (
+                Level("Whitespace"),
+                SplitInstruction::Function(split_whitespace),
+            ),
+        ]);
+
+        let input = "This is a test.";
+        let mut predictions = array![[0., 0., 0., 0., 1., 0., 0., 1., 0., 1., 0., 0., 0., 1., 1.]];
+        predictions.swap_axes(0, 1);
+        let predictions: ArrayView2<f32> = (&predictions).into();
+
+        let splits = instructions.apply(input, predictions, 0.5)?;
+        assert_eq!(splits.flatten(0), ["This ", "is ", "a ", "test", "."]);
+        assert_eq!(
+            splits.flatten(1),
+            ["This", " ", "is", " ", "a", " ", "test", "", ".", ""]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn splitter_works() -> Result<(), SplitError> {
+        let options = NNSplitOptions {
+            stride: 5,
+            max_length: 20,
+            ..NNSplitOptions::default()
+        };
+        let splitter = dummy_nnsplit(options);
+
+        // sample text must only contain chars which are 1 byte long, so that `DummyBackend`
+        // can not generate splits which are not char boundaries
+        splitter.split(vec!["This is a short test.", "This is another short test."])?;
+        Ok(())
+    }
+
+    #[test]
+    fn splitter_works_on_empty_input() -> Result<(), SplitError> {
+        let splitter = dummy_nnsplit(NNSplitOptions::default());
+
+        let splits = splitter.split(vec![])?;
+        assert!(splits.len() == 0);
+        Ok(())
+    }
+
+    #[quickcheck]
+    fn length_invariant(text: String) -> bool {
+        let splitter = dummy_nnsplit(NNSplitOptions::default());
+
+        let splits_result = splitter.split(vec![&text]);
+
+        if let Ok(splits) = splits_result {
+            let split = &splits[0];
+
+            let mut sums: Vec<usize> = Vec::new();
+
+            sums.push(split.iter().map(|x| x.text().len()).sum());
+
+            for i in 0..4 {
+                sums.push(split.flatten(i).iter().map(|x| x.len()).sum());
+            }
+
+            sums.into_iter().all(|sum| sum == text.len())
+        } else {
+            true
+        }
     }
 }

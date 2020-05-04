@@ -2,6 +2,7 @@ use crate::Backend;
 use ndarray::prelude::*;
 use std::cmp;
 use std::convert::TryInto;
+use std::error::Error;
 
 pub struct TchRsBackend {
     model: tch::CModule,
@@ -23,7 +24,7 @@ impl TchRsBackend {
 }
 
 impl Backend for TchRsBackend {
-    fn predict(&self, input: Array2<u8>, batch_size: usize) -> Array3<f32> {
+    fn predict(&self, input: Array2<u8>, batch_size: usize) -> Result<Array3<f32>, Box<dyn Error>> {
         let input_shape = input.shape();
 
         let mut preds = Array3::<f32>::zeros((input_shape[0], input_shape[1], self.n_outputs));
@@ -32,17 +33,20 @@ impl Backend for TchRsBackend {
             let start = i;
             let end = cmp::min(i + batch_size, input_shape[0]);
 
-            let batch_inputs = input.slice(s![start..end, ..]).to_slice().unwrap();
+            let batch_inputs = input
+                .slice(s![start..end, ..])
+                .to_slice()
+                .ok_or("converting ndarray to slice failed (likely not contiguous)")?;
             let batch_inputs = tch::Tensor::of_slice(batch_inputs)
                 .view((-1, input_shape[1] as i64))
                 .to_device(self.device);
 
-            let batch_preds = self.model.forward_ts(&[batch_inputs]).unwrap().sigmoid();
-            let batch_preds: ArrayD<f32> = (&batch_preds).try_into().unwrap();
+            let batch_preds = self.model.forward_ts(&[batch_inputs])?.sigmoid();
+            let batch_preds: ArrayD<f32> = (&batch_preds).try_into()?;
 
             preds.slice_mut(s![start..end, .., ..]).assign(&batch_preds);
         }
 
-        preds
+        Ok(preds)
     }
 }
