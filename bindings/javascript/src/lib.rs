@@ -75,11 +75,15 @@ impl NNSplit {
     }
 
     pub fn split(&self, texts: Vec<JsValue>) -> Vec<JsValue> {
-        let texts: Vec<String> = texts.into_iter().map(|x| x.as_string().unwrap()).collect();
+        let texts: Vec<String> = texts
+            .into_iter()
+            .map(|x| x.as_string().unwrap_throw())
+            .collect();
         let texts = texts.iter().map(|x| x.as_ref()).collect();
         let splits = self.inner.split(texts);
 
         splits
+            .unwrap_throw()
             .into_iter()
             .map(|x| {
                 let split: Split = x.into();
