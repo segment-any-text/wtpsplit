@@ -3,6 +3,7 @@ use numpy::{PyArray3, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
 use std::cmp;
+use std::error::Error;
 
 use nnsplit as core;
 
@@ -54,7 +55,7 @@ impl PytorchBackend {
 }
 
 impl core::Backend for PytorchBackend {
-    fn predict(&self, input: Array2<u8>, batch_size: usize) -> Array3<f32> {
+    fn predict(&self, input: Array2<u8>, batch_size: usize) -> Result<Array3<f32>, Box<dyn Error>> {
         let input_shape = input.shape();
 
         let mut preds = Array3::<f32>::zeros((input_shape[0], input_shape[1], self.n_outputs));
@@ -65,11 +66,12 @@ impl core::Backend for PytorchBackend {
 
             let batch_inputs = input.slice(s![start..end, ..]);
             let batch_preds =
-                PytorchBackend::predict_batch(batch_inputs, &self.model, &self.device).unwrap();
+                PytorchBackend::predict_batch(batch_inputs, &self.model, &self.device)
+                    .map_err(|_| "PyTorch prediction error")?;
 
             preds.slice_mut(s![start..end, .., ..]).assign(&batch_preds);
         }
 
-        preds
+        Ok(preds)
     }
 }

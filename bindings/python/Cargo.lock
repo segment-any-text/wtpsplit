@@ -7,38 +7,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8aac770f1885fd7e387acedd76065302551364496e46b3dd00860b2f8359b9d"
 
 [[package]]
-name = "backtrace"
-version = "0.3.46"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1e692897359247cc6bb902933361652380af0f1b7651ae5c5013407f30e109e"
-dependencies = [
- "backtrace-sys",
- "cfg-if",
- "libc",
- "rustc-demangle",
-]
-
-[[package]]
-name = "backtrace-sys"
-version = "0.1.37"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18fbebbe1c9d1f383a9cc7e8ccdb471b91c8d024ee9c2ca5b5346121fe8b4399"
-dependencies = [
- "cc",
- "libc",
-]
-
-[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
-
-[[package]]
-name = "cc"
-version = "1.0.52"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3d87b23d6a92cd03af510a5ade527033f6aa6fa92161e2d5863a907d4c5e31d"
 
 [[package]]
 name = "cfg-if"
@@ -63,28 +35,6 @@ checksum = "cf6b25ee9ac1995c54d7adb2eff8cfffb7260bc774fb63c601ec65467f43cd9d"
 dependencies = [
  "quote",
  "syn",
-]
-
-[[package]]
-name = "failure"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8529c2421efa3066a5cbd8063d2244603824daccb6936b079010bb2aa89464b"
-dependencies = [
- "backtrace",
- "failure_derive",
-]
-
-[[package]]
-name = "failure_derive"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "030a733c8287d6213886dd487564ff5c8f6aae10278b3588ed177f9d18f8d231"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
- "synstructure",
 ]
 
 [[package]]
@@ -190,8 +140,8 @@ dependencies = [
 name = "nnsplit"
 version = "0.2.2"
 dependencies = [
- "failure",
  "ndarray",
+ "thiserror",
 ]
 
 [[package]]
@@ -387,12 +337,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fe5bd57d1d7414c6b5ed48563a2c855d995ff777729dcd91c369ec7fea395ae"
 
 [[package]]
-name = "rustc-demangle"
-version = "0.1.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c691c0e608126e00913e33f0ccf3727d5fc84573623b8d65b2df340b5201783"
-
-[[package]]
 name = "ryu"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -453,15 +397,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "synstructure"
-version = "0.12.3"
+name = "thiserror"
+version = "1.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67656ea1dc1b41b1451851562ea232ec2e5a80242139f7e679ceccfb5d61f545"
+checksum = "d12a1dae4add0f0d568eebc7bf142f145ba1aa2544cafb195c76f0f409091b60"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f34e0c1caaa462fd840ec6b768946ea1e7842620d94fe29d5b847138f521269"
 dependencies = [
  "proc-macro2",
  "quote",
  "syn",
- "unicode-xid",
 ]
 
 [[package]]
