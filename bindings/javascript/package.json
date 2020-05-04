@@ -1,0 +1,6 @@
+{
+    "dependencies": {
+        "@tensorflow/tfjs-core": "^1.7.4",
+        "@tensorflow/tfjs-layers": "^1.7.4"
+    }
+}

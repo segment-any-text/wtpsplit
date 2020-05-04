@@ -1,0 +1,21 @@
+[package]
+name = "nnsplit_python"
+version = "0.1.0"
+authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
+edition = "2018"
+
+[lib]
+name = "nnsplit"
+crate-type = ["cdylib"]
+
+[dependencies]
+ndarray = "0.13"
+numpy = "0.8"
+
+[dependencies.nnsplit]
+path = "../../nnsplit"
+default-features =  false
+
+[dependencies.pyo3]
+version = "0.9.2"
+features = ["extension-module"]
