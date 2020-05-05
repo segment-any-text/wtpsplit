@@ -40,4 +40,4 @@ jobs:
       - run: |
           python -m venv venv
           . venv/bin/activate
-          cargo test --verbose
+          cargo test --verbose -- --nocapture
