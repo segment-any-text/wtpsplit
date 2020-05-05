@@ -721,6 +721,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "inline-python"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60c48788d59f1c343a202b90540242a47dc4bfd44ffa9a675be6eabcb484dba1"
+dependencies = [
+ "inline-python-macros",
+ "pyo3",
+]
+
+[[package]]
+name = "inline-python-macros"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17c07b44ce6b59a979fe6b529c89e8d534f845cc2402a1d885127c0d709f36b7"
+dependencies = [
+ "proc-macro2 1.0.12",
+ "pyo3",
+ "quote 1.0.4",
+ "syn",
+]
+
+[[package]]
 name = "inventory"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1002,6 +1024,7 @@ dependencies = [
 name = "nnsplit_python"
 version = "0.1.0"
 dependencies = [
+ "inline-python",
  "ndarray",
  "nnsplit",
  "numpy",

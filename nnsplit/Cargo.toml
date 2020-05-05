@@ -31,7 +31,11 @@ quickcheck = "0.9"
 rand = "0.7"
 
 [features]
-default = ["tch-rs-backend", "model-loader"]
+default = []
 
 tch-rs-backend = ["tch"]
 model-loader = ["directories", "reqwest", "url"]
+
+[[example]]
+name = "cli"
+required-features = ["tch-rs-backend"]
