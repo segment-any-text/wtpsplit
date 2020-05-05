@@ -2,6 +2,7 @@
 #[macro_use]
 extern crate quickcheck_macros;
 
+#[cfg(feature = "model-loader")]
 #[macro_use]
 extern crate lazy_static;
 
@@ -12,10 +13,10 @@ use std::ops::Range;
 use thiserror::Error;
 
 #[cfg(feature = "tch-rs-backend")]
-mod tch_rs_backend;
+pub mod tch_rs_backend;
 
 #[cfg(feature = "model-loader")]
-mod model_loader;
+pub mod model_loader;
 
 fn split_whitespace(input: &str) -> Vec<&str> {
     let offset = input.trim_end().len();
@@ -242,7 +243,7 @@ impl NNSplit {
             tch::Device::Cpu => "torchscript_cpu_model.pt",
             tch::Device::Cuda(_) => "torchscript_cuda_model.pt",
         };
-        let mut model_data = model_loader::get_from_cache_or_download(model_name, filename)?;
+        let mut model_data = model_loader::get_resource(model_name, filename)?.0;
         let model = tch::CModule::load_data(&mut model_data)?;
         let backend = tch_rs_backend::TchRsBackend::new(model, device);
 

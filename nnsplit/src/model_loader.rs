@@ -49,10 +49,10 @@ impl From<std::io::Error> for ResourceError {
     }
 }
 
-pub fn get_from_cache_or_download(
+pub fn get_resource(
     model_name: &str,
     file: &str,
-) -> Result<impl std::io::Read, ResourceError> {
+) -> Result<(impl std::io::Read, Option<PathBuf>), ResourceError> {
     let base_url = url::Url::parse(MODEL_DATA.get(model_name).ok_or_else(|| {
         ResourceError::ModelNotFoundError {
             model_name: model_name.to_owned(),
@@ -71,7 +71,7 @@ pub fn get_from_cache_or_download(
     // if the file can be read, the data is already cached ...
     if let Some(path) = &cache_path {
         if let Ok(bytes) = fs::read(path) {
-            return Ok(Cursor::new(bytes));
+            return Ok((Cursor::new(bytes), cache_path));
         }
     }
 
@@ -91,5 +91,5 @@ pub fn get_from_cache_or_download(
         fs::write(path, &bytes)?;
     }
 
-    Ok(Cursor::new(bytes))
+    Ok((Cursor::new(bytes), cache_path))
 }
