@@ -2,6 +2,9 @@
 #[macro_use]
 extern crate quickcheck_macros;
 
+#[macro_use]
+extern crate lazy_static;
+
 use ndarray::prelude::*;
 use std::cmp;
 use std::error::Error;
@@ -10,6 +13,9 @@ use thiserror::Error;
 
 #[cfg(feature = "tch-rs-backend")]
 mod tch_rs_backend;
+
+#[cfg(feature = "model-loader")]
+mod model_loader;
 
 fn split_whitespace(input: &str) -> Vec<&str> {
     let offset = input.trim_end().len();
@@ -226,6 +232,23 @@ impl NNSplit {
         Ok(Self::from_backend(Box::new(backend), options))
     }
 
+    #[cfg(all(feature = "tch-rs-backend", feature = "model-loader"))]
+    pub fn load(
+        model_name: &str,
+        device: tch::Device,
+        options: NNSplitOptions,
+    ) -> Result<Self, Box<dyn Error>> {
+        let filename = match device {
+            tch::Device::Cpu => "torchscript_cpu_model.pt",
+            tch::Device::Cuda(_) => "torchscript_cuda_model.pt",
+        };
+        let mut model_data = model_loader::get_from_cache_or_download(model_name, filename)?;
+        let model = tch::CModule::load_data(&mut model_data)?;
+        let backend = tch_rs_backend::TchRsBackend::new(model, device);
+
+        Ok(Self::from_backend(Box::new(backend), options))
+    }
+
     pub fn from_backend(backend: Box<dyn Backend>, options: NNSplitOptions) -> Self {
         NNSplit {
             backend,
@@ -412,6 +435,19 @@ mod tests {
             ["This", " ", "is", " ", "a", " ", "test", "", ".", ""]
         );
 
+        Ok(())
+    }
+
+    #[cfg(all(feature = "tch-rs-backend", feature = "model-loader"))]
+    #[test]
+    fn splitter_model_works() -> Result<(), Box<dyn Error>> {
+        let splitter = NNSplit::load("de", tch::Device::Cpu, NNSplitOptions::default())?;
+        let splits = &splitter.split(vec!["Das ist ein Test Das ist noch ein Test."])?[0];
+
+        assert_eq!(
+            splits.flatten(0),
+            vec!["Das ist ein Test ", "Das ist noch ein Test."]
+        );
         Ok(())
     }
 

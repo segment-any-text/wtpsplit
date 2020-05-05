@@ -16,17 +16,22 @@ readme = "README.md"
 include = ["src/*.rs", "tests/*.rs", "build.rs", "data"]
 
 [dependencies]
-tch = {version = "0.1.6", optional = true}
 ndarray = "0.13"
 thiserror = "1.0"
+lazy_static = "1.4"
+tch = {version = "0.1.7", optional = true}
+directories = {version = "2.0", optional = true}
+reqwest = {version = "0.10.4", features = ["blocking"], optional = true}
+url = {version = "2.1.1", optional = true}
 
 [dev-dependencies]
 criterion = "0.3"
-quickcheck_macros = "0.9.1"
-quickcheck = "0.9.1"
+quickcheck_macros = "0.9"
+quickcheck = "0.9"
 rand = "0.7"
 
 [features]
-default = ["tch-rs-backend"]
+default = ["tch-rs-backend", "model-loader"]
 
 tch-rs-backend = ["tch"]
+model-loader = ["directories", "reqwest", "url"]
