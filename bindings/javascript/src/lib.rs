@@ -11,7 +11,7 @@ use nnsplit as core;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen(inspectable)]
-struct Split {
+pub struct Split {
     text: String,
     parts: Vec<JsValue>,
 }
@@ -55,7 +55,7 @@ impl<'a> From<core::Split<'a>> for Split {
 }
 
 #[wasm_bindgen]
-struct NNSplit {
+pub struct NNSplit {
     inner: core::NNSplit,
 }
 
