@@ -7,7 +7,7 @@ use pyo3::conversion::FromPy;
 use pyo3::create_exception;
 use pyo3::exceptions::Exception;
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyBool, PyDict};
 use pytorch_backend::PytorchBackend;
 
 use nnsplit as core;
@@ -164,6 +164,59 @@ impl NNSplit {
         let backend = PytorchBackend::new(model, device)?;
         let options = to_options(kwargs)?;
 
+        Ok(NNSplit {
+            inner: core::NNSplit::from_backend(
+                Box::new(backend) as Box<dyn core::Backend>,
+                options,
+            ),
+        })
+    }
+
+    #[args(kwargs = "**")]
+    #[staticmethod]
+    pub fn load(
+        py: Python,
+        model_name: &str,
+        use_cuda: Option<bool>,
+        kwargs: Option<&PyDict>,
+    ) -> PyResult<Self> {
+        let torch = py.import("torch")?;
+
+        let use_cuda = match use_cuda {
+            Some(x) => x,
+            None => {
+                let cuda_is_available: &PyBool = torch
+                    .getattr("cuda")?
+                    .call_method0("is_available")?
+                    .downcast()?;
+                cuda_is_available.is_true()
+            }
+        };
+
+        let (file_name, device) = match use_cuda {
+            true => (
+                "torchscript_cuda_model.pt",
+                torch.call_method1("device", ("cuda",))?.to_object(py),
+            ),
+            false => (
+                "torchscript_cpu_model.pt",
+                torch.call_method1("device", ("cpu",))?.to_object(py),
+            ),
+        };
+
+        let (_, resource_path) = core::model_loader::get_resource(&model_name, file_name)
+            .map_err(|error| SplitError::py_err(error.to_string()))?;
+
+        let backend = PytorchBackend::from_path(
+            resource_path
+                .unwrap()
+                .into_os_string()
+                .into_string()
+                .unwrap(),
+            device,
+        )?;
+
+        let options = to_options(kwargs)?;
         Ok(NNSplit {
             inner: core::NNSplit::from_backend(
                 Box::new(backend) as Box<dyn core::Backend>,

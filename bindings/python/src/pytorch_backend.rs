@@ -52,6 +52,18 @@ impl PytorchBackend {
             n_outputs,
         })
     }
+
+    pub fn from_path(path: String, device: PyObject) -> PyResult<Self> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let model = py
+            .import("torch.jit")?
+            .call_method1("load", (path,))?
+            .to_object(py);
+
+        PytorchBackend::new(model, device)
+    }
 }
 
 impl core::Backend for PytorchBackend {
