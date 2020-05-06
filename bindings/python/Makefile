@@ -6,7 +6,7 @@ build:
 	maturin build --release --manylinux 1-unchecked
 	# select the least recently modified wheel
 	# needed for matrix build, this could theoretically be a race condition but very likely good enough
-	pip install --ignore-installed --upgrade $(ls -1t ../../target/wheels/* | head -1)
+	# pip install --ignore-installed --upgrade $(ls -1t ../../target/wheels/* | head -1)
 
 test:
 	pytest -s

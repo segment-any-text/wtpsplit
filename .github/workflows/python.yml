@@ -29,12 +29,13 @@ jobs:
       working-directory: ${{env.working-directory}}
     - name: Build
       run: |
+        make build
         pwd
         ls -l .
         ls -l ..
         ls -l ../..
+        ls -l ../../target/
         ls -l target/
-        make build
       working-directory: ${{env.working-directory}}
     - name: Test
       run: |
