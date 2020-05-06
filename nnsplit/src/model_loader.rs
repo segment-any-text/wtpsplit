@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
 use std::io::Cursor;
-use std::io::Read;
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -27,7 +26,7 @@ pub enum ResourceError {
     NetworkError {
         model_name: String,
         file_name: String,
-        source: reqwest::Error,
+        source: minreq::Error,
     },
     #[error("model not found: \"{model_name}\"")]
     ModelNotFoundError { model_name: String },
@@ -76,14 +75,14 @@ pub fn get_resource(
     }
 
     // ... otherwise, request the data from the URL ...
-    let mut bytes = Vec::new();
-    let mut response =
-        reqwest::blocking::get(url).map_err(|source| ResourceError::NetworkError {
+    let bytes = minreq::get(&url.to_string())
+        .send()
+        .map_err(|source| ResourceError::NetworkError {
             model_name: model_name.to_owned(),
             file_name: file.to_owned(),
             source,
-        })?;
-    response.read_to_end(&mut bytes)?;
+        })?
+        .into_bytes();
 
     // ... and then cache the data at the provided file, if one was found
     if let Some(path) = &cache_path {
