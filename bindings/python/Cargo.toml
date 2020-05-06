@@ -17,3 +17,6 @@ pyo3 = "0.9.2"
 path = "../../nnsplit"
 default-features =  false
 features = ["model-loader"]
+
+[package.metadata.maturin]
+requires-dist = ["torch>=1.4,<2"]
