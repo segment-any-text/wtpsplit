@@ -13,11 +13,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.6.x'
-          architecture: 'x64'
-      - run: pip install maturin
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:
@@ -37,7 +32,7 @@ jobs:
         with:
           command: build
           args: --verbose
-      - run: |
-          python -m venv venv
-          . venv/bin/activate
-          cargo test --verbose -- --nocapture
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --verbose
