@@ -29,6 +29,9 @@ jobs:
       working-directory: ${{env.working-directory}}
     - name: Build
       run: |
+        ls -1t ../../target/wheels
+        ls -1t ../../target/
+        ls -1t ../../
         make build
       working-directory: ${{env.working-directory}}
     - name: Test
