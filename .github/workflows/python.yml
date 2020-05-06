@@ -30,12 +30,6 @@ jobs:
     - name: Build
       run: |
         make build
-        pwd
-        ls -l .
-        ls -l ..
-        ls -l ../..
-        ls -l ../../target/
-        ls -l target/
       working-directory: ${{env.working-directory}}
     - name: Test
       run: |
