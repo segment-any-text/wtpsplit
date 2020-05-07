@@ -10,8 +10,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 ndarray = "0.13"
-numpy = "0.8"
-pyo3 = "0.9.2"
+numpy = {git = "https://github.com/bminixhofer/rust-numpy"}
+pyo3 = {git = "https://github.com/PyO3/pyo3", rev = "e6f8fa7"}
 
 [dependencies.nnsplit]
 path = "../../nnsplit"
