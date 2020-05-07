@@ -7,6 +7,7 @@ extern crate quickcheck_macros;
 extern crate lazy_static;
 
 use ndarray::prelude::*;
+use serde_derive::{Deserialize, Serialize};
 use std::cmp;
 use std::error::Error;
 use std::ops::Range;
@@ -188,24 +189,51 @@ pub enum SplitError {
     BackendError { source: Box<dyn Error> },
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct NNSplitOptions {
+    #[serde(default = "NNSplitOptions::default_threshold")]
     pub threshold: f32,
+    #[serde(default = "NNSplitOptions::default_stride")]
     pub stride: usize,
+    #[serde(alias = "maxLength", default = "NNSplitOptions::default_max_length")]
     pub max_length: usize,
+    #[serde(default = "NNSplitOptions::default_padding")]
     pub padding: usize,
+    #[serde(alias = "batchSize", default = "NNSplitOptions::default_batch_size")]
     pub batch_size: usize,
+}
+
+impl NNSplitOptions {
+    fn default_threshold() -> f32 {
+        0.1
+    }
+
+    fn default_stride() -> usize {
+        NNSplitOptions::default_max_length() / 2
+    }
+
+    fn default_max_length() -> usize {
+        500
+    }
+
+    fn default_padding() -> usize {
+        5
+    }
+
+    fn default_batch_size() -> usize {
+        128
+    }
 }
 
 impl Default for NNSplitOptions {
     fn default() -> Self {
-        let max_length = 500;
-
         NNSplitOptions {
-            threshold: 0.1,
-            stride: max_length / 2,
-            max_length,
-            padding: 5,
-            batch_size: 128,
+            threshold: NNSplitOptions::default_threshold(),
+            stride: NNSplitOptions::default_stride(),
+            max_length: NNSplitOptions::default_max_length(),
+            padding: NNSplitOptions::default_padding(),
+            batch_size: NNSplitOptions::default_batch_size(),
         }
     }
 }

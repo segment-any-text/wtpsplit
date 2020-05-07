@@ -516,6 +516,8 @@ dependencies = [
  "quickcheck",
  "quickcheck_macros",
  "rand 0.7.3",
+ "serde",
+ "serde_derive",
  "tch",
  "thiserror",
  "url",
@@ -529,6 +531,8 @@ dependencies = [
  "js-sys",
  "ndarray",
  "nnsplit",
+ "serde",
+ "serde_derive",
  "wasm-bindgen",
  "wasm-bindgen-futures 0.4.12",
  "wasm-bindgen-test",
@@ -1291,6 +1295,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3c7d40d09cdbf0f4895ae58cf57d92e1e57a9dd8ed2e8390514b54a47cc5551"
 dependencies = [
  "cfg-if",
+ "serde",
+ "serde_json",
  "wasm-bindgen-macro",
 ]
 

@@ -1,10 +1,17 @@
 use js_sys::{Array, Float32Array, Promise, Uint32Array, Uint8Array};
 use ndarray::prelude::*;
+use serde_derive::{Deserialize, Serialize};
 use std::error::Error;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 
 use nnsplit as core;
+
+#[derive(Serialize, Deserialize)]
+struct ModelPredictArgs {
+    #[serde(rename = "batchSize")]
+    batch_size: usize,
+}
 
 #[wasm_bindgen(module = "@tensorflow/tfjs-core")]
 extern "C" {
@@ -33,8 +40,9 @@ extern "C" {
     type Model;
 
     #[wasm_bindgen(method)]
-    fn predict(this: &Model, tensor: Tensor) -> Tensor;
+    fn predict(this: &Model, tensor: Tensor, args: JsValue) -> Tensor;
 }
+
 pub struct TensorflowJSBackend {
     model: Model,
 }
@@ -65,7 +73,10 @@ impl core::Backend for TensorflowJSBackend {
                 .into(),
             shape,
         );
-        let pred = self.model.predict(tensor);
+        let pred = self.model.predict(
+            tensor,
+            JsValue::from_serde(&ModelPredictArgs { batch_size })?,
+        );
 
         let shape = pred.shape();
         let shape = shape.to_vec();

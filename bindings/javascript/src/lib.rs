@@ -62,14 +62,18 @@ pub struct NNSplit {
 #[wasm_bindgen]
 impl NNSplit {
     #[wasm_bindgen(constructor)]
-    pub async fn new(path: String) -> Self {
+    pub async fn new(path: String, options: JsValue) -> Self {
         utils::set_panic_hook();
         let backend = TensorflowJSBackend::new(&path).await;
 
         NNSplit {
             inner: core::NNSplit::from_backend(
                 Box::new(backend) as Box<dyn core::Backend>,
-                core::NNSplitOptions::default(),
+                if options.is_undefined() || options.is_null() {
+                    core::NNSplitOptions::default()
+                } else {
+                    options.into_serde().unwrap()
+                },
             ),
         }
     }
