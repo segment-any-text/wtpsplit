@@ -1,6 +1,30 @@
 {
-    "dependencies": {
-        "@tensorflow/tfjs-core": "^1.7.4",
-        "@tensorflow/tfjs-layers": "^1.7.4"
-    }
+  "name": "nnsplit",
+  "version": "0.1.0",
+  "description": "Fast, robust sentence splitting with bindings for Python, Rust and Javascript.",
+  "main": "src/lib.rs",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "wasm-pack build && cp -a package.json pkg/package.json",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bminixhofer/nnsplit.git"
+  },
+  "author": "Benjamin Minixhofer <bminixhofer@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bminixhofer/nnsplit/issues"
+  },
+  "homepage": "https://github.com/bminixhofer/nnsplit#readme",
+  "dependencies": {
+    "@tensorflow/tfjs-core": "^1.7.4",
+    "@tensorflow/tfjs-layers": "^1.7.4"
+  },
+  "devDependencies": {
+    "@tensorflow/tfjs-node": "^1.7.4"
+  }
 }

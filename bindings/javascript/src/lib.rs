@@ -20,7 +20,7 @@ pub struct Split {
 impl Split {
     #[wasm_bindgen(getter)]
     pub fn parts(&self) -> Vec<JsValue> {
-        self.parts.iter().map(|x| x.clone()).collect()
+        self.parts.to_vec()
     }
 
     #[wasm_bindgen(getter)]

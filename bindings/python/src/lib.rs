@@ -19,7 +19,7 @@ pub struct Split {
     parts: Vec<PyObject>,
 }
 
-fn join_method_output(items: &Vec<PyObject>, method: &str, joiner: &str) -> PyResult<String> {
+fn join_method_output(items: &[PyObject], method: &str, joiner: &str) -> PyResult<String> {
     let gil = Python::acquire_gil();
     let py = gil.python();
 

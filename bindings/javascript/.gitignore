@@ -3,3 +3,4 @@ bin/
 pkg/
 wasm-pack.log
 www
+node_modules

@@ -11,7 +11,7 @@ lazy_static! {
         let mut model_data = HashMap::new();
 
         for line in raw_csv.lines() {
-            let mut parts = line.split(",");
+            let mut parts = line.split(',');
 
             model_data.insert(parts.next().unwrap(), parts.next().unwrap());
         }

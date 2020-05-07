@@ -36,6 +36,3 @@ features = ["serde-serialize"]
 [dependencies.nnsplit]
 path = "../../nnsplit"
 default-features = false
-
-[dev-dependencies]
-wasm-bindgen-test = "0.2"

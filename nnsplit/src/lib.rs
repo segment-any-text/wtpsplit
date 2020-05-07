@@ -120,7 +120,7 @@ impl SplitSequence {
                         })
                         .collect();
 
-                    if indices.len() == 0 || indices[indices.len() - 1] != text.len() {
+                    if indices.is_empty() || indices[indices.len() - 1] != text.len() {
                         indices.push(text.len());
                     }
 
@@ -293,10 +293,7 @@ impl NNSplit {
         }
     }
 
-    fn get_inputs_and_indeces(
-        &self,
-        texts: &Vec<&str>,
-    ) -> (Array2<u8>, Vec<(usize, Range<usize>)>) {
+    fn get_inputs_and_indeces(&self, texts: &[&str]) -> (Array2<u8>, Vec<(usize, Range<usize>)>) {
         let maxlen = cmp::min(
             texts
                 .iter()
@@ -500,7 +497,7 @@ mod tests {
         let splitter = dummy_nnsplit(NNSplitOptions::default());
 
         let splits = splitter.split(vec![])?;
-        assert!(splits.len() == 0);
+        assert!(splits.is_empty());
         Ok(())
     }
 
