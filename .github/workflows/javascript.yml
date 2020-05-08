@@ -23,9 +23,9 @@ jobs:
       - name: Build module
         run: npm run build
         working-directory: ${{env.working-directory}}
-      - name: Start test server
-        run: npm run start_test_server &
-        working-directory: ${{env.working-directory}}
-      - name: Run tests
-        run: npm run test
-        working-directory: ${{env.working-directory}}
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v1
+        with:
+          working-directory: ${{env.working-directory}}
+          start: npm run start_test_server
+          wait-on: 'http://localhost:8080'

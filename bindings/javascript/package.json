@@ -9,7 +9,7 @@
   "scripts": {
     "build": "wasm-pack build && npm install --no-save pkg/ && cp -a package.json pkg/package.json && mv pkg/nnsplit_javascript.js pkg/nnsplit.js",
     "start_test_server": "cd dev_server && npm install && node download_models.js && npx webpack-dev-server --port=8080",
-    "test": "node tests/test.js"
+    "test": "cypress run"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
     "@tensorflow/tfjs-layers": "^1.7.4"
   },
   "devDependencies": {
+    "cypress": "^4.5.0",
     "playwright": "^1.0.1"
   }
 }
