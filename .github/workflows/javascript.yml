@@ -1,0 +1,31 @@
+name: Javascript Integration
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      working-directory: bindings/python
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: jetli/wasm-pack-action@v0.3.0
+      - uses: actions/setup-node@v1
+      - uses: microsoft/playwright-github-action@v1
+      - name: Install dependencies
+        run: npm install
+        working-directory: ${{env.working-directory}}
+      - name: Build module
+        run: npm run build
+        working-directory: ${{env.working-directory}}
+      - name: Start test server
+        run: npm run start_test_server &
+        working-directory: ${{env.working-directory}}
+      - name: Run tests
+        run: npm run test
+        working-directory: ${{env.working-directory}}
