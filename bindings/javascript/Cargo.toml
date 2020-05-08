@@ -5,7 +5,6 @@ authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
 edition = "2018"
 
 [lib]
-name = "nnsplit"
 crate-type = ["cdylib", "rlib"]
 
 [features]
