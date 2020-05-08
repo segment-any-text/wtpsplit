@@ -6,7 +6,7 @@ const playwright = require('playwright');
         const context = await browser.newContext();
         const page = await context.newPage();
 
-        await page.goto('http://0.0.0.0:8080');
+        await page.goto('http://localhost:8080');
 
         page.on('console', msg => {
             for (let i = 0; i < msg.args().length; i++) {
