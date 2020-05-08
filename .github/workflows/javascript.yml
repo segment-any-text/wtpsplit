@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       working-directory: bindings/javascript
+    strategy:
+      matrix:
+        browser: ["firefox", "chrome", "edge"]
 
     steps:
       - uses: actions/checkout@v2
@@ -29,3 +32,4 @@ jobs:
           working-directory: ${{env.working-directory}}
           start: npm run start_test_server
           wait-on: 'http://localhost:8080'
+          browser: ${{ matrix.browser }}
