@@ -13,7 +13,7 @@ jobs:
       working-directory: bindings/javascript
     strategy:
       matrix:
-        browser: ["firefox", "chrome", "edge"]
+        browser: ["firefox", "chrome", "electron"]
 
     steps:
       - uses: actions/checkout@v2
