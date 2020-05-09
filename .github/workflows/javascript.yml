@@ -20,7 +20,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: jetli/wasm-pack-action@v0.3.0
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - uses: actions/setup-node@v1
       - uses: microsoft/playwright-github-action@v1
       - name: Install dependencies
