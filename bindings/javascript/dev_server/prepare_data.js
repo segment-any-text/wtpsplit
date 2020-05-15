@@ -3,6 +3,10 @@ const fs = require('fs');
 const fetch = require('node-fetch');
 const results = [];
 
+const output_dir = "./static/";
+
+fs.createReadStream('../../../benchmarks/sample.json').pipe(fs.createWriteStream(`${output_dir}sample.json`));
+
 fs.createReadStream('../../../models.csv')
     .pipe(csv({
         headers: false
@@ -13,7 +17,7 @@ fs.createReadStream('../../../models.csv')
             const name = data['0'];
             const url = data['1'];
 
-            const root = `./static/${name}/`;
+            const root = `${output_dir}${name}/`;
 
             fs.mkdirSync(root, { recursive: true });
             ["model.json", "group1-shard1of1.bin"].forEach((filename) => {

@@ -228,7 +228,7 @@ impl NNSplit {
     pub fn split(&self, py: Python, texts: Vec<&str>) -> PyResult<Vec<Split>> {
         let splits = self
             .inner
-            .split(texts)
+            .split(&texts)
             .map_err(|error| SplitError::py_err(error.to_string()))?;
 
         Ok(splits.into_iter().map(|x| x.into_py(py)).collect())

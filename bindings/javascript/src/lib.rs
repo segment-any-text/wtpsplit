@@ -83,8 +83,8 @@ impl NNSplit {
             .into_iter()
             .map(|x| x.as_string().unwrap_throw())
             .collect();
-        let texts = texts.iter().map(|x| x.as_ref()).collect();
-        let splits = self.inner.split(texts);
+        let texts: Vec<&str> = texts.iter().map(|x| x.as_ref()).collect();
+        let splits = self.inner.split(&texts);
 
         splits
             .unwrap_throw()

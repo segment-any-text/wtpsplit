@@ -11,7 +11,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     )?;
 
     let input: Vec<&str> = vec![&text]; // input can consist of multiple texts to allow parallelization
-    let splits = &splitter.split(input)?[0];
+    let splits = &splitter.split(&input)?[0];
 
     for sentence in splits.iter() {
         println!("{}", sentence.text());
