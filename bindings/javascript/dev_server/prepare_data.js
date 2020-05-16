@@ -4,7 +4,7 @@ const fetch = require('node-fetch');
 const results = [];
 
 const output_dir = "./static/";
-
+fs.mkdirSync(output_dir, { recursive: true });
 fs.createReadStream('../../../benchmarks/sample.json').pipe(fs.createWriteStream(`${output_dir}sample.json`));
 
 fs.createReadStream('../../../models.csv')

@@ -26,7 +26,6 @@
     "@tensorflow/tfjs-layers": "^1.7.4"
   },
   "devDependencies": {
-    "cypress": "^4.5.0",
-    "playwright": "^1.0.1"
+    "cypress": "^4.5.0"
   }
 }
