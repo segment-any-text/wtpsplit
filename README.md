@@ -1,5 +1,7 @@
 # NNSplit
 
+__NOTE: I am working on a major rewrite of NNSplit so some links in this Readme might not work. See the docs of the latest published version at PyPI / NPM / Crates.io for usage instructions.__
+
 [![PyPI](https://img.shields.io/pypi/v/nnsplit)](https://pypi.org/project/nnsplit/)
 [![Crates.io](https://img.shields.io/crates/v/nnsplit)](https://crates.io/crates/nnsplit)
 [![npm](https://img.shields.io/npm/v/nnsplit)](https://www.npmjs.com/package/nnsplit)
