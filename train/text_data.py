@@ -78,7 +78,7 @@ class MemoryMapDataset(data.Dataset):
 
 if __name__ == "__main__":
     xml_iter = xml_dump_iter(
-        "../../../train_data/dewiki-20180920-corpus.xml",
+        "../train_data/dewiki-20180920-corpus.xml",
         min_text_length=300,
         max_text_length=5000,
     )

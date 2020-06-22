@@ -21,7 +21,7 @@ def _freeze_bias(lstm):
 class Network(pl.LightningModule):
     TORCHSCRIPT_CPU_NAME = "torchscript_cpu_model.pt"
     TORCHSCRIPT_CUDA_NAME = "torchscript_cuda_model.pt"
-    TENSORFLOWJS_DIR_NAME = "tensorflowjs_model"
+    ONNX_NAME = "model.onnx"
 
     def __init__(self, hparams):
         super().__init__()
@@ -41,60 +41,10 @@ class Network(pl.LightningModule):
         dataset = SplitDataset(text_data, 500, 800, 20)
 
         train_indices, valid_indeces = train_test_split(
-            np.arange(len(dataset)), test_size=200_000, random_state=1234
+            np.arange(len(dataset)), test_size=20_000, random_state=1234
         )
         self.train_dataset = data.Subset(dataset, train_indices)
         self.valid_dataset = data.Subset(dataset, valid_indeces)
-
-    def get_keras_equivalent(self):
-        from tensorflow.keras import layers, models
-
-        k_model = models.Sequential()
-        k_model.add(layers.Input(shape=(None,)))
-
-        k_model.add(layers.Embedding(256, 32))
-        k_model.layers[-1].set_weights([self.embedding.weight.detach().cpu().numpy()])
-
-        k_model.add(
-            layers.Bidirectional(
-                layers.LSTM(128, return_sequences=True, use_bias=False)
-            )
-        )
-        k_model.layers[-1].set_weights(
-            [
-                np.transpose(x.detach().cpu().numpy())
-                for name, x in self.lstm1.named_parameters()
-                if not name.startswith("bias")
-            ]
-        )
-
-        k_model.add(
-            layers.Bidirectional(layers.LSTM(64, return_sequences=True, use_bias=False))
-        )
-        k_model.layers[-1].set_weights(
-            [
-                np.transpose(x.detach().cpu().numpy())
-                for name, x in self.lstm2.named_parameters()
-                if not name.startswith("bias")
-            ]
-        )
-
-        k_model.add(layers.Dense(2))
-        k_model.layers[-1].set_weights(
-            [np.transpose(x.detach().cpu().numpy()) for x in self.out.parameters()]
-        )
-        return k_model
-
-    def keras_outputs_are_close(self):
-        keras_model = self.get_keras_equivalent()
-        inp = np.random.randint(0, 256, [1, 100])
-
-        torch_output = (
-            self.forward(torch.from_numpy(inp)).detach().cpu().detach().numpy()
-        )
-        keras_output = keras_model.predict(inp)
-
-        return np.allclose(torch_output, keras_output, rtol=0.0, atol=1e-5)
 
     def forward(self, x):
         h = self.embedding(x.long())
@@ -166,7 +116,7 @@ class Network(pl.LightningModule):
         # reload_dataloaders_every_epoch must be True in trainer
         # so that memory is cleaned up after each epoch
 
-        epoch_indices = np.random.choice(np.arange(len(self.train_dataset)), 3_000_000)
+        epoch_indices = np.random.choice(np.arange(len(self.train_dataset)), 30_000)
         epoch_sample = data.Subset(self.train_dataset, epoch_indices)
 
         return data.DataLoader(
@@ -190,7 +140,7 @@ class Network(pl.LightningModule):
         store_directory = Path(directory)
         store_directory.mkdir(exist_ok=True, parents=True)
 
-        sample = torch.zeros([1, 100])
+        sample = torch.zeros([1, 100], dtype=torch.uint8)
         # model is trained with fp16, so it can be safely quantized to 16 bit
         # CPU model is quantized to 8 bit, with minimal loss in accuracy
         quantized_model = Network(self.hparams)
@@ -208,6 +158,18 @@ class Network(pl.LightningModule):
             logging.warn(
                 "CUDA is not available. CUDA version of model could not be stored."
             )
+
+        torch.onnx.export(
+            self.float().cpu(),
+            sample.cpu(),
+            store_directory / self.ONNX_NAME,
+            input_names=["input"],
+            output_names=["output"],
+            dynamic_axes={
+                "input": {0: "batch", 1: "length"},
+                "output": {0: "batch", 1: "length"},
+            },
+        )
 
         import tensorflowjs as tfjs  # noqa: F401
 

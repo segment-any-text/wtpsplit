@@ -4,12 +4,13 @@ from glob import glob
 import numpy as np
 from argparse import ArgumentParser
 from pytorch_lightning.trainer import Trainer
-from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.loggers.wandb import WandbLogger
 from models import Network
 
 
 def store_code(run):
     dst = Path(run.dir) / "code" / "train"
+    dst.mkdir(parents=True, exist_ok=True)
     src = (Path(__file__) / "..").resolve()
 
     for f in glob(str(src / "*.py")):
@@ -23,7 +24,7 @@ if __name__ == "__main__":
     parser = Network.add_model_specific_args(parser)
     parser = Trainer.add_argparse_args(parser)
     parser.set_defaults(
-        gpus=1, max_epochs=1, reload_dataloaders_every_epoch=True, logger=wandb_logger,
+        gpus=0, max_epochs=1, reload_dataloaders_every_epoch=True, logger=wandb_logger,
     )
 
     hparams = parser.parse_args()
