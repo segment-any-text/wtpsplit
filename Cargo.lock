@@ -574,8 +574,9 @@ dependencies = [
 
 [[package]]
 name = "numpy"
-version = "0.8.0"
-source = "git+https://github.com/bminixhofer/rust-numpy#b4450255755328fd66381b92a2af68e39b828f1b"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "885a051a1243964a8201192fd292d46ea01377773506b61799d9825bcd4c866e"
 dependencies = [
  "cfg-if",
  "libc",
@@ -697,27 +698,25 @@ dependencies = [
 
 [[package]]
 name = "pyo3"
-version = "0.9.2"
-source = "git+https://github.com/PyO3/pyo3?rev=e6f8fa7#e6f8fa76af2bf78e572c144cc24d763ed5d022ce"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "80348539d1fa3fde72728c3fe9d750ec92c39e89908a774eda074289578c8d33"
 dependencies = [
  "indoc",
  "inventory",
  "libc",
- "num-traits",
  "parking_lot",
  "paste",
  "pyo3cls",
- "regex",
- "serde",
- "serde_json",
  "unindent",
  "version_check",
 ]
 
 [[package]]
 name = "pyo3-derive-backend"
-version = "0.9.2"
-source = "git+https://github.com/PyO3/pyo3?rev=e6f8fa7#e6f8fa76af2bf78e572c144cc24d763ed5d022ce"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa4d5d2e35fa26a8556dfca96c964249062deaa940b7e82e7c214f1bc21d646d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -726,8 +725,9 @@ dependencies = [
 
 [[package]]
 name = "pyo3cls"
-version = "0.9.2"
-source = "git+https://github.com/PyO3/pyo3?rev=e6f8fa7#e6f8fa76af2bf78e572c144cc24d763ed5d022ce"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f4628c487dbc084c17d4762bc0b531f373ca315997457708d6c9fabcc5c9928"
 dependencies = [
  "pyo3-derive-backend",
  "quote",
@@ -1046,9 +1046,6 @@ name = "serde"
 version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36df6ac6412072f67cf767ebbde4133a5b2e88e76dc6187fa7104cd16f783399"
-dependencies = [
- "serde_derive",
-]
 
 [[package]]
 name = "serde_derive"
