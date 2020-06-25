@@ -36,15 +36,16 @@ jobs:
         make test
       working-directory: ${{env.working-directory}}
     - name: Store wheel name
-      working-directory: ${{env.working-directory}}
+      working-directory: ${{env.working-directory}}/build
       run: |
-        echo ::set-env name=WHEEL_NAME::$(ls build)
+        export PATTERN=export PATTERN=*cp`python -c "import sys; print(str(sys.version_info.major) + str(sys.version_info.minor))"`*.whl
+        echo ::set-env name=WHEEL_NAME::$(find . -iname "$PATTERN")
     - name: Upload wheel to nightly Release
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: https://uploads.github.com/repos/bminixhofer/nnsplit/releases/27930194/assets # nightly release
-        asset_path: ${{env.working-directory}}/build/${{env.WHEEL_NAME}}
+        asset_path: target/wheels/${{env.WHEEL_NAME}}
         asset_name: ${{env.WHEEL_NAME}}
         asset_content_type: application/zip
