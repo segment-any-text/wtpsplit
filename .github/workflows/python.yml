@@ -38,8 +38,8 @@ jobs:
     - name: Store wheel name
       working-directory: ${{env.working-directory}}/build
       run: |
-        export PATTERN=*cp`python -c "import sys; print(str(sys.version_info.major) + str(sys.version_info.minor))"`*.whl
-        echo ::set-env name=WHEEL_NAME::$(find . -iname "$PATTERN")
+        echo ::set-env name=PYTHON_PATTERN::"*cp`python -c 'import sys; print(str(sys.version_info.major) + str(sys.version_info.minor))'`*.whl"
+        echo ::set-env name=WHEEL_NAME::$(find . -iname "${{env.PYTHON_PATTERN}}")
     - name: Upload wheel to nightly Release
       uses: actions/upload-release-asset@v1
       env:
