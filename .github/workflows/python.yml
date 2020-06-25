@@ -35,12 +35,16 @@ jobs:
       run: |
         make test
       working-directory: ${{env.working-directory}}
+    - name: Store wheel name
+      working-directory: ${{env.working-directory}}
+      run: |
+        echo ::set-env name=WHEEL_NAME::$(ls build)
     - name: Upload wheel to nightly Release
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: https://uploads.github.com/repos/bminixhofer/nnsplit/releases/27930194/assets # nightly release
-        asset_path: ${{env.working-directory}}/build/*.whl
-        asset_name: wheel.zip
+        asset_path: ${{env.working-directory}}/build/${{env.WHEEL_NAME}}
+        asset_name: ${{env.WHEEL_NAME}}
         asset_content_type: application/zip
