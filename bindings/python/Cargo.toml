@@ -11,10 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 ndarray = "0.13"
 numpy = "0.9.0"
-
-[dependencies.pyo3]
-version = "0.10.1"
-features = ["extension-module"]
+pyo3 = "0.10.1"
 
 [dependencies.nnsplit]
 path = "../../nnsplit"
