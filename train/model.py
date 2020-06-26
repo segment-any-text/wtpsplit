@@ -5,10 +5,11 @@ from torch import nn
 import torch
 from torch.nn import functional as F
 import pytorch_lightning as pl
+from pytorch_lightning.trainer import Trainer
 from sklearn.model_selection import train_test_split
 from torch.utils import data
-from text_data import MemoryMapDataset
 from dataset import SplitDataset
+from argparse import ArgumentParser
 
 
 def _freeze_bias(lstm):
@@ -23,8 +24,10 @@ class Network(pl.LightningModule):
     TORCHSCRIPT_CUDA_NAME = "torchscript_cuda_model.pt"
     ONNX_NAME = "model.onnx"
 
-    def __init__(self, hparams):
+    def __init__(self, text_dataset, labeler, hparams):
         super().__init__()
+        self.text_dataset = text_dataset
+        self.labeler = labeler
         self.hparams = hparams
 
         self.embedding = nn.Embedding(256, 32)
@@ -34,11 +37,8 @@ class Network(pl.LightningModule):
         _freeze_bias(self.lstm2)
         self.out = nn.Linear(128, 2)
 
-        assert self.keras_outputs_are_close()
-
     def prepare_data(self):
-        text_data = MemoryMapDataset("texts.txt", "slices.pkl")
-        dataset = SplitDataset(text_data, 500, 800, 20)
+        dataset = SplitDataset(self.text_dataset, self.labeler, 500, 800, 20)
 
         train_indices, valid_indeces = train_test_split(
             np.arange(len(dataset)), test_size=20_000, random_state=1234
@@ -171,14 +171,24 @@ class Network(pl.LightningModule):
             },
         )
 
-        import tensorflowjs as tfjs  # noqa: F401
-
-        tfjs.converters.save_keras_model(
-            self.get_keras_equivalent(),
-            str(store_directory / self.TENSORFLOWJS_DIR_NAME),
-            quantization_dtype=np.uint8,
-        )
-
     @staticmethod
-    def add_model_specific_args(parser):
+    def get_parser():
+        parser = ArgumentParser()
+        parser.add_argument(
+            "--test_size", type=int, help="Number of samples for test set."
+        )
+        parser.add_argument(
+            "--train_size",
+            type=int,
+            help="Number of samples to train on for one epoch. "
+            "Will be sampled without replacement from the text dataset.",
+        )
+        parser = Trainer.add_argparse_args(parser)
+
+        parser.set_defaults(
+            train_size=2_000_000,
+            test_size=100_000,
+            max_epochs=1,
+            reload_dataloaders_every_epoch=True,
+        )
         return parser

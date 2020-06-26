@@ -1,14 +1,13 @@
 import torch
 from torch.utils import data
 from torch.nn.utils.rnn import pad_sequence
-from labeler import get_default_labeler
 import random
 
 
 class SplitDataset(data.Dataset):
-    def __init__(self, text_dataset, min_len, max_len, max_pad):
+    def __init__(self, text_dataset, labeler, min_len, max_len, max_pad):
         self.text_dataset = text_dataset
-        self.labeler = get_default_labeler()
+        self.labeler = labeler
         self.min_len = min_len
         self.max_len = max_len
         self.max_pad = max_pad
@@ -54,22 +53,3 @@ class SplitDataset(data.Dataset):
         labels = pad_sequence(labels, batch_first=True)
 
         return inputs, labels
-
-
-if __name__ == "__main__":
-    from text_data import MemoryMapDataset
-    from tqdm.auto import tqdm
-    from torch.utils import data
-
-    text_data = MemoryMapDataset("texts.txt", "slices.pkl")
-    dataset = SplitDataset(text_data, 500, 800, 20)
-    loader = data.DataLoader(
-        dataset,
-        collate_fn=SplitDataset.collate_fn,
-        shuffle=False,
-        batch_size=128,
-        num_workers=6,
-    )
-
-    for batch in tqdm(loader):
-        continue

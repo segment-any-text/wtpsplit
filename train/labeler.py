@@ -216,8 +216,8 @@ class Labeler:
             print(df)
 
 
-def get_default_labeler():
-    return Labeler(
+if __name__ == "__main__":
+    labeler = Labeler(
         [
             SpacySentenceTokenizer(
                 "de_core_news_sm", lower_start_prob=0.7, remove_end_punct_prob=0.7
@@ -227,8 +227,4 @@ def get_default_labeler():
             # SECOSCompoundTokenizer("http://localhost:2020"),
         ]
     )
-
-
-if __name__ == "__main__":
-    labeler = get_default_labeler()
     labeler.visualize("Die erste Million Jahre vergeht schnell, die zweite Million...")
