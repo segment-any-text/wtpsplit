@@ -49,5 +49,6 @@ jobs:
       with:
         upload_url: https://uploads.github.com/repos/bminixhofer/nnsplit/releases/27930194/assets{?name,label} # nightly release
         asset_path: target/wheels/${{env.WHEEL_NAME}}
+        release_id: 27930194
         asset_name: ${{env.WHEEL_NAME}}
         asset_content_type: application/zip
