@@ -1,4 +1,4 @@
-name: Python Integration
+name: Update Nightly Tag
 
 on:
   push:
