@@ -2,4 +2,3 @@ lightning_logs
 wandb
 nnsplit
 *.pkl
-*.txt
