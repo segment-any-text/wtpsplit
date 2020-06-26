@@ -43,7 +43,7 @@ jobs:
       run: |
         echo ::set-env name=WHEEL_NAME::$(ls ${{env.WHEEL_PATTERN}})
     - name: Upload wheel to nightly Release
-      uses: actions/upload-release-asset@v1
+      uses: gfreezy/upload-release-asset@v1.0.2 # change this once https://github.com/actions/upload-release-asset/pull/22 is merged
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
