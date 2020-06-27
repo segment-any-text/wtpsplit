@@ -179,8 +179,8 @@ class Network(pl.LightningModule):
         parser = Trainer.add_argparse_args(parser)
 
         parser.set_defaults(
-            train_size=2_000_000,
-            test_size=100_000,
+            train_size=1_000_000,
+            test_size=50_000,
             max_epochs=1,
             reload_dataloaders_every_epoch=True,
         )
