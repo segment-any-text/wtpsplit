@@ -136,7 +136,7 @@ class Network(pl.LightningModule):
         sample = torch.zeros([1, 100], dtype=torch.uint8)
         # model is trained with fp16, so it can be safely quantized to 16 bit
         # CPU model is quantized to 8 bit, with minimal loss in accuracy
-        quantized_model = Network(self.hparams)
+        quantized_model = Network(self.text_dataset, self.labeler, self.hparams)
         quantized_model.load_state_dict(self.state_dict())
         quantized_model = torch.quantization.quantize_dynamic(
             quantized_model, {nn.LSTM, nn.Linear}, dtype=torch.qint8, inplace=True
