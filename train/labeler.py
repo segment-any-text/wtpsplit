@@ -206,7 +206,7 @@ class Labeler:
             data.append([char, *label_col])
 
         df = pd.DataFrame(
-            data, columns=["char", *[x.__class__.__name__ for x in self.tokenizers]]
+            data, columns=["byte", *[x.__class__.__name__ for x in self.tokenizers]]
         ).T
         df.columns = ["" for _ in range(len(df.columns))]
 
