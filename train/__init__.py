@@ -37,7 +37,11 @@ if __name__ == "__main__":
         ]
     )
 
-    model = Network(MemoryMapDataset("texts.txt", "slices.pkl"), labeler, hparams)
+    model = Network(
+        MemoryMapDataset("../train_data/texts.txt", "../train_data/slices.pkl"),
+        labeler,
+        hparams,
+    )
     n_params = np.sum([np.prod(x.shape) for x in model.parameters()])
 
     trainer = Trainer.from_argparse_args(hparams)

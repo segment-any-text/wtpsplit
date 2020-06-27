@@ -12,13 +12,6 @@ from dataset import SplitDataset
 from argparse import ArgumentParser
 
 
-def _freeze_bias(lstm):
-    for name, param in lstm.named_parameters():
-        if name.startswith("bias"):
-            param.requires_grad = False
-            param[:] = 0
-
-
 class Network(pl.LightningModule):
     TORCHSCRIPT_CPU_NAME = "torchscript_cpu_model.pt"
     TORCHSCRIPT_CUDA_NAME = "torchscript_cuda_model.pt"
@@ -32,16 +25,14 @@ class Network(pl.LightningModule):
 
         self.embedding = nn.Embedding(256, 32)
         self.lstm1 = nn.LSTM(32, 128, bidirectional=True, batch_first=True)
-        _freeze_bias(self.lstm1)
         self.lstm2 = nn.LSTM(256, 64, bidirectional=True, batch_first=True)
-        _freeze_bias(self.lstm2)
         self.out = nn.Linear(128, 2)
 
     def prepare_data(self):
         dataset = SplitDataset(self.text_dataset, self.labeler, 500, 800, 20)
 
         train_indices, valid_indeces = train_test_split(
-            np.arange(len(dataset)), test_size=20_000, random_state=1234
+            np.arange(len(dataset)), test_size=self.hparams.test_size, random_state=1234
         )
         self.train_dataset = data.Subset(dataset, train_indices)
         self.valid_dataset = data.Subset(dataset, valid_indeces)
@@ -116,7 +107,9 @@ class Network(pl.LightningModule):
         # reload_dataloaders_every_epoch must be True in trainer
         # so that memory is cleaned up after each epoch
 
-        epoch_indices = np.random.choice(np.arange(len(self.train_dataset)), 30_000)
+        epoch_indices = np.random.choice(
+            np.arange(len(self.train_dataset)), self.hparams.train_size
+        )
         epoch_sample = data.Subset(self.train_dataset, epoch_indices)
 
         return data.DataLoader(
