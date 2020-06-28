@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build-javascript:
+    runs-on: ubuntu-latest
+    env:
+      working-directory: bindings/javascript
+    strategy:
+      matrix:
+        browser: ["firefox", "chrome", "electron"]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - uses: actions/setup-node@v1
+      - name: Install dependencies
+        run: npm install
+        working-directory: ${{env.working-directory}}
+      - name: Build module
+        run: npm run build
+        working-directory: ${{env.working-directory}}
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v1
+        with:
+          working-directory: ${{env.working-directory}}
+          start: npm run start_test_server
+          wait-on: "http://localhost:8080"
+          browser: ${{ matrix.browser }}
+
+  build-rust:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: rust_lib/target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose
+      - run: rustup component add clippy
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --verbose --all-features
+
+  build-python:
+    runs-on: ubuntu-latest
+    env:
+      working-directory: bindings/python
+    strategy:
+      matrix:
+        python-version: [3.5, 3.6, 3.7, 3.8]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          make install
+        working-directory: ${{env.working-directory}}
+      - name: Build
+        run: |
+          make build
+        working-directory: ${{env.working-directory}}
+      - name: Test
+        run: |
+          make test
+        working-directory: ${{env.working-directory}}
+      - name: Store python version pattern
+        run: |
+          echo ::set-env name=WHEEL_PATTERN::"*cp`python -c 'import sys; print(str(sys.version_info.major) + str(sys.version_info.minor))'`*.whl"
+      - name: Store wheel name
+        working-directory: target/wheels
+        run: |
+          echo ::set-env name=WHEEL_NAME::$(ls ${{env.WHEEL_PATTERN}})
+      - name: Upload wheel as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: python-wheel
+          path: target/wheels/${{env.WHEEL_NAME}}
+
+  nightly-release:
+    runs-on: ubuntu-latest
+    needs: [build-javascript, build-rust, build-python]
+
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: python-wheel
+          path: python-wheel
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Nightly Build"
+          files: |
+            python-wheel/*.whl
