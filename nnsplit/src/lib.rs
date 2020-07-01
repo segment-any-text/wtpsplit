@@ -199,7 +199,7 @@ pub struct NNSplitOptions {
 
 impl NNSplitOptions {
     fn default_threshold() -> f32 {
-        0.1
+        0.5
     }
 
     fn default_stride() -> usize {
