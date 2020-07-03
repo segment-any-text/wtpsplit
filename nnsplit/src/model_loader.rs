@@ -64,7 +64,7 @@ pub fn get_resource(
     if let Some(project_dirs) = directories::ProjectDirs::from("", "", "nnsplit") {
         let cache_dir = project_dirs.cache_dir();
 
-        cache_path = Some(cache_dir.join(file));
+        cache_path = Some(cache_dir.join(model_name).join(file));
     }
 
     // if the file can be read, the data is already cached ...

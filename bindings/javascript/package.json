@@ -22,8 +22,7 @@
   },
   "homepage": "https://github.com/bminixhofer/nnsplit#readme",
   "dependencies": {
-    "@tensorflow/tfjs-core": "^1.7.4",
-    "@tensorflow/tfjs-layers": "^1.7.4"
+    "tractjs": "^0.1.6"
   },
   "devDependencies": {
     "cypress": "^4.9.0"

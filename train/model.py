@@ -31,11 +31,11 @@ class Network(pl.LightningModule):
     def prepare_data(self):
         dataset = SplitDataset(self.text_dataset, self.labeler, 500, 800, 20)
 
-        train_indices, valid_indeces = train_test_split(
+        train_indices, valid_indices = train_test_split(
             np.arange(len(dataset)), test_size=self.hparams.test_size, random_state=1234
         )
         self.train_dataset = data.Subset(dataset, train_indices)
-        self.valid_dataset = data.Subset(dataset, valid_indeces)
+        self.valid_dataset = data.Subset(dataset, valid_indices)
 
     def forward(self, x):
         h = self.embedding(x.long())

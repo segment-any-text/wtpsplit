@@ -1,4 +1,4 @@
-use crate::Backend;
+use crate::{NNSplitLogic, NNSplitOptions};
 use ndarray::prelude::*;
 use std::cmp;
 use std::convert::TryInto;
@@ -21,9 +21,7 @@ impl TchRsBackend {
             n_outputs,
         }
     }
-}
 
-impl Backend for TchRsBackend {
     fn predict(&self, input: Array2<u8>, batch_size: usize) -> Result<Array3<f32>, Box<dyn Error>> {
         let input_shape = input.shape();
 
@@ -48,5 +46,74 @@ impl Backend for TchRsBackend {
         }
 
         Ok(preds)
+    }
+}
+
+pub struct NNSplit {
+    backend: TchRsBackend,
+    logic: NNSplitLogic,
+}
+
+impl NNSplit {
+    pub fn new<P: AsRef<std::path::Path>>(
+        model_path: P,
+        device: tch::Device,
+        options: NNSplitOptions,
+    ) -> Result<Self, Box<dyn Error>> {
+        let model = tch::CModule::load(model_path)?;
+        let backend = TchRsBackend::new(model, device);
+
+        Ok(NNSplit {
+            backend,
+            logic: NNSplitLogic::new(options),
+        })
+    }
+
+    #[cfg(feature = "model-loader")]
+    pub fn load(
+        model_name: &str,
+        device: tch::Device,
+        options: NNSplitOptions,
+    ) -> Result<Self, Box<dyn Error>> {
+        let filename = match device {
+            tch::Device::Cpu => "torchscript_cpu_model.pt",
+            tch::Device::Cuda(_) => "torchscript_cuda_model.pt",
+        };
+        let mut model_data = crate::model_loader::get_resource(model_name, filename)?.0;
+        let model = tch::CModule::load_data(&mut model_data)?;
+        let backend = TchRsBackend::new(model, device);
+
+        Ok(NNSplit {
+            backend,
+            logic: NNSplitLogic::new(options),
+        })
+    }
+
+    pub fn split<'a>(&self, texts: &[&'a str]) -> Result<Vec<crate::Split<'a>>, crate::SplitError> {
+        let (inputs, indices) = self.logic.get_inputs_and_indices(texts);
+
+        let slice_preds = self
+            .backend
+            .predict(inputs, self.logic.options.batch_size)
+            .unwrap();
+        self.logic.split(texts, slice_preds, indices)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(feature = "model-loader")]
+    #[test]
+    fn splitter_model_works() -> Result<(), Box<dyn Error>> {
+        let splitter = NNSplit::load("de", tch::Device::Cpu, NNSplitOptions::default())?;
+        let splits = &splitter.split(&["Das ist ein Test Das ist noch ein Test."])?[0];
+
+        assert_eq!(
+            splits.flatten(0),
+            vec!["Das ist ein Test ", "Das ist noch ein Test."]
+        );
+        Ok(())
     }
 }

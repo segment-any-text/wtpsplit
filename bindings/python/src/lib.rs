@@ -153,7 +153,8 @@ impl<'a> FromPy<core::Split<'a>> for Split {
 
 #[pyclass]
 pub struct NNSplit {
-    inner: core::NNSplit,
+    backend: PytorchBackend,
+    inner: core::NNSplitLogic,
 }
 
 #[pymethods]
@@ -165,10 +166,8 @@ impl NNSplit {
         let options = to_options(kwargs)?;
 
         Ok(NNSplit {
-            inner: core::NNSplit::from_backend(
-                Box::new(backend) as Box<dyn core::Backend>,
-                options,
-            ),
+            backend,
+            inner: core::NNSplitLogic::new(options),
         })
     }
 
@@ -217,18 +216,23 @@ impl NNSplit {
         )?;
 
         let options = to_options(kwargs)?;
+
         Ok(NNSplit {
-            inner: core::NNSplit::from_backend(
-                Box::new(backend) as Box<dyn core::Backend>,
-                options,
-            ),
+            backend,
+            inner: core::NNSplitLogic::new(options),
         })
     }
 
     pub fn split(&self, py: Python, texts: Vec<&str>) -> PyResult<Vec<Split>> {
+        let (inputs, indices) = self.inner.get_inputs_and_indices(&texts);
+
+        let slice_preds = self
+            .backend
+            .predict(inputs, self.inner.options.batch_size)?;
+
         let splits = self
             .inner
-            .split(&texts)
+            .split(&texts, slice_preds, indices)
             .map_err(|error| SplitError::py_err(error.to_string()))?;
 
         Ok(splits.into_iter().map(|x| x.into_py(py)).collect())

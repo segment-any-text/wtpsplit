@@ -1,7 +1,8 @@
-mod tensorflowjs_backend;
+mod tractjs_backend;
 mod utils;
 
-use tensorflowjs_backend::TensorflowJSBackend;
+use js_sys::Array;
+use tractjs_backend::TractJSBackend;
 use wasm_bindgen::prelude::*;
 
 use nnsplit as core;
@@ -56,43 +57,55 @@ impl<'a> From<core::Split<'a>> for Split {
 
 #[wasm_bindgen]
 pub struct NNSplit {
-    inner: core::NNSplit,
+    backend: TractJSBackend,
+    inner: core::NNSplitLogic,
 }
 
 #[wasm_bindgen]
 impl NNSplit {
     #[wasm_bindgen(constructor)]
-    pub async fn new(path: String, options: JsValue) -> Self {
+    pub fn new(path: String, options: JsValue) -> Self {
         utils::set_panic_hook();
-        let backend = TensorflowJSBackend::new(&path).await;
+        let backend = TractJSBackend::new(&path);
 
         NNSplit {
-            inner: core::NNSplit::from_backend(
-                Box::new(backend) as Box<dyn core::Backend>,
-                if options.is_undefined() || options.is_null() {
-                    core::NNSplitOptions::default()
-                } else {
-                    options.into_serde().unwrap()
-                },
-            ),
+            backend,
+            inner: core::NNSplitLogic::new(if options.is_undefined() || options.is_null() {
+                core::NNSplitOptions::default()
+            } else {
+                options.into_serde().unwrap()
+            }),
         }
     }
 
-    pub fn split(&self, texts: Vec<JsValue>) -> Vec<JsValue> {
+    pub async fn split(self, texts: Vec<JsValue>) -> JsValue {
         let texts: Vec<String> = texts
             .into_iter()
             .map(|x| x.as_string().unwrap_throw())
             .collect();
         let texts: Vec<&str> = texts.iter().map(|x| x.as_ref()).collect();
-        let splits = self.inner.split(&texts);
 
-        splits
-            .unwrap_throw()
+        let (inputs, indices) = self.inner.get_inputs_and_indices(&texts);
+        let slice_preds = self.backend.predict(inputs).await.unwrap_throw();
+
+        let splits = self
+            .inner
+            .split(&texts, slice_preds, indices)
+            .unwrap_throw();
+
+        let splits = splits
             .into_iter()
             .map(|x| {
                 let split: Split = x.into();
                 split.into()
             })
-            .collect()
+            .collect::<Vec<JsValue>>();
+
+        let array = Array::new();
+        for split in &splits {
+            array.push(split);
+        }
+
+        array.into()
     }
 }

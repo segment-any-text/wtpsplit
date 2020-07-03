@@ -15,6 +15,8 @@ use thiserror::Error;
 
 #[cfg(feature = "tch-rs-backend")]
 pub mod tch_rs_backend;
+#[cfg(feature = "tch-rs-backend")]
+pub use tch_rs_backend::NNSplit;
 
 #[cfg(feature = "model-loader")]
 pub mod model_loader;
@@ -231,49 +233,14 @@ impl Default for NNSplitOptions {
     }
 }
 
-pub trait Backend {
-    fn predict(&self, input: Array2<u8>, batch_size: usize) -> Result<Array3<f32>, Box<dyn Error>>;
+pub struct NNSplitLogic {
+    pub options: NNSplitOptions,
+    pub split_sequence: SplitSequence,
 }
 
-pub struct NNSplit {
-    backend: Box<dyn Backend>,
-    options: NNSplitOptions,
-    split_sequence: SplitSequence,
-}
-
-impl NNSplit {
-    #[cfg(feature = "tch-rs-backend")]
-    pub fn new<P: AsRef<std::path::Path>>(
-        model_path: P,
-        device: tch::Device,
-        options: NNSplitOptions,
-    ) -> Result<Self, Box<dyn Error>> {
-        let model = tch::CModule::load(model_path)?;
-        let backend = tch_rs_backend::TchRsBackend::new(model, device);
-
-        Ok(Self::from_backend(Box::new(backend), options))
-    }
-
-    #[cfg(all(feature = "tch-rs-backend", feature = "model-loader"))]
-    pub fn load(
-        model_name: &str,
-        device: tch::Device,
-        options: NNSplitOptions,
-    ) -> Result<Self, Box<dyn Error>> {
-        let filename = match device {
-            tch::Device::Cpu => "torchscript_cpu_model.pt",
-            tch::Device::Cuda(_) => "torchscript_cuda_model.pt",
-        };
-        let mut model_data = model_loader::get_resource(model_name, filename)?.0;
-        let model = tch::CModule::load_data(&mut model_data)?;
-        let backend = tch_rs_backend::TchRsBackend::new(model, device);
-
-        Ok(Self::from_backend(Box::new(backend), options))
-    }
-
-    pub fn from_backend(backend: Box<dyn Backend>, options: NNSplitOptions) -> Self {
-        NNSplit {
-            backend,
+impl NNSplitLogic {
+    pub fn new(options: NNSplitOptions) -> Self {
+        NNSplitLogic {
             options,
             split_sequence: SplitSequence::new(vec![
                 (Level("Sentence"), SplitInstruction::PredictionIndex(0)),
@@ -286,7 +253,10 @@ impl NNSplit {
         }
     }
 
-    fn get_inputs_and_indeces(&self, texts: &[&str]) -> (Array2<u8>, Vec<(usize, Range<usize>)>) {
+    pub fn get_inputs_and_indices(
+        &self,
+        texts: &[&str],
+    ) -> (Array2<u8>, Vec<(usize, Range<usize>)>) {
         let maxlen = cmp::min(
             texts
                 .iter()
@@ -362,13 +332,12 @@ impl NNSplit {
             .collect()
     }
 
-    pub fn split<'a>(&self, texts: &[&'a str]) -> Result<Vec<Split<'a>>, SplitError> {
-        let (inputs, indices) = self.get_inputs_and_indeces(&texts);
-        let slice_preds = self
-            .backend
-            .predict(inputs, self.options.batch_size)
-            .map_err(|source| SplitError::BackendError { source })?;
-
+    pub fn split<'a>(
+        &self,
+        texts: &[&'a str],
+        slice_preds: Array3<f32>,
+        indices: Vec<(usize, Range<usize>)>,
+    ) -> Result<Vec<Split<'a>>, SplitError> {
         let padded_preds = self.combine_predictions(
             (&slice_preds).into(),
             indices,
@@ -404,14 +373,18 @@ mod tests {
     use super::*;
     use rand::{thread_rng, Rng};
 
-    struct DummyBackend {}
+    struct DummyNNSplit {
+        logic: NNSplitLogic,
+    }
 
-    impl Backend for DummyBackend {
-        fn predict(
-            &self,
-            input: Array2<u8>,
-            _batch_size: usize,
-        ) -> Result<Array3<f32>, Box<dyn Error>> {
+    impl DummyNNSplit {
+        fn new(options: NNSplitOptions) -> Self {
+            DummyNNSplit {
+                logic: NNSplitLogic::new(options),
+            }
+        }
+
+        fn predict(&self, input: Array2<u8>) -> Array3<f32> {
             let n = input.shape()[0];
             let length = input.shape()[1];
             let dim = 2usize;
@@ -423,12 +396,15 @@ mod tests {
                 blob.push(rng.gen_range(0., 1.));
             }
 
-            Ok(Array3::from_shape_vec((n, length, dim), blob)?)
+            Array3::from_shape_vec((n, length, dim), blob).unwrap()
         }
-    }
 
-    fn dummy_nnsplit(options: NNSplitOptions) -> NNSplit {
-        NNSplit::from_backend(Box::new(DummyBackend {}), options)
+        pub fn split<'a>(&self, texts: &[&'a str]) -> Result<Vec<Split<'a>>, SplitError> {
+            let (input, indices) = self.logic.get_inputs_and_indices(texts);
+            let slice_preds = self.predict(input);
+
+            self.logic.split(texts, slice_preds, indices)
+        }
     }
 
     #[test]
@@ -454,19 +430,6 @@ mod tests {
         );
     }
 
-    #[cfg(all(feature = "tch-rs-backend", feature = "model-loader"))]
-    #[test]
-    fn splitter_model_works() -> Result<(), Box<dyn Error>> {
-        let splitter = NNSplit::load("de", tch::Device::Cpu, NNSplitOptions::default())?;
-        let splits = &splitter.split(&["Das ist ein Test Das ist noch ein Test."])?[0];
-
-        assert_eq!(
-            splits.flatten(0),
-            vec!["Das ist ein Test ", "Das ist noch ein Test."]
-        );
-        Ok(())
-    }
-
     #[test]
     fn splitter_works() -> Result<(), SplitError> {
         let options = NNSplitOptions {
@@ -474,17 +437,19 @@ mod tests {
             max_length: 20,
             ..NNSplitOptions::default()
         };
-        let splitter = dummy_nnsplit(options);
+        let splitter = DummyNNSplit::new(options);
 
-        // sample text must only contain chars which are 1 byte long, so that `DummyBackend`
+        // sample text must only contain chars which are 1 byte long, so that `DummyNNSplit`
         // can not generate splits which are not char boundaries
-        splitter.split(&["This is a short test.", "This is another short test."])?;
+        splitter
+            .split(&["This is a short test.", "This is another short test."])
+            .unwrap();
         Ok(())
     }
 
     #[test]
     fn splitter_works_on_empty_input() -> Result<(), SplitError> {
-        let splitter = dummy_nnsplit(NNSplitOptions::default());
+        let splitter = DummyNNSplit::new(NNSplitOptions::default());
 
         let splits = splitter.split(&[]).unwrap();
         assert!(splits.is_empty());
@@ -493,7 +458,7 @@ mod tests {
 
     #[quickcheck]
     fn length_invariant(text: String) -> bool {
-        let splitter = dummy_nnsplit(NNSplitOptions::default());
+        let splitter = DummyNNSplit::new(NNSplitOptions::default());
 
         let split = &splitter.split(&[&text]).unwrap()[0];
 

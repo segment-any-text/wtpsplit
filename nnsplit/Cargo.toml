@@ -44,4 +44,4 @@ required-features = ["tch-rs-backend", "model-loader"]
 
 [[example]]
 name = "cli"
-required-features = ["tch-rs-backend"]
+required-features = ["tch-rs-backend", "model-loader"]

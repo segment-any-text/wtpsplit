@@ -193,9 +193,9 @@ dependencies = [
 
 [[package]]
 name = "ctor"
-version = "0.1.14"
+version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf6b25ee9ac1995c54d7adb2eff8cfffb7260bc774fb63c601ec65467f43cd9d"
+checksum = "39858aa5bac06462d4dd4b9164848eb81ffc4aa5c479746393598fd193afa227"
 dependencies = [
  "quote",
  "syn",
@@ -316,9 +316,9 @@ dependencies = [
 
 [[package]]
 name = "ghost"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a36606a68532b5640dc86bb1f33c64b45c4682aad4c50f3937b317ea387f3d6"
+checksum = "1a5bcf1bbeab73aa4cf2fde60a846858dc036163c7c33bec309f8d17de785479"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -338,9 +338,9 @@ dependencies = [
 
 [[package]]
 name = "indoc"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79255cf29f5711995ddf9ec261b4057b1deb34e66c90656c201e41376872c544"
+checksum = "47741a8bc60fb26eb8d6e0238bbb26d8575ff623fdc97b1a2c00c050b9684ed8"
 dependencies = [
  "indoc-impl",
  "proc-macro-hack",
@@ -348,9 +348,9 @@ dependencies = [
 
 [[package]]
 name = "indoc-impl"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54554010aa3d17754e484005ea0022f1c93839aabc627c2c55f3d7b47206134c"
+checksum = "ce046d161f000fffde5f432a0d034d0341dc152643b2598ed5bfce44c4f3a8f0"
 dependencies = [
  "proc-macro-hack",
  "proc-macro2",
@@ -361,9 +361,9 @@ dependencies = [
 
 [[package]]
 name = "inventory"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82d3f4b90287725c97b17478c60dda0c6324e7c84ee1ed72fb9179d0fdf13956"
+checksum = "621b50c176968fd3b0bd71f821a28a0ea98db2b5aea966b2fbb8bd1b7d310328"
 dependencies = [
  "ctor",
  "ghost",
@@ -372,9 +372,9 @@ dependencies = [
 
 [[package]]
 name = "inventory-impl"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9092a4fefc9d503e9287ef137f03180a6e7d1b04c419563171ee14947c5e80ec"
+checksum = "f99a4111304bade76468d05beab3487c226e4fe4c4de1c4e8f006e815762db73"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -637,9 +637,9 @@ dependencies = [
 
 [[package]]
 name = "paste"
-version = "0.1.12"
+version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a229b1c58c692edcaa5b9b0948084f130f55d2dcc15b02fcc5340b2b4521476"
+checksum = "45ca20c77d80be666aef2b45486da86238fabe33e38306bd3118fe4af33fa880"
 dependencies = [
  "paste-impl",
  "proc-macro-hack",
@@ -647,14 +647,11 @@ dependencies = [
 
 [[package]]
 name = "paste-impl"
-version = "0.1.12"
+version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e0bf239e447e67ff6d16a8bb5e4d4bd2343acf5066061c0e8e06ac5ba8ca68c"
+checksum = "d95a7db200b97ef370c8e6de0088252f7e0dfff7d047a28528e47456c0fc98b6"
 dependencies = [
  "proc-macro-hack",
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -1210,9 +1207,9 @@ checksum = "826e7639553986605ec5979c7dd957c7895e93eabed50ab2ffa7f6128a75097c"
 
 [[package]]
 name = "unindent"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63f18aa3b0e35fed5a0048f029558b1518095ffe2a0a31fb87c93dece93a4993"
+checksum = "af41d708427f8fd0e915dcebb2cae0f0e6acb2a939b2d399c265c39a38a18942"
 
 [[package]]
 name = "untrusted"
@@ -1239,9 +1236,9 @@ checksum = "3fc439f2794e98976c88a2a2dafce96b930fe8010b0a256b3c2199a773933168"
 
 [[package]]
 name = "version_check"
-version = "0.9.1"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "078775d0255232fb988e6fccf26ddc9d1ac274299aaedcedce21c6f72cc533ce"
+checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 
 [[package]]
 name = "wasi"
