@@ -7,6 +7,7 @@ import random
 import requests
 import pandas as pd
 import diskcache
+from somajo import SoMaJo
 
 
 def has_space(text: str) -> bool:
@@ -28,17 +29,17 @@ class Tokenizer(ABC):
         pass
 
 
+def remove_last_punct(text: str) -> str:
+    for i in range(len(text))[::-1]:
+        if text[i] in string.punctuation:
+            return text[:i] + text[i + 1 :]
+        elif not text[i].isspace():
+            return text
+
+    return text
+
+
 class SpacySentenceTokenizer(Tokenizer):
-    @staticmethod
-    def remove_last_punct(text: str) -> str:
-        for i in range(len(text))[::-1]:
-            if text[i] in string.punctuation:
-                return text[:i] + text[i + 1 :]
-            elif not text[i].isspace():
-                return text
-
-        return text
-
     def __init__(
         self,
         model_name: str,
@@ -66,7 +67,7 @@ class SpacySentenceTokenizer(Tokenizer):
 
             if end_sentence and not text.isspace():
                 if self.training and random.random() < self.remove_end_punct_prob:
-                    current_sentence = self.remove_last_punct(current_sentence)
+                    current_sentence = remove_last_punct(current_sentence)
 
                 out_sentences.append(current_sentence)
 
@@ -106,6 +107,58 @@ class SpacyWordTokenizer(Tokenizer):
             current_token += token.text + token.whitespace_
 
         out_tokens.append(current_token)
+
+        return [x for x in out_tokens if len(x) > 0]
+
+
+class SoMaJoSentenceTokenizer(Tokenizer):
+    def __init__(self, model_name: str):
+        super().__init__()
+        self.tokenizer = SoMaJo(model_name)
+
+    def tokenize(self, text: str) -> List[str]:
+        out_sentences = []
+        sentences = list(self.tokenizer.tokenize_text([text]))
+
+        for i, sentence in enumerate(sentences):
+            text = ""
+
+            for token in sentence:
+                if "SpaceAfter=No" in token.extra_info:
+                    whitespace = ""
+                else:
+                    whitespace = " "
+
+                text += token.text + whitespace
+
+            if i == len(sentences) - 1:
+                text = text.rstrip()
+
+            out_sentences.append(text)
+
+        return out_sentences
+
+
+class SoMaJoWordTokenizer(Tokenizer):
+    def __init__(self, model_name: str):
+        super().__init__()
+        self.tokenizer = SoMaJo(model_name, split_sentences=False)
+
+    def tokenize(self, text: str) -> List[str]:
+        out_tokens = []
+        tokens = next(self.tokenizer.tokenize_text([text]))
+
+        for i, token in enumerate(tokens):
+            if "SpaceAfter=No" in token.extra_info or i == len(tokens) - 1:
+                whitespace = ""
+            else:
+                whitespace = " "
+
+            # sometimes sample more spaces than one space so the model learns to deal with it
+            while random.random() < 0.05:
+                whitespace += " "
+
+            out_tokens.append(token.text + whitespace)
 
         return [x for x in out_tokens if len(x) > 0]
 
