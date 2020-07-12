@@ -1,3 +1,6 @@
+//! Fast, robust sentence splitting with bindings for Python, Rust and Javascript. This crate contains the core splitting logic which is shared between Javascript, Python and Rust. Each binding then implements a backend separately.
+//!
+//! See [`tch_rs_backend::NNSplit`](tch_rs_backend/struct.NNSplit.html) for information for using NNSplit from Rust.
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck_macros;
@@ -9,15 +12,14 @@ extern crate lazy_static;
 use ndarray::prelude::*;
 use serde_derive::{Deserialize, Serialize};
 use std::cmp;
-use std::error::Error;
 use std::ops::Range;
-use thiserror::Error;
 
 #[cfg(feature = "tch-rs-backend")]
 pub mod tch_rs_backend;
 #[cfg(feature = "tch-rs-backend")]
 pub use tch_rs_backend::NNSplit;
 
+/// Caching and downloading of models.
 #[cfg(feature = "model-loader")]
 pub mod model_loader;
 
@@ -26,16 +28,21 @@ fn split_whitespace(input: &str) -> Vec<&str> {
     vec![&input[..offset], &input[offset..]]
 }
 
+/// A Split level, used to describe what this split corresponds to (e. g. a sentence).
 #[derive(Debug, Clone, Copy)]
 pub struct Level(&'static str);
 
 #[derive(Debug)]
+/// A splitted text.
 pub enum Split<'a> {
+    /// The lowest level of split.
     Text(&'a str),
+    /// A split which contains one or more smaller splits.
     Split((&'a str, Vec<Split<'a>>)),
 }
 
 impl<'a> Split<'a> {
+    /// Returns the encompassed text.
     pub fn text(&self) -> &'a str {
         match self {
             Split::Split((text, _)) => text,
@@ -43,6 +50,9 @@ impl<'a> Split<'a> {
         }
     }
 
+    /// Iterate over smaller splits.
+    /// # Panics
+    /// * If the Split is a `Split::Text` because the lowest level of split can not be iterated over.
     pub fn iter(&self) -> impl Iterator<Item = &Split<'a>> {
         match self {
             Split::Split((_, splits)) => splits.iter(),
@@ -50,6 +60,7 @@ impl<'a> Split<'a> {
         }
     }
 
+    /// Recursively flatten the split. Returns a vector where each item is the text of the split at the lowest level.
     pub fn flatten(&self, level: usize) -> Vec<&str> {
         match self {
             Split::Text(text) => vec![text],
@@ -70,17 +81,21 @@ impl<'a> Split<'a> {
     }
 }
 
+/// Instruction to split text.
 pub enum SplitInstruction {
+    /// Instruction to split at the given index of the neural network predictions.
     PredictionIndex(usize),
+    /// Instruction to split according to a function.
     Function(fn(&str) -> Vec<&str>),
 }
 
+/// Instructions for how to convert neural network outputs and a text to `Split` objects.
 pub struct SplitSequence {
     instructions: Vec<(Level, SplitInstruction)>,
 }
 
 impl SplitSequence {
-    pub fn new(instructions: Vec<(Level, SplitInstruction)>) -> Self {
+    fn new(instructions: Vec<(Level, SplitInstruction)>) -> Self {
         SplitSequence { instructions }
     }
 
@@ -168,20 +183,9 @@ impl SplitSequence {
         }
     }
 
-    pub fn apply<'a>(
-        &self,
-        text: &'a str,
-        predictions: ArrayView2<f32>,
-        threshold: f32,
-    ) -> Split<'a> {
+    fn apply<'a>(&self, text: &'a str, predictions: ArrayView2<f32>, threshold: f32) -> Split<'a> {
         self.inner_apply(text, predictions, threshold, 0)
     }
-}
-
-#[derive(Error, Debug)]
-pub enum SplitError {
-    #[error(transparent)]
-    BackendError { source: Box<dyn Error> },
 }
 
 #[derive(Serialize, Deserialize)]
@@ -351,7 +355,7 @@ impl NNSplitLogic {
         texts: &[&'a str],
         slice_preds: Array3<f32>,
         indices: Vec<(usize, Range<usize>)>,
-    ) -> Result<Vec<Split<'a>>, SplitError> {
+    ) -> Vec<Split<'a>> {
         let padded_preds = self.combine_predictions(
             (&slice_preds).into(),
             indices,
@@ -371,14 +375,14 @@ impl NNSplitLogic {
             })
             .collect::<Vec<_>>();
 
-        Ok(texts
+        texts
             .iter()
             .zip(preds)
             .map(|(text, pred)| {
                 self.split_sequence
                     .apply(text, pred, self.options.threshold)
             })
-            .collect())
+            .collect()
     }
 }
 
@@ -413,7 +417,7 @@ mod tests {
             Array3::from_shape_vec((n, length, dim), blob).unwrap()
         }
 
-        pub fn split<'a>(&self, texts: &[&'a str]) -> Result<Vec<Split<'a>>, SplitError> {
+        pub fn split<'a>(&self, texts: &[&'a str]) -> Vec<Split<'a>> {
             let (input, indices) = self.logic.get_inputs_and_indices(texts);
             let slice_preds = self.predict(input);
 
@@ -445,7 +449,7 @@ mod tests {
     }
 
     #[test]
-    fn splitter_works() -> Result<(), SplitError> {
+    fn splitter_works() {
         let options = NNSplitOptions {
             stride: 5,
             max_length: 20,
@@ -455,26 +459,22 @@ mod tests {
 
         // sample text must only contain chars which are 1 byte long, so that `DummyNNSplit`
         // can not generate splits which are not char boundaries
-        splitter
-            .split(&["This is a short test.", "This is another short test."])
-            .unwrap();
-        Ok(())
+        splitter.split(&["This is a short test.", "This is another short test."]);
     }
 
     #[test]
-    fn splitter_works_on_empty_input() -> Result<(), SplitError> {
+    fn splitter_works_on_empty_input() {
         let splitter = DummyNNSplit::new(NNSplitOptions::default());
 
-        let splits = splitter.split(&[]).unwrap();
+        let splits = splitter.split(&[]);
         assert!(splits.is_empty());
-        Ok(())
     }
 
     #[quickcheck]
     fn length_invariant(text: String) -> bool {
         let splitter = DummyNNSplit::new(NNSplitOptions::default());
 
-        let split = &splitter.split(&[&text]).unwrap()[0];
+        let split = &splitter.split(&[&text])[0];
 
         let mut sums: Vec<usize> = Vec::new();
         sums.push(split.iter().map(|x| x.text().len()).sum());

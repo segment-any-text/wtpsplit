@@ -12,7 +12,7 @@ use pytorch_backend::PytorchBackend;
 
 use nnsplit as core;
 
-create_exception!(nnsplit, SplitError, Exception);
+create_exception!(nnsplit, ResourceError, Exception);
 
 #[pyclass(gc)]
 pub struct Split {
@@ -204,7 +204,7 @@ impl NNSplit {
         };
 
         let (_, resource_path) = core::model_loader::get_resource(&model_name, file_name)
-            .map_err(|error| SplitError::py_err(error.to_string()))?;
+            .map_err(|error| ResourceError::py_err(error.to_string()))?;
 
         let backend = PytorchBackend::from_path(
             resource_path
@@ -230,11 +230,7 @@ impl NNSplit {
             .backend
             .predict(inputs, self.inner.options.batch_size)?;
 
-        let splits = self
-            .inner
-            .split(&texts, slice_preds, indices)
-            .map_err(|error| SplitError::py_err(error.to_string()))?;
-
+        let splits = self.inner.split(&texts, slice_preds, indices);
         Ok(splits.into_iter().map(|x| x.into_py(py)).collect())
     }
 }

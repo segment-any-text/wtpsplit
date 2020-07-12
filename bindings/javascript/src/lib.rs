@@ -88,11 +88,7 @@ impl NNSplit {
         let (inputs, indices) = self.inner.get_inputs_and_indices(&texts);
         let slice_preds = self.backend.predict(inputs).await.unwrap_throw();
 
-        let splits = self
-            .inner
-            .split(&texts, slice_preds, indices)
-            .unwrap_throw();
-
+        let splits = self.inner.split(&texts, slice_preds, indices);
         let splits = splits
             .into_iter()
             .map(|x| {
