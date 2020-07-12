@@ -5,8 +5,14 @@ from tqdm.auto import tqdm
 
 
 class OpenSubtitlesDataset(data.Dataset):
-    def __init__(self, source_file):
-        self.sentences = [self.clean(line) for line in tqdm(open(source_file))]
+    def __init__(self, source_file, max_lines=None):
+        self.sentences = []
+        for i, line in tqdm(enumerate(open(source_file))):
+            if max_lines is not None and i >= max_lines:
+                break
+
+            self.sentences.append(self.clean(line))
+
         self.sentences = [x for x in self.sentences if x is not None]
 
     def clean(self, line, min_length=2):
