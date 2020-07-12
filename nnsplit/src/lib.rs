@@ -266,37 +266,51 @@ impl NNSplitLogic {
             self.options.max_length,
         );
 
-        let mut all_inputs: Vec<u8> = Vec::new();
-        let mut all_indices: Vec<(usize, Range<usize>)> = Vec::new();
+        let (all_inputs, all_indices) = texts
+            .iter()
+            .enumerate()
+            .map(|(i, text)| {
+                let mut text_inputs: Vec<u8> = Vec::new();
+                let mut text_indices: Vec<(usize, Range<usize>)> = Vec::new();
 
-        for (i, text) in texts.iter().enumerate() {
-            let length = text.len() + self.options.padding * 2;
-            let mut inputs = vec![0; length];
+                let length = text.len() + self.options.padding * 2;
+                let mut inputs = vec![0; length];
 
-            for (j, byte) in text.bytes().enumerate() {
-                inputs[j + self.options.padding] = byte;
-            }
+                for (j, byte) in text.bytes().enumerate() {
+                    inputs[j + self.options.padding] = byte;
+                }
 
-            let mut start = 0;
-            let mut end = 0;
+                let mut start = 0;
+                let mut end = 0;
 
-            while end != length {
-                end = cmp::min(start + self.options.max_length, length);
-                start = if self.options.max_length > end {
-                    0
-                } else {
-                    end - self.options.max_length
-                };
+                while end != length {
+                    end = cmp::min(start + self.options.max_length, length);
+                    start = if self.options.max_length > end {
+                        0
+                    } else {
+                        end - self.options.max_length
+                    };
 
-                let mut input_slice = vec![0u8; maxlen];
-                input_slice[..end - start].copy_from_slice(&inputs[start..end]);
+                    let mut input_slice = vec![0u8; maxlen];
+                    input_slice[..end - start].copy_from_slice(&inputs[start..end]);
 
-                all_inputs.extend(input_slice);
-                all_indices.push((i, start..end));
+                    text_inputs.extend(input_slice);
+                    text_indices.push((i, start..end));
 
-                start += self.options.stride;
-            }
-        }
+                    start += self.options.stride;
+                }
+
+                (text_inputs, text_indices)
+            })
+            .fold(
+                (Vec::<u8>::new(), Vec::<(usize, Range<usize>)>::new()),
+                |mut acc, (text_inputs, text_indices)| {
+                    acc.0.extend(text_inputs);
+                    acc.1.extend(text_indices);
+
+                    acc
+                },
+            );
 
         let input_array = Array2::from_shape_vec((all_indices.len(), maxlen), all_inputs).unwrap();
         (input_array, all_indices)
