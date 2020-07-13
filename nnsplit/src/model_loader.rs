@@ -20,6 +20,7 @@ lazy_static! {
     };
 }
 
+/// An error retrieving a resource.
 #[derive(Error, Debug)]
 pub enum ResourceError {
     #[error("network error fetching \"{file_name}\" for \"{model_name}\": {source}")]
@@ -48,6 +49,7 @@ impl From<std::io::Error> for ResourceError {
     }
 }
 
+/// Loads the file for the given model, either retrieving it from the cache or downloading it if it is not found.
 pub fn get_resource(
     model_name: &str,
     file: &str,

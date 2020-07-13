@@ -4,14 +4,14 @@ use std::cmp;
 use std::convert::TryInto;
 use std::error::Error;
 
-pub struct TchRsBackend {
+struct TchRsBackend {
     model: tch::CModule,
     device: tch::Device,
     n_outputs: usize,
 }
 
 impl TchRsBackend {
-    pub fn new(model: tch::CModule, device: tch::Device) -> Self {
+    fn new(model: tch::CModule, device: tch::Device) -> Self {
         let dummy_data = tch::Tensor::zeros(&[1, 1], (tch::Kind::Uint8, device));
         let n_outputs = model.forward_ts(&[dummy_data]).unwrap().size()[2] as usize;
 
@@ -49,12 +49,16 @@ impl TchRsBackend {
     }
 }
 
+/// Complete splitter using tch-rs as backend.
 pub struct NNSplit {
     backend: TchRsBackend,
     logic: NNSplitLogic,
 }
 
 impl NNSplit {
+    /// Create a new splitter from the given model location.
+    /// # Errors
+    /// * If the file can not be loaded as TorchScript module.
     pub fn new<P: AsRef<std::path::Path>>(
         model_path: P,
         device: tch::Device,
@@ -69,6 +73,7 @@ impl NNSplit {
         })
     }
 
+    /// Loads a built-in model. From the local cache or from the interent if it is not cached.
     #[cfg(feature = "model-loader")]
     pub fn load(
         model_name: &str,
@@ -89,13 +94,14 @@ impl NNSplit {
         })
     }
 
-    pub fn split<'a>(&self, texts: &[&'a str]) -> Result<Vec<crate::Split<'a>>, crate::SplitError> {
+    /// Split a list of texts into a list of `Split` objects.
+    pub fn split<'a>(&self, texts: &[&'a str]) -> Vec<crate::Split<'a>> {
         let (inputs, indices) = self.logic.get_inputs_and_indices(texts);
 
         let slice_preds = self
             .backend
             .predict(inputs, self.logic.options.batch_size)
-            .unwrap();
+            .expect("model failure.");
         self.logic.split(texts, slice_preds, indices)
     }
 }
@@ -106,14 +112,13 @@ mod tests {
 
     #[cfg(feature = "model-loader")]
     #[test]
-    fn splitter_model_works() -> Result<(), Box<dyn Error>> {
-        let splitter = NNSplit::load("de", tch::Device::Cpu, NNSplitOptions::default())?;
-        let splits = &splitter.split(&["Das ist ein Test Das ist noch ein Test."])?[0];
+    fn splitter_model_works() {
+        let splitter = NNSplit::load("de", tch::Device::Cpu, NNSplitOptions::default()).unwrap();
+        let splits = &splitter.split(&["Das ist ein Test Das ist noch ein Test."])[0];
 
         assert_eq!(
             splits.flatten(0),
             vec!["Das ist ein Test ", "Das ist noch ein Test."]
         );
-        Ok(())
     }
 }

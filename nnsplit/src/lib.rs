@@ -1,6 +1,7 @@
 //! Fast, robust sentence splitting with bindings for Python, Rust and Javascript. This crate contains the core splitting logic which is shared between Javascript, Python and Rust. Each binding then implements a backend separately.
 //!
 //! See [`tch_rs_backend::NNSplit`](tch_rs_backend/struct.NNSplit.html) for information for using NNSplit from Rust.
+#![warn(missing_docs)]
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck_macros;
@@ -14,6 +15,7 @@ use serde_derive::{Deserialize, Serialize};
 use std::cmp;
 use std::ops::Range;
 
+/// Backend to run models using tch-rs.
 #[cfg(feature = "tch-rs-backend")]
 pub mod tch_rs_backend;
 #[cfg(feature = "tch-rs-backend")]
@@ -32,8 +34,8 @@ fn split_whitespace(input: &str) -> Vec<&str> {
 #[derive(Debug, Clone, Copy)]
 pub struct Level(&'static str);
 
-#[derive(Debug)]
 /// A splitted text.
+#[derive(Debug)]
 pub enum Split<'a> {
     /// The lowest level of split.
     Text(&'a str),
@@ -188,17 +190,23 @@ impl SplitSequence {
     }
 }
 
+/// Options for splitting text.
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct NNSplitOptions {
+    /// Threshold from 0 to 1 above which predictions will be considered positive.
     #[serde(default = "NNSplitOptions::default_threshold")]
     pub threshold: f32,
+    /// How much to move the window after each prediction (comparable to stride of 1d convolution).
     #[serde(default = "NNSplitOptions::default_stride")]
     pub stride: usize,
+    /// The maximum length of each cut (comparable to kernel size of 1d convolution),
     #[serde(alias = "maxLength", default = "NNSplitOptions::default_max_length")]
     pub max_length: usize,
+    /// How much to zero pad the text on both sides.
     #[serde(default = "NNSplitOptions::default_padding")]
     pub padding: usize,
+    /// Batch size to use.
     #[serde(alias = "batchSize", default = "NNSplitOptions::default_batch_size")]
     pub batch_size: usize,
 }
@@ -237,12 +245,14 @@ impl Default for NNSplitOptions {
     }
 }
 
+/// The logic by which texts are split.
 pub struct NNSplitLogic {
     pub options: NNSplitOptions,
     pub split_sequence: SplitSequence,
 }
 
 impl NNSplitLogic {
+    /// Create new logic from options. The split sequence is not customizable at the moment.
     pub fn new(options: NNSplitOptions) -> Self {
         NNSplitLogic {
             options,
@@ -257,6 +267,9 @@ impl NNSplitLogic {
         }
     }
 
+    /// Convert texts to neural network inputs. Returns:
+    /// * An `ndarray::Array2` which can be fed into the neural network as is.
+    /// * A vector of indices with information which positions in the text the array elements correspond to.
     pub fn get_inputs_and_indices(
         &self,
         texts: &[&str],
@@ -350,6 +363,8 @@ impl NNSplitLogic {
             .collect()
     }
 
+    /// Splits the text, given predictions by a neural network and indices
+    /// with information which positions in the text the predictions correspond to.
     pub fn split<'a>(
         &self,
         texts: &[&'a str],

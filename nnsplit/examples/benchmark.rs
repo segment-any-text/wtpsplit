@@ -21,7 +21,7 @@ fn main() {
             println!("{} {:#?}", batch_size, device);
             let now = Instant::now();
 
-            splitter.split(&data).unwrap();
+            splitter.split(&data);
             println!("Time: {}", now.elapsed().as_millis());
         }
     }
