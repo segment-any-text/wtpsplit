@@ -73,7 +73,7 @@ impl NNSplit {
         })
     }
 
-    /// Loads a built-in model. From the local cache or from the interent if it is not cached.
+    /// Loads a built-in model. From the local cache or from the internet if it is not cached.
     #[cfg(feature = "model-loader")]
     pub fn load(
         model_name: &str,
