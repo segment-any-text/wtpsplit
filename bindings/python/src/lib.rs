@@ -14,6 +14,11 @@ use nnsplit as core;
 
 create_exception!(nnsplit, ResourceError, Exception);
 
+/// Represents a splitted text. Can be iterated over to yield either:
+///     * `Split` objects representing smaller parts of this split.
+///     * `str` objects if at the lowest split level.
+///
+/// Can also be stringifed with `str(...)` to get the full text this split contains.
 #[pyclass(gc)]
 pub struct Split {
     parts: Vec<PyObject>,
@@ -151,7 +156,19 @@ impl<'a> FromPy<core::Split<'a>> for Split {
     }
 }
 
+/// Complete Splitter using PyTorch as backend.
+///
+/// Args:
+///     model (torch.jit.Module or torch.nn.Module): Model to use for prediction.
+///     device (torch.device or str): Device to use for computation. Must be the same as the device the model is on.
+///     **kwargs: Additional options. Can be:
+///         * threshold (float): Threshold from 0 to 1 above which predictions will be considered positive.
+///         * stride (int): How much to move the window after each prediction (comparable to stride of 1d convolution).
+///         * max_length (int): The maximum length of each cut (comparable to kernel size of 1d convolution).
+///         * padding (int): How much to zero pad the text on both sides.
+///         * batch_size (int): Batch size to use.
 #[pyclass]
+#[text_signature = "(model_name, device, **kwargs)"]
 pub struct NNSplit {
     backend: PytorchBackend,
     inner: core::NNSplitLogic,
@@ -171,6 +188,18 @@ impl NNSplit {
         })
     }
 
+    /// Loads a built-in model. From the local cache or from the interent if it is not cached.
+    ///
+    /// Args:
+    ///     model_name (str): Name of the model.
+    ///     use_cuda (bool): Whether to use CUDA to run the model on GPU.
+    ///     **kwargs: Additional options. Can be:
+    ///         * threshold (float): Threshold from 0 to 1 above which predictions will be considered positive.
+    ///         * stride (int): How much to move the window after each prediction (comparable to stride of 1d convolution).
+    ///         * max_length (int): The maximum length of each cut (comparable to kernel size of 1d convolution).
+    ///         * padding (int): How much to zero pad the text on both sides.
+    ///         * batch_size (int): Batch size to use.
+    #[text_signature = "(model_name, use_cuda, **kwargs)"]
     #[args(kwargs = "**")]
     #[staticmethod]
     pub fn load(
@@ -223,6 +252,14 @@ impl NNSplit {
         })
     }
 
+    /// Splits text into `Split` objects.
+    ///
+    /// Args:
+    ///     texts (List[str]): List of texts to split.
+    ///
+    /// Returns:
+    ///     splits (List[Split]): A list of `Split` objects with the same length as the input text list.
+    #[text_signature = "(texts)"]
     pub fn split(&self, py: Python, texts: Vec<&str>) -> PyResult<Vec<Split>> {
         let (inputs, indices) = self.inner.get_inputs_and_indices(&texts);
 
@@ -238,6 +275,7 @@ impl NNSplit {
 #[pymodule]
 fn nnsplit(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<NNSplit>()?;
+    m.add_class::<Split>()?;
 
     Ok(())
 }

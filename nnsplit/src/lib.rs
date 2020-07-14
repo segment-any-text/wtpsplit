@@ -200,7 +200,7 @@ pub struct NNSplitOptions {
     /// How much to move the window after each prediction (comparable to stride of 1d convolution).
     #[serde(default = "NNSplitOptions::default_stride")]
     pub stride: usize,
-    /// The maximum length of each cut (comparable to kernel size of 1d convolution),
+    /// The maximum length of each cut (comparable to kernel size of 1d convolution).
     #[serde(alias = "maxLength", default = "NNSplitOptions::default_max_length")]
     pub max_length: usize,
     /// How much to zero pad the text on both sides.
