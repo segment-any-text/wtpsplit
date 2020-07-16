@@ -1,8 +1,11 @@
 [package]
-name = "nnsplit_python"
-version = "0.1.0"
+name = "nnsplit-python"
+version = "0.3.0-post"
 authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
 edition = "2018"
+
+[package.metadata.maturin]
+requires-dist = ["torch>=1.4,<2"]
 
 [lib]
 name = "nnsplit"
@@ -17,6 +20,3 @@ pyo3 = "0.10.1"
 path = "../../nnsplit"
 default-features =  false
 features = ["model-loader"]
-
-[package.metadata.maturin]
-requires-dist = ["torch>=1.4,<2"]

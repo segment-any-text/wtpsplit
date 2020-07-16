@@ -1,10 +1,10 @@
 [package]
 name = "nnsplit"
-version = "0.2.2"
+version = "0.3.0-post"
 authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
 edition = "2018"
 
-description = "Rust bindings for fast, robust sentence splitting using machine learning."
+description = "Fast, robust sentence splitting with bindings for Python, Rust and Javascript."
 repository = "https://github.com/bminixhofer/nnsplit"
 homepage = "https://github.com/bminixhofer/nnsplit"
 documentation = "https://github.com/bminixhofer/nnsplit"
@@ -39,9 +39,11 @@ tch-rs-backend = ["tch"]
 model-loader = ["directories", "minreq", "url"]
 
 [[example]]
+path = "examples/benchmark" # somehow `cargo package` doesn't work without explicitly setting path
 name = "benchmark"
 required-features = ["tch-rs-backend", "model-loader"]
 
 [[example]]
+path = "examples/cli" # somehow `cargo package` doesn't work without explicitly setting path
 name = "cli"
 required-features = ["tch-rs-backend", "model-loader"]

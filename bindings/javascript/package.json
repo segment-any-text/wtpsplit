@@ -1,6 +1,6 @@
 {
   "name": "nnsplit",
-  "version": "0.1.0",
+  "version": "0.3.0-post",
   "description": "Fast, robust sentence splitting with bindings for Python, Rust and Javascript.",
   "main": "nnsplit.js",
   "directories": {
@@ -16,7 +16,7 @@
     "url": "git+https://github.com/bminixhofer/nnsplit.git"
   },
   "author": "Benjamin Minixhofer <bminixhofer@gmail.com>",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/bminixhofer/nnsplit/issues"
   },
