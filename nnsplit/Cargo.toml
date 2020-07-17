@@ -39,11 +39,11 @@ tch-rs-backend = ["tch"]
 model-loader = ["directories", "minreq", "url"]
 
 [[example]]
-path = "examples/benchmark" # somehow `cargo package` doesn't work without explicitly setting path
+path = "examples/benchmark.rs" # somehow `cargo package` doesn't work without explicitly setting path
 name = "benchmark"
 required-features = ["tch-rs-backend", "model-loader"]
 
 [[example]]
-path = "examples/cli" # somehow `cargo package` doesn't work without explicitly setting path
+path = "examples/cli.rs" # somehow `cargo package` doesn't work without explicitly setting path
 name = "cli"
 required-features = ["tch-rs-backend", "model-loader"]
