@@ -520,7 +520,7 @@ dependencies = [
 
 [[package]]
 name = "nnsplit-python"
-version = "0.3.0-post"
+version = "0.3.0"
 dependencies = [
  "ndarray",
  "nnsplit",

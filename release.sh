@@ -17,7 +17,7 @@ function update_version {
 }
 
 update_version $1
-
+cp -a README.md nnsplit/README.md
 cd nnsplit
 cargo package --allow-dirty
 cd ..
@@ -30,6 +30,7 @@ toml set bindings/python/Cargo.toml package.name nnsplit > out && mv out binding
 # update core version to avoid clash in Cargo.lock, all of this is VERY hacky, see https://github.com/PyO3/maturin/issues/313
 update_cargo_toml_version $1-post nnsplit/Cargo.toml
 
+cp -a README.md bindings/python/README.md
 cd bindings/python
 maturin build
 cd ../..
@@ -40,8 +41,12 @@ toml set bindings/python/Cargo.toml package.name $NAME > out && mv out bindings/
 
 cd bindings/javascript
 npm run build
+cp -a ../../README.md pkg/README.md
 cd pkg
 cd ..
 cd ../../
 
 update_version $1-post
+rm nnsplit/README.md
+rm bindings/javascript/pkg/README.md
+rm bindings/python/README.md
