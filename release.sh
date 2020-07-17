@@ -19,7 +19,7 @@ function update_version {
 update_version $1
 cp -a README.md nnsplit/README.md
 cd nnsplit
-cargo package --allow-dirty
+cargo publish --allow-dirty
 cd ..
 
 # temporarily remove python bindings from workspace to avoid namespace clash
@@ -32,7 +32,7 @@ update_cargo_toml_version $1-post nnsplit/Cargo.toml
 
 cp -a README.md bindings/python/README.md
 cd bindings/python
-maturin build
+maturin publish
 cd ../..
 
 # change it back
@@ -43,6 +43,7 @@ cd bindings/javascript
 npm run build
 cp -a ../../README.md pkg/README.md
 cd pkg
+npm publish
 cd ..
 cd ../../
 

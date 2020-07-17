@@ -6,6 +6,14 @@
   "directories": {
     "test": "tests"
   },
+  "files": [
+    "nnsplit_javascript_bg.wasm",
+    "nnsplit_javascript.js",
+    "nnsplit_javascript.d.ts"
+  ],
+  "module": "nnsplit_javascript.js",
+  "types": "nnsplit_javascript.d.ts",
+  "sideEffects": false,
   "scripts": {
     "build": "wasm-pack build && npm install --no-save pkg/ && cp -a package.json pkg/package.json && mv pkg/nnsplit_javascript.js pkg/nnsplit.js",
     "start_test_server": "cd dev_server && npm install && node prepare_data.js && npx webpack-dev-server --port=8080",
