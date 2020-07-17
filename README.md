@@ -8,7 +8,7 @@
 
 Fast, robust sentence splitting with bindings for Python, Rust and Javascript.
 
-### Features
+## Features
 
 - __Robust__: Does not depend on proper punctuation and casing to split text into sentences.
 - __Small__: NNSplit uses a byte-level LSTM, so weights are very small which makes it easy to run in the browser.
