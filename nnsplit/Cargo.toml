@@ -13,7 +13,7 @@ categories = ["science"]
 license = "MIT"
 readme = "README.md"
 
-include = ["src/*.rs", "tests/*.rs", "build.rs", "data"]
+include = ["src/*.rs", "tests/*.rs", "build.rs", "data", "models.csv"]
 
 [dependencies]
 ndarray = "0.13"
