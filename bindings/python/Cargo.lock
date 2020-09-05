@@ -290,7 +290,7 @@ dependencies = [
 
 [[package]]
 name = "nnsplit"
-version = "0.3.0-post"
+version = "0.3.1-post"
 dependencies = [
  "directories",
  "lazy_static",
@@ -304,10 +304,10 @@ dependencies = [
 
 [[package]]
 name = "nnsplit"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "ndarray",
- "nnsplit 0.3.0-post",
+ "nnsplit 0.3.1-post",
  "numpy",
  "pyo3",
 ]

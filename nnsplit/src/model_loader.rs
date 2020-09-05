@@ -7,7 +7,7 @@ use thiserror::Error;
 lazy_static! {
     static ref MODEL_DATA: HashMap<&'static str, &'static str> = {
         // this is checked at compile time so a relative path is ok
-        let raw_csv = include_str!("../../models.csv");
+        let raw_csv = include_str!("../models.csv");
         let mut model_data = HashMap::new();
 
         for line in raw_csv.lines() {

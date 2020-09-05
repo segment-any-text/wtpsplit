@@ -9,7 +9,7 @@ fs.createReadStream("../../../benchmarks/sample.json").pipe(
   fs.createWriteStream(`${output_dir}sample.json`)
 );
 
-fs.createReadStream("../../../models.csv")
+fs.createReadStream("../../../nnsplit/models.csv")
   .pipe(
     csv({
       headers: false,

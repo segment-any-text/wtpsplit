@@ -1,6 +1,6 @@
 [package]
 name = "nnsplit-python"
-version = "0.3.0-post"
+version = "0.3.1-post"
 authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
 edition = "2018"
 
