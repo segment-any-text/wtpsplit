@@ -94,7 +94,7 @@ features = ["model-loader", "tch-rs-backend"] # to automatically download pretra
 ### Usage
 
 ```rust
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let splitter =
         nnsplit::NNSplit::load("en", tch::Device::Cpu, nnsplit::NNSplitOptions::default())?;
 
