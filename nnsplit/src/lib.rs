@@ -16,10 +16,10 @@ use std::cmp;
 use std::ops::Range;
 
 /// Backend to run models using tch-rs.
-#[cfg(feature = "tch-rs-backend")]
-pub mod tch_rs_backend;
-#[cfg(feature = "tch-rs-backend")]
-pub use tch_rs_backend::NNSplit;
+#[cfg(feature = "tract-backend")]
+pub mod tract_backend;
+#[cfg(feature = "tract-backend")]
+pub use tract_backend::NNSplit;
 
 /// Caching and downloading of models.
 #[cfg(feature = "model-loader")]
@@ -247,7 +247,9 @@ impl Default for NNSplitOptions {
 
 /// The logic by which texts are split.
 pub struct NNSplitLogic {
+    #[allow(missing_docs)]
     pub options: NNSplitOptions,
+    #[allow(missing_docs)]
     pub split_sequence: SplitSequence,
 }
 

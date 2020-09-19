@@ -45,9 +45,11 @@ See [evaluate.ipynb](train/evaluate.ipynb) for details.
 
 ### Installation
 
-NNSplit has PyTorch as the only dependency.
+NNSplit has onnxruntime as the only dependency.
 
-Install it with pip: `pip install nnsplit`
+Install NNSplit with pip: `pip install nnsplit`
+
+To enable GPU support, install onnxruntime-gpu: `pip install onnxruntime-gpu`.
 
 ### Usage
 
@@ -86,7 +88,7 @@ Add NNSplit as a dependency to your `Cargo.toml`:
 
 [dependencies.nnsplit]
 version = "<version>"
-features = ["model-loader", "tch-rs-backend"] # to automatically download pretrained models and to use tch-rs for inference, respectively
+features = ["model-loader", "tract-backend"] # to automatically download pretrained models and to use tract for inference, respectively
 
 # ...
 ```
@@ -96,7 +98,7 @@ features = ["model-loader", "tch-rs-backend"] # to automatically download pretra
 ```rust
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let splitter =
-        nnsplit::NNSplit::load("en", tch::Device::Cpu, nnsplit::NNSplitOptions::default())?;
+        nnsplit::NNSplit::load("en", nnsplit::NNSplitOptions::default())?;
 
     let input: Vec<&str> = vec!["This is a test! This is another test."];
     let splits = &splitter.split(&input)[0];

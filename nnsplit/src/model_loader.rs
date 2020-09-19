@@ -22,6 +22,7 @@ lazy_static! {
 
 /// An error retrieving a resource.
 #[derive(Error, Debug)]
+#[allow(missing_docs)]
 pub enum ResourceError {
     #[error("network error fetching \"{file_name}\" for \"{model_name}\": {source}")]
     NetworkError {

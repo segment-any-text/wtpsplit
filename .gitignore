@@ -1,6 +1,7 @@
 data
 train_data
 .vscode
+*.lock
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
