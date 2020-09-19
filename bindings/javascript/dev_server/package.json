@@ -10,7 +10,7 @@
   "devDependencies": {
     "copy-webpack-plugin": "^5.0.0",
     "csv-parser": "^2.3.2",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.1",
     "webpack": "^4.29.3",
     "webpack-cli": "^3.1.0",
     "webpack-dev-server": "^3.1.5"
