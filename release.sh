@@ -32,7 +32,7 @@ update_cargo_toml_version $1-post nnsplit/Cargo.toml
 
 cp -a README.md bindings/python/README.md
 cd bindings/python
-maturin publish
+maturin publish --manylinux 1
 cd ../..
 
 # change it back
