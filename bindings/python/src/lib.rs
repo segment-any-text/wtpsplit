@@ -3,7 +3,7 @@ mod pytorch_backend;
 use pyo3::class::basic::PyObjectProtocol;
 use pyo3::class::gc::{PyGCProtocol, PyTraverseError, PyVisit};
 use pyo3::class::sequence::PySequenceProtocol;
-use pyo3::conversion::FromPy;
+use pyo3::conversion::IntoPy;
 use pyo3::create_exception;
 use pyo3::exceptions::Exception;
 use pyo3::prelude::*;
@@ -134,9 +134,9 @@ impl PyGCProtocol for Split {
     }
 }
 
-impl<'a> FromPy<core::Split<'a>> for Split {
-    fn from_py(split: core::Split, py: Python) -> Self {
-        match split {
+impl<'a> IntoPy<Split> for core::Split<'a> {
+    fn into_py(self, py: Python) -> Split {
+        match self {
             core::Split::Text(_) => panic!("text can not be converted to a Split"),
             core::Split::Split((_, split_parts)) => {
                 let parts = split_parts
