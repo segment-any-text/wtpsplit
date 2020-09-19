@@ -247,7 +247,9 @@ impl Default for NNSplitOptions {
 
 /// The logic by which texts are split.
 pub struct NNSplitLogic {
+    #[allow(missing_docs)]
     pub options: NNSplitOptions,
+    #[allow(missing_docs)]
     pub split_sequence: SplitSequence,
 }
 
