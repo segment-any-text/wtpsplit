@@ -5,7 +5,7 @@ authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
 edition = "2018"
 
 [package.metadata.maturin]
-requires-dist = ["torch>=1.4,<2"]
+requires-dist = ["onnxruntime>=1.4,<2"]
 
 [lib]
 name = "nnsplit"
@@ -15,6 +15,7 @@ crate-type = ["cdylib"]
 ndarray = "0.13"
 numpy = "0.11.0"
 pyo3 = "=0.11.1"
+lazy_static = "1.4"
 
 [dependencies.nnsplit]
 path = "../../nnsplit"

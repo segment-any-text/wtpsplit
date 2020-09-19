@@ -1,5 +1,6 @@
-mod pytorch_backend;
+mod onnxruntime_backend;
 
+use onnxruntime_backend::ONNXRuntimeBackend;
 use pyo3::class::basic::PyObjectProtocol;
 use pyo3::class::gc::{PyGCProtocol, PyTraverseError, PyVisit};
 use pyo3::class::sequence::PySequenceProtocol;
@@ -7,8 +8,7 @@ use pyo3::conversion::IntoPy;
 use pyo3::create_exception;
 use pyo3::exceptions::Exception;
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyDict};
-use pytorch_backend::PytorchBackend;
+use pyo3::types::PyDict;
 
 use nnsplit as core;
 
@@ -156,11 +156,11 @@ impl<'a> IntoPy<Split> for core::Split<'a> {
     }
 }
 
-/// Complete Splitter using PyTorch as backend.
+/// Complete Splitter using ONNXRuntime as backend.
 ///
 /// Args:
-///     model (torch.jit.Module or torch.nn.Module): Model to use for prediction.
-///     device (torch.device or str): Device to use for computation. Must be the same as the device the model is on.
+///     model_path (str or pathlib.Path): Path to a .onnx model to use for prediction.
+///     use_cuda (bool): Whether to use CUDA to run the model on GPU. If None, will use CUDA if available, otherwise CPU.
 ///     **kwargs: Additional options. Can be:
 ///         * threshold (float): Threshold from 0 to 1 above which predictions will be considered positive.
 ///         * stride (int): How much to move the window after each prediction (comparable to stride of 1d convolution).
@@ -168,9 +168,9 @@ impl<'a> IntoPy<Split> for core::Split<'a> {
 ///         * padding (int): How much to zero pad the text on both sides.
 ///         * batch_size (int): Batch size to use.
 #[pyclass]
-#[text_signature = "(model_name, device, **kwargs)"]
+#[text_signature = "(model_path, use_cuda=None, **kwargs)"]
 pub struct NNSplit {
-    backend: PytorchBackend,
+    backend: ONNXRuntimeBackend,
     inner: core::NNSplitLogic,
 }
 
@@ -178,8 +178,16 @@ pub struct NNSplit {
 impl NNSplit {
     #[new]
     #[args(kwargs = "**")]
-    pub fn new(model: PyObject, device: PyObject, kwargs: Option<&PyDict>) -> PyResult<Self> {
-        let backend = PytorchBackend::new(model, device)?;
+    pub fn new(
+        py: Python,
+        model_path: PyObject,
+        use_cuda: Option<bool>,
+        kwargs: Option<&PyDict>,
+    ) -> PyResult<Self> {
+        // explicitly call str(..) to handle pathlib.Path etc. correctly
+        let path = model_path.as_ref(py).str()?.to_string()?;
+
+        let backend = ONNXRuntimeBackend::new(py, path, use_cuda)?;
         let options = to_options(kwargs)?;
 
         Ok(NNSplit {
@@ -192,14 +200,14 @@ impl NNSplit {
     ///
     /// Args:
     ///     model_name (str): Name of the model.
-    ///     use_cuda (bool): Whether to use CUDA to run the model on GPU.
+    ///     use_cuda (bool): Whether to use CUDA to run the model on GPU. If None, will use CUDA if available, otherwise CPU.
     ///     **kwargs: Additional options. Can be:
     ///         * threshold (float): Threshold from 0 to 1 above which predictions will be considered positive.
     ///         * stride (int): How much to move the window after each prediction (comparable to stride of 1d convolution).
     ///         * max_length (int): The maximum length of each cut (comparable to kernel size of 1d convolution).
     ///         * padding (int): How much to zero pad the text on both sides.
     ///         * batch_size (int): Batch size to use.
-    #[text_signature = "(model_name, use_cuda, **kwargs)"]
+    #[text_signature = "(model_name, use_cuda=None, **kwargs)"]
     #[args(kwargs = "**")]
     #[staticmethod]
     pub fn load(
@@ -208,40 +216,17 @@ impl NNSplit {
         use_cuda: Option<bool>,
         kwargs: Option<&PyDict>,
     ) -> PyResult<Self> {
-        let torch = py.import("torch")?;
-
-        let use_cuda = match use_cuda {
-            Some(x) => x,
-            None => {
-                let cuda_is_available: &PyBool = torch
-                    .getattr("cuda")?
-                    .call_method0("is_available")?
-                    .downcast()?;
-                cuda_is_available.is_true()
-            }
-        };
-
-        let (file_name, device) = match use_cuda {
-            true => (
-                "torchscript_cuda_model.pt",
-                torch.call_method1("device", ("cuda",))?.to_object(py),
-            ),
-            false => (
-                "torchscript_cpu_model.pt",
-                torch.call_method1("device", ("cpu",))?.to_object(py),
-            ),
-        };
-
-        let (_, resource_path) = core::model_loader::get_resource(&model_name, file_name)
+        let (_, resource_path) = core::model_loader::get_resource(&model_name, "model.onnx")
             .map_err(|error| ResourceError::py_err(error.to_string()))?;
 
-        let backend = PytorchBackend::from_path(
+        let backend = ONNXRuntimeBackend::new(
+            py,
             resource_path
                 .unwrap()
                 .into_os_string()
                 .into_string()
                 .unwrap(),
-            device,
+            use_cuda,
         )?;
 
         let options = to_options(kwargs)?;
@@ -265,7 +250,7 @@ impl NNSplit {
 
         let slice_preds = self
             .backend
-            .predict(inputs, self.inner.options.batch_size)?;
+            .predict(py, inputs, self.inner.options.batch_size)?;
 
         let splits = self.inner.split(&texts, slice_preds, indices);
         Ok(splits.into_iter().map(|x| x.into_py(py)).collect())
