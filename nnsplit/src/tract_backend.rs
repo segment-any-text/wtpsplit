@@ -39,7 +39,10 @@ impl TractBackend {
             let batch_inputs: Tensor = input.slice(s![i..(i + 1), ..]).to_owned().into();
 
             let batch_preds = opt_model.run(tvec![batch_inputs])?.remove(0);
-            let batch_preds: ArrayD<f32> = (*batch_preds).clone().into_array()?;
+            let mut batch_preds: ArrayD<f32> = (*batch_preds).clone().into_array()?;
+
+            // sigmoid
+            batch_preds.mapv_inplace(|x| 1f32 / (1f32 + (-x).exp()));
 
             preds.slice_mut(s![i..(i + 1), .., ..]).assign(&batch_preds);
         }
