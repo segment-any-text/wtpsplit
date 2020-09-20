@@ -7,7 +7,7 @@ build:
 	maturin build --release --manylinux 1
 	mv Cargo.temp Cargo.toml
 	version=`python -c "import sys; print(str(sys.version_info.major) + str(sys.version_info.minor))"` && \
-	pip install --use-feature=2020-resolver --ignore-installed --upgrade ../../target/wheels/*cp$$version*.whl
+	python -m pip install --ignore-installed --upgrade target/wheels/*cp$$version*.whl
 
 test:
 	pytest -s
