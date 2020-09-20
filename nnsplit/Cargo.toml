@@ -1,6 +1,6 @@
 [package]
 name = "nnsplit"
-version = "0.4.1-post"
+version = "0.4.5"
 authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
 edition = "2018"
 

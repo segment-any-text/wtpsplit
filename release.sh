@@ -30,9 +30,7 @@ cargo publish --allow-dirty
 cd ..
 
 cp -a README.md bindings/python/README.md
-cd bindings/python
 twine upload $WHEEL_DIR/*
-cd ../..
 
 cd bindings/javascript
 npm run build
@@ -42,7 +40,6 @@ npm publish
 cd ..
 cd ../../
 
-update_version $NEW_VERSION-post
 rm nnsplit/README.md
 rm bindings/javascript/pkg/README.md
 rm bindings/python/README.md

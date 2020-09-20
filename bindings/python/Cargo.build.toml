@@ -1,7 +1,7 @@
 # also change Cargo.toml when changing this file, workaround for package name and extension-module
 [package]
 name = "nnsplit"
-version = "0.4.1-python-post"
+version = "0.4.5-python"
 authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
 edition = "2018"
 
