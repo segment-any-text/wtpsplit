@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 import numpy as np
 from torch import nn
@@ -134,23 +133,6 @@ class Network(pl.LightningModule):
         store_directory.mkdir(exist_ok=True, parents=True)
 
         sample = torch.zeros([1, 100], dtype=torch.uint8)
-        # model is trained with fp16, so it can be safely quantized to 16 bit
-        # CPU model is quantized to 8 bit, with minimal loss in accuracy
-        quantized_model = Network(self.text_dataset, self.labeler, self.hparams)
-        quantized_model.load_state_dict(self.state_dict())
-        quantized_model = torch.quantization.quantize_dynamic(
-            quantized_model, {nn.LSTM, nn.Linear}, dtype=torch.qint8, inplace=True
-        )
-        traced = torch.jit.trace(quantized_model, sample)
-        traced.save(str(store_directory / self.TORCHSCRIPT_CPU_NAME))
-
-        if torch.cuda.is_available():
-            traced = torch.jit.trace(self.half().cuda(), sample.cuda())
-            traced.save(str(store_directory / self.TORCHSCRIPT_CUDA_NAME))
-        else:
-            logging.warn(
-                "CUDA is not available. CUDA version of model could not be stored."
-            )
 
         torch.onnx.export(
             self.float().cpu(),
