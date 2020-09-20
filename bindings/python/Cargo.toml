@@ -1,6 +1,7 @@
+# also change Cargo.build.toml when changing this file, workaround for package name and extension-module
 [package]
 name = "nnsplit-python"
-version = "0.4.1-post"
+version = "0.4.1-python-post"
 authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
 edition = "2018"
 
@@ -18,11 +19,8 @@ lazy_static = "1.4"
 
 [dependencies.nnsplit]
 path = "../../nnsplit"
-default-features =  false
+default-features = false
 features = ["model-loader"]
 
-# this must be at the bottom due to hack to add extension-module feature in Makefile
-# will be fixed by https://github.com/PyO3/pyo3/pull/1123
-# newline at end of file is also needed :(
 [dependencies.pyo3]
 version = "=0.11.1"

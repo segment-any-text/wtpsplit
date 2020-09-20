@@ -1,3 +1,5 @@
+set -e
+
 # login to cargo
 cargo login $CARGO_KEY
 
@@ -25,11 +27,6 @@ cp -a README.md nnsplit/README.md
 cd nnsplit
 cargo publish --allow-dirty
 cd ..
-
-# temporarily remove python bindings from workspace to avoid namespace clash
-echo "\n[workspace]" >> bindings/python/Cargo.toml
-NAME=`toml get bindings/python/Cargo.toml package.name`
-toml set bindings/python/Cargo.toml package.name nnsplit > out && mv out bindings/python/Cargo.toml
 
 # update core version to avoid clash in Cargo.lock, all of this is VERY hacky, see https://github.com/PyO3/maturin/issues/313
 update_cargo_toml_version $1-post nnsplit/Cargo.toml
