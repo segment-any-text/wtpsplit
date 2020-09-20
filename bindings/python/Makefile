@@ -3,7 +3,7 @@ install:
 
 build:
 	# add extension-module feature to PyO3
-	echo '\nfeatures = ["extension-module"]' >> Cargo.toml
+	echo 'features = ["extension-module"]' >> Cargo.toml
 	maturin build --release --manylinux 1
 	# remove extension-module feature, see https://stackoverflow.com/a/4881962
 	# use "| true" to not fail in CI on e. g. windows, we don't really care if its not restored there
