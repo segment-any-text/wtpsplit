@@ -1,4 +1,8 @@
-set -e
+# login to cargo
+cargo login $CARGO_KEY
+
+# install the TOML cli tool
+cargo install toml-cli
 
 function update_cargo_toml_version {
     VERSION=$1
@@ -16,7 +20,7 @@ function update_version {
     npm version $1 --prefix bindings/javascript --allow-same-version
 }
 
-update_version $1
+update_version $NEW_VERSION
 cp -a README.md nnsplit/README.md
 cd nnsplit
 cargo publish --allow-dirty
@@ -32,11 +36,11 @@ update_cargo_toml_version $1-post nnsplit/Cargo.toml
 
 cp -a README.md bindings/python/README.md
 cd bindings/python
-maturin publish --manylinux 1-unchecked
+twine upload $WHEEL_DIR/*
 cd ../..
 
 # change it back
-ghead -n -2 bindings/python/Cargo.toml > out && mv out bindings/python/Cargo.toml
+head -n -2 bindings/python/Cargo.toml > out && mv out bindings/python/Cargo.toml
 toml set bindings/python/Cargo.toml package.name $NAME > out && mv out bindings/python/Cargo.toml
 
 cd bindings/javascript
@@ -47,7 +51,7 @@ npm publish
 cd ..
 cd ../../
 
-update_version $1-post
+update_version $NEW_VERSION-post
 rm nnsplit/README.md
 rm bindings/javascript/pkg/README.md
 rm bindings/python/README.md

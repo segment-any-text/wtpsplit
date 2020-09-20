@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  release:
+    types: [published]
   push:
   pull_request:
 
@@ -127,3 +129,22 @@ jobs:
           title: "Nightly Build"
           files: |
             python-wheel/*.whl
+
+  publish:
+    if: github.event_name == 'release'
+
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: python-wheel
+          path: python-wheel
+      - name: Run release script
+        run: |
+          bash release.sh
+        env:
+          CARGO_KEY: ${{ secrets.CARGO_KEY }}
+          NODE_AUTH_KEY: ${{ secrets.NPM_TOKEN }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          WHEEL_DIR: python-wheel
+          NEW_VERSION: ${{ github.event.release.tag_name }}
