@@ -77,7 +77,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.5, 3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8]
 
     steps:
       - uses: actions/checkout@v2
@@ -85,6 +85,10 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Update version (if release) # only needed for python since we store artifacts, others are rebuilt
+        if: github.event_name == 'release'
+        run: |
+          bash update_version.sh ${{ github.event.release.tag_name }}
       - name: Install
         run: |
           python -m pip install --upgrade pip
@@ -149,6 +153,9 @@ jobs:
         with:
           name: python-wheel
           path: python-wheel
+      - name: Update version
+        run: |
+          bash update_version.sh ${{ github.event.release.tag_name }}
       - name: Run release script
         run: |
           bash release.sh
@@ -158,4 +165,6 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
           TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
           WHEEL_DIR: python-wheel
-          NEW_VERSION: ${{ github.event.release.tag_name }}
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: v${{ github.event.release.tag_name }}

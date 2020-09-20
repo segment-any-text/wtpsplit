@@ -3,27 +3,6 @@ set -e
 # login to cargo
 cargo login $CARGO_KEY
 
-# install the TOML cli tool
-cargo install toml-cli
-
-function update_cargo_toml_version {
-    VERSION=$1
-    FILE=$2
-
-    toml set $2 package.version $1 > out && mv out $2
-}
-
-function update_version {
-    VERSION=$1
-
-    update_cargo_toml_version $1 nnsplit/Cargo.toml
-    update_cargo_toml_version $1 bindings/python/Cargo.toml
-    update_cargo_toml_version $1-python bindings/python/Cargo.build.toml
-
-    npm version $1 --prefix bindings/javascript --allow-same-version
-}
-
-update_version $NEW_VERSION
 cp -a README.md nnsplit/README.md
 cd nnsplit
 cargo publish --allow-dirty
