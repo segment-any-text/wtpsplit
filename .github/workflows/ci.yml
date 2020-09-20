@@ -69,11 +69,12 @@ jobs:
           args: --verbose --all-features
 
   build-python:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     env:
       working-directory: bindings/python
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: [3.5, 3.6, 3.7, 3.8]
 
     steps:
