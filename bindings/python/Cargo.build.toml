@@ -1,0 +1,29 @@
+# also change Cargo.toml when changing this file, workaround for package name and extension-module
+[package]
+name = "nnsplit"
+version = "0.4.1-python-post"
+authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
+edition = "2018"
+
+[package.metadata.maturin]
+requires-dist = ["onnxruntime>=1.4,<2"]
+
+[lib]
+name = "nnsplit"
+crate-type = ["cdylib"]
+
+[dependencies]
+ndarray = "0.13"
+numpy = "0.11.0"
+lazy_static = "1.4"
+
+[dependencies.nnsplit]
+path = "../../nnsplit"
+default-features = false
+features = ["model-loader"]
+
+[dependencies.pyo3]
+version = "=0.11.1"
+features = ["extension-module"]
+
+[workspace]

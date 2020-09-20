@@ -18,6 +18,7 @@ function update_version {
 
     update_cargo_toml_version $1 nnsplit/Cargo.toml
     update_cargo_toml_version $1 bindings/python/Cargo.toml
+    update_cargo_toml_version $1-python bindings/python/Cargo.build.toml
 
     npm version $1 --prefix bindings/javascript --allow-same-version
 }
@@ -28,17 +29,10 @@ cd nnsplit
 cargo publish --allow-dirty
 cd ..
 
-# update core version to avoid clash in Cargo.lock, all of this is VERY hacky, see https://github.com/PyO3/maturin/issues/313
-update_cargo_toml_version $1-post nnsplit/Cargo.toml
-
 cp -a README.md bindings/python/README.md
 cd bindings/python
 twine upload $WHEEL_DIR/*
 cd ../..
-
-# change it back
-head -n -2 bindings/python/Cargo.toml > out && mv out bindings/python/Cargo.toml
-toml set bindings/python/Cargo.toml package.name $NAME > out && mv out bindings/python/Cargo.toml
 
 cd bindings/javascript
 npm run build

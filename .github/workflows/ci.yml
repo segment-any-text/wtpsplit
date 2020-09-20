@@ -137,6 +137,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - run: |
+          pip install twine==3.2
       - uses: actions/download-artifact@v2
         with:
           name: python-wheel
