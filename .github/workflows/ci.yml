@@ -115,25 +115,6 @@ jobs:
           name: python-wheel
           path: bindings/python/target/wheels/*
 
-  nightly-release:
-    runs-on: ubuntu-latest
-    needs: [build-javascript, build-rust, build-python]
-    if: github.ref == 'refs/heads/master'
-
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          name: python-wheel
-          path: python-wheel
-      - uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: true
-          title: "Nightly Build"
-          files: |
-            python-wheel/*.whl
-
   publish:
     runs-on: ubuntu-latest
     needs: [build-javascript, build-rust, build-python]
