@@ -75,8 +75,11 @@ impl TractJSBackend {
         let shape = (shape[0] as usize, shape[1] as usize, shape[2] as usize);
 
         let data: Float32Array = pred.data().into();
-        let preds =
+        let mut preds =
             Array3::from_shape_vec(shape, data.to_vec()).map_err(|_| "Array conversion error")?;
+
+        // sigmoid
+        preds.mapv_inplace(|x| 1f32 / (1f32 + (-x).exp()));
 
         Ok(preds)
     }
