@@ -22,7 +22,8 @@
   "scripts": {
     "build": "bash build.sh",
     "start_test_server": "cd dev_server && npm install && node prepare_data.js && npx webpack-dev-server --port=8080",
-    "test": "cypress run"
+    "test:browser": "cypress run",
+    "test:node": "npx mocha --exit"
   },
   "repository": {
     "type": "git",
@@ -38,6 +39,7 @@
     "tractjs": "^0.3.0"
   },
   "devDependencies": {
-    "cypress": "^4.9.0"
+    "cypress": "^4.9.0",
+    "mocha": "^8.1.3"
   }
 }
