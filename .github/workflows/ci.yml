@@ -88,6 +88,10 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install GSED (if needed) # needed by update_version.sh
+        if: github.event_name == 'release' && matrix.os == 'macos-latest'
+        run: |
+          brew install gnu-sed
       - name: Update version (if release) # only needed for python since we store artifacts, others are rebuilt
         if: github.event_name == 'release'
         run: |
