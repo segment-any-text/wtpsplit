@@ -5,7 +5,7 @@ cargo login $CARGO_KEY
 
 cp -a README.md nnsplit/README.md
 cd nnsplit
-cargo publish --allow-dirty
+cargo publish --all-features --allow-dirty
 cd ..
 
 cp -a README.md bindings/python/README.md
