@@ -161,7 +161,7 @@ jobs:
           bash release.sh
         env:
           CARGO_KEY: ${{ secrets.CARGO_KEY }}
-          NODE_AUTH_KEY: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
           TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
           WHEEL_DIR: python-wheel

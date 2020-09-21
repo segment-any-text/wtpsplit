@@ -14,9 +14,7 @@ twine upload $WHEEL_DIR/*
 cd bindings/javascript
 npm run build
 cp -a ../../README.md pkg/README.md
-cd pkg
-npm publish
-cd ..
+npm publish pkg
 cd ../../
 
 rm nnsplit/README.md
