@@ -6,6 +6,9 @@ on:
   push:
   pull_request:
 
+env:
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
 jobs:
   build-javascript:
     runs-on: ubuntu-latest
@@ -161,7 +164,6 @@ jobs:
           bash release.sh
         env:
           CARGO_KEY: ${{ secrets.CARGO_KEY }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
           TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
           WHEEL_DIR: python-wheel
