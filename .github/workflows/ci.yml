@@ -24,7 +24,9 @@ jobs:
         uses: actions-rs/toolchain@v1
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: '12'
       - name: Install dependencies
         run: npm install
         working-directory: ${{env.working-directory}}
