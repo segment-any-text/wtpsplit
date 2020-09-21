@@ -65,9 +65,16 @@ pub struct NNSplit {
 impl NNSplit {
     #[wasm_bindgen(constructor)]
     pub fn invalid_new() -> Result<(), JsValue> {
-        Err("NNSplit can't be construced directly because it is asynchronous! Please use NNSplit.new.".into())
+        Err("NNSplit can't be constructed directly because it is asynchronous! Please use NNSplit.new.".into())
     }
 
+    /// Create a new splitter from the given model path. The path is passed to `fetch` in the browser or `fs.readFile` in Node.js
+    /// Optionally an object containing options can be provided as second argument:
+    ///     * threshold (float): Threshold from 0 to 1 above which predictions will be considered positive.
+    ///     * stride (int): How much to move the window after each prediction (comparable to stride of 1d convolution).
+    ///     * max_length (int): The maximum length of each cut (comparable to kernel size of 1d convolution).
+    ///     * padding (int): How much to zero pad the text on both sides.
+    ///     * batch_size (int): Batch size to use.
     pub async fn new(path: String, options: JsValue) -> Result<NNSplit, JsValue> {
         utils::set_panic_hook();
         let backend = TractJSBackend::new(&path).await?;
@@ -82,6 +89,11 @@ impl NNSplit {
         })
     }
 
+    /// Split texts. Takes an array of strings as input and returns an array of the same length of `Split` objects.
+    /// Each split has the properties
+    ///     * .text, the text in this `Split`.
+    ///     * .parts, the `Split`s contained in this `Split` (e. g. tokens in a sentence).
+    /// unless at the lowest level, at which it is just a string.
     pub async fn split(self, texts: Vec<JsValue>) -> Result<JsValue, JsValue> {
         let texts: Vec<String> = texts
             .into_iter()

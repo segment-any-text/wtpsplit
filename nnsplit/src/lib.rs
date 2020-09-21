@@ -1,6 +1,6 @@
 //! Fast, robust sentence splitting with bindings for Python, Rust and Javascript. This crate contains the core splitting logic which is shared between Javascript, Python and Rust. Each binding then implements a backend separately.
 //!
-//! See [`tch_rs_backend::NNSplit`](tch_rs_backend/struct.NNSplit.html) for information for using NNSplit from Rust.
+//! See [`tract_backend::NNSplit`](tract_backend/struct.NNSplit.html) for information for using NNSplit from Rust.
 #![warn(missing_docs)]
 #[cfg(test)]
 #[macro_use]

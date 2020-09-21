@@ -75,7 +75,26 @@ Install them with npm: `npm install nnsplit`
 
 ### Usage
 
-TBD
+The Javascript API has no method `.load(model_name)` to load a trained model. Instead the path to a model in your file system (in Node.js) or accessable via `fetch` (in the browser) has to be given as first argument to `NNSplit.new`.
+
+#### Node.js
+
+```js
+const nnsplit = require("nnsplit");
+
+async function run() {
+    const splitter = await nnsplit.NNSplit.new("path/to/model.onnx");
+
+    let splits = (await splitter.split(["This is a test This is another test."]))[0];
+    console.log(splits.parts.map((x) => x.text)); // to log sentences, or x.parts to get the smaller subsplits
+}
+
+run()
+```
+
+#### Browser
+
+NNSplit in the browser currently only works with a bundler and has to be imported asynchronously. API is the same as in Node.js. See [bindings/javascript/dev_server](bindings/javascript/dev_server) for a full example.
 
 ## Rust Usage
 
@@ -100,7 +119,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let splitter =
         nnsplit::NNSplit::load("en", nnsplit::NNSplitOptions::default())?;
 
-    let input: Vec<&str> = vec!["This is a test! This is another test."];
+    let input: Vec<&str> = vec!["This is a test This is another test."];
     let splits = &splitter.split(&input)[0];
 
     for sentence in splits.iter() {
