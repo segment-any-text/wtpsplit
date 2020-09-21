@@ -11,6 +11,7 @@ module.exports = {
     filename: "[name].js",
   },
   mode: "development",
+  target: "web",
   plugins: [
     new CopyWebpackPlugin(['index.html'])
   ],

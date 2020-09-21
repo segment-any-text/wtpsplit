@@ -64,21 +64,25 @@ pub struct NNSplit {
 #[wasm_bindgen]
 impl NNSplit {
     #[wasm_bindgen(constructor)]
-    pub fn new(path: String, options: JsValue) -> Self {
-        utils::set_panic_hook();
-        let backend = TractJSBackend::new(&path);
+    pub fn invalid_new() -> Result<(), JsValue> {
+        Err("NNSplit can't be construced directly because it is asynchronous! Please use NNSplit.new.".into())
+    }
 
-        NNSplit {
+    pub async fn new(path: String, options: JsValue) -> Result<NNSplit, JsValue> {
+        utils::set_panic_hook();
+        let backend = TractJSBackend::new(&path).await?;
+
+        Ok(NNSplit {
             backend,
             inner: core::NNSplitLogic::new(if options.is_undefined() || options.is_null() {
                 core::NNSplitOptions::default()
             } else {
                 options.into_serde().unwrap()
             }),
-        }
+        })
     }
 
-    pub async fn split(self, texts: Vec<JsValue>) -> JsValue {
+    pub async fn split(self, texts: Vec<JsValue>) -> Result<JsValue, JsValue> {
         let texts: Vec<String> = texts
             .into_iter()
             .map(|x| x.as_string().unwrap_throw())
@@ -86,7 +90,7 @@ impl NNSplit {
         let texts: Vec<&str> = texts.iter().map(|x| x.as_ref()).collect();
 
         let (inputs, indices) = self.inner.get_inputs_and_indices(&texts);
-        let slice_preds = self.backend.predict(inputs).await.unwrap_throw();
+        let slice_preds = self.backend.predict(inputs).await?;
 
         let splits = self.inner.split(&texts, slice_preds, indices);
         let splits = splits
@@ -102,6 +106,6 @@ impl NNSplit {
             array.push(split);
         }
 
-        array.into()
+        Ok(array.into())
     }
 }

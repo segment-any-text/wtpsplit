@@ -1,7 +1,6 @@
 use js_sys::{Array, Float32Array, Promise, Uint32Array, Uint8Array};
 use ndarray::prelude::*;
 use serde_derive::{Deserialize, Serialize};
-use std::error::Error;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 
@@ -14,8 +13,8 @@ struct ModelLoadArgs {
 extern "C" {
     type Model;
 
-    #[wasm_bindgen(constructor)]
-    fn new(path: &str, options: JsValue) -> Model;
+    #[wasm_bindgen(static_method_of = Model)]
+    fn load(path: &str, options: JsValue) -> Promise;
 
     #[wasm_bindgen(method)]
     fn predict_one(this: &Model, input: Tensor) -> Promise;
@@ -40,19 +39,18 @@ pub struct TractJSBackend {
 }
 
 impl TractJSBackend {
-    pub fn new(model_path: &str) -> Self {
-        let model = Model::new(
+    pub async fn new(model_path: &str) -> Result<Self, JsValue> {
+        let model: Model = JsFuture::from(Model::load(
             model_path,
             JsValue::from_serde(&ModelLoadArgs { optimize: false }).unwrap(),
-        );
+        ))
+        .await?
+        .into();
 
-        TractJSBackend { model }
+        Ok(TractJSBackend { model })
     }
 
-    pub async fn predict(
-        &self,
-        input: Array2<u8>,
-    ) -> Result<Array3<f32>, Box<dyn Error + Send + Sync>> {
+    pub async fn predict(&self, input: Array2<u8>) -> Result<Array3<f32>, JsValue> {
         let shape: Array = input
             .shape()
             .iter()
@@ -69,10 +67,7 @@ impl TractJSBackend {
             shape,
         );
 
-        let pred: Tensor = JsFuture::from(self.model.predict_one(tensor))
-            .await
-            .unwrap_throw()
-            .into();
+        let pred: Tensor = JsFuture::from(self.model.predict_one(tensor)).await?.into();
 
         let shape = pred.shape();
         let shape = shape.to_vec();
@@ -80,7 +75,8 @@ impl TractJSBackend {
         let shape = (shape[0] as usize, shape[1] as usize, shape[2] as usize);
 
         let data: Float32Array = pred.data().into();
-        let preds = Array3::from_shape_vec(shape, data.to_vec())?;
+        let preds =
+            Array3::from_shape_vec(shape, data.to_vec()).map_err(|_| "Array conversion error")?;
 
         Ok(preds)
     }
