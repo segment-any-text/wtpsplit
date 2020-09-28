@@ -9,7 +9,7 @@ repository = "https://github.com/bminixhofer/nnsplit"
 homepage = "https://github.com/bminixhofer/nnsplit"
 documentation = "https://github.com/bminixhofer/nnsplit"
 keywords = ["pytorch", "deep-learning", "machine-learning", "tokenizer", "sentencizer"]
-categories = ["science"]
+categories = ["text-processing", "science"]
 license = "MIT"
 readme = "README.md"
 
