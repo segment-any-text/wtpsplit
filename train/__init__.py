@@ -38,7 +38,7 @@ if __name__ == "__main__":
     )
 
     model = Network(
-        MemoryMapDataset("../train_data/texts.txt", "../train_data/slices.pkl"),
+        MemoryMapDataset("../train_data/de/texts.txt", "../train_data/de/slices.pkl"),
         labeler,
         hparams,
     )

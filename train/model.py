@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 import numpy as np
 from torch import nn
@@ -12,8 +13,6 @@ from argparse import ArgumentParser
 
 
 class Network(pl.LightningModule):
-    TORCHSCRIPT_CPU_NAME = "torchscript_cpu_model.pt"
-    TORCHSCRIPT_CUDA_NAME = "torchscript_cuda_model.pt"
     ONNX_NAME = "model.onnx"
 
     def __init__(self, text_dataset, labeler, hparams):
@@ -22,10 +21,11 @@ class Network(pl.LightningModule):
         self.labeler = labeler
         self.hparams = hparams
 
-        self.embedding = nn.Embedding(256, 32)
-        self.lstm1 = nn.LSTM(32, 128, bidirectional=True, batch_first=True)
-        self.lstm2 = nn.LSTM(256, 64, bidirectional=True, batch_first=True)
-        self.out = nn.Linear(128, 2)
+        self.embedding = nn.Embedding(256, 64)
+        self.lstm1 = nn.LSTM(64, 128, bidirectional=True, batch_first=True)
+        self.lstm2 = nn.LSTM(256, 128, bidirectional=True, batch_first=True)
+        self.lstm3 = nn.LSTM(256, 128, bidirectional=True, batch_first=True)
+        self.out = nn.Linear(256, 2)
 
     def prepare_data(self):
         dataset = SplitDataset(self.text_dataset, self.labeler, 500, 800, 20)
@@ -98,7 +98,17 @@ class Network(pl.LightningModule):
         return {"avg_val_loss": avg_loss, "log": tensorboard_logs}
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters())
+        adam = torch.optim.AdamW(self.parameters())
+        onecycle = torch.optim.lr_scheduler.OneCycleLR(
+            adam,
+            max_lr=1e-1,
+            epochs=self.hparams.max_epochs,
+            steps_per_epoch=int(
+                math.ceil(self.hparams.train_size / self.hparams.batch_size)
+            ),
+        )
+
+        return [adam], []
 
     def train_dataloader(self):
         # define 1 epoch = n random samples from train data
@@ -113,7 +123,7 @@ class Network(pl.LightningModule):
 
         return data.DataLoader(
             epoch_sample,
-            batch_size=128,
+            batch_size=self.hparams.batch_size,
             shuffle=True,
             num_workers=6,
             collate_fn=SplitDataset.collate_fn,
@@ -158,11 +168,15 @@ class Network(pl.LightningModule):
             help="Number of samples to train on for one epoch. "
             "Will be sampled without replacement from the text dataset.",
         )
+        parser.add_argument(
+            "--batch_size", type=int,
+        )
         parser = Trainer.add_argparse_args(parser)
 
         parser.set_defaults(
             train_size=1_000_000,
             test_size=50_000,
+            batch_size=128,
             max_epochs=1,
             reload_dataloaders_every_epoch=True,
         )

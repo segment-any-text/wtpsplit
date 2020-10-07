@@ -83,4 +83,6 @@ if __name__ == "__main__":
         max_text_length=5000,
     )
 
-    MemoryMapDataset.iterator_to_text_and_slices(xml_iter, "texts.txt", "slices.pkl")
+    MemoryMapDataset.iterator_to_text_and_slices(
+        xml_iter, "../train_data/de/texts.txt", "../train_data/de/slices.pkl"
+    )
