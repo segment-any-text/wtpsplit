@@ -75,6 +75,7 @@ impl NNSplit {
     ///     * max_length (int): The maximum length of each cut (comparable to kernel size of 1d convolution).
     ///     * padding (int): How much to zero pad the text on both sides.
     ///     * batch_size (int): Batch size to use.
+    ///     * length_divisor (int): Total length will be padded until it is divisible by this number. Allows some additional optimizations.
     pub async fn new(path: String, options: JsValue) -> Result<NNSplit, JsValue> {
         utils::set_panic_hook();
         let backend = TractJSBackend::new(&path).await?;

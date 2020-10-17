@@ -46,8 +46,10 @@ impl ONNXRuntimeBackend {
             .call1("create_session", (model_path.as_ref(), use_cuda))?
             .into();
 
-        let dummy_data = Array2::<u8>::zeros((1, 1));
-        let n_outputs = ONNXRuntimeBackend::predict_batch(py, dummy_data.view(), &session)?.len();
+        let dummy_data = Array2::<u8>::zeros((1, 12));
+        let dummy_out = ONNXRuntimeBackend::predict_batch(py, dummy_data.view(), &session)?;
+        let shape = dummy_out.shape();
+        let n_outputs = shape[shape.len() - 1];
 
         Ok(ONNXRuntimeBackend { session, n_outputs })
     }

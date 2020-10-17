@@ -206,6 +206,12 @@ pub struct NNSplitOptions {
     /// How much to zero pad the text on both sides.
     #[serde(default = "NNSplitOptions::default_padding")]
     pub padding: usize,
+    /// Total length will be padded until it is divisible by this number. Allows some additional optimizations.
+    #[serde(
+        alias = "paddingDivisor",
+        default = "NNSplitOptions::default_length_divisor"
+    )]
+    pub length_divisor: usize,
     /// Batch size to use.
     #[serde(alias = "batchSize", default = "NNSplitOptions::default_batch_size")]
     pub batch_size: usize,
@@ -231,6 +237,10 @@ impl NNSplitOptions {
     fn default_batch_size() -> usize {
         256
     }
+
+    fn default_length_divisor() -> usize {
+        2
+    }
 }
 
 impl Default for NNSplitOptions {
@@ -241,6 +251,7 @@ impl Default for NNSplitOptions {
             max_length: NNSplitOptions::default_max_length(),
             padding: NNSplitOptions::default_padding(),
             batch_size: NNSplitOptions::default_batch_size(),
+            length_divisor: NNSplitOptions::default_length_divisor(),
         }
     }
 }
@@ -255,7 +266,14 @@ pub struct NNSplitLogic {
 
 impl NNSplitLogic {
     /// Create new logic from options. The split sequence is not customizable at the moment.
+    ///
+    /// # Panics
+    /// - If the options are invalid, e. g. max_length % length_divisor != 0
     pub fn new(options: NNSplitOptions) -> Self {
+        if options.max_length % options.length_divisor != 0 {
+            panic!("max length must be divisible by length divisor.")
+        }
+
         NNSplitLogic {
             options,
             split_sequence: SplitSequence::new(vec![
@@ -269,6 +287,17 @@ impl NNSplitLogic {
         }
     }
 
+    fn pad(&self, length: usize) -> usize {
+        let padded = length * self.options.padding * 2;
+        let remainder = padded % self.options.length_divisor;
+
+        if remainder == 0 {
+            padded
+        } else {
+            padded + (self.options.length_divisor - remainder)
+        }
+    }
+
     /// Convert texts to neural network inputs. Returns:
     /// * An `ndarray::Array2` which can be fed into the neural network as is.
     /// * A vector of indices with information which positions in the text the array elements correspond to.
@@ -277,11 +306,7 @@ impl NNSplitLogic {
         texts: &[&str],
     ) -> (Array2<u8>, Vec<(usize, Range<usize>)>) {
         let maxlen = cmp::min(
-            texts
-                .iter()
-                .map(|x| x.len() + self.options.padding * 2)
-                .max()
-                .unwrap_or(0),
+            texts.iter().map(|x| self.pad(x.len())).max().unwrap_or(0),
             self.options.max_length,
         );
 
@@ -292,7 +317,7 @@ impl NNSplitLogic {
                 let mut text_inputs: Vec<u8> = Vec::new();
                 let mut text_indices: Vec<(usize, Range<usize>)> = Vec::new();
 
-                let length = text.len() + self.options.padding * 2;
+                let length = self.pad(text.len());
                 let mut inputs = vec![0; length];
 
                 for (j, byte) in text.bytes().enumerate() {
@@ -376,17 +401,15 @@ impl NNSplitLogic {
         let padded_preds = self.combine_predictions(
             (&slice_preds).into(),
             indices,
-            texts
-                .iter()
-                .map(|x| x.len() + self.options.padding * 2)
-                .collect(),
+            texts.iter().map(|x| self.pad(x.len())).collect(),
         );
 
         let preds = padded_preds
             .iter()
-            .map(|x| {
+            .zip(texts)
+            .map(|(x, text)| {
                 x.slice(s![
-                    self.options.padding..x.shape()[0] - self.options.padding,
+                    self.options.padding..self.options.padding + text.len(),
                     ..
                 ])
             })

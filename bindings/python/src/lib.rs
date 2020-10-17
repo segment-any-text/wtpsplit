@@ -167,6 +167,7 @@ impl<'a> IntoPy<Split> for core::Split<'a> {
 ///         * max_length (int): The maximum length of each cut (comparable to kernel size of 1d convolution).
 ///         * padding (int): How much to zero pad the text on both sides.
 ///         * batch_size (int): Batch size to use.
+///         * length_divisor (int): Total length will be padded until it is divisible by this number. Allows some additional optimizations.
 #[pyclass]
 #[text_signature = "(model_path, use_cuda=None, **kwargs)"]
 pub struct NNSplit {
@@ -207,6 +208,7 @@ impl NNSplit {
     ///         * max_length (int): The maximum length of each cut (comparable to kernel size of 1d convolution).
     ///         * padding (int): How much to zero pad the text on both sides.
     ///         * batch_size (int): Batch size to use.
+    ///         * length_divisor (int): Total length will be padded until it is divisible by this number. Allows some additional optimizations.
     #[text_signature = "(model_name, use_cuda=None, **kwargs)"]
     #[args(kwargs = "**")]
     #[staticmethod]
@@ -261,6 +263,7 @@ impl NNSplit {
 fn nnsplit(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<NNSplit>()?;
     m.add_class::<Split>()?;
+    m.add("__version__", env!("CARGO_PKG_VERSION"))?;
 
     Ok(())
 }
