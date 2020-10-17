@@ -222,7 +222,7 @@ impl NNSplit {
         let backend = ONNXRuntimeBackend::new(
             py,
             resource_path
-                .unwrap()
+                .expect("could not cache model.")
                 .into_os_string()
                 .into_string()
                 .unwrap(),

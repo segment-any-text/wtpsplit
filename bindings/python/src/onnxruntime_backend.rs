@@ -11,7 +11,7 @@ lazy_static! {
         let py = guard.python();
 
         PyModule::from_code(py, include_str!("./backend.py"), "backend.py", "backend")
-            .unwrap()
+            .expect("error loading backend.py")
             .into()
     };
 }
