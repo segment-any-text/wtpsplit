@@ -6,6 +6,7 @@ from tqdm.auto import tqdm
 import pickle
 import mmap
 from torch.utils import data
+import click
 
 
 def _fast_iter(context):
@@ -76,13 +77,19 @@ class MemoryMapDataset(data.Dataset):
         return self.mm[start:end].decode("utf-8")
 
 
-if __name__ == "__main__":
+@click.command()
+@click.option("--dump_path", help="Path to XML dump.")
+@click.option("--text_path", help="Path to write the texts to (should be .txt)")
+@click.option("--slice_path", help="Path to write the slices to (should be .pkl)")
+def text_and_slices(dump_path, text_path, slice_path):
     xml_iter = xml_dump_iter(
-        "../train_data/dewiki-20180920-corpus.xml",
+        dump_path,
         min_text_length=300,
         max_text_length=5000,
     )
 
-    MemoryMapDataset.iterator_to_text_and_slices(
-        xml_iter, "../train_data/de/texts.txt", "../train_data/de/slices.pkl"
-    )
+    MemoryMapDataset.iterator_to_text_and_slices(xml_iter, text_path, slice_path)
+
+
+if __name__ == "__main__":
+    text_and_slices()

@@ -43,6 +43,10 @@ class SplitDataset(data.Dataset):
             ids.append(0)
             label.append([0] * len(self.labeler.tokenizers))
 
+        while len(ids) % 2 != 0:
+            ids.append(0)
+            label.append([0] * len(self.labeler.tokenizers))
+
         return torch.tensor(ids), torch.tensor(label)
 
     @staticmethod

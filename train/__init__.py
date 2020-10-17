@@ -23,6 +23,26 @@ if __name__ == "__main__":
 
     parser = Network.get_parser()
     parser.set_defaults(logger=wandb_logger)
+    parser.add_argument(
+        "--spacy_model",
+        help="Name of the spacy model to use for labelling.",
+        required=True,
+    )
+    parser.add_argument(
+        "--text_path",
+        help="Path to the text file to use for training.",
+        required=True,
+    )
+    parser.add_argument(
+        "--slice_path",
+        help="Path to the slice file to use for training.",
+        required=True,
+    )
+    parser.add_argument(
+        "--model_path",
+        help="Directory to store the model at.",
+    )
+
     hparams = parser.parse_args()
 
     if hparams.logger:
@@ -31,14 +51,14 @@ if __name__ == "__main__":
     labeler = Labeler(
         [
             SpacySentenceTokenizer(
-                "de_core_news_sm", lower_start_prob=0.7, remove_end_punct_prob=0.7
+                hparams.spacy_model, lower_start_prob=0.7, remove_end_punct_prob=0.7
             ),
-            SpacyWordTokenizer("de_core_news_sm"),
+            SpacyWordTokenizer(hparams.spacy_model),
         ]
     )
 
     model = Network(
-        MemoryMapDataset("../train_data/de/texts.txt", "../train_data/de/slices.pkl"),
+        MemoryMapDataset(hparams.text_path, hparams.slice_path),
         labeler,
         hparams,
     )
@@ -50,3 +70,6 @@ if __name__ == "__main__":
 
     if hparams.logger:
         model.store(Path(wandb_logger.experiment.dir) / "model")
+
+    if hparams.model_path:
+        model.store(Path(hparams.model_path))

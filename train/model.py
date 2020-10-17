@@ -1,4 +1,3 @@
-import math
 from pathlib import Path
 import numpy as np
 from torch import nn
@@ -22,10 +21,13 @@ class Network(pl.LightningModule):
         self.hparams = hparams
 
         self.embedding = nn.Embedding(256, 64)
+        self.downsample = nn.Conv1d(64, 64, kernel_size=2, stride=2)
+
         self.lstm1 = nn.LSTM(64, 128, bidirectional=True, batch_first=True)
         self.lstm2 = nn.LSTM(256, 128, bidirectional=True, batch_first=True)
         self.lstm3 = nn.LSTM(256, 128, bidirectional=True, batch_first=True)
-        self.out = nn.Linear(256, 2)
+
+        self.out = nn.Linear(256, 4)
 
     def prepare_data(self):
         dataset = SplitDataset(self.text_dataset, self.labeler, 500, 800, 20)
@@ -37,10 +39,16 @@ class Network(pl.LightningModule):
         self.valid_dataset = data.Subset(dataset, valid_indices)
 
     def forward(self, x):
+        input_length = x.shape[1]
+
         h = self.embedding(x.long())
+        h = self.downsample(h.permute(0, 2, 1)).permute(0, 2, 1)
+
         h, _ = self.lstm1(h)
         h, _ = self.lstm2(h)
-        h = self.out(h)
+        h, _ = self.lstm3(h)
+
+        h = self.out(h).reshape(-1, input_length, 2)
         return h
 
     @staticmethod
@@ -99,14 +107,6 @@ class Network(pl.LightningModule):
 
     def configure_optimizers(self):
         adam = torch.optim.AdamW(self.parameters())
-        onecycle = torch.optim.lr_scheduler.OneCycleLR(
-            adam,
-            max_lr=1e-1,
-            epochs=self.hparams.max_epochs,
-            steps_per_epoch=int(
-                math.ceil(self.hparams.train_size / self.hparams.batch_size)
-            ),
-        )
 
         return [adam], []
 
@@ -169,7 +169,8 @@ class Network(pl.LightningModule):
             "Will be sampled without replacement from the text dataset.",
         )
         parser.add_argument(
-            "--batch_size", type=int,
+            "--batch_size",
+            type=int,
         )
         parser = Trainer.add_argparse_args(parser)
 
