@@ -1,6 +1,6 @@
 {
   "name": "nnsplit",
-  "version": "0.4.9",
+  "version": "0.5.0",
   "description": "Fast, robust sentence splitting with bindings for Python, Rust and Javascript.",
   "directories": {
     "test": "tests"
