@@ -21,25 +21,138 @@ NNSplit comes with pretrained models. They were evaluated on the [OPUS Open Subt
 
 See [evaluate.ipynb](train/evaluate.ipynb) for details.
 
-### [`en`](models/en)
+<details>
+<summary>en - English</summary>
+<p>
+ 
+__Location__: [`models/en`](models/en)
+
+__Metrics__:
 
 |                              |   NNSplit |   Spacy (Tagger) |   Spacy (Sentencizer) |
 |:-----------------------------|----------:|-----------------:|----------------------:|
-| Clean                        |  0.754371 |         0.853603 |            0.820934   |
-| Partial punctuation          |  0.485907 |         0.517829 |            0.249753   |
-| Partial case                 |  0.761754 |         0.825119 |            0.819679   |
-| Partial punctuation and case |  0.443704 |         0.458619 |            0.249873   |
-| No punctuation and case      |  0.166273 |         0.180859 |            0.00463281 |
+| Clean                        |  0.763458 |         0.859013 |            0.820934   |
+| Partial punctuation          |  0.486206 |         0.486595 |            0.249753   |
+| Partial case                 |  0.768897 |         0.831067 |            0.819679   |
+| Partial punctuation and case |  0.438204 |         0.4339   |            0.249873   |
+| No punctuation and case      |  0.141555 |         0.151777 |            0.00463281 |
 
-### [`de`](models/de)
+</p>
+</details>
+
+<details>
+<summary>de - German</summary>
+<p>
+   
+__Location__: [`models/de`](models/de)
+
+__Metrics__:
 
 |                              |   NNSplit |   Spacy (Tagger) |   Spacy (Sentencizer) |
 |:-----------------------------|----------:|-----------------:|----------------------:|
-| Clean                        |  0.818902 |        0.833368  |            0.878471   |
-| Partial punctuation          |  0.463999 |        0.426458  |            0.266312   |
-| Partial case                 |  0.823565 |        0.792839  |            0.876678   |
-| Partial punctuation and case |  0.447231 |        0.377201  |            0.26697    |
-| No punctuation and case      |  0.198165 |        0.0952267 |            0.00756195 |
+| Clean                        |  0.795678 |        0.833368  |            0.878471   |
+| Partial punctuation          |  0.532773 |        0.426458  |            0.266312   |
+| Partial case                 |  0.803658 |        0.792839  |            0.876678   |
+| Partial punctuation and case |  0.527035 |        0.377201  |            0.26697    |
+| No punctuation and case      |  0.293959 |        0.0952267 |            0.00756195 |
+
+</p>
+</details>
+
+<details>
+   <summary>tr - Turkish</summary>
+<p>
+
+__Location__: [`models/tr`](models/tr)
+
+__Metrics__:
+
+|                              |   NNSplit |   Spacy (Tagger) |   Spacy (Sentencizer) |
+|:-----------------------------|----------:|-----------------:|----------------------:|
+| Clean                        |  0.8733   |                - |            0.918164   |
+| Partial punctuation          |  0.632185 |                - |            0.274083   |
+| Partial case                 |  0.877694 |                - |            0.917446   |
+| Partial punctuation and case |  0.573482 |                - |            0.274352   |
+| No punctuation and case      |  0.243955 |                - |            0.00364647 |
+
+</p>
+</details>
+
+<details>
+<summary>fr - French</summary>
+<p>
+ 
+__Location__: [`models/fr`](models/fr)
+
+__Metrics__:
+
+|                              |   NNSplit |   Spacy (Tagger) |   Spacy (Sentencizer) |
+|:-----------------------------|----------:|-----------------:|----------------------:|
+| Clean                        |  0.885584 |        0.903697  |            0.896942   |
+| Partial punctuation          |  0.66587  |        0.382312  |            0.267478   |
+| Partial case                 |  0.887438 |        0.876797  |            0.897211   |
+| Partial punctuation and case |  0.580686 |        0.34492   |            0.267926   |
+| No punctuation and case      |  0.251696 |        0.0473742 |            0.00298891 |
+
+</p>
+</details>
+
+<details>
+<summary>no - Norwegian</summary>
+<p>
+   
+__Location__: [`models/no`](models/no)
+
+__Metrics__:
+
+|                              |   NNSplit |   Spacy (Tagger) |   Spacy (Sentencizer) |
+|:-----------------------------|----------:|-----------------:|----------------------:|
+| Clean                        |  0.850256 |         0.93792  |            0.878859   |
+| Partial punctuation          |  0.623128 |         0.442299 |            0.263921   |
+| Partial case                 |  0.847655 |         0.910273 |            0.877395   |
+| Partial punctuation and case |  0.526556 |         0.377141 |            0.26413    |
+| No punctuation and case      |  0.195445 |         0.060107 |            0.00472248 |
+
+</p>
+</details>
+
+<details>
+<summary>sv - Swedish</summary>
+<p>
+   
+__Location__: [`models/sv`](models/sv)
+
+__Metrics__:
+
+|                              |   NNSplit |   Spacy (Tagger) |   Spacy (Sentencizer) |
+|:-----------------------------|----------:|-----------------:|----------------------:|
+| Clean                        |  0.831306 |                - |            0.873121   |
+| Partial punctuation          |  0.587172 |                - |            0.262038   |
+| Partial case                 |  0.836716 |                - |            0.87339    |
+| Partial punctuation and case |  0.51484  |                - |            0.262217   |
+| No punctuation and case      |  0.206952 |                - |            0.00352692 |
+
+</p>
+</details>
+
+<details>
+<summary>zh - Chinese</summary>
+<p>
+   
+__Location__: [`models/zh`](models/zh)
+
+__Metrics__:
+
+|                              |   NNSplit |   Spacy (Tagger) |   Spacy (Sentencizer) |
+|:-----------------------------|----------:|-----------------:|----------------------:|
+| Clean                        |  0.219715 |         0.236004 |              0.186478 |
+| Partial punctuation          |  0.184774 |         0.21033  |              0.133903 |
+| Partial case                 |  0.221538 |         0.235706 |              0.186568 |
+| Partial punctuation and case |  0.185432 |         0.210449 |              0.133993 |
+| No punctuation and case      |  0.147383 |         0.198284 |              0.107093 |
+
+</p>
+</details>
 
 ## Python Usage
 
