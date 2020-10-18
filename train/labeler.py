@@ -8,6 +8,19 @@ import requests
 import pandas as pd
 import diskcache
 from somajo import SoMaJo
+from spacy.lang.tr import Turkish
+from spacy.lang.sv import Swedish
+
+NO_MODEL_LANGUAGE_LOOKUP = {"turkish": Turkish, "swedish": Swedish}
+
+
+def get_model(name):
+    try:
+        nlp = spacy.load(name, disable=["tagger", "parser", "ner"])
+    except OSError:
+        nlp = NO_MODEL_LANGUAGE_LOOKUP[name]()
+
+    return nlp
 
 
 def has_space(text: str) -> bool:
@@ -47,7 +60,7 @@ class SpacySentenceTokenizer(Tokenizer):
         remove_end_punct_prob: Fraction,
     ):
         super().__init__()
-        self.nlp = spacy.load(model_name, disable=["tagger", "parser", "ner"])
+        self.nlp = get_model(model_name)
         self.nlp.add_pipe(self.nlp.create_pipe("sentencizer"))
 
         self.lower_start_prob = lower_start_prob
@@ -91,9 +104,8 @@ class SpacySentenceTokenizer(Tokenizer):
 class SpacyWordTokenizer(Tokenizer):
     def __init__(self, model_name: str):
         super().__init__()
-        self.tokenizer = spacy.load(
-            model_name, disable=["tagger", "parser", "ner"]
-        ).tokenizer
+
+        self.tokenizer = get_model(model_name).tokenizer
 
     def tokenize(self, text: str) -> List[str]:
         out_tokens = []
@@ -264,7 +276,8 @@ class Labeler:
         df.columns = ["" for _ in range(len(df.columns))]
 
         with pd.option_context(
-            "display.max_columns", len(text),
+            "display.max_columns",
+            len(text),
         ):
             print(df)
 

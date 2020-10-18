@@ -1,7 +1,10 @@
 from torch.utils import data
 import numpy as np
-from labeler import remove_last_punct
+from labeler import remove_last_punct, get_model
 from tqdm.auto import tqdm
+import click
+import spacy
+import pandas as pd
 
 
 class OpenSubtitlesDataset(data.Dataset):
@@ -84,3 +87,96 @@ class Evaluator:
             correct[i] = True
 
         return correct
+
+
+class NNSplitInterface:
+    def __init__(self, splitter):
+        self.splitter = splitter
+
+    def split(self, texts):
+        out = []
+        for split in self.splitter.split(texts):
+            out.append([str(x) for x in split])
+
+        return out
+
+
+class SpacyInterface:
+    def __init__(self, name, use_sentencizer):
+        if use_sentencizer:
+            nlp = get_model(name)
+            nlp.add_pipe(nlp.create_pipe("sentencizer"))
+        else:
+            try:
+                nlp = spacy.load(name, disable=["tagger", "ner"])
+            except OSError:
+                nlp = None
+
+        self.nlp = nlp
+
+    def split(self, texts):
+        out = []
+
+        if self.nlp is not None:
+            for doc in self.nlp.pipe(texts):
+                sentences = []
+
+                for sent in doc.sents:
+                    sentences.append("".join([x.text + x.whitespace_ for x in sent]))
+
+                out.append(sentences)
+
+        return out
+
+
+@click.command()
+@click.option("--subtitle_path", help="Path to the OPUS OpenSubtitles raw text.")
+@click.option("--spacy_model", help="Name of the spacy model to compare against.")
+@click.option("--nnsplit_path", help="Path to the .onnx NNSplit model to use.")
+def evaluate(subtitle_path, spacy_model, nnsplit_path):
+    # nnsplit must be installed to evaluate
+    from nnsplit import NNSplit
+
+    print("Evaluating..")
+
+    dataset = data.Subset(
+        OpenSubtitlesDataset(subtitle_path, 1_000_000), np.arange(100_000)
+    )
+    targets = {
+        "NNSplit": NNSplitInterface(
+            NNSplit(nnsplit_path, use_cuda=True, batch_size=2 ** 7)
+        ),
+        "Spacy (Tagger)": SpacyInterface(spacy_model, use_sentencizer=False),
+        "Spacy (Sentencizer)": SpacyInterface(spacy_model, use_sentencizer=True),
+    }
+
+    eval_setups = {
+        "Clean": (0.0, 0.0),
+        "Partial punctuation": (0.5, 0.0),
+        "Partial case": (0.0, 0.5),
+        "Partial punctuation and case": (0.5, 0.5),
+        "No punctuation and case": (1.0, 1.0),
+    }
+
+    result = {}
+    preds = {}
+
+    for eval_name, (remove_punct_prob, lower_start_prob) in eval_setups.items():
+        result[eval_name] = {}
+        evaluator = Evaluator(dataset, remove_punct_prob, lower_start_prob)
+
+        for target_name, interface in targets.items():
+            correct = evaluator.evaluate(interface.split)
+            preds[f"{eval_name}_{target_name}"] = {
+                "samples": evaluator.texts,
+                "correct": correct,
+            }
+            result[eval_name][target_name] = correct.mean()
+
+    result = pd.DataFrame.from_dict(result).T
+    print(result)
+    print(result.to_markdown())
+
+
+if __name__ == "__main__":
+    evaluate()

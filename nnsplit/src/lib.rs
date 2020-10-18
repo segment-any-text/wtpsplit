@@ -288,7 +288,7 @@ impl NNSplitLogic {
     }
 
     fn pad(&self, length: usize) -> usize {
-        let padded = length * self.options.padding * 2;
+        let padded = length + self.options.padding * 2;
         let remainder = padded % self.options.length_divisor;
 
         if remainder == 0 {
