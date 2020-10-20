@@ -1,7 +1,7 @@
-de,https://raw.githubusercontent.com/bminixhofer/nnsplit/master/models/de/
-en,https://raw.githubusercontent.com/bminixhofer/nnsplit/master/models/en/
-tr,https://raw.githubusercontent.com/bminixhofer/nnsplit/master/models/tr/
-fr,https://raw.githubusercontent.com/bminixhofer/nnsplit/master/models/fr/
-no,https://raw.githubusercontent.com/bminixhofer/nnsplit/master/models/no/
-sv,https://raw.githubusercontent.com/bminixhofer/nnsplit/master/models/sv/
-zh,https://raw.githubusercontent.com/bminixhofer/nnsplit/master/models/zh/
+de,https://github.com/bminixhofer/nnsplit/raw/0.5.0/models/de/model.onnx
+en,https://github.com/bminixhofer/nnsplit/raw/0.5.0/models/en/model.onnx
+tr,https://github.com/bminixhofer/nnsplit/raw/0.5.0/models/tr/model.onnx
+fr,https://github.com/bminixhofer/nnsplit/raw/0.5.0/models/fr/model.onnx
+no,https://github.com/bminixhofer/nnsplit/raw/0.5.0/models/no/model.onnx
+sv,https://github.com/bminixhofer/nnsplit/raw/0.5.0/models/sv/model.onnx
+zh,https://github.com/bminixhofer/nnsplit/raw/0.5.0/models/zh/model.onnx

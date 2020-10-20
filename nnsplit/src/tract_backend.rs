@@ -6,18 +6,22 @@ use tract_onnx::prelude::*;
 struct TractBackend {
     model: TypedModel,
     n_outputs: usize,
+    length_divisor: usize,
 }
 
 impl TractBackend {
-    fn new(model: TypedModel) -> TractResult<Self> {
-        let n_outputs = if let TDim::Val(value) = model.outlet_fact(model.outputs[0])?.shape.dim(2)
-        {
+    fn new(model: TypedModel, length_divisor: usize) -> TractResult<Self> {
+        let n_outputs = if let TDim::Val(value) = model.outlet_fact(model.outputs[0])?.shape[2] {
             value as usize
         } else {
             0 // TODO: raise error here
         };
 
-        Ok(TractBackend { model, n_outputs })
+        Ok(TractBackend {
+            model,
+            n_outputs,
+            length_divisor,
+        })
     }
 
     fn predict(
@@ -28,7 +32,10 @@ impl TractBackend {
         let input_shape = input.shape();
         let opt_model = self
             .model
-            .concretize_stream_dim(input_shape[1])?
+            .concretize_dims(&SymbolValues::default().with(
+                's'.into(),
+                input_shape[1] as i64 / self.length_divisor as i64,
+            ))?
             .optimize()?
             .into_runnable()?;
 
@@ -58,11 +65,14 @@ pub struct NNSplit {
 }
 
 impl NNSplit {
-    fn type_model(model: InferenceModel) -> TractResult<TypedModel> {
+    fn type_model(model: InferenceModel, length_divisor: usize) -> TractResult<TypedModel> {
         model
             .with_input_fact(
                 0,
-                InferenceFact::dt_shape(u8::datum_type(), tvec!(1.into(), TDim::s())),
+                InferenceFact::dt_shape(
+                    u8::datum_type(),
+                    tvec!(1.into(), TDim::from('s') * length_divisor),
+                ),
             )?
             .into_typed()?
             .declutter()
@@ -75,8 +85,9 @@ impl NNSplit {
         model_path: P,
         options: NNSplitOptions,
     ) -> Result<Self, Box<dyn Error>> {
-        let model = NNSplit::type_model(onnx().model_for_path(model_path)?)?;
-        let backend = TractBackend::new(model)?;
+        let model =
+            NNSplit::type_model(onnx().model_for_path(model_path)?, options.length_divisor)?;
+        let backend = TractBackend::new(model, options.length_divisor)?;
 
         Ok(NNSplit {
             backend,
@@ -88,9 +99,12 @@ impl NNSplit {
     #[cfg(feature = "model-loader")]
     pub fn load(model_name: &str, options: NNSplitOptions) -> Result<Self, Box<dyn Error>> {
         let mut model_data = crate::model_loader::get_resource(model_name, "model.onnx")?.0;
-        let model = NNSplit::type_model(onnx().model_for_read(&mut model_data)?)?;
+        let model = NNSplit::type_model(
+            onnx().model_for_read(&mut model_data)?,
+            options.length_divisor,
+        )?;
 
-        let backend = TractBackend::new(model)?;
+        let backend = TractBackend::new(model, options.length_divisor)?;
 
         Ok(NNSplit {
             backend,
