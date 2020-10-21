@@ -152,6 +152,8 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
           TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
           WHEEL_DIR: python-wheel
+      - run: |
+          rm -r python-wheel
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: v${{ github.event.release.tag_name }}
