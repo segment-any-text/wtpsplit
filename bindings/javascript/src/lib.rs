@@ -78,15 +78,17 @@ impl NNSplit {
     ///     * length_divisor (int): Total length will be padded until it is divisible by this number. Allows some additional optimizations.
     pub async fn new(path: String, options: JsValue) -> Result<NNSplit, JsValue> {
         utils::set_panic_hook();
-        let backend = TractJSBackend::new(&path).await?;
+        let options = if options.is_undefined() || options.is_null() {
+            core::NNSplitOptions::default()
+        } else {
+            options.into_serde().unwrap()
+        };
+
+        let backend = TractJSBackend::new(&path, options.length_divisor).await?;
 
         Ok(NNSplit {
             backend,
-            inner: core::NNSplitLogic::new(if options.is_undefined() || options.is_null() {
-                core::NNSplitOptions::default()
-            } else {
-                options.into_serde().unwrap()
-            }),
+            inner: core::NNSplitLogic::new(options),
         })
     }
 

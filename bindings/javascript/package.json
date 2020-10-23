@@ -36,7 +36,7 @@
   },
   "homepage": "https://github.com/bminixhofer/nnsplit#readme",
   "dependencies": {
-    "tractjs": "^0.3.0"
+    "tractjs": "^0.3.1"
   },
   "devDependencies": {
     "cypress": "^4.9.0",

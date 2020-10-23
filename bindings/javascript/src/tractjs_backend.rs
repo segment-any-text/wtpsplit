@@ -1,12 +1,15 @@
 use js_sys::{Array, Float32Array, Promise, Uint32Array, Uint8Array};
 use ndarray::prelude::*;
 use serde_derive::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 
 #[derive(Serialize, Deserialize)]
 struct ModelLoadArgs {
-    optimize: bool,
+    #[serde(rename = "inputFacts")]
+    input_facts: HashMap<usize, Value>,
 }
 
 #[wasm_bindgen(module = "tractjs")]
@@ -17,7 +20,7 @@ extern "C" {
     fn load(path: &str, options: JsValue) -> Promise;
 
     #[wasm_bindgen(method)]
-    fn predict_one(this: &Model, input: Tensor) -> Promise;
+    fn predict_one(this: &Model, input: Tensor, symbol_values: JsValue) -> Promise;
 }
 
 #[wasm_bindgen(module = "tractjs")]
@@ -36,18 +39,32 @@ extern "C" {
 
 pub struct TractJSBackend {
     model: Model,
+    length_divisor: usize,
 }
 
 impl TractJSBackend {
-    pub async fn new(model_path: &str) -> Result<Self, JsValue> {
+    pub async fn new(model_path: &str, length_divisor: usize) -> Result<Self, JsValue> {
+        let mut input_facts = HashMap::new();
+        input_facts.insert(
+            0,
+            json!(["uint8", [1, {
+                "id": "s",
+                "slope": length_divisor,
+                "intercept": 0,
+            }]]),
+        );
+
         let model: Model = JsFuture::from(Model::load(
             model_path,
-            JsValue::from_serde(&ModelLoadArgs { optimize: false }).unwrap(),
+            JsValue::from_serde(&ModelLoadArgs { input_facts }).unwrap(),
         ))
         .await?
         .into();
 
-        Ok(TractJSBackend { model })
+        Ok(TractJSBackend {
+            model,
+            length_divisor,
+        })
     }
 
     pub async fn predict(&self, input: Array2<u8>) -> Result<Array3<f32>, JsValue> {
@@ -67,7 +84,15 @@ impl TractJSBackend {
             shape,
         );
 
-        let pred: Tensor = JsFuture::from(self.model.predict_one(tensor)).await?.into();
+        let mut symbol_values = HashMap::new();
+        symbol_values.insert("s", input.shape()[1] / self.length_divisor);
+
+        let pred: Tensor = JsFuture::from(
+            self.model
+                .predict_one(tensor, JsValue::from_serde(&symbol_values).unwrap()),
+        )
+        .await?
+        .into();
 
         let shape = pred.shape();
         let shape = shape.to_vec();
