@@ -8,7 +8,7 @@ Cypress.on('window:before:load', (win) => {
 
 it('runs the javascript without errors and logs "cypress:success"', () => {
     cy.visit("/");
-    cy.wait(5000).then(() => {
+    cy.wait(10000).then(() => {
         expect(fail_spy).not.to.be.called;
         expect(success_spy).to.be.called;
     });
