@@ -6,8 +6,8 @@ edition = "2018"
 
 description = "Fast, robust sentence splitting with bindings for Python, Rust and Javascript."
 repository = "https://github.com/bminixhofer/nnsplit"
-homepage = "https://github.com/bminixhofer/nnsplit"
-documentation = "https://github.com/bminixhofer/nnsplit"
+homepage = "https://bminixhofer.github.io/nnsplit"
+documentation = "https://docs.rs/nnsplit/"
 keywords = ["pytorch", "deep-learning", "machine-learning", "tokenizer", "sentencizer"]
 categories = ["text-processing", "science"]
 license = "MIT"
@@ -48,3 +48,6 @@ required-features = ["tract-backend", "model-loader"]
 path = "examples/cli.rs" # somehow `cargo package` doesn't work without explicitly setting path
 name = "cli"
 required-features = ["tract-backend", "model-loader"]
+
+[package.metadata.docs.rs]
+all-features = true

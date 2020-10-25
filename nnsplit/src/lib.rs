@@ -24,8 +24,8 @@ pub use tract_backend::NNSplit;
 pub mod model_loader;
 
 /// A Split level, used to describe what this split corresponds to (e. g. a sentence).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Level(String);
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub struct Level(pub String);
 
 /// A splitted text.
 #[derive(Debug)]
@@ -110,6 +110,11 @@ impl SplitSequence {
     /// Creates a new split sequence. Contains instructions for how to use model predictions to split a text.
     pub fn new(instructions: Vec<(Level, SplitInstruction)>) -> Self {
         SplitSequence { instructions }
+    }
+
+    /// Gets the levels of this split sequence, from top (larger) to bottom (smaller).
+    pub fn get_levels(&self) -> Vec<&Level> {
+        self.instructions.iter().map(|(level, _)| level).collect()
     }
 
     fn inner_apply<'a>(
@@ -269,14 +274,12 @@ impl Default for NNSplitOptions {
 
 /// The logic by which texts are split.
 pub struct NNSplitLogic {
-    #[allow(missing_docs)]
-    pub options: NNSplitOptions,
-    #[allow(missing_docs)]
-    pub split_sequence: SplitSequence,
+    options: NNSplitOptions,
+    split_sequence: SplitSequence,
 }
 
 impl NNSplitLogic {
-    /// Create new logic from options. The split sequence is not customizable at the moment.
+    /// Create new logic from options and a split sequence.
     ///
     /// # Panics
     /// - If the options are invalid, e. g. max_length % length_divisor != 0
@@ -289,6 +292,18 @@ impl NNSplitLogic {
             options,
             split_sequence,
         }
+    }
+
+    /// Get the underlying NNSplitOptions.
+    #[inline]
+    pub fn options(&self) -> &NNSplitOptions {
+        &self.options
+    }
+
+    /// Get the underlying SplitSequence.
+    #[inline]
+    pub fn split_sequence(&self) -> &SplitSequence {
+        &self.split_sequence
     }
 
     fn pad(&self, length: usize) -> usize {

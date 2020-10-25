@@ -1,4 +1,4 @@
-use crate::{NNSplitLogic, NNSplitOptions};
+use crate::{Level, NNSplitLogic, NNSplitOptions};
 use ndarray::prelude::*;
 use std::error::Error;
 use tract_onnx::prelude::*;
@@ -134,9 +134,14 @@ impl NNSplit {
 
         let slice_preds = self
             .backend
-            .predict(inputs, self.logic.options.batch_size)
+            .predict(inputs, self.logic.options().batch_size)
             .expect("model failure.");
         self.logic.split(texts, slice_preds, indices)
+    }
+
+    /// Gets the underlying NNSplitLogic.
+    pub fn logic(&self) -> &NNSplitLogic {
+        &self.logic
     }
 }
 
@@ -156,6 +161,24 @@ mod tests {
         assert_eq!(
             splits.flatten(0),
             vec!["Das ist ein Test ", "Das ist noch ein Test."]
+        );
+    }
+
+    #[test]
+    fn getting_levels_works() {
+        let splitter = NNSplit::new(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../models/de/model.onnx"),
+            NNSplitOptions::default(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            splitter.logic().split_sequence().get_levels(),
+            vec![
+                &Level("Sentence".into()),
+                &Level("Token".into()),
+                &Level("_Whitespace".into())
+            ]
         );
     }
 }
