@@ -21,6 +21,9 @@ extern "C" {
 
     #[wasm_bindgen(method)]
     fn predict_one(this: &Model, input: Tensor, symbol_values: JsValue) -> Promise;
+
+    #[wasm_bindgen(method)]
+    fn get_metadata(this: &Model) -> Promise;
 }
 
 #[wasm_bindgen(module = "tractjs")]
@@ -107,5 +110,14 @@ impl TractJSBackend {
         preds.mapv_inplace(|x| 1f32 / (1f32 + (-x).exp()));
 
         Ok(preds)
+    }
+
+    pub async fn get_metadata(&self) -> Result<HashMap<String, String>, JsValue> {
+        let metadata: HashMap<String, String> = JsFuture::from(self.model.get_metadata())
+            .await?
+            .into_serde()
+            .map_err(|_| "reading metadata failed")?;
+
+        Ok(metadata)
     }
 }

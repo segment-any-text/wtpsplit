@@ -58,7 +58,7 @@ impl<'a> From<core::Split<'a>> for Split {
 #[wasm_bindgen]
 pub struct NNSplit {
     backend: TractJSBackend,
-    inner: core::NNSplitLogic,
+    logic: core::NNSplitLogic,
 }
 
 #[wasm_bindgen]
@@ -85,10 +85,19 @@ impl NNSplit {
         };
 
         let backend = TractJSBackend::new(&path, options.length_divisor).await?;
+        let metadata = backend.get_metadata().await?;
 
         Ok(NNSplit {
             backend,
-            inner: core::NNSplitLogic::new(options),
+            logic: core::NNSplitLogic::new(
+                options,
+                serde_json::from_str(
+                    metadata
+                        .get("split_sequence")
+                        .ok_or("Model must contain `split_sequence` metadata key")?,
+                )
+                .map_err(|_| "split_sequence must be valid JSON.")?,
+            ),
         })
     }
 
@@ -104,10 +113,10 @@ impl NNSplit {
             .collect();
         let texts: Vec<&str> = texts.iter().map(|x| x.as_ref()).collect();
 
-        let (inputs, indices) = self.inner.get_inputs_and_indices(&texts);
+        let (inputs, indices) = self.logic.get_inputs_and_indices(&texts);
         let slice_preds = self.backend.predict(inputs).await?;
 
-        let splits = self.inner.split(&texts, slice_preds, indices);
+        let splits = self.logic.split(&texts, slice_preds, indices);
         let splits = splits
             .into_iter()
             .map(|x| {
@@ -122,5 +131,16 @@ impl NNSplit {
         }
 
         Ok(array.into())
+    }
+
+    /// Gets names of the levels of this splitter.
+    #[wasm_bindgen(js_name = getLevels)]
+    pub fn get_levels(self) -> Array {
+        self.logic
+            .split_sequence()
+            .get_levels()
+            .iter()
+            .map(|x| JsValue::from(x.0.clone()))
+            .collect()
     }
 }

@@ -172,7 +172,29 @@ impl<'a> IntoPy<Split> for core::Split<'a> {
 #[text_signature = "(model_path, use_cuda=None, **kwargs)"]
 pub struct NNSplit {
     backend: ONNXRuntimeBackend,
-    inner: core::NNSplitLogic,
+    logic: core::NNSplitLogic,
+}
+
+impl NNSplit {
+    fn from_backend_and_kwargs(
+        py: Python,
+        backend: ONNXRuntimeBackend,
+        kwargs: Option<&PyDict>,
+    ) -> PyResult<Self> {
+        let options = to_options(kwargs)?;
+        let metadata = backend.get_metadata(py)?;
+
+        Ok(NNSplit {
+            backend,
+            logic: core::NNSplitLogic::new(
+                options,
+                serde_json::from_str(metadata.get("split_sequence").ok_or_else(|| {
+                    Exception::py_err("Model must contain `split_sequence` metadata key")
+                })?)
+                .map_err(|_| Exception::py_err("split_sequence must be valid JSON."))?,
+            ),
+        })
+    }
 }
 
 #[pymethods]
@@ -189,12 +211,7 @@ impl NNSplit {
         let path = model_path.as_ref(py).str()?.to_string()?;
 
         let backend = ONNXRuntimeBackend::new(py, path, use_cuda)?;
-        let options = to_options(kwargs)?;
-
-        Ok(NNSplit {
-            backend,
-            inner: core::NNSplitLogic::new(options),
-        })
+        NNSplit::from_backend_and_kwargs(py, backend, kwargs)
     }
 
     /// Loads a built-in model. From the local cache or from the interent if it is not cached.
@@ -231,12 +248,7 @@ impl NNSplit {
             use_cuda,
         )?;
 
-        let options = to_options(kwargs)?;
-
-        Ok(NNSplit {
-            backend,
-            inner: core::NNSplitLogic::new(options),
-        })
+        NNSplit::from_backend_and_kwargs(py, backend, kwargs)
     }
 
     /// Splits text into `Split` objects.
@@ -248,14 +260,29 @@ impl NNSplit {
     ///     splits (List[Split]): A list of `Split` objects with the same length as the input text list.
     #[text_signature = "(texts)"]
     pub fn split(&self, py: Python, texts: Vec<&str>) -> PyResult<Vec<Split>> {
-        let (inputs, indices) = self.inner.get_inputs_and_indices(&texts);
+        let (inputs, indices) = self.logic.get_inputs_and_indices(&texts);
 
         let slice_preds = self
             .backend
-            .predict(py, inputs, self.inner.options.batch_size)?;
+            .predict(py, inputs, self.logic.options().batch_size)?;
 
-        let splits = self.inner.split(&texts, slice_preds, indices);
+        let splits = self.logic.split(&texts, slice_preds, indices);
         Ok(splits.into_iter().map(|x| x.into_py(py)).collect())
+    }
+
+    /// Gets names of the levels of this splitter.
+    ///
+    /// Returns:
+    ///     levels (List[str]): A list of strings describing the split levels, from top (largest split) to bottom (smallest split).
+    #[text_signature = "()"]
+    pub fn get_levels(&self) -> PyResult<Vec<String>> {
+        Ok(self
+            .logic
+            .split_sequence()
+            .get_levels()
+            .iter()
+            .map(|x| x.0.clone())
+            .collect())
     }
 }
 

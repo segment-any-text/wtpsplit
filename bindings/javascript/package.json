@@ -21,7 +21,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "bash build.sh",
-    "start_test_server": "cd dev_server && npm install && node prepare_data.js && npx webpack-dev-server --port=8080",
+    "start_test_server": "cd dev_server && npm install && cp -ar ../../../models/ static/ && npx webpack-dev-server --port=8080",
     "test:browser": "cypress run",
     "test:node": "npx mocha --exit --timeout 5000"
   },
@@ -36,7 +36,7 @@
   },
   "homepage": "https://github.com/bminixhofer/nnsplit#readme",
   "dependencies": {
-    "tractjs": "^0.3.1"
+    "tractjs": "^0.3.2"
   },
   "devDependencies": {
     "cypress": "^4.9.0",

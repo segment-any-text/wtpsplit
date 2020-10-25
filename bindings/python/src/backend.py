@@ -17,3 +17,7 @@ def create_session(path, use_cuda):
 
 def predict_batch(session, inputs):
     return session.run(None, {"input": inputs})[0]
+
+
+def get_metadata(session):
+    return session.get_modelmeta().custom_metadata_map

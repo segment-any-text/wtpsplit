@@ -3,6 +3,7 @@ use ndarray::prelude::*;
 use numpy::{PyArray3, ToPyArray};
 use pyo3::prelude::*;
 use std::cmp;
+use std::collections::HashMap;
 
 // only load the module once, otherwise onnxruntime gets newly imported for each splitter instance
 lazy_static! {
@@ -76,5 +77,12 @@ impl ONNXRuntimeBackend {
         }
 
         Ok(preds)
+    }
+
+    pub fn get_metadata(&self, py: Python) -> PyResult<HashMap<String, String>> {
+        MODULE
+            .as_ref(py)
+            .call1("get_metadata", (&self.session,))?
+            .extract()
     }
 }

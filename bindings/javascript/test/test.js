@@ -16,4 +16,9 @@ describe('NNSplit', function () {
 
         assert.deepStrictEqual(split[0].parts.map((x) => x.text), ["Das ist ein Test ", "Das ist noch ein Test."]);
     });
+    it('should be able to return names of split levels', async function () {
+        let splitter = await nnsplit.NNSplit.new("../../models/de/model.onnx");
+
+        assert.deepStrictEqual(splitter.getLevels(), ["Sentence", "Token", "_Whitespace"])
+    });
 });
