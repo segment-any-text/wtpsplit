@@ -175,6 +175,28 @@ pub struct NNSplit {
     inner: core::NNSplitLogic,
 }
 
+impl NNSplit {
+    fn from_backend_and_kwargs(
+        py: Python,
+        backend: ONNXRuntimeBackend,
+        kwargs: Option<&PyDict>,
+    ) -> PyResult<Self> {
+        let options = to_options(kwargs)?;
+        let metadata = backend.get_metadata(py)?;
+
+        Ok(NNSplit {
+            backend,
+            inner: core::NNSplitLogic::new(
+                options,
+                serde_json::from_str(metadata.get("split_sequence").ok_or_else(|| {
+                    Exception::py_err("Model must contain `split_sequence` metadata key")
+                })?)
+                .map_err(|_| Exception::py_err("split_sequence must be valid JSON."))?,
+            ),
+        })
+    }
+}
+
 #[pymethods]
 impl NNSplit {
     #[new]
@@ -189,12 +211,7 @@ impl NNSplit {
         let path = model_path.as_ref(py).str()?.to_string()?;
 
         let backend = ONNXRuntimeBackend::new(py, path, use_cuda)?;
-        let options = to_options(kwargs)?;
-
-        Ok(NNSplit {
-            backend,
-            inner: core::NNSplitLogic::new(options),
-        })
+        NNSplit::from_backend_and_kwargs(py, backend, kwargs)
     }
 
     /// Loads a built-in model. From the local cache or from the interent if it is not cached.
@@ -231,12 +248,7 @@ impl NNSplit {
             use_cuda,
         )?;
 
-        let options = to_options(kwargs)?;
-
-        Ok(NNSplit {
-            backend,
-            inner: core::NNSplitLogic::new(options),
-        })
+        NNSplit::from_backend_and_kwargs(py, backend, kwargs)
     }
 
     /// Splits text into `Split` objects.
