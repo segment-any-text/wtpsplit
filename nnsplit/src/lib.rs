@@ -6,13 +6,11 @@
 #[macro_use]
 extern crate quickcheck_macros;
 
-#[cfg(feature = "model-loader")]
-#[macro_use]
-extern crate lazy_static;
-
+use lazy_static::lazy_static;
 use ndarray::prelude::*;
 use serde_derive::{Deserialize, Serialize};
 use std::cmp;
+use std::collections::HashMap;
 use std::ops::Range;
 
 /// Backend to run models using tch-rs.
@@ -25,14 +23,9 @@ pub use tract_backend::NNSplit;
 #[cfg(feature = "model-loader")]
 pub mod model_loader;
 
-fn split_whitespace(input: &str) -> Vec<&str> {
-    let offset = input.trim_end().len();
-    vec![&input[..offset], &input[offset..]]
-}
-
 /// A Split level, used to describe what this split corresponds to (e. g. a sentence).
-#[derive(Debug, Clone, Copy)]
-pub struct Level(&'static str);
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Level(String);
 
 /// A splitted text.
 #[derive(Debug)]
@@ -83,21 +76,39 @@ impl<'a> Split<'a> {
     }
 }
 
+fn split_whitespace(input: &str) -> Vec<&str> {
+    let offset = input.trim_end().len();
+    vec![&input[..offset], &input[offset..]]
+}
+
+type SplitFunction = fn(&str) -> Vec<&str>;
+
+lazy_static! {
+    static ref SPLIT_FUNCTIONS: HashMap<&'static str, SplitFunction> = {
+        let mut map = HashMap::new();
+        map.insert("whitespace", split_whitespace as SplitFunction);
+        map
+    };
+}
+
+#[derive(Serialize, Deserialize)]
 /// Instruction to split text.
 pub enum SplitInstruction {
     /// Instruction to split at the given index of the neural network predictions.
     PredictionIndex(usize),
     /// Instruction to split according to a function.
-    Function(fn(&str) -> Vec<&str>),
+    Function(String),
 }
 
+#[derive(Serialize, Deserialize)]
 /// Instructions for how to convert neural network outputs and a text to `Split` objects.
 pub struct SplitSequence {
     instructions: Vec<(Level, SplitInstruction)>,
 }
 
 impl SplitSequence {
-    fn new(instructions: Vec<(Level, SplitInstruction)>) -> Self {
+    /// Creates a new split sequence. Contains instructions for how to use model predictions to split a text.
+    pub fn new(instructions: Vec<(Level, SplitInstruction)>) -> Self {
         SplitSequence { instructions }
     }
 
@@ -162,9 +173,9 @@ impl SplitSequence {
 
                     Split::Split((text, parts))
                 }
-                SplitInstruction::Function(func) => Split::Split((
+                SplitInstruction::Function(func_name) => Split::Split((
                     text,
-                    func(text)
+                    (*SPLIT_FUNCTIONS.get(func_name.as_str()).unwrap())(text)
                         .iter()
                         .map(|part| {
                             let start = part.as_ptr() as usize - text.as_ptr() as usize;
@@ -269,21 +280,14 @@ impl NNSplitLogic {
     ///
     /// # Panics
     /// - If the options are invalid, e. g. max_length % length_divisor != 0
-    pub fn new(options: NNSplitOptions) -> Self {
+    pub fn new(options: NNSplitOptions, split_sequence: SplitSequence) -> Self {
         if options.max_length % options.length_divisor != 0 {
             panic!("max length must be divisible by length divisor.")
         }
 
         NNSplitLogic {
             options,
-            split_sequence: SplitSequence::new(vec![
-                (Level("Sentence"), SplitInstruction::PredictionIndex(0)),
-                (Level("Token"), SplitInstruction::PredictionIndex(1)),
-                (
-                    Level("Whitespace"),
-                    SplitInstruction::Function(split_whitespace),
-                ),
-            ]),
+            split_sequence,
         }
     }
 
@@ -438,7 +442,20 @@ mod tests {
     impl DummyNNSplit {
         fn new(options: NNSplitOptions) -> Self {
             DummyNNSplit {
-                logic: NNSplitLogic::new(options),
+                logic: NNSplitLogic::new(
+                    options,
+                    SplitSequence::new(vec![
+                        (
+                            Level("Sentence".into()),
+                            SplitInstruction::PredictionIndex(0),
+                        ),
+                        (Level("Token".into()), SplitInstruction::PredictionIndex(1)),
+                        (
+                            Level("Whitespace".into()),
+                            SplitInstruction::Function("whitespace".into()),
+                        ),
+                    ]),
+                ),
             }
         }
 
@@ -468,10 +485,10 @@ mod tests {
     #[test]
     fn split_instructions_work() {
         let instructions = SplitSequence::new(vec![
-            (Level("Token"), SplitInstruction::PredictionIndex(0)),
+            (Level("Token".into()), SplitInstruction::PredictionIndex(0)),
             (
-                Level("Whitespace"),
-                SplitInstruction::Function(split_whitespace),
+                Level("Whitespace".into()),
+                SplitInstruction::Function("whitespace".into()),
             ),
         ]);
 
