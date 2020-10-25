@@ -1,9 +1,11 @@
 mod tractjs_backend;
 mod utils;
 
-use js_sys::Array;
+use js_sys::{Array, Promise};
+use std::rc::Rc;
 use tractjs_backend::TractJSBackend;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::future_to_promise;
 
 use nnsplit as core;
 
@@ -57,8 +59,8 @@ impl<'a> From<core::Split<'a>> for Split {
 
 #[wasm_bindgen]
 pub struct NNSplit {
-    backend: TractJSBackend,
-    logic: core::NNSplitLogic,
+    backend: Rc<TractJSBackend>,
+    logic: Rc<core::NNSplitLogic>,
 }
 
 #[wasm_bindgen]
@@ -88,8 +90,8 @@ impl NNSplit {
         let metadata = backend.get_metadata().await?;
 
         Ok(NNSplit {
-            backend,
-            logic: core::NNSplitLogic::new(
+            backend: Rc::new(backend),
+            logic: Rc::new(core::NNSplitLogic::new(
                 options,
                 serde_json::from_str(
                     metadata
@@ -97,7 +99,7 @@ impl NNSplit {
                         .ok_or("Model must contain `split_sequence` metadata key")?,
                 )
                 .map_err(|_| "split_sequence must be valid JSON.")?,
-            ),
+            )),
         })
     }
 
@@ -106,36 +108,42 @@ impl NNSplit {
     ///     * .text, the text in this `Split`.
     ///     * .parts, the `Split`s contained in this `Split` (e. g. tokens in a sentence).
     /// unless at the lowest level, at which it is just a string.
-    pub async fn split(self, texts: Vec<JsValue>) -> Result<JsValue, JsValue> {
-        let texts: Vec<String> = texts
-            .into_iter()
-            .map(|x| x.as_string().unwrap_throw())
-            .collect();
-        let texts: Vec<&str> = texts.iter().map(|x| x.as_ref()).collect();
+    pub fn split(&self, texts: Vec<JsValue>) -> Promise {
+        let logic = self.logic.clone();
+        let backend = self.backend.clone();
 
-        let (inputs, indices) = self.logic.get_inputs_and_indices(&texts);
-        let slice_preds = self.backend.predict(inputs).await?;
+        // future_to_promise needed to avoid move - see discussion in https://github.com/rustwasm/wasm-bindgen/issues/1858
+        future_to_promise(async move {
+            let texts: Vec<String> = texts
+                .into_iter()
+                .map(|x| x.as_string().unwrap_throw())
+                .collect();
+            let texts: Vec<&str> = texts.iter().map(|x| x.as_ref()).collect();
 
-        let splits = self.logic.split(&texts, slice_preds, indices);
-        let splits = splits
-            .into_iter()
-            .map(|x| {
-                let split: Split = x.into();
-                split.into()
-            })
-            .collect::<Vec<JsValue>>();
+            let (inputs, indices) = logic.get_inputs_and_indices(&texts);
+            let slice_preds = backend.predict(inputs).await?;
 
-        let array = Array::new();
-        for split in &splits {
-            array.push(split);
-        }
+            let splits = logic.split(&texts, slice_preds, indices);
+            let splits = splits
+                .into_iter()
+                .map(|x| {
+                    let split: Split = x.into();
+                    split.into()
+                })
+                .collect::<Vec<JsValue>>();
 
-        Ok(array.into())
+            let array = Array::new();
+            for split in &splits {
+                array.push(split);
+            }
+
+            Ok(array.into())
+        })
     }
 
     /// Gets names of the levels of this splitter.
     #[wasm_bindgen(js_name = getLevels)]
-    pub fn get_levels(self) -> Array {
+    pub fn get_levels(&self) -> Array {
         self.logic
             .split_sequence()
             .get_levels()
