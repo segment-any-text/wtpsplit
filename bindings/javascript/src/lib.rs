@@ -85,10 +85,19 @@ impl NNSplit {
         };
 
         let backend = TractJSBackend::new(&path, options.length_divisor).await?;
+        let metadata = backend.get_metadata().await?;
 
         Ok(NNSplit {
             backend,
-            inner: core::NNSplitLogic::new(options),
+            inner: core::NNSplitLogic::new(
+                options,
+                serde_json::from_str(
+                    metadata
+                        .get("split_sequence")
+                        .ok_or("Model must contain `split_sequence` metadata key")?,
+                )
+                .map_err(|_| "split_sequence must be valid JSON.")?,
+            ),
         })
     }
 
