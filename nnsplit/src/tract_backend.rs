@@ -1,4 +1,4 @@
-use crate::{Level, NNSplitLogic, NNSplitOptions};
+use crate::{NNSplitLogic, NNSplitOptions};
 use ndarray::prelude::*;
 use std::error::Error;
 use tract_onnx::prelude::*;
@@ -161,6 +161,21 @@ mod tests {
         assert_eq!(
             splits.flatten(0),
             vec!["Das ist ein Test ", "Das ist noch ein Test."]
+        );
+    }
+
+    #[test]
+    fn splitter_model_works_on_long_texts() {
+        let splitter = NNSplit::new(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../models/de/model.onnx"),
+            NNSplitOptions::default(),
+        )
+        .unwrap();
+        let splits = &splitter.split(&["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx. Eine Vernetzung von Neuronen im Nervensystem eines Lebewesens darstellen."])[0];
+
+        assert_eq!(
+            splits.flatten(0),
+            vec!["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx. ", "Eine Vernetzung von Neuronen im Nervensystem eines Lebewesens darstellen."]
         );
     }
 

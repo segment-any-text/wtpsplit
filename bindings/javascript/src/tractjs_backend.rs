@@ -1,3 +1,4 @@
+use futures::future::join_all;
 use js_sys::{Array, Float32Array, Promise, Uint32Array, Uint8Array};
 use ndarray::prelude::*;
 use serde_derive::{Deserialize, Serialize};
@@ -71,40 +72,46 @@ impl TractJSBackend {
     }
 
     pub async fn predict(&self, input: Array2<u8>) -> Result<Array3<f32>, JsValue> {
-        let shape: Array = input
-            .shape()
-            .iter()
-            .map(|x| JsValue::from(*x as u32))
+        let shape: Array = vec![JsValue::from(1u32), JsValue::from(input.shape()[1] as u32)]
+            .into_iter()
             .collect();
-
-        let tensor = Tensor::new(
-            Uint8Array::from(
-                input
-                    .as_slice()
-                    .ok_or("converting ndarray to slice failed (likely not contiguous)")?,
-            )
-            .into(),
-            shape,
-        );
-
         let mut symbol_values = HashMap::new();
         symbol_values.insert("s", input.shape()[1] / self.length_divisor);
 
-        let pred: Tensor = JsFuture::from(
-            self.model
-                .predict_one(tensor, JsValue::from_serde(&symbol_values).unwrap()),
-        )
-        .await?
-        .into();
+        let preds = (0..input.shape()[0])
+            .map(|i| {
+                let tensor = Tensor::new(
+                    Uint8Array::from(input.slice(s![i, ..]).as_slice().expect_throw(
+                        "converting ndarray to slice failed (likely not contiguous)",
+                    ))
+                    .into(),
+                    shape.clone(),
+                );
 
-        let shape = pred.shape();
+                JsFuture::from(
+                    self.model
+                        .predict_one(tensor, JsValue::from_serde(&symbol_values).unwrap()),
+                )
+            })
+            .collect::<Vec<_>>();
+        let preds = join_all(preds)
+            .await
+            .into_iter()
+            .map(|x| x.map(|value| value.into()))
+            .collect::<Result<Vec<Tensor>, JsValue>>()?;
+
+        let shape = preds[0].shape();
         let shape = shape.to_vec();
         assert!(shape.len() == 3);
-        let shape = (shape[0] as usize, shape[1] as usize, shape[2] as usize);
+        let shape = (input.shape()[0], shape[1] as usize, shape[2] as usize);
 
-        let data: Float32Array = pred.data().into();
+        let data_vec = preds.into_iter().fold(Vec::new(), |mut arr, x| {
+            let curr: Float32Array = x.data().into();
+            arr.extend(curr.to_vec());
+            arr
+        });
         let mut preds =
-            Array3::from_shape_vec(shape, data.to_vec()).map_err(|_| "Array conversion error")?;
+            Array3::from_shape_vec(shape, data_vec).map_err(|_| "Array conversion error")?;
 
         // sigmoid
         preds.mapv_inplace(|x| 1f32 / (1f32 + (-x).exp()));
