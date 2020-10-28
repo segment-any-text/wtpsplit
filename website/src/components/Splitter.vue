@@ -1,5 +1,5 @@
 <template>
-  <v-container class="elevation-4 rounded-lg">
+  <div class="splitter-div d-flex flex-column">
     <v-row>
       <v-col>
         <v-select
@@ -35,10 +35,8 @@
         ></v-select>
       </v-col>
     </v-row>
-    <v-row>
-      <div id="editor" spellcheck="false"></div>
-    </v-row>
-  </v-container>
+    <div id="editor" spellcheck="false"></div>
+  </div>
 </template>
 
 <script>
@@ -113,7 +111,7 @@ export default {
   name: "Splitter",
 
   data() {
-    let colors = ["#448AFF", "#76FF03", "#FF3D00", "#614793"];
+    let colors = ["#0288D1", "#E64A19", "#388E3C", "#673AB7"];
 
     let models = [
       { code: "de", name: "German", samplePage: "Künstliches neuronales Netz" },
@@ -340,8 +338,8 @@ export default {
 #editor span,
 #editor strong {
   font-weight: normal;
-  font-size: 1.3rem;
-  line-height: calc(1.3rem + var(--max_offset));
+  font-size: 1rem;
+  line-height: calc(1rem + var(--max_offset));
   padding-bottom: var(--max_offset);
 }
 
@@ -364,9 +362,13 @@ export default {
 </style>
 
 <style lang="scss" scoped >
+.splitter-div {
+  height: 100%;
+}
+
 #editor {
   font-size: 1rem;
   width: 100%;
-  height: 30rem;
+  height: 100%;
 }
 </style>

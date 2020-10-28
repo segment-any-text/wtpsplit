@@ -3,5 +3,12 @@ module.exports = {
     "vuetify"
   ],
   // see https://github.com/vuejs/vue-cli/issues/2948#issuecomment-438589725
-  chainWebpack: config => config.resolve.symlinks(false)
+  chainWebpack: config => {
+    config.resolve.symlinks(false);
+    config.module.rule('raw')
+      .test(/\.md$/)
+      .use('raw-loader')
+      .loader('raw-loader')
+      .end();
+  }
 }
