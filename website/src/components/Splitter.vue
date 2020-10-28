@@ -335,6 +335,10 @@ export default {
   --underline-cap-width: 6px;
 }
 
+#editor .ql-editor {
+  padding: 0;
+}
+
 #editor span,
 #editor strong {
   font-weight: normal;
