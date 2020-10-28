@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <v-container class="elevation-4 rounded-lg">
     <v-row>
       <v-col>
         <v-select
@@ -16,6 +16,7 @@
         >
           <template #selection="{ item }">
             <v-chip
+              class="font-weight-bold"
               text-color="white"
               :color="colors[model.levels.indexOf(item)]"
               >{{ item }}</v-chip
@@ -23,10 +24,12 @@
           </template></v-select
         >
       </v-col>
-      <v-col>
+      <v-col cols="2">
         <v-select
           height="3em"
-          :items="models.map((x) => x.code)"
+          :items="models"
+          item-text="name"
+          item-value="code"
           label="Model"
           v-model="selected"
         ></v-select>
@@ -110,7 +113,7 @@ export default {
   name: "Splitter",
 
   data() {
-    let colors = ["#3B8B79", "#D8C85B", "#D88B5B", "#614793"];
+    let colors = ["#448AFF", "#76FF03", "#FF3D00", "#614793"];
 
     let models = [
       { code: "de", name: "German", samplePage: "Künstliches neuronales Netz" },
@@ -179,6 +182,9 @@ export default {
       }
 
       clearTimeout(this.splitTimeout);
+      let model = this.models.find((x) => x.code == this.selected);
+      model.text = this.getText();
+
       this.clear();
       this.splitTimeout = setTimeout(() => {
         this.split();
@@ -359,8 +365,8 @@ export default {
 
 <style lang="scss" scoped >
 #editor {
-  height: 100%;
   font-size: 1rem;
   width: 100%;
+  height: 30rem;
 }
 </style>
