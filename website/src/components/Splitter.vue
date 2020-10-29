@@ -180,10 +180,11 @@ export default {
       }
 
       clearTimeout(this.splitTimeout);
+
+      this.clear();
       let model = this.models.find((x) => x.code == this.selected);
       model.text = this.getText();
 
-      this.clear();
       this.splitTimeout = setTimeout(() => {
         this.split();
       }, 300);
@@ -271,7 +272,11 @@ export default {
         .join("\n");
     },
     clear() {
-      this.quill.removeFormat(0, Infinity);
+      let model = this.models.find((x) => x.code == this.selected);
+      this.selectedLevels[model.code].forEach(() => {
+        this.quill.removeFormat(0, Infinity);
+      });
+
       this.quill.formatText(0, Infinity, { bold: true });
     },
     render() {
@@ -293,12 +298,17 @@ export default {
         this.selectedLevels[this.selected].includes(x)
       );
 
+      const whitespaceRegex = /^\s+$/;
+
       const traverse = (parts, offset, level) => {
         parts.forEach((part) => {
           let length = part.text ? part.text.length : part.length;
           let remaining = levelMask.slice(level + 1).reduce((a, b) => a + b, 0);
 
-          if (levelMask[level]) {
+          if (
+            levelMask[level] &&
+            !whitespaceRegex.test(text.slice(offset, offset + length))
+          ) {
             let name = `split${remaining}`;
             makeBlotIfDoesntExist(name);
 
@@ -337,6 +347,7 @@ export default {
 
 #editor .ql-editor {
   padding: 0;
+  max-height: 100%;
 }
 
 #editor span,
@@ -373,6 +384,6 @@ export default {
 #editor {
   font-size: 1rem;
   width: 100%;
-  height: 100%;
+  height: calc(100% - 6em);
 }
 </style>
