@@ -75,3 +75,4 @@ watchdog==0.10.2
 Werkzeug==1.0.1
 zipp==3.1.0
 somajo==2.1.1
+onnx==1.7.0

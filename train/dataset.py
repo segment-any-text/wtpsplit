@@ -47,7 +47,7 @@ class SplitDataset(data.Dataset):
             ids.append(0)
             label.append([0] * len(self.labeler.tokenizers))
 
-        return torch.tensor(ids), torch.tensor(label)
+        return torch.tensor(ids), torch.tensor(label)[:, [0, 1, 3]]
 
     @staticmethod
     def collate_fn(batch):

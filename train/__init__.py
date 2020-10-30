@@ -6,7 +6,13 @@ from pytorch_lightning.trainer import Trainer
 from pytorch_lightning.loggers.wandb import WandbLogger
 from model import Network
 from text_data import MemoryMapDataset
-from labeler import Labeler, SpacySentenceTokenizer, SpacyWordTokenizer
+from labeler import (
+    Labeler,
+    SpacySentenceTokenizer,
+    SpacyWordTokenizer,
+    WhitespaceTokenizer,
+    SECOSCompoundTokenizer,
+)
 
 
 def store_code(run):
@@ -54,6 +60,8 @@ if __name__ == "__main__":
                 hparams.spacy_model, lower_start_prob=0.7, remove_end_punct_prob=0.7
             ),
             SpacyWordTokenizer(hparams.spacy_model),
+            WhitespaceTokenizer(),
+            SECOSCompoundTokenizer("../../../Experiments/SECOS/"),
         ]
     )
 
