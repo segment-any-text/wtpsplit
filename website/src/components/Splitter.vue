@@ -44,16 +44,6 @@ import Quill from "quill";
 import * as nnsplit from "nnsplit";
 import "@/style/quill.snow.reduced.css";
 
-// see https://stackoverflow.com/a/2117523
-function getGUID() {
-  return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c) =>
-    (
-      c ^
-      (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
-    ).toString(16)
-  );
-}
-
 // see https://stackoverflow.com/a/14480366
 function getPosition(string, subString, index) {
   return string.split(subString, index).join(subString).length;
@@ -62,6 +52,9 @@ function getPosition(string, subString, index) {
 const Inline = Quill.import("blots/inline");
 
 const splitBlots = [];
+
+let prevName = null;
+let allBlots = [];
 
 function makeBlotIfDoesntExist(name) {
   if (splitBlots.includes(name)) {
@@ -75,20 +68,14 @@ function makeBlotIfDoesntExist(name) {
     constructor(domNode, value) {
       super(domNode, value);
 
-      if (typeof value === "object") {
-        this.domNode.dataset.num = value.num;
-        this.domNode.dataset.guid = value.guid;
+      allBlots = allBlots.filter((x) => document.body.contains(x));
+      allBlots.push(domNode);
 
-        this.domNode.style.setProperty("--bottom", `${5 + 8 * value.num}px`);
+      if (typeof value === "object") {
+        this.domNode.dataset.guid = value.guid;
+        this.domNode.dataset.level = value.level;
+
         this.domNode.style.setProperty("--color", value.color);
-        this.domNode.style.setProperty(
-          "--leftcap",
-          `url(assets/left_cap_${value.level + 1}.svg)`
-        );
-        this.domNode.style.setProperty(
-          "--rightcap",
-          `url(assets/right_cap_${value.level + 1}.svg)`
-        );
       }
     }
 
@@ -104,14 +91,18 @@ function makeBlotIfDoesntExist(name) {
     }
   }
   Quill.register(SplitBlot);
+  // see https://github.com/quilljs/quill/issues/2312#issuecomment-426221880
+  Inline.order.splice(Inline.order.indexOf(prevName || "bold"), 0, name);
   splitBlots.push(name);
+
+  prevName = name;
 }
 
 export default {
   name: "Splitter",
 
   data() {
-    let colors = ["#0288D1", "#E64A19", "#388E3C", "#673AB7"];
+    let colors = ["#81D4FA", "#EF9A9A", "#80CBC4", "#B39DDB"];
 
     let models = [
       { code: "de", name: "German", samplePage: "Künstliches neuronales Netz" },
@@ -181,13 +172,13 @@ export default {
 
       clearTimeout(this.splitTimeout);
 
-      this.clear();
       let model = this.models.find((x) => x.code == this.selected);
       model.text = this.getText();
+      this.quill.formatText(0, model.text.length, { bold: true });
 
       this.splitTimeout = setTimeout(() => {
         this.split();
-      }, 300);
+      }, 500);
     });
   },
   watch: {
@@ -199,9 +190,7 @@ export default {
     },
     selectedLevels: {
       handler: function () {
-        setTimeout(() => {
-          this.render();
-        }, 0);
+        this.styleLevels();
       },
       deep: true,
     },
@@ -271,13 +260,29 @@ export default {
         .map((el) => el.textContent)
         .join("\n");
     },
-    clear() {
+    styleLevels() {
       let model = this.models.find((x) => x.code == this.selected);
-      this.selectedLevels[model.code].forEach(() => {
-        this.quill.removeFormat(0, Infinity);
-      });
+      if (model === null) {
+        return;
+      }
 
-      this.quill.formatText(0, Infinity, { bold: true });
+      let levelMask = model.levels.map((x) =>
+        this.selectedLevels[this.selected].includes(x)
+      );
+
+      allBlots.forEach((x) => {
+        let level = parseInt(x.dataset.level);
+        let num = levelMask.slice(level + 1).reduce((a, b) => {
+          return a + b;
+        }, 0);
+        x.style.setProperty("--bottom", `${2 + 8 * num}`);
+
+        if (levelMask[level]) {
+          x.classList.remove("invisible");
+        } else {
+          x.classList.add("invisible");
+        }
+      });
     },
     render() {
       let model = this.models.find((x) => x.code == this.selected);
@@ -292,33 +297,27 @@ export default {
         return;
       }
 
-      this.clear();
-
-      let levelMask = model.levels.map((x) =>
-        this.selectedLevels[this.selected].includes(x)
-      );
-
-      const whitespaceRegex = /^\s+$/;
+      let clearData = { bold: false };
+      splitBlots.forEach((x) => {
+        clearData[x] = false;
+      });
+      this.quill.formatText(0, text.length, clearData);
+      let whitespaceRegex = /^\s+$/;
 
       const traverse = (parts, offset, level) => {
         parts.forEach((part) => {
           let length = part.text ? part.text.length : part.length;
-          let remaining = levelMask.slice(level + 1).reduce((a, b) => a + b, 0);
 
-          if (
-            levelMask[level] &&
-            !whitespaceRegex.test(text.slice(offset, offset + length))
-          ) {
-            let name = `split${remaining}`;
-            makeBlotIfDoesntExist(name);
+          let name = `split${level}`;
+          makeBlotIfDoesntExist(name);
 
-            let guid = getGUID();
+          // only whitespace is not interesting
+          if (!whitespaceRegex.test(text.slice(offset, offset + length))) {
             this.quill.formatText(offset, length, {
               [name]: {
-                level: level,
+                level,
                 color: this.colors[level],
-                num: remaining,
-                guid,
+                guid: `${level}_${offset}_${length}`,
               },
             });
           }
@@ -331,6 +330,7 @@ export default {
       };
 
       traverse(splits.parts, 0, 0);
+      this.styleLevels();
     },
   },
 };
@@ -338,7 +338,7 @@ export default {
 
 <style lang="scss">
 :root {
-  --max_offset: 30px;
+  --max_offset: 30;
   --cap_width: 2;
   --underline-width: 1;
   --underline-intrinsic-width: 3;
@@ -354,25 +354,29 @@ export default {
 #editor strong {
   font-weight: normal;
   font-size: 1rem;
-  line-height: calc(1rem + var(--max_offset));
-  padding-bottom: var(--max_offset);
+  line-height: calc(1rem + var(--max_offset) * 2px);
+  padding-bottom: calc(var(--max_offset) * 1px);
+  padding-top: calc(var(--max_offset) * 1px);
+}
+
+strong .split {
+  all: unset;
 }
 
 .split {
-  --underline-width-scale: calc(
-    var(--underline-width) / var(--underline-intrinsic-width)
-  );
+  border: 2px solid var(--color);
+  z-index: calc(var(--bottom) * -1);
+  padding: calc(var(--bottom) * 1px) 0 !important;
+  box-shadow: 3px 3px 5px 1px rgba(51, 51, 51, 0.2);
+  margin: calc((var(--max_offset) - var(--bottom)) * 1px) 0;
 
-  background-image: linear-gradient(180deg, var(--color), var(--color)),
-    var(--leftcap), var(--rightcap);
-  background-position-x: calc(
-      var(--underline-cap-width) * var(--underline-width-scale) + 2px
-    ),
-    0, 100%;
-  background-position-y: calc(100% - var(--max_offset) + var(--bottom));
-  background-size: calc(100% - 8px) calc(var(--underline-width) * 2px),
-    auto calc(var(--underline-width) * 10px),
-    auto calc(var(--underline-width) * 10px);
+  &.invisible {
+    all: unset;
+  }
+}
+
+.ql-editor p {
+  padding-left: 1px !important;
 }
 </style>
 

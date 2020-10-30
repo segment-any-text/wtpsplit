@@ -54,7 +54,7 @@
               {{
                 Number.isNaN(scores[lang][model][key])
                   ? "-"
-                  : scores[lang][model][key]
+                  : Math.round(scores[lang][model][key] * 100 * 100) / 100
               }}
             </td>
           </tr>
@@ -73,11 +73,11 @@ export default {
       scores: {
         German: {
           NNSplit: {
-            Clean: 0.795678,
-            "Partial punctuation": 0.532773,
-            "Partial case": 0.803658,
-            "Partial punctuation and case": 0.527035,
-            "No punctuation and case": 0.293959,
+            Clean: 0.807723,
+            "Partial punctuation": 0.516424,
+            "Partial case": 0.822369,
+            "Partial punctuation and case": 0.499656,
+            "No punctuation and case": 0.256299,
           },
           "Spacy (Tagger)": {
             Clean: 0.833368,

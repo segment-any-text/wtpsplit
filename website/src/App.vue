@@ -3,7 +3,7 @@
     <h1 class="text-h2">NNSplit</h1>
     <v-main>
       <h2 class="text-h3 ml-10 mt-15 mb-5">Demo</h2>
-      <v-container class="splitter-container elevation-4 rounded-lg">
+      <v-container class="splitter-container elevation-2 rounded-lg">
         <Splitter />
       </v-container>
 
@@ -11,7 +11,8 @@
       <Usage />
       <h2 class="text-h3 ml-10 mt-15 mb-5">Metrics</h2>
       <Metrics />
-      <h2 class="text-h3 ml-10 mt-15 mb-5">Benchmarks</h2>
+      <h2 class="text-h3 ml-10 mt-15 mb-5">Benchmark</h2>
+      <Benchmark />
     </v-main>
   </v-app>
 </template>
@@ -19,6 +20,7 @@
 <script>
 import Metrics from "./components/Metrics";
 import Usage from "./components/Usage";
+import Benchmark from "./components/Benchmark";
 import "highlight.js/styles/github.css";
 
 export default {
@@ -28,6 +30,7 @@ export default {
     Splitter: () => import("./components/Splitter"),
     Metrics,
     Usage,
+    Benchmark,
   },
 
   data: () => ({
