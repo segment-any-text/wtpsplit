@@ -1,23 +1,23 @@
 <template>
   <v-app>
-    <h1 class="text-h2">NNSplit</h1>
-    <iframe
-      class="mt-1 mb-4"
-      src="https://ghbtns.com/github-btn.html?user=bminixhofer&repo=nnsplit&type=star&count=true&size=large"
-      frameborder="0"
-      scrolling="0"
-      width="170"
-      height="30"
-      title="GitHub"
-    ></iframe>
-    <p class="body-1">
-      NNSplit is a tool to split text using a neural network. The main
-      application is <strong>sentence boundary detection</strong>, but e. g.
-      <strong>compound splitting for German</strong> is also supported.
-      NNSplit's focus is on being <strong>fast</strong> and
-      <strong>not reliant on correct punctuation, spelling and case</strong>.
-    </p>
-    <v-main>
+    <v-main class="pa-4 px-md-12">
+      <h1 class="text-h2">NNSplit</h1>
+      <iframe
+        class="mt-1 mb-4"
+        src="https://ghbtns.com/github-btn.html?user=bminixhofer&repo=nnsplit&type=star&count=true&size=large"
+        frameborder="0"
+        scrolling="0"
+        width="170"
+        height="30"
+        title="GitHub"
+      ></iframe>
+      <p class="body-1">
+        NNSplit is a tool to split text using a neural network. The main
+        application is <strong>sentence boundary detection</strong>, but e. g.
+        <strong>compound splitting for German</strong> is also supported.
+        NNSplit's focus is on being <strong>fast</strong> and
+        <strong>not reliant on correct punctuation, spelling and case</strong>.
+      </p>
       <p>
         NNSplit uses a byte-level LSTM so the models are small (&lt; 4MB) and
         models can be trained for every unicode encodable language.
@@ -34,7 +34,7 @@
         browser so no internet connection is required once a model is loaded.
       </p>
 
-      <v-container class="splitter-container elevation-2 rounded-lg">
+      <v-container class="elevation-2 rounded-lg">
         <Splitter />
       </v-container>
 
@@ -89,12 +89,12 @@
         NNSplit is the same for all languages. Some details:
       </p>
       <pre class="caption" style="font-family: monospace !important">
-        Python version: 3.8.5
-        NNSplit version: 0.5.2
-        Spacy version: 2.3.2
-        GPU: RTX 2080 TI
-        CPU: GeForce RTX 2080 Ti
-        CUDA/cuDNN version: 10.2.89 / 7.6.5
+    Python version: 3.8.5
+    NNSplit version: 0.5.2
+    Spacy version: 2.3.2
+    GPU: RTX 2080 TI
+    CPU: GeForce RTX 2080 Ti
+    CUDA/cuDNN version: 10.2.89 / 7.6.5
       </pre>
       <Benchmark />
     </v-main>
@@ -124,17 +124,8 @@ export default {
 </script>
 
 <style lang="scss">
-.splitter-container {
-  height: 35rem;
-}
-
 .container {
-  padding: 0 2em 2em 2em;
   max-width: 80rem;
-}
-
-.v-application {
-  padding: 2em 4em;
 }
 
 .container code {

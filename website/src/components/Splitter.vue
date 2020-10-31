@@ -1,9 +1,8 @@
 <template>
-  <div class="splitter-div d-flex flex-column">
+  <div>
     <v-row>
       <v-col>
         <v-select
-          height="3em"
           v-for="model in models"
           :key="model.code"
           v-model="selectedLevels[model.code]"
@@ -24,9 +23,9 @@
           </template></v-select
         >
       </v-col>
-      <v-col cols="2">
+      <v-col md="2">
         <v-select
-          height="3em"
+          height="2.65em"
           :items="models"
           item-text="name"
           item-value="code"
@@ -339,15 +338,11 @@ export default {
 <style lang="scss">
 :root {
   --max_offset: 30;
-  --cap_width: 2;
-  --underline-width: 1;
-  --underline-intrinsic-width: 3;
-  --underline-cap-width: 6px;
 }
 
 #editor .ql-editor {
   padding: 0;
-  max-height: 100%;
+  height: 30rem;
 }
 
 #editor span,
@@ -381,13 +376,8 @@ strong .split {
 </style>
 
 <style lang="scss" scoped >
-.splitter-div {
-  height: 100%;
-}
-
 #editor {
   font-size: 1rem;
   width: 100%;
-  height: calc(100% - 6em);
 }
 </style>

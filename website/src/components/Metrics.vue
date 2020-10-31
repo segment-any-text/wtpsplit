@@ -2,7 +2,7 @@
   <v-container class="elevation-4 rounded-lg">
     <v-row>
       <v-spacer />
-      <v-col cols="2" class="pb-0">
+      <v-col md="2" class="pb-0">
         <v-select
           height="3em"
           :items="Object.keys(scores)"

@@ -1,10 +1,8 @@
 <template>
   <v-container class="elevation-4 rounded-lg">
     <v-row>
-      <v-col cols="10">
-        <markdown-it-vue :content="usage[selected]['code']" />
-      </v-col>
-      <v-col cols="2">
+      <v-spacer />
+      <v-col md="2" class="pb-0">
         <v-select
           height="3em"
           :items="Object.keys(usage)"
@@ -21,6 +19,7 @@
         >
       </v-col>
     </v-row>
+    <markdown-it-vue :content="usage[selected]['code']" />
   </v-container>
 </template>
 
