@@ -9,24 +9,20 @@ sys.path.append("../train/")
 from evaluate import SpacyInterface, NNSplitInterface  # noqa: E402
 
 
-def time_batches(splitter_init, texts, n=5):
-    times = []
+def time_batches(splitter_init, texts, n=10, batch_sizes=[1, 4, 16, 64, 256, 1024]):
+    times = [0 for _ in batch_sizes]
 
     for _ in range(n):
-        avg = 0
-
-        for batch_size in [1, 4, 16, 64, 256, 1024]:
+        for i, batch_size in enumerate(batch_sizes):
             print(splitter_init, batch_size)
 
             splitter = splitter_init(batch_size)
 
             start = time.time()
             splitter.split(texts)
-            avg += time.time() - start
+            times[i] += time.time() - start
 
-        times.append(avg / n)
-
-    return times
+    return [x / n for x in times]
 
 
 if __name__ == "__main__":

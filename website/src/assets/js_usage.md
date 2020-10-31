@@ -11,7 +11,7 @@ npm install nnsplit
 
 &nbsp;
 
-## Usage
+## Use
 
 The Javascript API has no method *.load(model_name)* to load a pretrained model. Instead the path to a model in your file system (in Node.js) or accessable via *fetch* (in the browser) has to be given as first argument to *NNSplit.new*. See [https://github.com/bminixhofer/nnsplit/tree/master/models](models) to download the `model.onnx` files for the pretrained models.
 
