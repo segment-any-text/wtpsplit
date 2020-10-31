@@ -35,15 +35,15 @@ export default {
       selected: "Python",
       usage: {
         Python: {
-          icon: "/assets/python.svg",
+          icon: "assets/python.svg",
           code: pythonUsage,
         },
         Rust: {
-          icon: "/assets/rust.svg",
+          icon: "assets/rust.svg",
           code: rustUsage,
         },
         JavaScript: {
-          icon: "/assets/javascript.svg",
+          icon: "assets/javascript.svg",
           code: jsUsage,
         },
       },
