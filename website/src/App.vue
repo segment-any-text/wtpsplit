@@ -92,8 +92,8 @@
     Python version: 3.8.5
     NNSplit version: 0.5.2
     Spacy version: 2.3.2
-    GPU: RTX 2080 TI
-    CPU: GeForce RTX 2080 Ti
+    GPU: GeForce RTX 2080 Ti
+    CPU: Intel(R) Core(TM) i5-8600K CPU @ 3.60GHz
     CUDA/cuDNN version: 10.2.89 / 7.6.5
       </pre>
       <Benchmark />
