@@ -21,4 +21,9 @@ def test_splitter_model_works_with_args():
 def test_getting_levels_works():
     model = nnsplit.NNSplit(MODEL_PATH / "de" / "model.onnx")
 
-    assert model.get_levels() == ["Sentence", "Token", "_Whitespace"]
+    assert model.get_levels() == [
+        "Sentence",
+        "Token",
+        "_Whitespace",
+        "Compound constituent",
+    ]
