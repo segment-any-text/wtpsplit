@@ -4,6 +4,9 @@ on:
   push:
     branches: [ master ]
 
+env:
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
