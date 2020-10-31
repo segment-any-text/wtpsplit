@@ -71,7 +71,7 @@ impl NNSplit {
                 0,
                 InferenceFact::dt_shape(
                     u8::datum_type(),
-                    tvec!(1.into(), TDim::from('s') * length_divisor),
+                    tvec!(1.into(), TDim::from(Symbol::from('s')) * length_divisor),
                 ),
             )?
             .into_typed()?
@@ -148,6 +148,7 @@ impl NNSplit {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Level;
 
     #[test]
     fn splitter_model_works() {
@@ -171,11 +172,13 @@ mod tests {
             NNSplitOptions::default(),
         )
         .unwrap();
-        let splits = &splitter.split(&["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx. Eine Vernetzung von Neuronen im Nervensystem eines Lebewesens darstellen."])[0];
+        let text =
+            "Eine Vernetzung von Neuronen im Nervensystem eines Lebewesens darstellen. ".repeat(20);
+        let splits = &splitter.split(&[&text])[0];
 
         assert_eq!(
             splits.flatten(0),
-            vec!["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx. ", "Eine Vernetzung von Neuronen im Nervensystem eines Lebewesens darstellen."]
+            vec!["Eine Vernetzung von Neuronen im Nervensystem eines Lebewesens darstellen. "; 20]
         );
     }
 
@@ -192,7 +195,8 @@ mod tests {
             vec![
                 &Level("Sentence".into()),
                 &Level("Token".into()),
-                &Level("_Whitespace".into())
+                &Level("_Whitespace".into()),
+                &Level("Compound constituent".into())
             ]
         );
     }
