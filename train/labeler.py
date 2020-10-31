@@ -4,14 +4,35 @@ from abc import ABC, abstractmethod
 import spacy
 import string
 import random
-import requests
 import pandas as pd
+import numpy as np
 import diskcache
+import sys
 from somajo import SoMaJo
 from spacy.lang.tr import Turkish
 from spacy.lang.sv import Swedish
 
 NO_MODEL_LANGUAGE_LOOKUP = {"turkish": Turkish, "swedish": Swedish}
+
+
+def noise(text, insert_chance, delete_chance, repeat_chance):
+    assert insert_chance == delete_chance == repeat_chance
+
+    chances = np.random.random(len(text) * 3)
+    if (chances < insert_chance).all():
+        return text
+
+    out = ""
+
+    for i, char in enumerate(text):
+        if chances[i * 3] >= delete_chance:
+            out += char
+        if chances[(i * 3) + 1] < repeat_chance:
+            out += char
+        if chances[(i * 3) + 2] < insert_chance:
+            out += random.choice(string.ascii_letters)
+
+    return out
 
 
 def get_model(name):
@@ -191,9 +212,26 @@ class WhitespaceTokenizer(Tokenizer):
 
 
 class SECOSCompoundTokenizer(Tokenizer):
-    def __init__(self, server_url: str):
+    def __init__(self, secos_path: str):
         super().__init__()
-        self.server_url = server_url
+        sys.path.append(secos_path)
+        import decompound_server
+
+        self.decompound = decompound_server.make_decompounder(
+            [
+                "decompound_server.py",
+                f"{secos_path}data/denews70M_trigram__candidates",
+                f"{secos_path}data/denews70M_trigram__WordCount",
+                "50",
+                "3",
+                "3",
+                "5",
+                "3",
+                "upper",
+                "0.01",
+                "2020",
+            ]
+        )
 
         self.disk_cache = diskcache.Index("secos_cache")
         self.cache = {}
@@ -212,8 +250,7 @@ class SECOSCompoundTokenizer(Tokenizer):
         if compounds is None:
             assert not has_space(text), text
 
-            response = requests.get(self.server_url, params={"sentence": text})
-            compounds = response.text
+            compounds = self.decompound(text)
 
             if len(compounds) == 0:
                 compounds = text
@@ -225,7 +262,10 @@ class SECOSCompoundTokenizer(Tokenizer):
         else:
             compounds = compounds.decode("utf-8")
 
-        return compounds.split()
+        compounds = compounds.split()
+        compounds = [noise(x, 0.001, 0.001, 0.001) for x in compounds]
+
+        return compounds if len(compounds) > 0 else [noise(text, 0.001, 0.001, 0.001)]
 
 
 class Labeler:
@@ -255,8 +295,9 @@ class Labeler:
             input_bytes += token_bytes
             label += [all_zeros.copy() for _ in range(len(token_bytes))]
 
-            for idx in annotation:
-                label[-1][idx] = 1
+            if len(label) > 0:
+                for idx in annotation:
+                    label[-1][idx] = 1
 
         return input_bytes, label
 
@@ -289,8 +330,8 @@ if __name__ == "__main__":
                 "de_core_news_sm", lower_start_prob=0.7, remove_end_punct_prob=0.7
             ),
             SpacyWordTokenizer("de_core_news_sm"),
-            # WhitespaceTokenizer(),
-            # SECOSCompoundTokenizer("http://localhost:2020"),
+            WhitespaceTokenizer(),
+            SECOSCompoundTokenizer("../../../Experiments/SECOS/"),
         ]
     )
-    labeler.visualize("Die erste Million Jahre vergeht schnell, die zweite Million...")
+    labeler.visualize("KNN (ANN).")

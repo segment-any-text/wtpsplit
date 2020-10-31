@@ -19,6 +19,14 @@ describe('NNSplit', function () {
     it('should be able to return names of split levels', async function () {
         let splitter = await nnsplit.NNSplit.new("../../models/de/model.onnx");
 
-        assert.deepStrictEqual(splitter.getLevels(), ["Sentence", "Token", "_Whitespace"])
+        assert.deepStrictEqual(splitter.getLevels(), ["Sentence", "Token", "_Whitespace", "Compound constituent"])
+    });
+    it('should be able to split long text correctly', async function () {
+        let splitter = await nnsplit.NNSplit.new("../../models/de/model.onnx");
+        let split = await splitter.split([
+            "Eine Vernetzung von Neuronen im Nervensystem eines Lebewesens darstellen. ".repeat(20),
+        ]);
+
+        assert.deepStrictEqual(split[0].parts.map((x) => x.text), Array(20).fill("Eine Vernetzung von Neuronen im Nervensystem eines Lebewesens darstellen. "));
     });
 });

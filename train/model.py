@@ -9,6 +9,8 @@ from sklearn.model_selection import train_test_split
 from torch.utils import data
 from dataset import SplitDataset
 from argparse import ArgumentParser
+from utils import postprocess
+import json
 
 
 class Network(pl.LightningModule):
@@ -27,7 +29,7 @@ class Network(pl.LightningModule):
         self.lstm2 = nn.LSTM(256, 128, bidirectional=True, batch_first=True)
         self.lstm3 = nn.LSTM(256, 128, bidirectional=True, batch_first=True)
 
-        self.out = nn.Linear(256, 4)
+        self.out = nn.Linear(256, 6)
 
     def prepare_data(self):
         dataset = SplitDataset(self.text_dataset, self.labeler, 500, 800, 20)
@@ -48,12 +50,12 @@ class Network(pl.LightningModule):
         h, _ = self.lstm2(h)
         h, _ = self.lstm3(h)
 
-        h = self.out(h).reshape(-1, input_length, 2)
+        h = self.out(h).reshape(-1, input_length, 3)
         return h
 
     @staticmethod
     def loss(y_hat, y):
-        weight = torch.tensor([2.0, 0.1]).view((1, 1, 2)).to(y_hat.device)
+        weight = torch.tensor([2.0, 0.1, 0.1]).view((1, 1, 3)).to(y_hat.device)
 
         return F.binary_cross_entropy_with_logits(
             y_hat, y.float(), pos_weight=torch.tensor(10.0), weight=weight
@@ -143,16 +145,32 @@ class Network(pl.LightningModule):
         store_directory.mkdir(exist_ok=True, parents=True)
 
         sample = torch.zeros([1, 100], dtype=torch.uint8)
+        model_path = store_directory / self.ONNX_NAME
 
         torch.onnx.export(
             self.float().cpu(),
             sample.cpu(),
-            store_directory / self.ONNX_NAME,
+            model_path,
             input_names=["input"],
             output_names=["output"],
             dynamic_axes={
                 "input": {0: "batch", 1: "length"},
                 "output": {0: "batch", 1: "length"},
+            },
+        )
+        postprocess(
+            model_path,
+            {
+                "split_sequence": json.dumps(
+                    {
+                        "instructions": [
+                            ["Sentence", {"PredictionIndex": 0}],
+                            ["Token", {"PredictionIndex": 1}],
+                            ["_Whitespace", {"Function": "whitespace"}],
+                            ["Compound constituent", {"PredictionIndex": 2}],
+                        ]
+                    }
+                )
             },
         )
 
