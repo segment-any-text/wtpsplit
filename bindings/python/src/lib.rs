@@ -255,16 +255,24 @@ impl NNSplit {
     ///
     /// Args:
     ///     texts (List[str]): List of texts to split.
-    ///
+    ///     verbose (bool): Whether to display a progress bar.
     /// Returns:
     ///     splits (List[Split]): A list of `Split` objects with the same length as the input text list.
-    #[text_signature = "(texts)"]
-    pub fn split(&self, py: Python, texts: Vec<&str>) -> PyResult<Vec<Split>> {
+    #[text_signature = "(texts, verbose=False)"]
+    pub fn split(
+        &self,
+        py: Python,
+        texts: Vec<&str>,
+        verbose: Option<bool>,
+    ) -> PyResult<Vec<Split>> {
         let (inputs, indices) = self.logic.get_inputs_and_indices(&texts);
 
-        let slice_preds = self
-            .backend
-            .predict(py, inputs, self.logic.options().batch_size)?;
+        let slice_preds = self.backend.predict(
+            py,
+            inputs,
+            self.logic.options().batch_size,
+            verbose.unwrap_or(false),
+        )?;
 
         let splits = self.logic.split(&texts, slice_preds, indices);
         Ok(splits.into_iter().map(|x| x.into_py(py)).collect())

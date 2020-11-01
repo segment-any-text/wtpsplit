@@ -61,10 +61,21 @@ impl ONNXRuntimeBackend {
         py: Python,
         input: Array2<u8>,
         batch_size: usize,
+        verbose: bool,
     ) -> PyResult<Array3<f32>> {
         let input_shape = input.shape();
 
         let mut preds = Array3::<f32>::zeros((input_shape[0], input_shape[1], self.n_outputs));
+
+        let bar = if verbose {
+            Some(
+                MODULE
+                    .as_ref(py)
+                    .call1("get_progress_bar", (input_shape[0],))?,
+            )
+        } else {
+            None
+        };
 
         for i in (0..input_shape[0]).step_by(batch_size) {
             let start = i;
@@ -74,6 +85,14 @@ impl ONNXRuntimeBackend {
             let batch_preds = ONNXRuntimeBackend::predict_batch(py, batch_inputs, &self.session)?;
 
             preds.slice_mut(s![start..end, .., ..]).assign(&batch_preds);
+
+            if let Some(bar) = bar {
+                bar.call_method1("update", (end - start,))?;
+            }
+        }
+
+        if let Some(bar) = bar {
+            bar.call_method0("close")?;
         }
 
         Ok(preds)
