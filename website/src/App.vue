@@ -28,8 +28,8 @@
           language.
         </li>
         <li>
-          <strong>Portable</strong>: NNNSplit is written in Rust with bindings
-          for Rust Python, and Javascript (Browser and Node.js). See how to get
+          <strong>Portable</strong>: NNSplit is written in Rust with bindings
+          for Rust, Python, and Javascript (Browser and Node.js). See how to get
           started in the <a href="#usage">usage</a> section.
         </li>
         <li>
