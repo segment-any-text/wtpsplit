@@ -20,7 +20,7 @@
       <ul class="body-1">
         <li>
           <strong>Robust</strong>: Not reliant on proper punctuation, spelling
-          and case.
+          and case. See the <a href="#metrics">metrics</a>.
         </li>
         <li>
           <strong>Small</strong>: NNSplit uses a byte-level LSTM, so weights are
@@ -29,7 +29,8 @@
         </li>
         <li>
           <strong>Portable</strong>: NNNSplit is written in Rust with bindings
-          for Rust Python, and Javascript (Browser and Node.js).
+          for Rust Python, and Javascript (Browser and Node.js). See how to get
+          started in the <a href="#usage">usage</a> section.
         </li>
         <li>
           <strong>Fast</strong>: Up to 2x faster than SpaCy sentencization, see
@@ -38,7 +39,8 @@
         <li>
           <strong>Multilingual</strong>: NNSplit currently has models for 7
           different languages (German, English, French, Norwegian, Swedish,
-          Simplified Chinese, Turkish).
+          Simplified Chinese, Turkish). Try them in the
+          <a href="#demo">demo</a>.
         </li>
       </ul>
       <h2 id="demo" class="text-h3 mt-5 mb-5">Demo</h2>
