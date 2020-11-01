@@ -12,22 +12,36 @@
         title="GitHub"
       ></iframe>
       <p class="body-1">
-        NNSplit is a tool to split text using a neural network. The main
-        application is <strong>sentence boundary detection</strong>, but e. g.
-        <strong>compound splitting for German</strong> is also supported.
-        NNSplit's focus is on being <strong>fast</strong> and
-        <strong>not reliant on correct punctuation, spelling and case</strong>.
+        A tool to split text using a neural network. The main application is
+        sentence boundary detection, but e. g. compound splitting for German is
+        also supported.
       </p>
-      <p>
-        NNSplit uses a byte-level LSTM so the models are small (&lt; 4MB) and
-        models can be trained for every unicode encodable language.
-      </p>
-      <p>
-        NNSplit is written in Rust, with bindings for Python and Javascript
-        (Browser and Node.js) and currently has models for 7 different
-        languages.
-      </p>
-      <h2 id="demo" class="text-h3 mt-15 mb-5">Demo</h2>
+      <h2 class="text-h4 mb-2">Features</h2>
+      <ul class="body-1">
+        <li>
+          <strong>Robust</strong>: Not reliant on proper punctuation, spelling
+          and case.
+        </li>
+        <li>
+          <strong>Small</strong>: NNSplit uses a byte-level LSTM, so weights are
+          small (&lt; 4MB) and models can be trained for every unicode encodable
+          language.
+        </li>
+        <li>
+          <strong>Portable</strong>: NNNSplit is written in Rust with bindings
+          for Rust Python, and Javascript (Browser and Node.js).
+        </li>
+        <li>
+          <strong>Fast</strong>: Up to 2x faster than SpaCy sentencization, see
+          the <a href="#benchmark">benchmark</a>.
+        </li>
+        <li>
+          <strong>Multilingual</strong>: NNSplit currently has models for 7
+          different languages (German, English, French, Norwegian, Swedish,
+          Simplified Chinese, Turkish).
+        </li>
+      </ul>
+      <h2 id="demo" class="text-h3 mt-5 mb-5">Demo</h2>
       <p class="body-1">
         Try NNSplit! This demo runs powered by
         <a href="https://github.com/bminixhofer/tractjs">tractjs</a> in your

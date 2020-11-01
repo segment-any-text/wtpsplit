@@ -1,7 +1,7 @@
 {
   "name": "nnsplit",
   "version": "0.5.1",
-  "description": "Fast, robust sentence splitting with bindings for Python, Rust and Javascript.",
+  "description": "A tool to split text using a neural network. For sentence boundary detection, compound splitting and more. ",
   "directories": {
     "test": "tests"
   },
