@@ -1,5 +1,5 @@
 # also change Cargo.toml when changing this file, workaround for package name and extension-module
-# only difference between this and Cargo.toml must be in: name, version, crate-type, crate-type, workspace, dependencies.pyo3
+# only difference between this and Cargo.toml must be in: package.name, package.version, lib.name, lib.crate-type, workspace, dependencies.pyo3
 [package]
 name = "nnsplit"
 version = "0.5.2-post0"

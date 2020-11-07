@@ -9,7 +9,7 @@ edition = "2018"
 requires-dist = ["onnxruntime==1.4", "tqdm>=4"]
 
 [lib]
-name = "nnsplit"
+name = "nnsplit_python"
 
 [dependencies]
 ndarray = "0.13"
