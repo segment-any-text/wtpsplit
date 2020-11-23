@@ -11,7 +11,7 @@ env:
 
 jobs:
   build-javascript:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     env:
       working-directory: bindings/javascript
     strategy:
@@ -37,7 +37,7 @@ jobs:
         run: npm run test:node
         working-directory: ${{env.working-directory}}
       - name: Run Cypress tests
-        uses: cypress-io/github-action@v1
+        uses: cypress-io/github-action@v2
         with:
           working-directory: ${{env.working-directory}}
           start: npm run start_test_server
@@ -45,7 +45,7 @@ jobs:
           browser: ${{ matrix.browser }}
 
   build-rust:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     steps:
       - uses: actions/checkout@v2
@@ -84,7 +84,7 @@ jobs:
       working-directory: bindings/python
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-18.04, windows-latest, macos-latest]
         python-version: [3.6, 3.7, 3.8]
 
     steps:
@@ -121,7 +121,7 @@ jobs:
           path: bindings/python/target/wheels/*
 
   publish:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     needs: [build-javascript, build-rust, build-python]
     if: github.event_name == 'release'
 
