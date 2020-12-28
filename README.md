@@ -17,3 +17,7 @@ A tool to split text using a neural network. The main application is sentence bo
 - __Multilingual__: NNSplit currently has models for 7 different languages (German, English, French, Norwegian, Swedish, Simplified Chinese, Turkish). Try them in the [demo](https://bminixhofer.github.io/nnsplit/#demo).
 
 Documentation has moved to the NNSplit website: https://bminixhofer.github.io/nnsplit.
+
+## License
+
+NNSplit is licensed under the MIT license.
