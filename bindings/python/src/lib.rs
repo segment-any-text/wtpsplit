@@ -1,25 +1,24 @@
 mod onnxruntime_backend;
 
 use onnxruntime_backend::ONNXRuntimeBackend;
-use pyo3::class::basic::PyObjectProtocol;
-use pyo3::class::gc::{PyGCProtocol, PyTraverseError, PyVisit};
 use pyo3::class::sequence::PySequenceProtocol;
 use pyo3::conversion::IntoPy;
 use pyo3::create_exception;
-use pyo3::exceptions::Exception;
+use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use pyo3::{class::basic::PyObjectProtocol, exceptions::PyIndexError};
 
 use nnsplit as core;
 
-create_exception!(nnsplit, ResourceError, Exception);
+create_exception!(nnsplit, ResourceError, PyException);
 
 /// Represents a splitted text. Can be iterated over to yield either:
 ///     * `Split` objects representing smaller parts of this split.
 ///     * `str` objects if at the lowest split level.
 ///
 /// Can also be stringifed with `str(...)` to get the full text this split contains.
-#[pyclass(gc)]
+#[pyclass]
 pub struct Split {
     parts: Vec<PyObject>,
 }
@@ -89,47 +88,7 @@ impl PySequenceProtocol for Split {
         if idx >= 0 && (idx as usize) < self.parts.len() {
             Ok(self.parts[idx as usize].clone_ref(py))
         } else {
-            Err(PyErr::new::<pyo3::exceptions::IndexError, _>(
-                "list index out of range",
-            ))
-        }
-    }
-}
-
-#[pyproto]
-impl PyGCProtocol for Split {
-    fn __traverse__(&'p self, visit: PyVisit) -> Result<(), PyTraverseError> {
-        let gil = Python::acquire_gil();
-        let python = gil.python();
-
-        self.parts
-            .iter()
-            .map(|x| {
-                // TODO: clarify if this is required
-                if let Ok(split) = x.extract::<&PyCell<Split>>(python) {
-                    for part in &split.borrow().parts {
-                        visit.call(part)?;
-                    }
-                }
-
-                visit.call(x)
-            })
-            .collect()
-    }
-
-    fn __clear__(&'p mut self) {
-        let gil = Python::acquire_gil();
-        let python = gil.python();
-
-        for part in self.parts.drain(..) {
-            // TODO: clarify if this is required
-            if let Ok(split) = part.extract::<&PyCell<Split>>(python) {
-                for subpart in &split.borrow().parts {
-                    python.release(subpart);
-                }
-            }
-
-            python.release(part);
+            Err(PyIndexError::new_err("list index out of range"))
         }
     }
 }
@@ -189,9 +148,9 @@ impl NNSplit {
             logic: core::NNSplitLogic::new(
                 options,
                 serde_json::from_str(metadata.get("split_sequence").ok_or_else(|| {
-                    Exception::py_err("Model must contain `split_sequence` metadata key")
+                    PyException::new_err("Model must contain `split_sequence` metadata key")
                 })?)
-                .map_err(|_| Exception::py_err("split_sequence must be valid JSON."))?,
+                .map_err(|_| PyException::new_err("split_sequence must be valid JSON."))?,
             ),
         })
     }
@@ -208,7 +167,7 @@ impl NNSplit {
         kwargs: Option<&PyDict>,
     ) -> PyResult<Self> {
         // explicitly call str(..) to handle pathlib.Path etc. correctly
-        let path = model_path.as_ref(py).str()?.to_string()?;
+        let path = model_path.as_ref(py).str()?.to_string();
 
         let backend = ONNXRuntimeBackend::new(py, path, use_cuda)?;
         NNSplit::from_backend_and_kwargs(py, backend, kwargs)
@@ -236,7 +195,7 @@ impl NNSplit {
         kwargs: Option<&PyDict>,
     ) -> PyResult<Self> {
         let (_, resource_path) = core::model_loader::get_resource(&model_name, "model.onnx")
-            .map_err(|error| ResourceError::py_err(error.to_string()))?;
+            .map_err(|error| ResourceError::new_err(error.to_string()))?;
 
         let backend = ONNXRuntimeBackend::new(
             py,

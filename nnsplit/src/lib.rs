@@ -483,7 +483,7 @@ mod tests {
 
             let mut blob = Vec::new();
             for _ in 0..n * length * dim {
-                blob.push(rng.gen_range(0., 1.));
+                blob.push(rng.gen_range(0.0..1.0));
             }
 
             Array3::from_shape_vec((n, length, dim), blob).unwrap()
