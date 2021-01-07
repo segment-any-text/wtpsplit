@@ -24,7 +24,7 @@ grpcio==1.30.0
 idna==2.9
 importlib-metadata==1.6.1
 joblib==0.15.1
-lxml==4.5.1
+lxml==4.6.2
 Markdown==3.2.2
 mccabe==0.6.1
 murmurhash==1.0.2
