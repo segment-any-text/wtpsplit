@@ -29,10 +29,17 @@ class Network(pl.LightningModule):
         self.lstm2 = nn.LSTM(256, 128, bidirectional=True, batch_first=True)
         self.lstm3 = nn.LSTM(256, 128, bidirectional=True, batch_first=True)
 
-        self.out = nn.Linear(256, 6)
+        self.out = nn.Linear(256, 2 * len(hparams.predict_indices))
 
     def prepare_data(self):
-        dataset = SplitDataset(self.text_dataset, self.labeler, 500, 800, 20)
+        dataset = SplitDataset(
+            self.text_dataset,
+            self.labeler,
+            500,
+            800,
+            20,
+            return_indices=self.hparams.predict_indices,
+        )
 
         train_indices, valid_indices = train_test_split(
             np.arange(len(dataset)), test_size=self.hparams.test_size, random_state=1234
@@ -50,12 +57,15 @@ class Network(pl.LightningModule):
         h, _ = self.lstm2(h)
         h, _ = self.lstm3(h)
 
-        h = self.out(h).reshape(-1, input_length, 3)
+        h = self.out(h).reshape(-1, input_length, len(self.hparams.predict_indices))
         return h
 
-    @staticmethod
-    def loss(y_hat, y):
-        weight = torch.tensor([2.0, 0.1, 0.1]).view((1, 1, 3)).to(y_hat.device)
+    def loss(self, y_hat, y):
+        weight = (
+            torch.tensor(self.hparams.level_weights)
+            .view((1, 1, len(self.hparams.level_weights)))
+            .to(y_hat.device)
+        )
 
         return F.binary_cross_entropy_with_logits(
             y_hat, y.float(), pos_weight=torch.tensor(10.0), weight=weight
@@ -140,7 +150,7 @@ class Network(pl.LightningModule):
             collate_fn=SplitDataset.collate_fn,
         )
 
-    def store(self, directory):
+    def store(self, directory, metadata):
         store_directory = Path(directory)
         store_directory.mkdir(exist_ok=True, parents=True)
 
@@ -160,18 +170,7 @@ class Network(pl.LightningModule):
         )
         postprocess(
             model_path,
-            {
-                "split_sequence": json.dumps(
-                    {
-                        "instructions": [
-                            ["Sentence", {"PredictionIndex": 0}],
-                            ["Token", {"PredictionIndex": 1}],
-                            ["_Whitespace", {"Function": "whitespace"}],
-                            ["Compound constituent", {"PredictionIndex": 2}],
-                        ]
-                    }
-                )
-            },
+            metadata,
         )
 
     @staticmethod
@@ -185,6 +184,20 @@ class Network(pl.LightningModule):
             type=int,
             help="Number of samples to train on for one epoch. "
             "Will be sampled without replacement from the text dataset.",
+        )
+        parser.add_argument(
+            "--predict_indices",
+            nargs="+",
+            type=int,
+            default=[],
+            help="Which levels of the splits to predict.",
+        )
+        parser.add_argument(
+            "--level_weights",
+            nargs="+",
+            type=float,
+            default=[],
+            help="Determines how much each level contributes to the loss. Must have the same length as the indices to predict.",
         )
         parser.add_argument(
             "--batch_size",

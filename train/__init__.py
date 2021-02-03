@@ -4,6 +4,7 @@ from glob import glob
 import numpy as np
 from pytorch_lightning.trainer import Trainer
 from pytorch_lightning.loggers.wandb import WandbLogger
+import json
 from model import Network
 from text_data import MemoryMapDataset
 from labeler import (
@@ -61,7 +62,7 @@ if __name__ == "__main__":
             ),
             SpacyWordTokenizer(hparams.spacy_model),
             WhitespaceTokenizer(),
-            SECOSCompoundTokenizer("../../../Experiments/SECOS/"),
+            # SECOSCompoundTokenizer("../../../Experiments/SECOS/"), # used for german
         ]
     )
 
@@ -76,8 +77,21 @@ if __name__ == "__main__":
     print(f"Training model with {n_params} parameters.")
     trainer.fit(model)
 
+    metadata = {
+        "split_sequence": json.dumps(
+            {
+                "instructions": [
+                    ["Sentence", {"PredictionIndex": 0}],
+                    ["Token", {"PredictionIndex": 1}],
+                    ["_Whitespace", {"Function": "whitespace"}],
+                    # ["Compound constituent", {"PredictionIndex": 2}],
+                ]
+            }
+        )
+    }
+
     if hparams.logger:
-        model.store(Path(wandb_logger.experiment.dir) / "model")
+        model.store(Path(wandb_logger.experiment.dir) / "model", metadata)
 
     if hparams.model_path:
-        model.store(Path(hparams.model_path))
+        model.store(Path(hparams.model_path), metadata)

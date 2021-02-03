@@ -82,7 +82,7 @@ class SpacySentenceTokenizer(Tokenizer):
     ):
         super().__init__()
         self.nlp = get_model(model_name)
-        self.nlp.add_pipe(self.nlp.create_pipe("sentencizer"))
+        self.nlp.add_pipe("sentencizer")
 
         self.lower_start_prob = lower_start_prob
         self.remove_end_punct_prob = remove_end_punct_prob

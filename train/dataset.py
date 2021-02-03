@@ -5,12 +5,16 @@ import random
 
 
 class SplitDataset(data.Dataset):
-    def __init__(self, text_dataset, labeler, min_len, max_len, max_pad):
+    def __init__(
+        self, text_dataset, labeler, min_len, max_len, max_pad, return_indices
+    ):
         self.text_dataset = text_dataset
         self.labeler = labeler
         self.min_len = min_len
         self.max_len = max_len
         self.max_pad = max_pad
+
+        self.return_indices = return_indices
 
     def __len__(self):
         return len(self.text_dataset)
@@ -47,7 +51,7 @@ class SplitDataset(data.Dataset):
             ids.append(0)
             label.append([0] * len(self.labeler.tokenizers))
 
-        return torch.tensor(ids), torch.tensor(label)[:, [0, 1, 3]]
+        return torch.tensor(ids), torch.tensor(label)[:, self.return_indices]
 
     @staticmethod
     def collate_fn(batch):
