@@ -105,7 +105,7 @@ class SpacyInterface:
     def __init__(self, name, use_sentencizer, batch_size=1000):
         if use_sentencizer:
             nlp = get_model(name)
-            nlp.add_pipe(nlp.create_pipe("sentencizer"))
+            nlp.add_pipe("sentencizer")
         else:
             try:
                 nlp = spacy.load(name, disable=["tagger", "ner"])

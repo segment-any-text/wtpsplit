@@ -11,8 +11,13 @@ import sys
 from somajo import SoMaJo
 from spacy.lang.tr import Turkish
 from spacy.lang.sv import Swedish
+from spacy.lang.uk import Ukrainian
 
-NO_MODEL_LANGUAGE_LOOKUP = {"turkish": Turkish, "swedish": Swedish}
+NO_MODEL_LANGUAGE_LOOKUP = {
+    "turkish": Turkish,
+    "swedish": Swedish,
+    "ukrainian": Ukrainian,
+}
 
 
 def noise(text, insert_chance, delete_chance, repeat_chance):

@@ -115,6 +115,8 @@ export default {
         samplePage: "Réseau de neurones artificiels",
       },
       { code: "zh", name: "Simplified Chinese", samplePage: "人工神经网络" },
+      { code: "ru", name: "Russian", samplePage: "Нейронная сеть" },
+      { code: "uk", name: "Ukrainian", samplePage: "Штучна нейронна мережа" },
     ];
 
     let splits = {};
