@@ -68,9 +68,9 @@ class Tokenizer(ABC):
         pass
 
 
-def remove_last_punct(text: str) -> str:
+def remove_last_punct(text: str, punctuation) -> str:
     for i in range(len(text))[::-1]:
-        if text[i] in string.punctuation:
+        if text[i] in punctuation:
             return text[:i] + text[i + 1 :]
         elif not text[i].isspace():
             return text
@@ -84,6 +84,7 @@ class SpacySentenceTokenizer(Tokenizer):
         model_name: str,
         lower_start_prob: Fraction,
         remove_end_punct_prob: Fraction,
+        punctuation: str,
     ):
         super().__init__()
         self.nlp = get_model(model_name)
@@ -91,6 +92,7 @@ class SpacySentenceTokenizer(Tokenizer):
 
         self.lower_start_prob = lower_start_prob
         self.remove_end_punct_prob = remove_end_punct_prob
+        self.punctuation = punctuation
 
     def tokenize(self, text: str) -> List[str]:
         out_sentences = []
@@ -106,7 +108,7 @@ class SpacySentenceTokenizer(Tokenizer):
 
             if end_sentence and not text.isspace():
                 if self.training and random.random() < self.remove_end_punct_prob:
-                    current_sentence = remove_last_punct(current_sentence)
+                    current_sentence = remove_last_punct(current_sentence, self.punctuation)
 
                 out_sentences.append(current_sentence)
 
@@ -332,7 +334,7 @@ if __name__ == "__main__":
     labeler = Labeler(
         [
             SpacySentenceTokenizer(
-                "de_core_news_sm", lower_start_prob=0.7, remove_end_punct_prob=0.7
+                "de_core_news_sm", lower_start_prob=0.7, remove_end_punct_prob=0.7, punctuation=".?!"
             ),
             SpacyWordTokenizer("de_core_news_sm"),
             WhitespaceTokenizer(),

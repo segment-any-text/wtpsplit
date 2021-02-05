@@ -58,7 +58,7 @@ if __name__ == "__main__":
     labeler = Labeler(
         [
             SpacySentenceTokenizer(
-                hparams.spacy_model, lower_start_prob=0.7, remove_end_punct_prob=0.7
+                hparams.spacy_model, lower_start_prob=0.7, remove_end_punct_prob=0.7, punctuation=".?!"
             ),
             SpacyWordTokenizer(hparams.spacy_model),
             WhitespaceTokenizer(),

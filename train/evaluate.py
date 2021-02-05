@@ -35,6 +35,7 @@ class Evaluator:
         dataset,
         remove_end_punct_prob,
         lower_start_prob,
+        punctuation,
         lengths=[2, 3, 4],
         seed=1234,
     ):
@@ -54,7 +55,7 @@ class Evaluator:
                 sentence = dataset[i]
 
                 if gen.random() < remove_end_punct_prob:
-                    sentence = remove_last_punct(sentence)
+                    sentence = remove_last_punct(sentence, punctuation)
 
                 if gen.random() < lower_start_prob:
                     sentence = sentence[0].lower() + sentence[1:]
@@ -134,7 +135,8 @@ class SpacyInterface:
 @click.option("--subtitle_path", help="Path to the OPUS OpenSubtitles raw text.")
 @click.option("--spacy_model", help="Name of the spacy model to compare against.")
 @click.option("--nnsplit_path", help="Path to the .onnx NNSplit model to use.")
-def evaluate(subtitle_path, spacy_model, nnsplit_path):
+@click.option("--punctuation", help="Which characters to consider punctuation.", default=".?!")
+def evaluate(subtitle_path, spacy_model, nnsplit_path, punctuation):
     # nnsplit must be installed to evaluate
     from nnsplit import NNSplit
 
@@ -164,7 +166,7 @@ def evaluate(subtitle_path, spacy_model, nnsplit_path):
 
     for eval_name, (remove_punct_prob, lower_start_prob) in eval_setups.items():
         result[eval_name] = {}
-        evaluator = Evaluator(dataset, remove_punct_prob, lower_start_prob)
+        evaluator = Evaluator(dataset, remove_punct_prob, lower_start_prob, punctuation)
 
         for target_name, interface in targets.items():
             correct = evaluator.evaluate(interface.split)
