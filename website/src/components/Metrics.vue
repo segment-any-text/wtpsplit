@@ -234,11 +234,11 @@ export default {
         },
         Russian: {
           NNSplit: {
-            Clean: 0.833488,
-            "Partial punctuation": 0.523926,
-            "Partial case": 0.831545,
-            "Partial punctuation and case": 0.432047,
-            "No punctuation and case": 0.100696,
+            Clean: 0.81678,
+            "Partial punctuation": 0.580357,
+            "Partial case": 0.814239,
+            "Partial punctuation and case": 0.497773,
+            "No punctuation and case": 0.207012,
           },
           "Spacy (Tagger)": {
             Clean: 0.903279,
@@ -257,11 +257,11 @@ export default {
         },
         Ukrainian: {
           NNSplit: {
-            Clean: 0.700152,
-            "Partial punctuation": 0.408763,
-            "Partial case": 0.6928,
-            "Partial punctuation and case": 0.368264,
-            "No punctuation and case": 0.111576,
+            Clean: 0.693308,
+            "Partial punctuation": 0.441074,
+            "Partial case": 0.691783,
+            "Partial punctuation and case": 0.391338,
+            "No punctuation and case": 0.12138,
           },
           "Spacy (Tagger)": {
             Clean: NaN,
