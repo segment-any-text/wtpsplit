@@ -2,7 +2,7 @@
 # only difference between this and Cargo.toml must be in: package.name, package.version, lib.name, lib.crate-type, workspace, dependencies.pyo3
 [package]
 name = "nnsplit"
-version = "0.5.2-post0"
+version = "0.5.4-post0"
 authors = ["Benjamin Minixhofer <bminixhofer@gmail.com>"]
 edition = "2018"
 
