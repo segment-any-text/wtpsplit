@@ -23,7 +23,7 @@
     "build": "bash build.sh",
     "start_test_server": "cd dev_server && npm install && cp -ar ../../../models/ static/ && npx webpack-dev-server --port=8080",
     "test:browser": "cypress run",
-    "test:node": "npx mocha --exit --timeout 5000"
+    "test:node": "npx mocha --exit --timeout 10000"
   },
   "repository": {
     "type": "git",
