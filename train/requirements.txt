@@ -53,8 +53,8 @@ notebook==6.2.0
 numpy==1.19.4
 oauthlib==3.1.0
 onnx==1.8.1
-onnxruntime==1.4.0
-onnxruntime-gpu==1.4.0
+onnxruntime==1.7.0
+onnxruntime-gpu==1.7.0
 packaging==20.9
 pandas==1.2.1
 pandocfilters==1.4.3
