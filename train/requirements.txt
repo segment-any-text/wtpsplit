@@ -77,7 +77,7 @@ pyrsistent==0.17.3
 python-dateutil==2.8.1
 pytorch-lightning==1.1.7
 pytz==2021.1
-PyYAML==5.3.1
+PyYAML==5.4
 pyzmq==22.0.2
 qtconsole==5.0.2
 QtPy==1.9.0
