@@ -37,9 +37,9 @@
           the <a href="#benchmark">benchmark</a>.
         </li>
         <li>
-          <strong>Multilingual</strong>: NNSplit currently has models for 7
+          <strong>Multilingual</strong>: NNSplit currently has models for 9
           different languages (German, English, French, Norwegian, Swedish,
-          Simplified Chinese, Turkish). Try them in the
+          Simplified Chinese, Turkish, Russian and Ukrainian). Try them in the
           <a href="#demo">demo</a>.
         </li>
       </ul>
