@@ -55,7 +55,7 @@ impl TractJSBackend {
         let mut input_facts = HashMap::new();
         input_facts.insert(
             0,
-            json!(["uint8", ["b", {
+            json!(["uint8", [1, {
                 "id": "s",
                 "slope": length_divisor,
                 "intercept": 0,
