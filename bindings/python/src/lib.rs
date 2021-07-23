@@ -128,7 +128,7 @@ impl<'a> IntoPy<Split> for core::Split<'a> {
 ///         * batch_size (int): Batch size to use.
 ///         * length_divisor (int): Total length will be padded until it is divisible by this number. Allows some additional optimizations.
 #[pyclass]
-#[text_signature = "(model_path, use_cuda=None, **kwargs)"]
+#[pyo3(text_signature = "(model_path, use_cuda=None, **kwargs)")]
 pub struct NNSplit {
     backend: ONNXRuntimeBackend,
     logic: core::NNSplitLogic,
@@ -185,7 +185,7 @@ impl NNSplit {
     ///         * padding (int): How much to zero pad the text on both sides.
     ///         * batch_size (int): Batch size to use.
     ///         * length_divisor (int): Total length will be padded until it is divisible by this number. Allows some additional optimizations.
-    #[text_signature = "(model_name, use_cuda=None, **kwargs)"]
+    #[pyo3(text_signature = "(model_name, use_cuda=None, **kwargs)")]
     #[args(kwargs = "**")]
     #[staticmethod]
     pub fn load(
@@ -217,7 +217,7 @@ impl NNSplit {
     ///     verbose (bool): Whether to display a progress bar.
     /// Returns:
     ///     splits (List[Split]): A list of `Split` objects with the same length as the input text list.
-    #[text_signature = "(texts, verbose=False)"]
+    #[pyo3(text_signature = "(texts, verbose=False)")]
     pub fn split(
         &self,
         py: Python,
@@ -241,7 +241,7 @@ impl NNSplit {
     ///
     /// Returns:
     ///     levels (List[str]): A list of strings describing the split levels, from top (largest split) to bottom (smallest split).
-    #[text_signature = "()"]
+    #[pyo3(text_signature = "()")]
     pub fn get_levels(&self) -> PyResult<Vec<String>> {
         Ok(self
             .logic
