@@ -86,7 +86,9 @@ impl NNSplit {
             options.into_serde().unwrap()
         };
 
-        let backend = TractJSBackend::new(&path, options.length_divisor).await?;
+        // larger batch sizes seem to slow things down so hardcode to 1 for now
+        // would need more investigation to find the cause
+        let backend = TractJSBackend::new(&path, options.length_divisor, 1).await?;
         let metadata = backend.get_metadata().await?;
 
         Ok(NNSplit {

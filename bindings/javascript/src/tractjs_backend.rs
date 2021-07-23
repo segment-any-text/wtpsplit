@@ -3,7 +3,7 @@ use js_sys::{Array, Float32Array, Promise, Uint32Array, Uint8Array};
 use ndarray::prelude::*;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::{cmp, collections::HashMap};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 
@@ -21,7 +21,7 @@ extern "C" {
     fn load(path: &str, options: JsValue) -> Promise;
 
     #[wasm_bindgen(method)]
-    fn predict_one(this: &Model, input: Tensor, symbol_values: JsValue) -> Promise;
+    fn predict_one(this: &Model, input: Tensor) -> Promise;
 
     #[wasm_bindgen(method)]
     fn get_metadata(this: &Model) -> Promise;
@@ -43,15 +43,19 @@ extern "C" {
 
 pub struct TractJSBackend {
     model: Model,
-    length_divisor: usize,
+    batch_size: usize,
 }
 
 impl TractJSBackend {
-    pub async fn new(model_path: &str, length_divisor: usize) -> Result<Self, JsValue> {
+    pub async fn new(
+        model_path: &str,
+        length_divisor: usize,
+        batch_size: usize,
+    ) -> Result<Self, JsValue> {
         let mut input_facts = HashMap::new();
         input_facts.insert(
             0,
-            json!(["uint8", [1, {
+            json!(["uint8", ["b", {
                 "id": "s",
                 "slope": length_divisor,
                 "intercept": 0,
@@ -65,33 +69,32 @@ impl TractJSBackend {
         .await?
         .into();
 
-        Ok(TractJSBackend {
-            model,
-            length_divisor,
-        })
+        Ok(TractJSBackend { model, batch_size })
     }
 
     pub async fn predict(&self, input: Array2<u8>) -> Result<Array3<f32>, JsValue> {
-        let shape: Array = vec![JsValue::from(1u32), JsValue::from(input.shape()[1] as u32)]
-            .into_iter()
-            .collect();
-        let mut symbol_values = HashMap::new();
-        symbol_values.insert("s", input.shape()[1] / self.length_divisor);
-
         let preds = (0..input.shape()[0])
-            .map(|i| {
+            .step_by(self.batch_size)
+            .map(|start| {
+                let end = cmp::min(start + self.batch_size, input.shape()[0]);
+                let actual_batch_size = end - start;
+
+                let shape: Array = vec![
+                    JsValue::from(actual_batch_size as u32),
+                    JsValue::from(input.shape()[1] as u32),
+                ]
+                .into_iter()
+                .collect();
+
                 let tensor = Tensor::new(
-                    Uint8Array::from(input.slice(s![i, ..]).as_slice().expect_throw(
+                    Uint8Array::from(input.slice(s![start..end, ..]).as_slice().expect_throw(
                         "converting ndarray to slice failed (likely not contiguous)",
                     ))
                     .into(),
-                    shape.clone(),
+                    shape,
                 );
 
-                JsFuture::from(
-                    self.model
-                        .predict_one(tensor, JsValue::from_serde(&symbol_values).unwrap()),
-                )
+                JsFuture::from(self.model.predict_one(tensor))
             })
             .collect::<Vec<_>>();
         let preds = join_all(preds)
@@ -107,11 +110,13 @@ impl TractJSBackend {
 
         let data_vec = preds.into_iter().fold(Vec::new(), |mut arr, x| {
             let curr: Float32Array = x.data().into();
+
             arr.extend(curr.to_vec());
             arr
         });
+
         let mut preds =
-            Array3::from_shape_vec(shape, data_vec).map_err(|_| "Array conversion error")?;
+            Array3::from_shape_vec(shape, data_vec).map_err(|_| "Array conversion error.")?;
 
         // sigmoid
         preds.mapv_inplace(|x| 1f32 / (1f32 + (-x).exp()));

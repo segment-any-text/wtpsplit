@@ -1,57 +1,43 @@
 use crate::{NNSplitLogic, NNSplitOptions};
 use ndarray::prelude::*;
-use std::error::Error;
+use std::{cmp, error::Error};
 use tract_onnx::prelude::*;
 
+type TractModel = TypedSimplePlan<TypedModel>;
+
 struct TractBackend {
-    model: TypedModel,
+    model: TractModel,
     n_outputs: usize,
-    length_divisor: usize,
 }
 
 impl TractBackend {
-    fn new(model: TypedModel, length_divisor: usize) -> TractResult<Self> {
-        let n_outputs = if let TDim::Val(value) = model.outlet_fact(model.outputs[0])?.shape[2] {
-            value as usize
-        } else {
-            0 // TODO: raise error here
-        };
+    fn new(model: TractModel) -> TractResult<Self> {
+        let n_outputs =
+            if let TDim::Val(value) = model.model().outlet_fact(model.outputs[0])?.shape[2] {
+                value as usize
+            } else {
+                0 // TODO: raise error here
+            };
 
-        Ok(TractBackend {
-            model,
-            n_outputs,
-            length_divisor,
-        })
+        Ok(TractBackend { model, n_outputs })
     }
 
-    fn predict(
-        &self,
-        input: Array2<u8>,
-        _batch_size: usize,
-    ) -> Result<Array3<f32>, Box<dyn Error>> {
+    fn predict(&self, input: Array2<u8>, batch_size: usize) -> Result<Array3<f32>, Box<dyn Error>> {
         let input_shape = input.shape();
-        let opt_model = self
-            .model
-            .concretize_dims(&SymbolValues::default().with(
-                's'.into(),
-                input_shape[1] as i64 / self.length_divisor as i64,
-            ))?
-            .optimize()?
-            .into_runnable()?;
-
         let mut preds = Array3::<f32>::zeros((input_shape[0], input_shape[1], self.n_outputs));
 
-        // currently batch size is always 1, tract does not yet support more than one streaming dimension well
-        for i in 0..input_shape[0] {
-            let batch_inputs: Tensor = input.slice(s![i..(i + 1), ..]).to_owned().into();
+        for start in (0..input_shape[0]).step_by(batch_size) {
+            let end = cmp::min(start + batch_size, input_shape[0]);
 
-            let batch_preds = opt_model.run(tvec![batch_inputs])?.remove(0);
+            let batch_inputs: Tensor = input.slice(s![start..end, ..]).to_owned().into();
+
+            let batch_preds = self.model.run(tvec![batch_inputs])?.remove(0);
             let mut batch_preds: ArrayD<f32> = (*batch_preds).clone().into_array()?;
 
             // sigmoid
             batch_preds.mapv_inplace(|x| 1f32 / (1f32 + (-x).exp()));
 
-            preds.slice_mut(s![i..(i + 1), .., ..]).assign(&batch_preds);
+            preds.slice_mut(s![start..end, .., ..]).assign(&batch_preds);
         }
 
         Ok(preds)
@@ -65,17 +51,21 @@ pub struct NNSplit {
 }
 
 impl NNSplit {
-    fn type_model(model: InferenceModel, length_divisor: usize) -> TractResult<TypedModel> {
+    fn type_model(model: InferenceModel, length_divisor: usize) -> TractResult<TractModel> {
         model
             .with_input_fact(
                 0,
                 InferenceFact::dt_shape(
                     u8::datum_type(),
-                    tvec!(1.into(), TDim::from(Symbol::from('s')) * length_divisor),
+                    tvec!(
+                        TDim::from(Symbol::from('b')),
+                        TDim::from(Symbol::from('s')) * length_divisor
+                    ),
                 ),
             )?
-            .into_typed()?
-            .declutter()
+            .into_optimized()?
+            .declutter()?
+            .into_runnable()
     }
 
     fn from_model(
@@ -99,7 +89,7 @@ impl NNSplit {
             })
             .ok_or("Model must contain `split_sequence` metadata key")?;
 
-        let backend = TractBackend::new(model, options.length_divisor)?;
+        let backend = TractBackend::new(model)?;
 
         Ok(NNSplit {
             backend,

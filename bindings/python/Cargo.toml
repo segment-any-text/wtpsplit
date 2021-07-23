@@ -12,8 +12,8 @@ requires-dist = ["onnxruntime==1.7", "tqdm>=4"]
 name = "nnsplit_python"
 
 [dependencies]
-ndarray = "=0.13.0"
-numpy = "0.12.2"
+ndarray = "0.15.0"
+numpy = "0.14.1"
 lazy_static = "1.4"
 serde_json = "1.0"
 
@@ -23,4 +23,4 @@ default-features = false
 features = ["model-loader"]
 
 [dependencies.pyo3]
-version = "0.12"
+version = "0.14"

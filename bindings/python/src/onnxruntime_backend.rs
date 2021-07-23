@@ -31,7 +31,8 @@ impl ONNXRuntimeBackend {
     ) -> PyResult<Array3<f32>> {
         let prediction: &PyArray3<f32> = MODULE
             .as_ref(py)
-            .call1("predict_batch", (session, data.to_pyarray(py)))?
+            .getattr("predict_batch")?
+            .call1((session, data.to_pyarray(py)))?
             .extract()?;
 
         let mut prediction = prediction.to_owned_array();
@@ -45,7 +46,8 @@ impl ONNXRuntimeBackend {
     pub fn new<P: AsRef<str>>(py: Python, model_path: P, use_cuda: Option<bool>) -> PyResult<Self> {
         let session = MODULE
             .as_ref(py)
-            .call1("create_session", (model_path.as_ref(), use_cuda))?
+            .getattr("create_session")?
+            .call1((model_path.as_ref(), use_cuda))?
             .into();
 
         let dummy_data = Array2::<u8>::zeros((1, 12));
@@ -71,7 +73,8 @@ impl ONNXRuntimeBackend {
             Some(
                 MODULE
                     .as_ref(py)
-                    .call1("get_progress_bar", (input_shape[0],))?,
+                    .getattr("get_progress_bar")?
+                    .call1((input_shape[0],))?,
             )
         } else {
             None
@@ -101,7 +104,8 @@ impl ONNXRuntimeBackend {
     pub fn get_metadata(&self, py: Python) -> PyResult<HashMap<String, String>> {
         MODULE
             .as_ref(py)
-            .call1("get_metadata", (&self.session,))?
+            .getattr("get_metadata")?
+            .call1((&self.session,))?
             .extract()
     }
 }
