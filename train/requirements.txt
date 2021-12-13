@@ -38,7 +38,7 @@ jupyter-console==6.2.0
 jupyter-core==4.7.1
 jupyterlab-pygments==0.1.2
 jupyterlab-widgets==1.0.0
-lxml==4.6.3
+lxml==4.6.5
 Markdown==3.3.3
 MarkupSafe==1.1.1
 mistune==0.8.4
