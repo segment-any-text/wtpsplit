@@ -7,7 +7,7 @@ def create_session(path, use_cuda):
     # if use_cuda=True force it to error if GPU is not available
     
     if use_cuda is None:
-        providers = [provider for provider in ["CUDAExecutionProvider", "CPUExecutionProvider"] if provider in onnxruntime.get_availabile_providers()]
+        providers = [provider for provider in ["CUDAExecutionProvider", "CPUExecutionProvider"] if provider in onnxruntime.get_available_providers()]
     else:
         if use_cuda:
             providers = ["CUDAExecutionProvider"]
