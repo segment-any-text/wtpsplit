@@ -5,9 +5,13 @@ from tqdm.auto import tqdm
 def create_session(path, use_cuda):
     # onnxruntime automatically prioritizes GPU if supported
     # if use_cuda=True force it to error if GPU is not available
-    providers = ["CPUExecutionProvider"]
-    if use_cuda:
-        providers = ["CUDAExecutionProvider"]
+    providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+    if use_cuda is not None:
+        if use_cuda:
+            providers = ["CUDAExecutionProvider"]
+        else:
+            providers = ["CPUExecutionProvider"]
+
     session = onnxruntime.InferenceSession(path, providers=providers)
 
     return session
