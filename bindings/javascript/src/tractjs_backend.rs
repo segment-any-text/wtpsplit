@@ -25,6 +25,9 @@ extern "C" {
 
     #[wasm_bindgen(method)]
     fn get_metadata(this: &Model) -> Promise;
+
+    #[wasm_bindgen(method)]
+    fn destroy(this: &Model) -> Promise;
 }
 
 #[wasm_bindgen(module = "tractjs")]
@@ -39,6 +42,11 @@ extern "C" {
 
     #[wasm_bindgen(method, getter)]
     fn shape(this: &Tensor) -> Uint32Array;
+}
+
+#[wasm_bindgen(module = "tractjs")]
+extern "C" {
+    fn terminate() -> ();
 }
 
 pub struct TractJSBackend {
