@@ -65,17 +65,17 @@ jobs:
 
       - uses: actions/checkout@dc323e67f16fb5f7663d20ff7941f27f5809e9b6 # v2.6.0
       - name: Cache cargo registry
-        uses: actions/cache@70655ec8323daeeaa7ef06d7c56e1b9191396cbe # v1.1.2
+        uses: actions/cache@6998d139ddd3e68c71e9e398d8e40b71a2f39812 # v3.2.5
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache cargo index
-        uses: actions/cache@70655ec8323daeeaa7ef06d7c56e1b9191396cbe # v1.1.2
+        uses: actions/cache@6998d139ddd3e68c71e9e398d8e40b71a2f39812 # v3.2.5
         with:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache cargo build
-        uses: actions/cache@70655ec8323daeeaa7ef06d7c56e1b9191396cbe # v1.1.2
+        uses: actions/cache@6998d139ddd3e68c71e9e398d8e40b71a2f39812 # v3.2.5
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
