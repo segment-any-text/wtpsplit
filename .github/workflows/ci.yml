@@ -34,7 +34,7 @@ jobs:
           toolchain: stable
       - name: Install wasm-pack # need a build from master for https://github.com/rustwasm/wasm-pack/pull/839
         run: cargo install --git https://github.com/rustwasm/wasm-pack --rev d46d1c6
-      - uses: actions/setup-node@27082cecf3ff7a1742dbd5e12605f0cb59dce2d9 # v2-beta
+      - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v2-beta
         with:
           node-version: '12'
       - name: Install dependencies
