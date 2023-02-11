@@ -107,7 +107,7 @@ jobs:
 
       - uses: actions/checkout@dc323e67f16fb5f7663d20ff7941f27f5809e9b6 # v2.6.0
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@152ba7c4dd6521b8e9c93f72d362ce03bf6c4f20 # v1.2.3
+        uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435 # v4.5.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install GSED (if needed) # needed by update_version.sh
@@ -160,7 +160,7 @@ jobs:
       - name: Install wasm-pack # need a build from master for https://github.com/rustwasm/wasm-pack/pull/839
         run: cargo install --git https://github.com/rustwasm/wasm-pack --rev d46d1c6
       - name: Set up Python 3.8
-        uses: actions/setup-python@152ba7c4dd6521b8e9c93f72d362ce03bf6c4f20 # v1.2.3
+        uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435 # v4.5.0
         with:
           python-version: 3.8
       - run: |
