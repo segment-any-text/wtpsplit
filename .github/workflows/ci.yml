@@ -9,6 +9,9 @@ on:
 env:
   NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+permissions:
+  contents: read
+
 jobs:
   build-javascript:
     runs-on: ubuntu-18.04
@@ -19,14 +22,19 @@ jobs:
         browser: ["firefox", "chrome", "electron"]
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - name: Harden Runner
+        uses: step-security/harden-runner@18bf8ad2ca49c14cbb28b91346d626ccfb00c518 # v2.1.0
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+
+      - uses: actions/checkout@dc323e67f16fb5f7663d20ff7941f27f5809e9b6 # v2.6.0
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
         with:
           profile: minimal
           toolchain: stable
       - name: Install wasm-pack # need a build from master for https://github.com/rustwasm/wasm-pack/pull/839
         run: cargo install --git https://github.com/rustwasm/wasm-pack --rev d46d1c6
-      - uses: actions/setup-node@v2-beta
+      - uses: actions/setup-node@27082cecf3ff7a1742dbd5e12605f0cb59dce2d9 # v2-beta
         with:
           node-version: '12'
       - name: Install dependencies
@@ -39,7 +47,7 @@ jobs:
         run: npm run test:node
         working-directory: ${{env.working-directory}}
       - name: Run Cypress tests
-        uses: cypress-io/github-action@v2
+        uses: cypress-io/github-action@f5bea478b80a774068179089247f13d60abc5010 # v2.11.8
         with:
           working-directory: ${{env.working-directory}}
           start: npm run start_test_server
@@ -50,29 +58,34 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Harden Runner
+        uses: step-security/harden-runner@18bf8ad2ca49c14cbb28b91346d626ccfb00c518 # v2.1.0
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+
+      - uses: actions/checkout@dc323e67f16fb5f7663d20ff7941f27f5809e9b6 # v2.6.0
       - name: Cache cargo registry
-        uses: actions/cache@v1
+        uses: actions/cache@70655ec8323daeeaa7ef06d7c56e1b9191396cbe # v1.1.2
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache cargo index
-        uses: actions/cache@v1
+        uses: actions/cache@70655ec8323daeeaa7ef06d7c56e1b9191396cbe # v1.1.2
         with:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache cargo build
-        uses: actions/cache@v1
+        uses: actions/cache@70655ec8323daeeaa7ef06d7c56e1b9191396cbe # v1.1.2
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
           command: build
           args: --verbose
       - run: rustup component add clippy
       - run: cargo clippy --all-features
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
           command: test
           args: --verbose --all-features
@@ -87,9 +100,14 @@ jobs:
         python-version: ["3.8", "3.9", "3.10"]
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Harden Runner
+        uses: step-security/harden-runner@18bf8ad2ca49c14cbb28b91346d626ccfb00c518 # v2.1.0
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+
+      - uses: actions/checkout@dc323e67f16fb5f7663d20ff7941f27f5809e9b6 # v2.6.0
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@152ba7c4dd6521b8e9c93f72d362ce03bf6c4f20 # v1.2.3
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install GSED (if needed) # needed by update_version.sh
@@ -114,33 +132,40 @@ jobs:
           make test
         working-directory: ${{env.working-directory}}
       - name: Upload wheel as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
           name: python-wheel
           path: bindings/python/target/wheels/*
 
   publish:
+    permissions:
+      contents: write  # for stefanzweifel/git-auto-commit-action to push code in repo
     runs-on: ubuntu-18.04
     needs: [build-javascript, build-rust, build-python]
     if: github.event_name == 'release'
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Harden Runner
+        uses: step-security/harden-runner@18bf8ad2ca49c14cbb28b91346d626ccfb00c518 # v2.1.0
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+
+      - uses: actions/checkout@dc323e67f16fb5f7663d20ff7941f27f5809e9b6 # v2.6.0
         with:
           ref: ${{ github.head_ref }}
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
         with:
           profile: minimal
           toolchain: stable
       - name: Install wasm-pack # need a build from master for https://github.com/rustwasm/wasm-pack/pull/839
         run: cargo install --git https://github.com/rustwasm/wasm-pack --rev d46d1c6
       - name: Set up Python 3.8
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@152ba7c4dd6521b8e9c93f72d362ce03bf6c4f20 # v1.2.3
         with:
           python-version: 3.8
       - run: |
           pip install twine==3.2
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@f023be2c48cc18debc3bacd34cb396e0295e2869 # v2.1.0
         with:
           name: python-wheel
           path: python-wheel
@@ -157,7 +182,7 @@ jobs:
           WHEEL_DIR: python-wheel
       - run: |
           rm -r python-wheel
-      - uses: stefanzweifel/git-auto-commit-action@v4
+      - uses: stefanzweifel/git-auto-commit-action@3ea6ae190baf489ba007f7c92608f33ce20ef04a # v4.16.0
         with:
           commit_message: v${{ github.event.release.tag_name }}
           branch: main
