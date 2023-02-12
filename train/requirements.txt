@@ -14,7 +14,7 @@ cffi==1.14.4
 chardet==3.0.4
 click==7.1.2
 cymem==2.0.5
-decorator==4.4.2
+decorator==5.1.1
 defusedxml==0.6.0
 diskcache==5.2.1
 entrypoints==0.3
