@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build-javascript:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     env:
       working-directory: bindings/javascript
     strategy:
@@ -28,24 +28,31 @@ jobs:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+
       - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
         with:
           profile: minimal
           toolchain: stable
+
       - name: Install wasm-pack # need a build from master for https://github.com/rustwasm/wasm-pack/pull/839
         run: cargo install --git https://github.com/rustwasm/wasm-pack --rev d46d1c6
+
       - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v2-beta
         with:
-          node-version: '12'
+          node-version: '16'
+
       - name: Install dependencies
         run: npm install
         working-directory: ${{env.working-directory}}
+
       - name: Build module
         run: npm run build
         working-directory: ${{env.working-directory}}
+
       - name: Run Node.js tests
         run: npm run test:node
         working-directory: ${{env.working-directory}}
+
       - name: Run Cypress tests
         uses: cypress-io/github-action@ca3f666049f4ac2267a75de769535a7cbdc7bfd7 # v5.0.8
         with:
@@ -54,8 +61,31 @@ jobs:
           wait-on: "http://localhost:8080"
           browser: ${{ matrix.browser }}
 
+  clippy:
+    if: github.repository_owner == 'Kapiche'
+    runs-on: ubuntu-latest
+    needs: security-audit
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@2e205a28d0e1da00c5f53b161f4067b052c61f34
+      with:
+        egress-policy: block
+        allowed-endpoints: >
+          crates.io:443
+          github.com:443
+          static.crates.io:443
+          download.pytorch.org:443
+
+    - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+      with:
+        fetch-depth: 0
+
+    - run: rustup component add clippy
+    - run: cargo clean
+    - run: cargo clippy --all-features
+
   build-rust:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Harden Runner
@@ -64,11 +94,15 @@ jobs:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+        with:
+          fetch-depth: 0
+
       - name: Cache cargo registry
         uses: actions/cache@6998d139ddd3e68c71e9e398d8e40b71a2f39812 # v3.2.5
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Cache cargo index
         uses: actions/cache@6998d139ddd3e68c71e9e398d8e40b71a2f39812 # v3.2.5
         with:
@@ -79,12 +113,12 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
       - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
           command: build
           args: --verbose
-      - run: rustup component add clippy
-      - run: cargo clippy --all-features
+
       - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
           command: test
@@ -96,7 +130,7 @@ jobs:
       working-directory: bindings/python
     strategy:
       matrix:
-        os: [ubuntu-18.04, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.8", "3.9", "3.10"]
 
     steps:
@@ -106,31 +140,40 @@ jobs:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+        with:
+          fetch-depth: 0
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435 # v4.5.0
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Install GSED (if needed) # needed by update_version.sh
         if: github.event_name == 'release' && matrix.os == 'macos-latest'
         run: |
           brew install gnu-sed
+
       - name: Update version (if release) # only needed for python since we store artifacts, others are rebuilt
         if: github.event_name == 'release'
         run: |
           bash update_version.sh ${{ github.event.release.tag_name }}
+
       - name: Install
         run: |
           python -m pip install --upgrade pip
           make install
         working-directory: ${{env.working-directory}}
+
       - name: Build
         run: |
           make build
         working-directory: ${{env.working-directory}}
+
       - name: Test
         run: |
           make test
         working-directory: ${{env.working-directory}}
+
       - name: Upload wheel as artifact
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
@@ -140,7 +183,7 @@ jobs:
   publish:
     permissions:
       contents: write  # for stefanzweifel/git-auto-commit-action to push code in repo
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     needs: [build-javascript, build-rust, build-python]
     if: github.event_name == 'release'
 
@@ -153,25 +196,32 @@ jobs:
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
         with:
           ref: ${{ github.head_ref }}
+
       - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
         with:
           profile: minimal
           toolchain: stable
+
       - name: Install wasm-pack # need a build from master for https://github.com/rustwasm/wasm-pack/pull/839
         run: cargo install --git https://github.com/rustwasm/wasm-pack --rev d46d1c6
+
       - name: Set up Python 3.8
         uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435 # v4.5.0
         with:
           python-version: 3.8
+
       - run: |
           pip install twine==3.2
+
       - uses: actions/download-artifact@f023be2c48cc18debc3bacd34cb396e0295e2869 # v2.1.0
         with:
           name: python-wheel
           path: python-wheel
+
       - name: Update version
         run: |
           bash update_version.sh ${{ github.event.release.tag_name }}
+
       - name: Run release script
         run: |
           bash release.sh
@@ -180,8 +230,10 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
           TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
           WHEEL_DIR: python-wheel
+
       - run: |
           rm -r python-wheel
+
       - uses: stefanzweifel/git-auto-commit-action@3ea6ae190baf489ba007f7c92608f33ce20ef04a # v4.16.0
         with:
           commit_message: v${{ github.event.release.tag_name }}
