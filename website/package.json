@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "chart.js": "^2.9.4",
-    "core-js": "^3.6.5",
+    "core-js": "^3.27.2",
     "markdown-it-vue": "^1.1.4",
     "nnsplit": "file:../bindings/javascript/pkg",
     "quill": "^1.3.7",
