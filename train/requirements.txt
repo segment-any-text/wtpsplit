@@ -65,7 +65,7 @@ pickleshare==0.7.5
 preshed==3.0.5
 prometheus-client==0.9.0
 prompt-toolkit==3.0.14
-protobuf==3.14.0
+protobuf==3.18.3
 ptyprocess==0.7.0
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
