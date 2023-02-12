@@ -75,7 +75,7 @@ Pygments==2.7.4
 pyparsing==2.4.7
 pyrsistent==0.17.3
 python-dateutil==2.8.1
-pytorch-lightning==1.1.7
+pytorch-lightning==1.6.0
 pytz==2021.1
 PyYAML==5.4
 pyzmq==22.0.2
