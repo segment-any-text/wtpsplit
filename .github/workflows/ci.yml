@@ -4,10 +4,9 @@ on:
   release:
     types: [published]
   push:
+    branches: [ main ]
   pull_request:
-
-env:
-  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    branches: [ main ]
 
 permissions:
   contents: read
@@ -21,7 +20,7 @@ jobs:
 
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@2e205a28d0e1da00c5f53b161f4067b052c61f34
+      uses: step-security/harden-runner@18bf8ad2ca49c14cbb28b91346d626ccfb00c518 # v2.1.0
       with:
         egress-policy: audit
         allowed-endpoints: >
@@ -59,6 +58,7 @@ jobs:
         security-checks: 'vuln,config,secret'
 
   build-javascript:
+    needs: security-audit
     runs-on: ubuntu-latest
     env:
       working-directory: bindings/javascript
@@ -70,7 +70,27 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@18bf8ad2ca49c14cbb28b91346d626ccfb00c518 # v2.1.0
         with:
-          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            actions-results-receiver-production.githubapp.com:443
+            api.github.com:443
+            cdn.cypress.io:443
+            content-signature-2.cdn.mozilla.net:443
+            crates.io:443
+            download.cypress.io:443
+            firefox-settings-attachments.cdn.mozilla.net:443
+            firefox.settings.services.mozilla.com:443
+            github.com:443
+            location.services.mozilla.com:443
+            objects.githubusercontent.com:443
+            ocsp.digicert.com:80
+            r3.o.lencr.org:80
+            registry.npmjs.org:443
+            shavar.services.mozilla.com:443
+            static.crates.io:443
+            static.rust-lang.org:443
+            tracking-protection.cdn.mozilla.net:443
 
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
 
@@ -106,36 +126,24 @@ jobs:
           wait-on: "http://localhost:8080"
           browser: ${{ matrix.browser }}
 
-  clippy:
-    runs-on: ubuntu-latest
-    needs: security-audit
-    steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@2e205a28d0e1da00c5f53b161f4067b052c61f34
-      with:
-        egress-policy: block
-        allowed-endpoints: >
-          crates.io:443
-          github.com:443
-          static.crates.io:443
-          download.pytorch.org:443
-
-    - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
-      with:
-        fetch-depth: 0
-
-    - run: rustup component add clippy
-    - run: cargo clean
-    - run: cargo clippy --all-features
 
   build-rust:
+    needs: security-audit
     runs-on: ubuntu-latest
 
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@18bf8ad2ca49c14cbb28b91346d626ccfb00c518 # v2.1.0
         with:
-          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            crates.io:443
+            files.pythonhosted.org:443
+            github.com:443
+            pypi.org:443
+            static.crates.io:443
 
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
         with:
@@ -163,15 +171,22 @@ jobs:
           command: build
           args: --verbose
 
+      - run: rustup component add clippy
+      - run: cargo clean
+      - run: cargo clippy --all-features
+
       - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
           command: test
           args: --verbose --all-features
 
   build-python:
+    needs: security-audit
     runs-on: ${{ matrix.os }}
     env:
       working-directory: bindings/python
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -181,7 +196,13 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@18bf8ad2ca49c14cbb28b91346d626ccfb00c518 # v2.1.0
         with:
-          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            crates.io:443
+            github.com:443
+            static.crates.io:443
 
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
         with:
@@ -218,19 +239,26 @@ jobs:
           make test
         working-directory: ${{env.working-directory}}
 
+      - name: Generate subject
+        id: hash
+        run: |
+          cd dist
+          HASHES=$(sha256sum bindings/python/target/wheels/* | base64 -w0)
+          echo "hashes=$HASHES" >> "$GITHUB_OUTPUT"
+
       - name: Upload wheel as artifact
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: python-wheel
           path: bindings/python/target/wheels/*
 
-  publish:
-    permissions:
-      contents: write  # for stefanzweifel/git-auto-commit-action to push code in repo
-    runs-on: ubuntu-latest
-    needs: [build-javascript, build-rust, build-python]
-    if: github.event_name == 'release'
 
+  python-release:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    needs: [build-javascript, build-rust, build-python]
+    permissions:
+      contents: write # To add assets to a release.
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@18bf8ad2ca49c14cbb28b91346d626ccfb00c518 # v2.1.0
@@ -246,16 +274,10 @@ jobs:
           profile: minimal
           toolchain: stable
 
-      - name: Install wasm-pack # need a build from master for https://github.com/rustwasm/wasm-pack/pull/839
-        run: cargo install --git https://github.com/rustwasm/wasm-pack --rev d46d1c6
-
       - name: Set up Python 3.8
         uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435 # v4.5.0
         with:
           python-version: 3.8
-
-      - run: |
-          pip install twine==3.2
 
       - uses: actions/download-artifact@f023be2c48cc18debc3bacd34cb396e0295e2869 # v2.1.0
         with:
@@ -266,19 +288,9 @@ jobs:
         run: |
           bash update_version.sh ${{ github.event.release.tag_name }}
 
-      - name: Run release script
-        run: |
-          bash release.sh
+      - name: Upload release binaries
+        uses: alexellis/upload-assets@259de5111cb56966d046ced998941e93f91d2c93
         env:
-          CARGO_KEY: ${{ secrets.CARGO_KEY }}
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
-          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
-          WHEEL_DIR: python-wheel
-
-      - run: |
-          rm -r python-wheel
-
-      - uses: stefanzweifel/git-auto-commit-action@3ea6ae190baf489ba007f7c92608f33ce20ef04a # v4.16.0
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          commit_message: v${{ github.event.release.tag_name }}
-          branch: main
+          asset_paths: '["./python-wheel/nnsplit-*"]'
