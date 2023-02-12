@@ -13,6 +13,51 @@ permissions:
   contents: read
 
 jobs:
+  security-audit:
+    permissions:
+      contents: read # for actions/checkout to fetch code
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@2e205a28d0e1da00c5f53b161f4067b052c61f34
+      with:
+        egress-policy: audit
+        allowed-endpoints: >
+          api.github.com:443
+          github.com:443
+          objects.githubusercontent.com:443
+          ghcr.io:443
+          pkg-containers.githubusercontent.com:443
+
+    - name: Checkout the code
+      uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v2
+      with:
+        fetch-depth: 0
+
+    - name: Run vulnerability scanner in repo mode
+      if: github.actor != 'dependabot[bot]'
+      uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # 0.2.2
+      with:
+        scan-type: 'fs'
+        ignore-unfixed: true
+        format: 'table'
+        vuln-type: 'library'
+        severity: 'CRITICAL,HIGH'
+        security-checks: 'vuln,config,secret'
+
+    - name: Run vulnerability scanner in repo mode
+      if: github.actor == 'dependabot[bot]'
+      uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # 0.2.2
+      with:
+        scan-type: 'fs'
+        ignore-unfixed: false
+        format: 'table'
+        vuln-type: 'library'
+        severity: 'HIGH,CRITICAL'
+        security-checks: 'vuln,config,secret'
+
   build-javascript:
     runs-on: ubuntu-latest
     env:
