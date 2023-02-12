@@ -49,7 +49,7 @@ nbconvert==6.0.7
 nbformat==5.7.3
 nest-asyncio==1.5.1
 nnsplit==0.5.2.post0
-notebook==6.2.0
+notebook==6.4.12
 numpy==1.19.4
 oauthlib==3.1.0
 onnx==1.12.0
