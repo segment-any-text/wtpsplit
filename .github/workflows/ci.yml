@@ -257,7 +257,7 @@ jobs:
       - run: |
           pip install twine==3.2
 
-      - uses: actions/download-artifact@f023be2c48cc18debc3bacd34cb396e0295e2869 # v2.1.0
+      - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: python-wheel
           path: python-wheel
