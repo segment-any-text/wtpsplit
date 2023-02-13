@@ -20,7 +20,7 @@ diskcache==5.2.1
 entrypoints==0.3
 fsspec==0.8.5
 future==0.18.3
-google-auth==1.24.0
+google-auth==2.16.0
 google-auth-oauthlib==0.4.2
 grpcio==1.51.1
 idna==2.10
