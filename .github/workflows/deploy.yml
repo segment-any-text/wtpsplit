@@ -2,10 +2,7 @@ name: Deploy to Github Pages
 
 on:
   push:
-    branches: [ master ]
-
-env:
-  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    branches: [ main ]
 
 permissions:
   contents: read
