@@ -180,18 +180,9 @@ jobs:
           command: test
           args: --verbose --all-features
 
-  build-python:
+  python-macos:
     needs: security-audit
-    runs-on: ${{ matrix.os }}
-    env:
-      working-directory: bindings/python
-    outputs:
-      hashes: ${{ steps.hash.outputs.hashes }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.8", "3.9", "3.10"]
-
+    runs-on: macos-latest
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@18bf8ad2ca49c14cbb28b91346d626ccfb00c518 # v2.1.0
@@ -218,12 +209,16 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435 # v4.5.0
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.10'
 
       - name: Install GSED (if needed) # needed by update_version.sh
-        if: github.event_name == 'release' && matrix.os == 'macos-latest'
+        if: github.event_name == 'release'
         run: |
           brew install gnu-sed
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
 
       - name: Update version (if release) # only needed for python since we store artifacts, others are rebuilt
         if: github.event_name == 'release'
@@ -242,63 +237,215 @@ jobs:
           cp Cargo.build.toml Cargo.toml
         working-directory: ${{env.working-directory}}
 
-      - uses: messense/maturin-action@7c8579861aba9e28def3eb58e9a54d2c9231c30f
-        if: matrix.os == 'ubuntu-latest'
+      - name: Build wheels - x86_64
+        uses: messense/maturin-action@7c8579861aba9e28def3eb58e9a54d2c9231c30f
         with:
-          manylinux: auto
           command: build
-          args: --release -i python${{ matrix.python-version }}
-          maturin-version: 0.12.10
-          working-directory: ${{env.working-directory}}
-  
-      - uses: messense/maturin-action@7c8579861aba9e28def3eb58e9a54d2c9231c30f
-        if: matrix.os == 'windows-latest'  || matrix.os == 'macos-latest'
-        with:
-          manylinux: auto
-          command: build
-          args: --release -i python
+          target: x86_64-apple-darwin
+          args: --release --out dist --sdist
           maturin-version: 0.12.10
           working-directory: ${{env.working-directory}}
 
-      - name: Move temp cargo file and test
-        if: matrix.os == 'ubuntu-latest'  || matrix.os == 'macos-latest'
+      - name: Install built wheel - x86_64
         run: |
           mv Cargo.temp Cargo.toml
-          version=`python -c "import sys; print(str(sys.version_info.major) + str(sys.version_info.minor))"` && \
-          python -m pip install --ignore-installed --upgrade --find-links=target/wheels nnsplit
-        working-directory: ${{env.working-directory}}
-
-      - name: Move temp cargo file and test
-        if: matrix.os == 'windows-latest'
-        run: |
-          rm Cargo.toml
-          mv Cargo.temp Cargo.toml
-          python -m pip install --ignore-installed --upgrade --find-links=target/wheels nnsplit
-        working-directory: ${{env.working-directory}}
-
-      - name: Test
-        run: |
+          pip install auditwheel-symbols --no-index --find-links dist --force-reinstall
+          auditwheel-symbols --help
           make test
         working-directory: ${{env.working-directory}}
 
-      - name: Generate subject
-        if: matrix.os == 'ubuntu-latest'
-        id: hash
+      - name: Build wheels - universal2
+        uses: messense/maturin-action@7c8579861aba9e28def3eb58e9a54d2c9231c30f
+        with:
+          command: build
+          args: --release --universal2 --out dist
+          maturin-version: 0.12.10
+          working-directory: ${{env.working-directory}}
+
+      - name: Install built wheel - universal2
         run: |
-          HASHES=$(sha256sum target/wheels/* | base64 -w0)
-          echo "hashes=$HASHES" >> "$GITHUB_OUTPUT"
+          mv Cargo.temp Cargo.toml
+          pip install auditwheel-symbols --no-index --find-links dist --force-reinstall
+          auditwheel-symbols --help
+          make test
         working-directory: ${{env.working-directory}}
 
-      - name: Upload wheel as artifact
+      - name: Upload wheels
+        if: github.event_name == 'release'
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: python-wheel
-          path: bindings/python/target/wheels/*
+          path: bindings/python/dist/*
+
+  python-windows:
+    needs: security-audit
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        platform: [
+          { python-architecture: "x64", target: "x86_64-pc-windows-msvc" },
+          { python-architecture: "x86", target: "i686-pc-windows-msvc" },
+        ]
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@18bf8ad2ca49c14cbb28b91346d626ccfb00c518 # v2.1.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            crates.io:443
+            github.com:443
+            static.crates.io:443
+            pypi.org:443
+            files.pythonhosted.org:443
+            quay.io:443
+            cdn03.quay.io:443
+            sh.rustup.rs:443
+            static.rust-lang.org:443
+            objects.githubusercontent.com:443
+
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435 # v4.5.0
+        with:
+          python-version: 3.6
+          architecture: ${{ matrix.platform.python-architecture }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+
+      - name: Update version (if release) # only needed for python since we store artifacts, others are rebuilt
+        if: github.event_name == 'release'
+        run: |
+          bash update_version.sh ${{ github.event.release.tag_name }}
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          make install
+        working-directory: ${{env.working-directory}}
+
+      - name: Move cargo build to cargo toml
+        run: |
+          mv Cargo.toml Cargo.temp
+          cp Cargo.build.toml Cargo.toml
+        working-directory: ${{env.working-directory}}
+
+      - name: Build wheels
+        uses: messense/maturin-action@7c8579861aba9e28def3eb58e9a54d2c9231c30f
+        with:
+          command: build
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist
+          maturin-version: 0.12.10
+          working-directory: ${{env.working-directory}}
+
+      - name: Install built wheel
+        run: |
+          rm Cargo.toml
+          mv Cargo.temp Cargo.toml
+          pip install auditwheel-symbols --no-index --find-links dist --force-reinstall
+          auditwheel-symbols --help
+          make test
+        working-directory: ${{env.working-directory}}
+
+      - name: Upload wheels
+        if: github.event_name == 'release'
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: python-wheel
+          path: bindings/python/dist/*
+
+  python-linux:
+    needs: security-audit
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [
+          { target: "x86_64-unknown-linux-musl", image_tag: "x86_64-musl" },
+          { target: "aarch64-unknown-linux-musl", image_tag: "aarch64-musl" },
+        ]
+    container:
+      image: docker://messense/rust-musl-cross:${{ matrix.platform.image_tag }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@18bf8ad2ca49c14cbb28b91346d626ccfb00c518 # v2.1.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            crates.io:443
+            github.com:443
+            static.crates.io:443
+            pypi.org:443
+            files.pythonhosted.org:443
+            quay.io:443
+            cdn03.quay.io:443
+            sh.rustup.rs:443
+            static.rust-lang.org:443
+            objects.githubusercontent.com:443
+
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+        with:
+          fetch-depth: 0
+
+      - name: Update version (if release) # only needed for python since we store artifacts, others are rebuilt
+        if: github.event_name == 'release'
+        run: |
+          bash update_version.sh ${{ github.event.release.tag_name }}
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          make install
+        working-directory: ${{env.working-directory}}
+
+      - name: Move cargo build to cargo toml
+        run: |
+          mv Cargo.toml Cargo.temp
+          cp Cargo.build.toml Cargo.toml
+        working-directory: ${{env.working-directory}}
+
+      - name: Build Wheels - manylinux
+        uses: messense/maturin-action@7c8579861aba9e28def3eb58e9a54d2c9231c30f
+        with:
+          manylinux: auto
+          command: build
+          target: ${{ matrix.platform.target }}
+          args: --release -o dist
+          maturin-version: 0.12.10
+          working-directory: ${{env.working-directory}}
+          container: off
+
+      - name: Build Wheels - musllinux
+        uses: messense/maturin-action@7c8579861aba9e28def3eb58e9a54d2c9231c30f
+        with:
+          target: ${{ matrix.platform.target }}
+          command: build
+          manylinux: musllinux_1_1
+          container: off
+          args: --release -o dist
+          maturin-version: 0.12.10
+          working-directory: ${{env.working-directory}}
+
+      - name: Upload wheels
+        if: github.event_name == 'release'
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: python-wheel
+          path: bindings/python/dist/*
+
 
   python-release:
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
-    needs: [build-javascript, build-rust, build-python]
+    needs: [build-javascript, build-rust, python-macos, python-windows, python-linux ]
     permissions:
       contents: write # To add assets to a release.
     steps:
