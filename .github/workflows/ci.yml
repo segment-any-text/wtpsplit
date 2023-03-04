@@ -242,7 +242,7 @@ jobs:
           cp Cargo.build.toml Cargo.toml
         working-directory: ${{env.working-directory}}
 
-      - uses: messense/maturin-action@7c8579861aba9e28def3eb58e9a54d2c9231c30f
+      - uses: messense/maturin-action@59e476bfb6fd6e071aaa1cf62bc573e10cdac221
         if: matrix.os == 'ubuntu-latest'
         with:
           manylinux: auto
@@ -251,7 +251,7 @@ jobs:
           maturin-version: 0.12.10
           working-directory: ${{env.working-directory}}
   
-      - uses: messense/maturin-action@7c8579861aba9e28def3eb58e9a54d2c9231c30f
+      - uses: messense/maturin-action@59e476bfb6fd6e071aaa1cf62bc573e10cdac221
         if: matrix.os == 'windows-latest'  || matrix.os == 'macos-latest'
         with:
           manylinux: auto
