@@ -1,6 +1,6 @@
 {
   "name": "nnsplit",
-  "version": "0.5.8",
+  "version": "0.5.9",
   "description": "A tool to split text using a neural network. For sentence boundary detection, compound splitting and more. ",
   "directories": {
     "test": "tests"
