@@ -114,7 +114,7 @@ jobs:
           make test
         working-directory: ${{env.working-directory}}
       - name: Upload wheel as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: python-wheel
           path: bindings/python/target/wheels/*
