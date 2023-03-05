@@ -375,8 +375,8 @@ jobs:
     strategy:
       matrix:
         platform: [
-          { target: "x86_64-unknown-linux-musl",  python-architecture: "x64", manylinux: "auto" },
-          { target: "aarch64-unknown-linux-musl", python-architecture: "aarch64", manylinux: "musllinux_1_1" },
+          { target: "x86_64-unknown-linux-gnu" },
+          { target: "aarch64-unknown-linux-gnu" },
         ]
     steps:
       - name: Harden Runner
@@ -429,9 +429,9 @@ jobs:
         uses: messense/maturin-action@59e476bfb6fd6e071aaa1cf62bc573e10cdac221
         with:
           rust-toolchain: stable
-          manylinux: ${{ matrix.platform.manylinux }}
+          manylinux: auto
           target: ${{ matrix.platform.target }}
-          args: --release -i 3.8 3.9 3.10
+          args: --release --no-sdist -i 3.8 3.9 3.10
           maturin-version: 0.13.5
           working-directory: ${{env.working-directory}}
 
