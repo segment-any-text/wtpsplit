@@ -140,7 +140,7 @@ jobs:
           python-version: 3.8
       - run: |
           pip install twine==3.2
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: python-wheel
           path: python-wheel
