@@ -1,5 +1,0 @@
-**/*.rs.bk
-bin/
-pkg/
-wasm-pack.log
-node_modules

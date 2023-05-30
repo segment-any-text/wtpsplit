@@ -1,6 +1,0 @@
-lightning_logs
-wandb
-nnsplit
-*.pkl
-logs
-checkpoints
