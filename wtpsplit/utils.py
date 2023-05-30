@@ -8,8 +8,6 @@ from functools import cached_property
 
 import pandas as pd
 
-from iso639 import languages
-
 
 class ConstantsClass:
     NEWLINE_INDEX = 0
@@ -84,6 +82,8 @@ def label(input_ids, label_dict):
 
 
 def lang_code_to_lang(lang_code):
+    from iso639 import languages
+
     if lang_code == "el":
         return "Greek"
     elif lang_code == "tl":

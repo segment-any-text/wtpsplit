@@ -489,7 +489,7 @@ def main():
         return metrics
 
     if "wandb" in training_args.report_to and training_args.process_index == 0:
-        wandb.init(name=wandb_name, entity="llms-transfer-learning", project="sentence")
+        wandb.init(name=wandb_name, project="sentence")
         wandb.config.update(args)
         wandb.config.update(training_args)
         wandb.config.update(label_args)

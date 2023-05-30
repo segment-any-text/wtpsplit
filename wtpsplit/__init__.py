@@ -46,7 +46,7 @@ class ORTWrapper:
 
 
 class WtP:
-    def __init__(self, model_name_or_model, ort_providers=None, ort_kwargs=None, mixtures=None):
+    def __init__(self, model_name_or_model, ort_providers=None, ort_kwargs=None, mixtures=None, hub_prefix="benjamin"):
         self.model_name_or_model = model_name_or_model
         self.ort_providers = ort_providers
         self.ort_kwargs = ort_kwargs
@@ -57,7 +57,12 @@ class WtP:
             model_name_or_model = str(model_name_or_model)
             is_local = os.path.isdir(model_name_or_model)
 
-            model = AutoModelForTokenClassification.from_pretrained(model_name_or_model)
+            if not is_local and hub_prefix is not None:
+                model_name_to_fetch = f"{hub_prefix}/{model_name_or_model}"
+            else:
+                model_name_to_fetch = model_name_or_model
+
+            model = AutoModelForTokenClassification.from_pretrained(model_name_to_fetch)
 
             if is_local:
                 model_path = Path(model_name_or_model)
