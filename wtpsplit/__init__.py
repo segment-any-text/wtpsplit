@@ -14,7 +14,7 @@ from transformers.utils.hub import cached_file
 import skops.io as sio
 
 from wtpsplit.extract import extract
-from wtpsplit.utils import NEWLINE_INDEX, encode, indices_to_sentences
+from wtpsplit.utils import Constants, encode, indices_to_sentences
 
 
 class ORTWrapper:
@@ -168,7 +168,7 @@ class WtP:
             )
 
             def newline_probability_fn(logits):
-                return torch.sigmoid(logits.float()[:, NEWLINE_INDEX]).numpy()
+                return torch.sigmoid(logits.float()[:, Constants.NEWLINE_INDEX]).numpy()
 
             for i, (text, logits) in enumerate(zip(outer_batch_texts, outer_batch_logits)):
                 if style is not None:

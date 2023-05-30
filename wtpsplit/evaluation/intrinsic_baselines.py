@@ -16,7 +16,7 @@ from wtpsplit.evaluation import (
     spacy_dp_sentencize,
     spacy_sent_sentencize,
 )
-from wtpsplit.utils import CACHE_DIR, SEPARATORS
+from wtpsplit.utils import Constants
 
 
 @dataclass
@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
             sentences = [preprocess_sentence(s) for s in dataset["data"]]
 
-            text = SEPARATORS[lang_code].join(sentences)
+            text = Constants.SEPARATORS[lang_code].join(sentences)
 
             for (f, name) in [
                 (punkt_sentencize, "punkt"),
@@ -59,4 +59,4 @@ if __name__ == "__main__":
                 except LanguageError:
                     results[lang_code][dataset_name][name] = None
 
-    json.dump(results, open(CACHE_DIR / "intrinsic_baselines.json", "w"), indent=4)
+    json.dump(results, open(Constants.CACHE_DIR / "intrinsic_baselines.json", "w"), indent=4)

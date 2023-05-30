@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from tqdm.auto import tqdm
 
-from wtpsplit.utils import LANG_CODE_TO_INDEX
+from wtpsplit.utils import Constants
 
 
 def extract(
@@ -142,7 +142,7 @@ def extract(
             raise ValueError("Please specify a `lang_code` when using a model with language adapters.")
 
         language_ids = torch.tensor(
-            [LANG_CODE_TO_INDEX[lang_code]] * batch_size,
+            [Constants.LANG_CODE_TO_INDEX[lang_code]] * batch_size,
             dtype=torch.long,
             device=model.device,
         )

@@ -20,7 +20,7 @@ from transformers import (
 import wandb
 from datasets import load_dataset
 from wtpsplit.models import LACanineConfig, LACanineForTokenClassification, LACanineModel
-from wtpsplit.utils import LANG_CODE_TO_INDEX, ROOT_DIR
+from wtpsplit.utils import Constants
 
 
 @dataclass
@@ -188,7 +188,7 @@ def load_iwslt(path, tokenizer, args, fix_space=True):
     )["labels"]
 
     if args.use_lang_adapter:
-        dataset = dataset.add_column("language_ids", [LANG_CODE_TO_INDEX[args.lang]] * len(dataset))
+        dataset = dataset.add_column("language_ids", [Constants.LANG_CODE_TO_INDEX[args.lang]] * len(dataset))
 
     return dataset, np.array(char_labels)
 
@@ -277,23 +277,23 @@ def main():
 
     if args.lang == "en":
         train_dataset, _ = load_iwslt(
-            ROOT_DIR / "data" / "external" / "punctuation_annotation" / "en" / "train2012",
+            Constants.ROOT_DIR / "data" / "external" / "punctuation_annotation" / "en" / "train2012",
             tokenizer=tokenizer,
             args=args,
         )
         test_dataset, test_char_labels = load_iwslt(
-            ROOT_DIR / "data" / "external" / "punctuation_annotation" / "en" / "test2011",
+            Constants.ROOT_DIR / "data" / "external" / "punctuation_annotation" / "en" / "test2011",
             tokenizer=tokenizer,
             args=args,
         )
     else:
         train_dataset, _ = load_iwslt(
-            ROOT_DIR / "data" / "external" / "punctuation_annotation" / "bn" / "train",
+            Constants.ROOT_DIR / "data" / "external" / "punctuation_annotation" / "bn" / "train",
             tokenizer=tokenizer,
             args=args,
         )
         test_dataset, test_char_labels = load_iwslt(
-            ROOT_DIR / "data" / "external" / "punctuation_annotation" / "bn" / "test_ref",
+            Constants.ROOT_DIR / "data" / "external" / "punctuation_annotation" / "bn" / "test_ref",
             tokenizer=tokenizer,
             args=args,
         )

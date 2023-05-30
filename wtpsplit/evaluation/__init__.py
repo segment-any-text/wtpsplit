@@ -13,13 +13,11 @@ import torch
 
 from wtpsplit.extract import extract
 from wtpsplit.utils import (
-    AUX_OFFSET,
-    NEWLINE_INDEX,
-    SEPARATORS,
+    Constants,
     encode,
     lang_code_to_lang,
     indices_to_sentences,
-    reconstruct_sentences
+    reconstruct_sentences,
 )
 
 
@@ -31,7 +29,7 @@ def preprocess_sentence(sentence):
 
 
 def get_labels(lang_code, sentences, after_space=True):
-    separator = SEPARATORS[lang_code]
+    separator = Constants.SEPARATORS[lang_code]
     text = separator.join(sentences)
 
     true_end_indices = np.cumsum(np.array([len(s) for s in sentences])) + np.arange(1, len(sentences) + 1) * len(
@@ -50,7 +48,7 @@ def get_labels(lang_code, sentences, after_space=True):
 
 
 def evaluate_sentences(lang_code, sentences, predicted_sentences):
-    separator = SEPARATORS[lang_code]
+    separator = Constants.SEPARATORS[lang_code]
 
     text = separator.join(sentences)
 
@@ -73,7 +71,7 @@ def train_mixture(lang_code, original_train_x, train_y, n_subsample=None, featur
 
     train_y = train_y[:-1]
 
-    if original_train_x.shape[1] > AUX_OFFSET:
+    if original_train_x.shape[1] > Constants.AUX_OFFSET:
         if features is not None:
             train_x = original_train_x[:, features]
         else:
@@ -92,7 +90,7 @@ def train_mixture(lang_code, original_train_x, train_y, n_subsample=None, featur
         clf = None
         best_threshold_transformed = None
 
-    p, r, t = precision_recall_curve(train_y, torch.sigmoid(original_train_x[:, NEWLINE_INDEX]))
+    p, r, t = precision_recall_curve(train_y, torch.sigmoid(original_train_x[:, Constants.NEWLINE_INDEX]))
     f1 = 2 * p * r / (p + r + 1e-6)
     best_threshold_newline = t[f1.argmax()]
 
@@ -109,11 +107,11 @@ def evaluate_mixture(
     threshold_newline,
 ):
     test_x = torch.from_numpy(test_x)
-    text = SEPARATORS[lang_code].join(true_sentences)
+    text = Constants.SEPARATORS[lang_code].join(true_sentences)
 
-    predicted_indices_newline = np.where(torch.sigmoid(test_x[..., NEWLINE_INDEX].float()).numpy() > threshold_newline)[
-        0
-    ]
+    predicted_indices_newline = np.where(
+        torch.sigmoid(test_x[..., Constants.NEWLINE_INDEX].float()).numpy() > threshold_newline
+    )[0]
 
     if clf is not None:
         if features is not None:
@@ -180,9 +178,9 @@ def our_sentencize(
         verbose=False,
     )[0]
 
-    predicted_indices_newline = np.where(torch.sigmoid(logits[..., NEWLINE_INDEX].float()).numpy() > threshold_newline)[
-        0
-    ]
+    predicted_indices_newline = np.where(
+        torch.sigmoid(logits[..., Constants.NEWLINE_INDEX].float()).numpy() > threshold_newline
+    )[0]
 
     if features is not None:
         x = logits[:, features]

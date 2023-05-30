@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 from transformers import HfArgumentParser
 
 from datasets import load_dataset
-from wtpsplit.utils import LANGINFO
+from wtpsplit.utils import Constants
 
 all_chars = [chr(c) for c in range(0x110000)]
 punctuation_chars = "".join(c for c in all_chars if "S" in unicodedata.category(c) or "P" in unicodedata.category(c))
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     metadata_path = output_dir / "metadata.json"
 
     if not (train_text_path.exists() and valid_text_path.exists()):
-        languages = [lang for lang, row in LANGINFO.iterrows()]
+        languages = [lang for lang, row in Constants.LANGINFO.iterrows()]
 
         chars_per_language = math.ceil(args.target_chars / len(languages))
 

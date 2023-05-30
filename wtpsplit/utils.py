@@ -4,24 +4,50 @@ import random
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
+from functools import cached_property
 
 import pandas as pd
 
 from iso639 import languages
 
-ROOT_DIR = Path(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-CACHE_DIR = ROOT_DIR / ".cache"
-CACHE_DIR.mkdir(exist_ok=True)
+class ConstantsClass:
+    NEWLINE_INDEX = 0
+    AUX_OFFSET = 1
 
-NEWLINE_INDEX = 0
-AUX_OFFSET = 1
+    @cached_property
+    def ROOT_DIR(self):
+        return Path(os.path.abspath(os.path.join(os.path.dirname(__file__))))
 
-LANGINFO = pd.read_csv(os.path.join(ROOT_DIR, "data", "language_info.csv"), index_col=0)
-PUNCTUATION_CHARS = [x.strip() for x in open(os.path.join(ROOT_DIR, "data", "punctuation.txt")).readlines()]
-PUNCTUATION_MAP = json.load(open(os.path.join(ROOT_DIR, "data", "punctuation.json")))
-LANG_CODE_TO_INDEX = {lang: i for i, lang in enumerate(LANGINFO.index)}
-SEPARATORS = {lang: ("" if row["no_whitespace"] else " ") for lang, row in LANGINFO.iterrows()}
+    @cached_property
+    def CACHE_DIR(self):
+        CACHE_DIR = self.ROOT_DIR / ".cache"
+        CACHE_DIR.mkdir(exist_ok=True)
+
+        return CACHE_DIR
+
+    @cached_property
+    def LANGINFO(self):
+        return pd.read_csv(os.path.join(self.ROOT_DIR, "data", "language_info.csv"), index_col=0)
+
+    @cached_property
+    def PUNCTUATION_CHARS(self):
+        return [x.strip() for x in open(os.path.join(self.ROOT_DIR, "data", "punctuation.txt")).readlines()]
+
+    @cached_property
+    def PUNCTUATION_MAP(self):
+        return json.load(open(os.path.join(self.ROOT_DIR, "data", "punctuation.json")))
+
+    @cached_property
+    def LANG_CODE_TO_INDEX(self):
+        return {lang: i for i, lang in enumerate(Constants.LANGINFO.index)}
+
+    @cached_property
+    def SEPARATORS(self):
+        return {lang: ("" if row["no_whitespace"] else " ") for lang, row in Constants.LANGINFO.iterrows()}
+
+
+Constants = ConstantsClass()
 
 
 @dataclass
@@ -32,7 +58,7 @@ class LabelArgs:
     newline_whitespace_prob: float = 0.99
     hyphen_smooth_prob: float = 0.9
     newline_chars: List[str] = field(default_factory=lambda: ["\n"])
-    auxiliary_chars: List[str] = field(default_factory=lambda: PUNCTUATION_CHARS.copy())
+    auxiliary_chars: List[str] = field(default_factory=lambda: Constants.PUNCTUATION_CHARS.copy())
     hyphen_chars: List[str] = field(default_factory=lambda: ["-", "‐"])
     use_auxiliary: bool = False
 
@@ -41,10 +67,10 @@ def get_label_dict(label_args):
     label_dict = {}
 
     for i, c in enumerate(label_args.auxiliary_chars):
-        label_dict[ord(c)] = 1 + AUX_OFFSET + i
+        label_dict[ord(c)] = 1 + Constants.AUX_OFFSET + i
 
     for c in label_args.newline_chars:
-        label_dict[ord(c)] = 1 + NEWLINE_INDEX
+        label_dict[ord(c)] = 1 + Constants.NEWLINE_INDEX
 
     return label_dict
 
@@ -84,7 +110,7 @@ def corrupt(
     block_ids = block_ids.copy()
     labels = label(input_ids, label_dict)
 
-    separator = SEPARATORS[lang]
+    separator = Constants.SEPARATORS[lang]
 
     try:
         i = next(index for index, label in enumerate(labels) if label != 0)
@@ -95,7 +121,7 @@ def corrupt(
         if min_length is not None and len(input_ids) <= min_length:
             break
 
-        if labels[i] == NEWLINE_INDEX + 1:
+        if labels[i] == Constants.NEWLINE_INDEX + 1:
             if random.random() < label_args.newline_remove_prob:
                 if separator == " " and random.random() < label_args.newline_whitespace_prob:
                     input_ids[i + 1] = ord(" ")
@@ -113,7 +139,7 @@ def corrupt(
                         labels.insert(last_index_in_block, 0)
                     else:
                         del block_ids[i + 1]
-        elif label_args.use_auxiliary and labels[i] > AUX_OFFSET:  # auxiliary
+        elif label_args.use_auxiliary and labels[i] > Constants.AUX_OFFSET:  # auxiliary
             if pack_samples:
                 raise NotImplementedError()
 

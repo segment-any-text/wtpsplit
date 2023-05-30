@@ -7,7 +7,7 @@ from transformers import AutoModelForTokenClassification, HfArgumentParser
 
 import wtpsplit.models  # noqa
 from wtpsplit.extract import extract
-from wtpsplit.utils import ROOT_DIR, encode
+from wtpsplit.utils import Constants, encode
 
 
 @dataclass
@@ -52,17 +52,17 @@ if __name__ == "__main__":
 
     if args.lang == "en":
         train_text, train_char_labels = load_iwslt(
-            ROOT_DIR / "data" / "external" / "punctuation_annotation" / "en" / "train2012",
+            Constants.ROOT_DIR / "data" / "external" / "punctuation_annotation" / "en" / "train2012",
         )
         test_text, test_char_labels = load_iwslt(
-            ROOT_DIR / "data" / "external" / "punctuation_annotation" / "en" / "test2011",
+            Constants.ROOT_DIR / "data" / "external" / "punctuation_annotation" / "en" / "test2011",
         )
     else:
         train_text, train_char_labels = load_iwslt(
-            ROOT_DIR / "data" / "external" / "punctuation_annotation" / "bn" / "train",
+            Constants.ROOT_DIR / "data" / "external" / "punctuation_annotation" / "bn" / "train",
         )
         test_text, test_char_labels = load_iwslt(
-            ROOT_DIR / "data" / "external" / "punctuation_annotation" / "bn" / "test_ref",
+            Constants.ROOT_DIR / "data" / "external" / "punctuation_annotation" / "bn" / "test_ref",
         )
 
     model = AutoModelForTokenClassification.from_pretrained(args.model_path).to(args.device)

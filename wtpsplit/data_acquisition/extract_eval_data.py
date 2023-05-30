@@ -10,7 +10,7 @@ from transformers import HfArgumentParser
 import conllu
 from datasets import load_dataset
 from wtpsplit.evaluation import preprocess_sentence
-from wtpsplit.utils import LANGINFO
+from wtpsplit.utils import Constants
 
 UD_TREEBANK_PATH = "data/external/ud-treebanks-v2.10"  # source: https://universaldependencies.org/#download
 WIKTEXTRACT_DATA_PATH = "data/external/raw-wiktextract-data.json"  # source: https://kaikki.org/dictionary/rawdata.html
@@ -82,10 +82,10 @@ class Args:
 if __name__ == "__main__":
     (args,) = HfArgumentParser([Args]).parse_args_into_dataclasses()
 
-    eval_data = {lang_code: {"sentence": {}, "compound": {}} for lang_code in LANGINFO.index}
+    eval_data = {lang_code: {"sentence": {}, "compound": {}} for lang_code in Constants.LANGINFO.index}
 
     # Ersatz data
-    for lang_code in tqdm(LANGINFO.index):
+    for lang_code in tqdm(Constants.LANGINFO.index):
         if lang_code in ERSATZ_TEST_DATASETS:
             eval_data[lang_code]["sentence"]["ersatz"] = {
                 "meta": {
@@ -109,8 +109,8 @@ if __name__ == "__main__":
             }
 
     # UD + OPUS100 sentences
-    for lang_code in tqdm(LANGINFO.index):
-        opus_dset_name = LANGINFO.loc[lang_code, "opus100"]
+    for lang_code in tqdm(Constants.LANGINFO.index):
+        opus_dset_name = Constants.LANGINFO.loc[lang_code, "opus100"]
 
         if opus_dset_name not in (np.nan, None):
             other_lang_code = set(opus_dset_name.split("-")) - {lang_code}
@@ -146,13 +146,13 @@ if __name__ == "__main__":
                 "data": opus100_sentences,
             }
 
-        if LANGINFO.loc[lang_code, "ud"] not in (np.nan, None):
+        if Constants.LANGINFO.loc[lang_code, "ud"] not in (np.nan, None):
             ud_data = conllu.parse(
                 open(
                     glob.glob(
                         os.path.join(
                             UD_TREEBANK_PATH,
-                            LANGINFO.loc[lang_code, "ud"],
+                            Constants.LANGINFO.loc[lang_code, "ud"],
                             "*-ud-test.conllu",
                         )
                     )[0]
@@ -165,7 +165,7 @@ if __name__ == "__main__":
                         glob.glob(
                             os.path.join(
                                 UD_TREEBANK_PATH,
-                                LANGINFO.loc[lang_code, "ud"],
+                                Constants.LANGINFO.loc[lang_code, "ud"],
                                 "*-ud-train.conllu",
                             )
                         )[0]

@@ -3,7 +3,7 @@ import sklearn.metrics
 
 import pysbd
 from wtpsplit.extract import extract
-from wtpsplit.utils import NEWLINE_INDEX, SEPARATORS, encode
+from wtpsplit.utils import Constants, encode
 
 
 def compute_iou(a, b):
@@ -59,12 +59,12 @@ def evaluate_sentence(
     positive_index=None,
 ):
     if positive_index is None:
-        positive_index = NEWLINE_INDEX
+        positive_index = Constants.NEWLINE_INDEX
 
     # preprocessing, many OPUS100 (and some UD) sentences start with "- "
     sentences = [sentence.lstrip("-").strip() for sentence in sentences]
 
-    separator = SEPARATORS[lang_code]
+    separator = Constants.SEPARATORS[lang_code]
     text = separator.join(sentences)
 
     input_ids = encode(text)

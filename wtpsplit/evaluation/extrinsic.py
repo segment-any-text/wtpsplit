@@ -9,14 +9,14 @@ import sacrebleu
 import skops.io as sio
 from datasets import load_dataset
 from wtpsplit.evaluation import ERSATZ_LANGUAGES, ersatz_sentencize, our_sentencize, preprocess_sentence
-from wtpsplit.utils import CACHE_DIR, LANGINFO, SEPARATORS
+from wtpsplit.utils import Constants
 
 
 @dataclass
 class Args:
     model_path: str
     device: str = "cuda"
-    clfs_path: str = CACHE_DIR / "main_3layers_h0_clfs.pkl"
+    clfs_path: str = Constants.CACHE_DIR / "main_3layers_h0_clfs.pkl"
     paragraph_length: int = 10
 
 
@@ -29,7 +29,7 @@ def mt_eval(
     threshold_transformed,
     threshold_newline,
 ):
-    dset_name = LANGINFO.loc[lang_code, "opus100"]
+    dset_name = Constants.LANGINFO.loc[lang_code, "opus100"]
     dset_langs = dset_name.split("-")
     target_lang = dset_langs[0] if dset_langs[1] == lang_code else dset_langs[1]
 
@@ -47,7 +47,7 @@ def mt_eval(
     all_sentences = [x[lang_code] for x in dset["test"]["translation"]]
     all_targets = [x[target_lang] for x in dset["test"]["translation"]]
 
-    separator = SEPARATORS[lang_code]
+    separator = Constants.SEPARATORS[lang_code]
 
     current_paragraph = []
     current_target = []
@@ -110,7 +110,7 @@ def mt_eval(
             ]
         )
         preds_no_sentencize = mt_pipeline(paragraph_text, truncation=True)[0]["translation_text"]
-        if LANGINFO.loc[lang_code, "no_whitespace"]:
+        if Constants.LANGINFO.loc[lang_code, "no_whitespace"]:
             naive_sentences = [
                 paragraph_text[
                     int(i * len(paragraph_text) / len(current_paragraph)) : int(

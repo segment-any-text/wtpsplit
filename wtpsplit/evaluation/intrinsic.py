@@ -12,7 +12,7 @@ import skops.io as sio
 from datasets import load_dataset
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture
 from wtpsplit.extract import extract
-from wtpsplit.utils import CACHE_DIR, LANGINFO, SEPARATORS, encode
+from wtpsplit.utils import Constants, encode
 
 
 @dataclass
@@ -28,10 +28,10 @@ class Args:
 
 
 def load_or_compute_logits(args, model, eval_data, valid_data, max_n_train_sentences=10_000):
-    logits_path = CACHE_DIR / (model.config.mixture_name + "_logits.h5")
+    logits_path = Constants.CACHE_DIR / (model.config.mixture_name + "_logits.h5")
 
     with h5py.File(logits_path, "a") as f, torch.no_grad():
-        for lang_code in LANGINFO.index:
+        for lang_code in Constants.LANGINFO.index:
             if args.include_langs is not None and lang_code not in args.include_langs:
                 continue
 
@@ -45,7 +45,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data, max_n_train_sente
                 sentences = [sample["text"].strip() for sample in valid_data if sample["lang"] == lang_code]
                 assert len(sentences) > 0
 
-                separator = SEPARATORS[lang_code]
+                separator = Constants.SEPARATORS[lang_code]
                 text = separator.join(sentences)
                 input_ids = encode(text)
 
@@ -69,7 +69,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data, max_n_train_sente
 
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"]
-                    test_text = SEPARATORS[lang_code].join(test_sentences)
+                    test_text = Constants.SEPARATORS[lang_code].join(test_sentences)
 
                     test_logits = extract(
                         [encode(test_text)],
@@ -88,7 +88,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data, max_n_train_sente
                 train_sentences = dataset["meta"].get("train_data")
                 if train_sentences is not None and "train_logits" not in dset_group:
                     train_sentences = train_sentences[:max_n_train_sentences]
-                    train_text = SEPARATORS[lang_code].join(train_sentences)
+                    train_text = Constants.SEPARATORS[lang_code].join(train_sentences)
 
                     train_logits = extract(
                         [encode(train_text)],
@@ -171,14 +171,14 @@ if __name__ == "__main__":
     sio.dump(
         clfs,
         open(
-            CACHE_DIR / (model.config.mixture_name + ".skops"),
+            Constants.CACHE_DIR / (model.config.mixture_name + ".skops"),
             "wb",
         ),
     )
     json.dump(
         results,
         open(
-            CACHE_DIR / (model.config.mixture_name + "_intrinsic_results.json"),
+            Constants.CACHE_DIR / (model.config.mixture_name + "_intrinsic_results.json"),
             "w",
         ),
         indent=4,

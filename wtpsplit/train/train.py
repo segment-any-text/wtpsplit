@@ -23,11 +23,7 @@ from wtpsplit.models import (
 from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.trainer import Trainer
 from wtpsplit.utils import (
-    AUX_OFFSET,
-    LANG_CODE_TO_INDEX,
-    LANGINFO,
-    NEWLINE_INDEX,
-    PUNCTUATION_CHARS,
+    Constants,
     LabelArgs,
     corrupt,
     get_label_dict,
@@ -87,10 +83,10 @@ class Model(nn.Module):
             losses = []
 
             if self.do_sentence_training:
-                sentence_labels = (0.5 - self.loss_margin) + (labels == NEWLINE_INDEX + 1).to(logits.dtype).view(
-                    -1
-                ) * self.loss_margin * 2
-                sentence_logits = logits[:, :, NEWLINE_INDEX].view(-1)
+                sentence_labels = (0.5 - self.loss_margin) + (labels == Constants.NEWLINE_INDEX + 1).to(
+                    logits.dtype
+                ).view(-1) * self.loss_margin * 2
+                sentence_logits = logits[:, :, Constants.NEWLINE_INDEX].view(-1)
 
                 losses.append(
                     (
@@ -108,9 +104,9 @@ class Model(nn.Module):
                 loss_fn = nn.CrossEntropyLoss()
 
                 aux_labels = torch.where(
-                    (labels == 0) | (labels == NEWLINE_INDEX + 1),
+                    (labels == 0) | (labels == Constants.NEWLINE_INDEX + 1),
                     0,
-                    labels - AUX_OFFSET,
+                    labels - Constants.AUX_OFFSET,
                 )
                 aux_labels = torch.where(
                     reduced_attention_mask == 1,
@@ -120,7 +116,7 @@ class Model(nn.Module):
 
                 losses.append(
                     loss_fn(
-                        logits[:, :, AUX_OFFSET:].view(-1, self.config.num_labels - AUX_OFFSET),
+                        logits[:, :, Constants.AUX_OFFSET :].view(-1, self.config.num_labels - Constants.AUX_OFFSET),
                         aux_labels.view(-1),
                     )
                 )
@@ -208,7 +204,7 @@ def collate_fn(batch, args, label_args, label_dict):
         all_input_ids.append(input_ids)
         all_label_weights.append(label_weights)
         all_labels.append(labels)
-        all_language_ids.append(LANG_CODE_TO_INDEX[lang])
+        all_language_ids.append(Constants.LANG_CODE_TO_INDEX[lang])
 
         all_attention_masks.append(attention_mask)
         all_position_ids.append(position_ids)
@@ -239,8 +235,8 @@ def main():
         args.model_name_or_path,
         raw_lookahead=args.lookahead,
         num_hidden_layers=args.num_hidden_layers,
-        num_labels=AUX_OFFSET + ((1 + len(PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0),
-        n_languages=len(LANG_CODE_TO_INDEX),
+        num_labels=Constants.AUX_OFFSET + ((1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0),
+        n_languages=len(Constants.LANG_CODE_TO_INDEX),
         ngram_order=args.ngram_order,
         language_adapter=args.language_adapter,
         # upsampling kernel size > 1 is problematic for packing
@@ -252,7 +248,8 @@ def main():
     if args.use_bert:
         config = BertCharConfig.from_pretrained(
             args.model_name_or_path,
-            num_labels=AUX_OFFSET + ((1 + len(PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0),
+            num_labels=Constants.AUX_OFFSET
+            + ((1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0),
         )
         backbone = BertCharForTokenClassification(config)
     elif args.from_scratch:
@@ -295,7 +292,9 @@ def main():
 
         if args.non_punctuation_sample_ratio is not None:
             languages_without_punctuation = {
-                lang_code for lang_code in LANGINFO.index if LANGINFO.loc[lang_code, "no_punctuation"]
+                lang_code
+                for lang_code in Constants.LANGINFO.index
+                if Constants.LANGINFO.loc[lang_code, "no_punctuation"]
             }
 
             def drop_some_non_punctuation_samples(examples):

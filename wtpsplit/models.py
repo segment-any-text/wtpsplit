@@ -33,7 +33,7 @@ from transformers.models.canine.modeling_canine import (
     TokenClassifierOutput,
 )
 
-from wtpsplit.utils import LANG_CODE_TO_INDEX
+from wtpsplit.utils import Constants
 
 
 class LACanineConfig(CanineConfig):
@@ -808,7 +808,7 @@ class LACanineForTokenClassification(CanineForTokenClassification):
         self.post_init()
 
     def set_language_adapters(self, lang):
-        lang_index = LANG_CODE_TO_INDEX[lang]
+        lang_index = Constants.LANG_CODE_TO_INDEX[lang]
 
         for module in self.modules():
             if isinstance(module, LACanineOutput):
