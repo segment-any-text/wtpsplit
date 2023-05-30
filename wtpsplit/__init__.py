@@ -73,7 +73,7 @@ class WtP:
                 if not onnx_path.exists():
                     onnx_path = None
             else:
-                mixture_path = cached_file(model_name_to_fetch, "mixture.skops")
+                mixture_path = cached_file(model_name_to_fetch, "mixtures.skops")
                 onnx_path = cached_file(model_name_to_fetch, "model.onnx")
 
             if ort_providers is not None:
@@ -127,6 +127,11 @@ class WtP:
         if style is not None:
             if lang_code is None:
                 raise ValueError("Please specify a `lang_code` when passing a `style` to adapt to.")
+
+            if self.mixtures is None:
+                raise ValueError(
+                    "This model does not have any associated mixtures. Maybe they are missing from the model directory?"
+                )
 
             try:
                 clf, _, _, _ = self.mixtures[lang_code][style]
@@ -218,6 +223,11 @@ class WtP:
         if style is not None:
             if lang_code is None:
                 raise ValueError("Please specify a `lang_code` when passing a `style` to adapt to.")
+
+            if self.mixtures is None:
+                raise ValueError(
+                    "This model does not have any associated mixtures. Maybe they are missing from the model directory?"
+                )
 
             try:
                 _, _, sentence_threshold, _ = self.mixtures[lang_code][style]
