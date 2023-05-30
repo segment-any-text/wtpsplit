@@ -9,4 +9,6 @@ setup(
     author_email="bminixhofer@gmail.com",
     install_requires=["torch", "transformers", "numpy", "scikit-learn", "tqdm", "skops"],
     url="https://github.com/bminixhofer/wtpsplit",
+    package_data={"wtpsplit": ["data/*"]},
+    include_package_data=True,
 )
