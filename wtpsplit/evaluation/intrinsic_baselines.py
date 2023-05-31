@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
             text = Constants.SEPARATORS[lang_code].join(sentences)
 
-            for (f, name) in [
+            for f, name in [
                 (punkt_sentencize, "punkt"),
                 (spacy_dp_sentencize, "spacy_dp"),
                 (spacy_sent_sentencize, "spacy_sent"),

@@ -16,7 +16,8 @@ import skops.io as sio
 from wtpsplit.extract import extract
 from wtpsplit.utils import Constants, encode, indices_to_sentences
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
+
 
 class ORTWrapper:
     def __init__(self, model, ort_session):
@@ -47,7 +48,15 @@ class ORTWrapper:
 
 
 class WtP:
-    def __init__(self, model_name_or_model, ort_providers=None, ort_kwargs=None, mixtures=None, hub_prefix="benjamin"):
+    def __init__(
+        self,
+        model_name_or_model,
+        from_pretrained_kwargs=None,
+        ort_providers=None,
+        ort_kwargs=None,
+        mixtures=None,
+        hub_prefix="benjamin",
+    ):
         self.model_name_or_model = model_name_or_model
         self.ort_providers = ort_providers
         self.ort_kwargs = ort_kwargs
@@ -63,7 +72,9 @@ class WtP:
             else:
                 model_name_to_fetch = model_name_or_model
 
-            model = AutoModelForTokenClassification.from_pretrained(model_name_to_fetch)
+            model = AutoModelForTokenClassification.from_pretrained(
+                model_name_to_fetch, **(from_pretrained_kwargs or {})
+            )
 
             if is_local:
                 model_path = Path(model_name_or_model)
@@ -74,11 +85,11 @@ class WtP:
                 if not onnx_path.exists():
                     onnx_path = None
             else:
-                mixture_path = cached_file(model_name_to_fetch, "mixtures.skops")
+                mixture_path = cached_file(model_name_to_fetch, "mixtures.skops", **(from_pretrained_kwargs or {}))
 
                 # no need to load if no ort_providers set
                 if ort_providers is not None:
-                    onnx_path = cached_file(model_name_to_fetch, "model.onnx")
+                    onnx_path = cached_file(model_name_to_fetch, "model.onnx", **(from_pretrained_kwargs or {}))
                 else:
                     onnx_path = None
 
