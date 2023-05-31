@@ -16,6 +16,7 @@ import skops.io as sio
 from wtpsplit.extract import extract
 from wtpsplit.utils import Constants, encode, indices_to_sentences
 
+__version__ = "1.0.0"
 
 class ORTWrapper:
     def __init__(self, model, ort_session):
@@ -125,7 +126,7 @@ class WtP:
         remove_whitespace_before_inference: bool = False,
         outer_batch_size=1000,
         return_paragraph_probabilities=False,
-        verbose: bool = True,
+        verbose: bool = False,
     ):
         if isinstance(text_or_texts, str):
             return next(
@@ -264,7 +265,7 @@ class WtP:
         outer_batch_size=1000,
         paragraph_threshold: float = 0.5,
         do_paragraph_segmentation=False,
-        verbose: bool = True,
+        verbose: bool = False,
     ):
         if isinstance(text_or_texts, str):
             return next(
@@ -285,22 +286,20 @@ class WtP:
                 )
             )
         else:
-            return next(
-                self._split(
-                    text_or_texts,
-                    lang_code=lang_code,
-                    style=style,
-                    threshold=threshold,
-                    stride=stride,
-                    block_size=block_size,
-                    batch_size=batch_size,
-                    pad_last_batch=pad_last_batch,
-                    remove_whitespace_before_inference=remove_whitespace_before_inference,
-                    outer_batch_size=outer_batch_size,
-                    paragraph_threshold=paragraph_threshold,
-                    do_paragraph_segmentation=do_paragraph_segmentation,
-                    verbose=verbose,
-                )
+            return self._split(
+                text_or_texts,
+                lang_code=lang_code,
+                style=style,
+                threshold=threshold,
+                stride=stride,
+                block_size=block_size,
+                batch_size=batch_size,
+                pad_last_batch=pad_last_batch,
+                remove_whitespace_before_inference=remove_whitespace_before_inference,
+                outer_batch_size=outer_batch_size,
+                paragraph_threshold=paragraph_threshold,
+                do_paragraph_segmentation=do_paragraph_segmentation,
+                verbose=verbose,
             )
 
     def _split(
@@ -348,7 +347,7 @@ class WtP:
                 pad_last_batch=pad_last_batch,
                 remove_whitespace_before_inference=remove_whitespace_before_inference,
                 outer_batch_size=outer_batch_size,
-                do_paragraph_segmentation=do_paragraph_segmentation,
+                return_paragraph_probabilities=do_paragraph_segmentation,
                 verbose=verbose,
             ),
         ):

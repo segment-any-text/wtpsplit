@@ -16,7 +16,7 @@ def extract(
     batch_size,
     lang_code=None,
     pad_last_batch=True,
-    verbose=True,
+    verbose=False,
 ):
     input_ids = []
     attention_masks = []
