@@ -26,6 +26,9 @@ wtp.split("This is a test This is another test.")
 # returns an iterator yielding a lists of sentences for every text
 # do this instead of calling wtp.split on every text individually for much better performance
 wtp.split(["This is a test This is another test.", "And some more texts..."])
+
+# if you're using a model with language adapters, also pass a `lang_code`
+wtp.split("This is a test This is another test.", lang_code="en")
 ```
 
 ## Available Models
