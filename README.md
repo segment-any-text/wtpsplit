@@ -111,6 +111,22 @@ from transformers import AutoModelForTokenClassification
 model = AutoModelForTokenClassification.from_pretrained("benjamin/wtp-bert-mini") # or some other model name
 ```
 
+## Reproducing the paper
+
+`configs/` contains the configs for the runs from the paper. We trained on a TPUv3-8. Launch training like this:
+
+```
+python wtpsplit/train/train.py configs/<config_name>.json
+```
+
+In addition:
+- `wtpsplit/data_acquisition` contains the code for obtaining evaluation data and raw text from the mC4 corpus.
+- `wtpsplit/evaluation` contains the code for:
+  - intrinsic evaluation (i.e. sentence segmentation results) via `intrinsic.py`. The raw intrinsic results in JSON format are also at `evaluation_results/`
+  - extrinsic evaluation on Machine Translation in `extrinsic.py`
+  - baseline (PySBD, nltk, etc.) intrinsic evaluation in `intrinsic_baselines.py`
+  - punctuation annotation experiments in `punct_annotation.py` and `punct_annotation_wtp.py`
+
 ## Supported Languages
 
 | iso | Name                   |
