@@ -119,11 +119,54 @@ class WtP:
         pad_last_batch: bool = False,
         remove_whitespace_before_inference: bool = False,
         outer_batch_size=1000,
-        do_paragraph_segmentation=False,
+        return_paragraph_probabilities=False,
         verbose: bool = True,
     ):
-        texts = [text_or_texts] if isinstance(text_or_texts, str) else text_or_texts
+        if isinstance(text_or_texts, str):
+            return next(
+                self._predict_proba(
+                    [text_or_texts],
+                    lang_code=lang_code,
+                    style=style,
+                    stride=stride,
+                    block_size=block_size,
+                    batch_size=batch_size,
+                    pad_last_batch=pad_last_batch,
+                    remove_whitespace_before_inference=remove_whitespace_before_inference,
+                    outer_batch_size=outer_batch_size,
+                    return_paragraph_probabilities=return_paragraph_probabilities,
+                    verbose=verbose,
+                )
+            )
+        else:
+            return self._predict_proba(
+                text_or_texts,
+                lang_code=lang_code,
+                style=style,
+                stride=stride,
+                block_size=block_size,
+                batch_size=batch_size,
+                pad_last_batch=pad_last_batch,
+                remove_whitespace_before_inference=remove_whitespace_before_inference,
+                outer_batch_size=outer_batch_size,
+                return_paragraph_probabilities=return_paragraph_probabilities,
+                verbose=verbose,
+            )
 
+    def _predict_proba(
+        self,
+        texts,
+        lang_code: str,
+        style: str,
+        stride: int,
+        block_size: int,
+        batch_size: int,
+        pad_last_batch: bool,
+        remove_whitespace_before_inference: bool,
+        outer_batch_size: int,
+        return_paragraph_probabilities: bool,
+        verbose: bool,
+    ):
         if style is not None:
             if lang_code is None:
                 raise ValueError("Please specify a `lang_code` when passing a `style` to adapt to.")
@@ -197,12 +240,12 @@ class WtP:
                     newline_probs = np.array(newline_probs)
                     sentence_probs = np.array(sentence_probs)
 
-                if do_paragraph_segmentation:
+                if return_paragraph_probabilities:
                     yield sentence_probs, newline_probs
                 else:
                     yield sentence_probs
 
-    def segment(
+    def split(
         self,
         text_or_texts,
         lang_code: str = None,
@@ -218,8 +261,59 @@ class WtP:
         do_paragraph_segmentation=False,
         verbose: bool = True,
     ):
-        texts = [text_or_texts] if isinstance(text_or_texts, str) else text_or_texts
+        if isinstance(text_or_texts, str):
+            return next(
+                self._split(
+                    [text_or_texts],
+                    lang_code=lang_code,
+                    style=style,
+                    threshold=threshold,
+                    stride=stride,
+                    block_size=block_size,
+                    batch_size=batch_size,
+                    pad_last_batch=pad_last_batch,
+                    remove_whitespace_before_inference=remove_whitespace_before_inference,
+                    outer_batch_size=outer_batch_size,
+                    paragraph_threshold=paragraph_threshold,
+                    do_paragraph_segmentation=do_paragraph_segmentation,
+                    verbose=verbose,
+                )
+            )
+        else:
+            return next(
+                self._split(
+                    text_or_texts,
+                    lang_code=lang_code,
+                    style=style,
+                    threshold=threshold,
+                    stride=stride,
+                    block_size=block_size,
+                    batch_size=batch_size,
+                    pad_last_batch=pad_last_batch,
+                    remove_whitespace_before_inference=remove_whitespace_before_inference,
+                    outer_batch_size=outer_batch_size,
+                    paragraph_threshold=paragraph_threshold,
+                    do_paragraph_segmentation=do_paragraph_segmentation,
+                    verbose=verbose,
+                )
+            )
 
+    def _split(
+        self,
+        texts,
+        lang_code: str,
+        style: str,
+        threshold: float,
+        stride: int,
+        block_size: int,
+        batch_size: int,
+        pad_last_batch: bool,
+        remove_whitespace_before_inference: bool,
+        outer_batch_size: int,
+        paragraph_threshold: float,
+        do_paragraph_segmentation: bool,
+        verbose: bool,
+    ):
         if style is not None:
             if lang_code is None:
                 raise ValueError("Please specify a `lang_code` when passing a `style` to adapt to.")
