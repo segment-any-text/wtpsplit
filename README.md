@@ -30,7 +30,7 @@ wtp.split(["This is a test This is another test.", "And some more texts..."])
 # if you're using a model with language adapters, also pass a `lang_code`
 wtp.split("This is a test This is another test.", lang_code="en")
 
-# depending on your usecase, adaption to e.g. the Universal Dependencies style may give better results
+# depending on your usecase, adaptation to e.g. the Universal Dependencies style may give better results
 # this always requires a language code
 wtp.split("This is a test This is another test.", lang_code="en", style="ud")
 ```
