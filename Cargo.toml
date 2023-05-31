@@ -1,7 +1,0 @@
-[workspace]
-
-members = [
-    "nnsplit",
-    "bindings/javascript",
-    "bindings/python"
-]
