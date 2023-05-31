@@ -74,7 +74,12 @@ class WtP:
                     onnx_path = None
             else:
                 mixture_path = cached_file(model_name_to_fetch, "mixtures.skops")
-                onnx_path = cached_file(model_name_to_fetch, "model.onnx")
+
+                # no need to load if no ort_providers set
+                if ort_providers is not None:
+                    onnx_path = cached_file(model_name_to_fetch, "model.onnx")
+                else:
+                    onnx_path = None
 
             if ort_providers is not None:
                 if onnx_path is None:
