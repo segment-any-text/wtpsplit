@@ -1,6 +1,6 @@
 # wtpsplit🪓
 
-Code for the paper [Where's the Point? Self-Supervised Multilingual Punctuation-Agnostic Sentence Segmentation](https://arxiv.org/abs/2305.18893) accepted at ACL 2023.
+Code for the paper [Where's the Point? Self-Supervised Multilingual Punctuation-Agnostic Sentence Segmentation](https://arxiv.org/abs/2305.18893) with Jonas Pfeiffer and Ivan Vulić, accepted at ACL 2023.
 
 This repository contains `wtpsplit`, a package for robust and adaptible sentence segmentation across 85 languages, as well as the code and configs to reproduce the experiments in the paper.
 
