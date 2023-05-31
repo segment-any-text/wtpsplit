@@ -135,6 +135,8 @@ You can enable ONNX inference for the `wtp-bert-*` models:
 wtp = WtP("wtp-bert-mini", onnx_providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
 ```
 
+This requires `onnxruntime` and `onnxruntime-gpu`.
+
 However, on my hardware, this *did not* produce a speedup over PyTorch. The embeddings in ONNX inference still have to be computed using PyTorch because hash embeddings are supported by ONNX, so the moving around of tensors might cause it to be slower.
 
 The `wtp-canine-*` models are currently not supported with ONNX because the pooling done by CANINE is not trivial to export. 
