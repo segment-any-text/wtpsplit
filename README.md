@@ -30,7 +30,34 @@ wtp.split(["This is a test This is another test.", "And some more texts..."])
 
 ## Available Models
 
+Pro tips: I recommend `wtp-bert-mini` for speed-sensitive applications, otherwise `wtp-canine-s-12l`. The `*-no-adapters` models provide a good tradeoff between speed and performance. You should *probably not* use `wtp-bert-tiny`.
 
+| Model                                                                      |    English Score |    English Score<br>(adapted) |    Multilingual Score |    Multilingual Score<br>(adapted) |
+|:-----------------------------------------------------------------------|-----:|-----:|-----:|-----:|
+| [wtp-bert-tiny](https://huggingface.co/benjamin/wtp-bert-tiny)                | 83.8 | 91.9 | 79.5 | 88.6 |
+| [wtp-bert-mini](https://huggingface.co/benjamin/wtp-bert-mini)                | 91.8 | 95.9 | 84.3 | 91.3 |
+| [wtp-canine-s-1l](https://huggingface.co/benjamin/wtp-canine-s-1l)              | 94.5 | 96.5 | 86.7 | 92.8 |
+| [wtp-canine-s-1l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-1l-no-adapters)  | 93.1 | 96.4 | 85.1 | 91.8 |
+| [wtp-canine-s-3l](https://huggingface.co/benjamin/wtp-canine-s-3l)              | 94.4 | 96.8 | 86.7 | 93.4 |
+| [wtp-canine-s-3l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-3l-no-adapters)  | 93.8 | 96.4 | 86   | 92.3 |
+| [wtp-canine-s-6l](https://huggingface.co/benjamin/wtp-canine-s-6l)              | 94.5 | 97.1 | 87   | 93.6 |
+| [wtp-canine-s-6l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-6l-no-adapters)  | 94.4 | 96.8 | 86.4 | 92.8 |
+| [wtp-canine-s-9l](https://huggingface.co/benjamin/wtp-canine-s-9l)              | 94.8 | 97   | 87.7 | 93.8 |
+| [wtp-canine-s-9l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-9l-no-adapters)  | 94.3 | 96.9 | 86.6 | 93   |
+| [wtp-canine-s-12l](https://huggingface.co/benjamin/wtp-canine-s-12l)             | 94.7 | 97.1 | 87.9 | 94   |
+| [wtp-canine-s-12l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-12l-no-adapters) | 94.5 | 97   | 87.1 | 93.2 |
+
+The scores are macro-average F1 score across all available datasets for "English", and macro-average F1 score across all datasets and languages for "Multilingual". "adapted" means adapation via WtP Punct; check out the paper for details. 
+
+For comparison, here's the English scores of some other tools:
+
+| Model                                                                      |    English Score
+|:-----------------------------------------------------------------------|-----:|
+| SpaCy (sentencizer) | 86.8 |
+| PySBD | 69.8 |
+| SpaCy (dependency parser) | 93.1 |
+| Ersatz | 91.6 |
+| Punkt (`nltk.sent_tokenize`) | 92.5 |
 
 ### Paragraph Segmentation
 
@@ -177,4 +204,3 @@ model = AutoModelForTokenClassification.from_pretrained("benjamin/wtp-bert-mini"
 ## Previous Version
 
 *This repository previously contained `nnsplit`, the precursor to `wtpsplit`. You can still use the `nnsplit` branch (or the `nnsplit` PyPI releases) for the old version, however, this is highly discouraged and not maintained! Please let me know if you have a usecase which `nnsplit` can solve but `wtpsplit` can not.*
-
