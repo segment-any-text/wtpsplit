@@ -127,6 +127,20 @@ In addition:
   - baseline (PySBD, nltk, etc.) intrinsic evaluation in `intrinsic_baselines.py`
   - punctuation annotation experiments in `punct_annotation.py` and `punct_annotation_wtp.py`
 
+## ONNX support (experimental)
+
+You can enable ONNX inference for the `wtp-bert-*` models:
+
+```python
+wtp = WtP("wtp-bert-mini", onnx_providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
+```
+
+However, on my hardware, this *did not* produce a speedup over PyTorch. The embeddings in ONNX inference still have to be computed using PyTorch because hash embeddings are supported by ONNX, so the moving around of tensors might cause it to be slower.
+
+The `wtp-canine-*` models are currently not supported with ONNX because the pooling done by CANINE is not trivial to export. 
+
+Ideas to solve this (and the hash embeddings problem) are very welcome!
+
 ## Supported Languages
 
 | iso | Name                   |
