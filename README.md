@@ -240,6 +240,21 @@ Ideas to solve this (and the hash embeddings problem) are very welcome!
 | zh  | Chinese                |
 | zu  | Zulu                   |
 
+## Citation
+
+Please cite `wtpsplit` as 
+
+```
+@misc{minixhofer2023wheres,
+      title={Where's the Point? Self-Supervised Multilingual Punctuation-Agnostic Sentence Segmentation}, 
+      author={Benjamin Minixhofer and Jonas Pfeiffer and Ivan Vulić},
+      year={2023},
+      eprint={2305.18893},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL}
+}
+```
+
 ## Previous Version
 
 *This repository previously contained `nnsplit`, the precursor to `wtpsplit`. You can still use the `nnsplit` branch (or the `nnsplit` PyPI releases) for the old version, however, this is highly discouraged and not maintained! Please let me know if you have a usecase which `nnsplit` can solve but `wtpsplit` can not.*
