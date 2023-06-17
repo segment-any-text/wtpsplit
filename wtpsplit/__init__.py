@@ -85,7 +85,10 @@ class WtP:
                 if not onnx_path.exists():
                     onnx_path = None
             else:
-                mixture_path = cached_file(model_name_to_fetch, "mixtures.skops", **(from_pretrained_kwargs or {}))
+                try:
+                    mixture_path = cached_file(model_name_to_fetch, "mixtures.skops", **(from_pretrained_kwargs or {}))
+                except OSError:
+                    mixture_path = None
 
                 # no need to load if no ort_providers set
                 if ort_providers is not None:
@@ -312,6 +315,17 @@ class WtP:
                 do_paragraph_segmentation=do_paragraph_segmentation,
                 verbose=verbose,
             )
+        
+    def get_threshold(self, lang_code: str, style: str, return_punctuation_threshold: bool = False):
+        try:
+            _, _, punctuation_threshold, threshold = self.mixtures[lang_code][style]
+        except KeyError:
+            raise ValueError(f"Could not find a mixture for the style '{style}' and language '{lang_code}'.")
+
+        if return_punctuation_threshold:
+            return punctuation_threshold
+
+        return threshold
 
     def _split(
         self,
@@ -339,12 +353,14 @@ class WtP:
                 )
 
             try:
-                _, _, sentence_threshold, _ = self.mixtures[lang_code][style]
+                _, _, default_threshold, _ = self.mixtures[lang_code][style]
             except KeyError:
                 raise ValueError(f"Could not find a mixture for the style '{style}'.")
         else:
             # the established default for newline prob threshold is 0.01
-            sentence_threshold = threshold if threshold is not None else 0.01
+            default_threshold = 0.01
+
+        sentence_threshold = threshold if threshold is not None else default_threshold
 
         for text, probs in zip(
             texts,

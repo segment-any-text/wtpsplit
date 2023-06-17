@@ -88,6 +88,17 @@ WtP can adapt to the Universal Dependencies, OPUS100 or Ersatz corpus segmentati
 wtp.split(text, lang_code="en", style="ud")
 ```
 
+This also allows changing the threshold, but inherently has higher thresholds values since it is not newline probablity anymore being thresholded:
+
+```python
+wtp.split(text, lang_code="en", style="ud", threshold=0.7)
+```
+
+To get the default threshold for a style:
+```python
+wtp.get_threshold("en", "ud", return_punctuation_threshold=True)
+```
+
 #### Threshold Adaptation
 ```python
 threshold = wtp.get_threshold("en", "ud")
