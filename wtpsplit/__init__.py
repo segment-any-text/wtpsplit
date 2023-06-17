@@ -16,7 +16,7 @@ import skops.io as sio
 from wtpsplit.extract import extract
 from wtpsplit.utils import Constants, encode, indices_to_sentences
 
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 
 
 class ORTWrapper:
