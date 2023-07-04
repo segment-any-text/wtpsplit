@@ -8,7 +8,7 @@ setup(
     author="Benjamin Minixhofer",
     author_email="bminixhofer@gmail.com",
     install_requires=[
-        "onnxruntime>=1.15.1",
+        "onnxruntime>=1.13.1",
         "transformers>=4.22.2",
         "numpy>=1",
         "scikit-learn==1.2.2",
