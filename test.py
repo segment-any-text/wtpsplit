@@ -1,3 +1,4 @@
+# noqa: E501
 from wtpsplit import WtP
 
 
@@ -57,7 +58,7 @@ Daniel Wroughton Craig CMG (born 2 March 1968) is an English actor who gained in
 """.strip().split()
     )
 
-    splits = wtp.split(text, do_paragraph_segmentation=True, paragraph_threshold=0.1)
+    splits = wtp.split(text, do_paragraph_segmentation=True)
 
     paragraph1 = "".join(splits[0])
     paragraph2 = "".join(splits[1])
@@ -67,7 +68,7 @@ Daniel Wroughton Craig CMG (born 2 March 1968) is an English actor who gained in
 
 
 def test_split_paragraphs_with_language_adapters():
-    wtp = WtP("benjamin/wtp-canine-s-3l-no-adapters", hub_prefix=None)
+    wtp = WtP("benjamin/wtp-canine-s-3l", hub_prefix=None)
 
     text = " ".join(
         """
@@ -76,7 +77,7 @@ Daniel Wroughton Craig CMG (born 2 March 1968) is an English actor who gained in
 """.strip().split()
     )
 
-    splits = wtp.split(text, do_paragraph_segmentation=True, paragraph_threshold=0.1)
+    splits = wtp.split(text, do_paragraph_segmentation=True, lang_code="en")
 
     paragraph1 = "".join(splits[0])
     paragraph2 = "".join(splits[1])

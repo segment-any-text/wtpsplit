@@ -5,7 +5,7 @@ from typing import Optional, Tuple, Union
 import torch
 from torch import nn
 from transformers import AutoModel, AutoModelForTokenClassification
-from transformers.models.bert.modeling_bert import (BertConfig, BertEncoder,
+from transformers.models.bert.modeling_bert import (BertEncoder,
                                                     BertForTokenClassification,
                                                     BertModel, BertPooler)
 from transformers.models.canine.modeling_canine import (

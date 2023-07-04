@@ -12,7 +12,7 @@ from transformers import AutoModelForTokenClassification, HfArgumentParser
 
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture
 from wtpsplit.extract import extract
-from wtpsplit.utils import Constants, encode
+from wtpsplit.utils import Constants
 
 
 @dataclass

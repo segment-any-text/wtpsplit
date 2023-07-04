@@ -82,7 +82,7 @@ def extract(
             start, end = j, j + block_size
             done = False
 
-            if end > text_lengths[i]:
+            if end >= text_lengths[i]:
                 end = text_lengths[i]
                 start = max(end - block_size, 0)
                 done = True

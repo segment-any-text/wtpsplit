@@ -3,7 +3,7 @@ import pysbd
 import sklearn.metrics
 
 from wtpsplit.extract import extract
-from wtpsplit.utils import Constants, encode
+from wtpsplit.utils import Constants
 
 
 def compute_iou(a, b):

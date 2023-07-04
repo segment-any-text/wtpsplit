@@ -2,11 +2,10 @@ import math
 import os
 from pathlib import Path
 import contextlib
-import os
 
 # avoid the "None of PyTorch, TensorFlow, etc. have been found" warning.
 with contextlib.redirect_stderr(open(os.devnull, "w")):
-    import transformers
+    import transformers  # noqa
 
 import numpy as np
 import skops.io as sio

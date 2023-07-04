@@ -9,7 +9,7 @@ from sklearn.metrics import (f1_score, precision_recall_curve, precision_score,
                              recall_score)
 
 from wtpsplit.extract import extract
-from wtpsplit.utils import (Constants, encode, indices_to_sentences,
+from wtpsplit.utils import (Constants, indices_to_sentences,
                             lang_code_to_lang, reconstruct_sentences)
 
 

@@ -7,7 +7,7 @@ from transformers import AutoModelForTokenClassification, HfArgumentParser
 
 import wtpsplit.models  # noqa
 from wtpsplit.extract import extract
-from wtpsplit.utils import Constants, encode
+from wtpsplit.utils import Constants
 
 
 @dataclass
