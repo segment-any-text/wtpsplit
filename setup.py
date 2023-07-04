@@ -11,7 +11,7 @@ setup(
         "onnxruntime>=1.13.1",
         "transformers>=4.22.2",
         "numpy>=1",
-        "scikit-learn==1.2.2",
+        "scikit-learn>=1",
         "tqdm",
         "skops",
         "pandas>=2",
