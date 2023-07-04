@@ -6,10 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
+from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import HfArgumentParser
 
-from datasets import load_dataset
 from wtpsplit.utils import Constants
 
 all_chars = [chr(c) for c in range(0x110000)]

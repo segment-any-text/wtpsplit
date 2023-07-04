@@ -6,16 +6,10 @@ import torch
 from tqdm import tqdm
 from transformers import HfArgumentParser
 
-from wtpsplit.evaluation import (
-    LanguageError,
-    ersatz_sentencize,
-    evaluate_sentences,
-    preprocess_sentence,
-    punkt_sentencize,
-    pysbd_sentencize,
-    spacy_dp_sentencize,
-    spacy_sent_sentencize,
-)
+from wtpsplit.evaluation import (LanguageError, ersatz_sentencize,
+                                 evaluate_sentences, preprocess_sentence,
+                                 punkt_sentencize, pysbd_sentencize,
+                                 spacy_dp_sentencize, spacy_sent_sentencize)
 from wtpsplit.utils import Constants
 
 

@@ -1,50 +1,23 @@
+import math
 import os
 from pathlib import Path
+import contextlib
+import os
 
-# to register models for AutoModel
-import wtpsplit.models  # noqa
+# avoid the "None of PyTorch, TensorFlow, etc. have been found" warning.
+with contextlib.redirect_stderr(open(os.devnull, "w")):
+    import transformers
 
-
-import math
 import numpy as np
-
-import torch
-from transformers import AutoModelForTokenClassification
-from transformers.utils.hub import cached_file
 import skops.io as sio
+from transformers import AutoConfig, AutoModelForTokenClassification
+from transformers.utils.hub import cached_file
 
-from wtpsplit.extract import extract
-from wtpsplit.utils import Constants, encode, indices_to_sentences
+from wtpsplit.extract import ORTWrapper, PyTorchWrapper, extract
+from wtpsplit.utils import Constants, indices_to_sentences, sigmoid
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
-
-class ORTWrapper:
-    def __init__(self, model, ort_session):
-        self.model = model
-        self.ort_session = ort_session
-
-    @property
-    def device(self):
-        return self.model.device
-
-    @property
-    def config(self):
-        return self.model.config
-
-    def __call__(self, input_ids, attention_mask, position_ids):
-        inputs_embeds = self.model.get_input_embeddings()(input_ids)
-
-        logits = self.ort_session.run(
-            ["logits"],
-            {
-                "attention_mask": attention_mask.detach().numpy(),
-                "position_ids": position_ids.detach().numpy(),
-                "inputs_embeds": inputs_embeds.detach().numpy(),
-            },
-        )[0]
-
-        return {"logits": torch.from_numpy(logits).to(self.model.device)}
 
 
 class WtP:
@@ -64,20 +37,16 @@ class WtP:
         mixture_path = None
 
         if isinstance(model_name_or_model, (str, Path)):
-            model_name_or_model = str(model_name_or_model)
-            is_local = os.path.isdir(model_name_or_model)
+            model_name = str(model_name_or_model)
+            is_local = os.path.isdir(model_name)
 
             if not is_local and hub_prefix is not None:
-                model_name_to_fetch = f"{hub_prefix}/{model_name_or_model}"
+                model_name_to_fetch = f"{hub_prefix}/{model_name}"
             else:
-                model_name_to_fetch = model_name_or_model
-
-            model = AutoModelForTokenClassification.from_pretrained(
-                model_name_to_fetch, **(from_pretrained_kwargs or {})
-            )
+                model_name_to_fetch = model_name
 
             if is_local:
-                model_path = Path(model_name_or_model)
+                model_path = Path(model_name)
                 mixture_path = model_path / "mixture.skops"
                 if not mixture_path.exists():
                     mixture_path = None
@@ -102,13 +71,32 @@ class WtP:
                         "Could not find an ONNX model in the model directory. Try `use_ort=False` to run with PyTorch."
                     )
 
-                import onnxruntime as ort
+                try:
+                    import onnxruntime as ort  # noqa
+                except ModuleNotFoundError:
+                    raise ValueError("Please install `onnxruntime` to use WtP with an ONNX model.")
+
+                # to register models for AutoConfig
+                import wtpsplit.configs  # noqa
 
                 self.model = ORTWrapper(
-                    model, ort.InferenceSession(onnx_path, providers=ort_providers, **(ort_kwargs or {}))
+                    AutoConfig.from_pretrained(model_name),
+                    ort.InferenceSession(str(onnx_path), providers=ort_providers, **(ort_kwargs or {})),
                 )
             else:
-                self.model = model
+                # to register models for AutoConfig
+                try:
+                    import torch  # noqa
+                except ModuleNotFoundError:
+                    raise ValueError("Please install `torch` to use WtP with a PyTorch model.")
+
+                import wtpsplit.models  # noqa
+
+                self.model = PyTorchWrapper(
+                    AutoModelForTokenClassification.from_pretrained(
+                        model_name_to_fetch, **(from_pretrained_kwargs or {})
+                    )
+                )
         else:
             if ort_providers is not None:
                 raise ValueError("You can only use onnxruntime with a model directory, not a model object.")
@@ -133,7 +121,7 @@ class WtP:
         text_or_texts,
         lang_code: str = None,
         style: str = None,
-        stride=64,
+        stride=256,
         block_size: int = 512,
         batch_size=32,
         pad_last_batch: bool = False,
@@ -230,7 +218,7 @@ class WtP:
                 input_texts.append(input_text)
 
             outer_batch_logits = extract(
-                [encode(text) for text in outer_batch_texts],
+                outer_batch_texts,
                 self.model,
                 lang_code=lang_code,
                 stride=stride,
@@ -241,7 +229,7 @@ class WtP:
             )
 
             def newline_probability_fn(logits):
-                return torch.sigmoid(logits.float()[:, Constants.NEWLINE_INDEX]).numpy()
+                return sigmoid(logits[:, Constants.NEWLINE_INDEX])
 
             for i, (text, logits) in enumerate(zip(outer_batch_texts, outer_batch_logits)):
                 if style is not None:
@@ -315,7 +303,7 @@ class WtP:
                 do_paragraph_segmentation=do_paragraph_segmentation,
                 verbose=verbose,
             )
-        
+
     def get_threshold(self, lang_code: str, style: str, return_punctuation_threshold: bool = False):
         try:
             _, _, punctuation_threshold, threshold = self.mixtures[lang_code][style]

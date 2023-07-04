@@ -2,13 +2,13 @@ import glob
 import os
 from dataclasses import dataclass
 
+import conllu
 import numpy as np
 import torch
+from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import HfArgumentParser
 
-import conllu
-from datasets import load_dataset
 from wtpsplit.evaluation import preprocess_sentence
 from wtpsplit.utils import Constants
 

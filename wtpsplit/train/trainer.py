@@ -5,26 +5,15 @@ import torch
 import transformers
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
-from transformers.trainer import (
-    ALL_LAYERNORM_LAYERS,
-    DataLoader,
-    EvalLoopOutput,
-    IterableDatasetShard,
-    List,
-    Optional,
-    ShardedDDPOption,
-    deepspeed_init,
-    denumpify_detensorize,
-    find_batch_size,
-    get_parameter_names,
-    has_length,
-    is_sagemaker_mp_enabled,
-    is_torch_tpu_available,
-    logger,
-    nested_concat,
-    nested_numpify,
-    nested_truncate,
-)
+from transformers.trainer import (ALL_LAYERNORM_LAYERS, DataLoader,
+                                  EvalLoopOutput, IterableDatasetShard, List,
+                                  Optional, ShardedDDPOption, deepspeed_init,
+                                  denumpify_detensorize, find_batch_size,
+                                  get_parameter_names, has_length,
+                                  is_sagemaker_mp_enabled,
+                                  is_torch_tpu_available, logger,
+                                  nested_concat, nested_numpify,
+                                  nested_truncate)
 
 if is_torch_tpu_available(check_device=False):
     import torch_xla.core.xla_model as xm  # noqa: F401

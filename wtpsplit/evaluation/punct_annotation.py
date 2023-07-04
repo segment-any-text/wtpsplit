@@ -4,22 +4,17 @@ from functools import partial
 
 import numpy as np
 import torch
+import wandb
+from datasets import load_dataset
 from sklearn.metrics import f1_score
 from torch import nn
 from tqdm.auto import tqdm
-from transformers import (
-    AutoModel,
-    AutoModelForTokenClassification,
-    AutoTokenizer,
-    CanineTokenizer,
-    HfArgumentParser,
-    Trainer,
-    TrainingArguments,
-)
+from transformers import (AutoModel, AutoModelForTokenClassification,
+                          AutoTokenizer, CanineTokenizer, HfArgumentParser,
+                          Trainer, TrainingArguments)
 
-import wandb
-from datasets import load_dataset
-from wtpsplit.models import LACanineConfig, LACanineForTokenClassification, LACanineModel
+from wtpsplit.models import (LACanineConfig, LACanineForTokenClassification,
+                             LACanineModel)
 from wtpsplit.utils import Constants
 
 

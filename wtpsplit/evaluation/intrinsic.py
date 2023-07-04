@@ -3,13 +3,13 @@ import json
 from dataclasses import dataclass
 from typing import List
 
+import h5py
+import skops.io as sio
 import torch
+from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForTokenClassification, HfArgumentParser
 
-import h5py
-import skops.io as sio
-from datasets import load_dataset
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture
 from wtpsplit.extract import extract
 from wtpsplit.utils import Constants, encode
@@ -47,10 +47,9 @@ def load_or_compute_logits(args, model, eval_data, valid_data, max_n_train_sente
 
                 separator = Constants.SEPARATORS[lang_code]
                 text = separator.join(sentences)
-                input_ids = encode(text)
 
                 valid_logits = extract(
-                    [input_ids],
+                    [text],
                     model,
                     lang_code=lang_code,
                     stride=args.stride,
@@ -72,7 +71,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data, max_n_train_sente
                     test_text = Constants.SEPARATORS[lang_code].join(test_sentences)
 
                     test_logits = extract(
-                        [encode(test_text)],
+                        [test_text],
                         model,
                         lang_code=lang_code,
                         stride=args.stride,
@@ -91,7 +90,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data, max_n_train_sente
                     train_text = Constants.SEPARATORS[lang_code].join(train_sentences)
 
                     train_logits = extract(
-                        [encode(train_text)],
+                        [train_text],
                         model,
                         lang_code=lang_code,
                         stride=args.stride,

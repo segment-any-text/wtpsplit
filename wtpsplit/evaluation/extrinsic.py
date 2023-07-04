@@ -2,13 +2,15 @@ from dataclasses import dataclass
 
 import pandas as pd
 import regex as re
-from tqdm.auto import tqdm
-from transformers import AutoModelForTokenClassification, HfArgumentParser, pipeline
-
 import sacrebleu
 import skops.io as sio
 from datasets import load_dataset
-from wtpsplit.evaluation import ERSATZ_LANGUAGES, ersatz_sentencize, our_sentencize, preprocess_sentence
+from tqdm.auto import tqdm
+from transformers import (AutoModelForTokenClassification, HfArgumentParser,
+                          pipeline)
+
+from wtpsplit.evaluation import (ERSATZ_LANGUAGES, ersatz_sentencize,
+                                 our_sentencize, preprocess_sentence)
 from wtpsplit.utils import Constants
 
 

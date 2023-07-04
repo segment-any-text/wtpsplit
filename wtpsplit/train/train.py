@@ -9,25 +9,16 @@ from typing import List
 
 import numpy as np
 import torch
+import wandb
+from datasets import load_dataset
 from torch import nn
 from transformers import HfArgumentParser, TrainingArguments
 
-import wandb
-from datasets import load_dataset
-from wtpsplit.models import (
-    BertCharConfig,
-    BertCharForTokenClassification,
-    LACanineConfig,
-    LACanineForTokenClassification,
-)
+from wtpsplit.models import (BertCharConfig, BertCharForTokenClassification,
+                             LACanineConfig, LACanineForTokenClassification)
 from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.trainer import Trainer
-from wtpsplit.utils import (
-    Constants,
-    LabelArgs,
-    corrupt,
-    get_label_dict,
-)
+from wtpsplit.utils import Constants, LabelArgs, corrupt, get_label_dict
 
 
 class Model(nn.Module):

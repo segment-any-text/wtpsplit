@@ -1,7 +1,7 @@
 import numpy as np
+import pysbd
 import sklearn.metrics
 
-import pysbd
 from wtpsplit.extract import extract
 from wtpsplit.utils import Constants, encode
 
@@ -67,10 +67,8 @@ def evaluate_sentence(
     separator = Constants.SEPARATORS[lang_code]
     text = separator.join(sentences)
 
-    input_ids = encode(text)
-
     logits = extract(
-        [input_ids],
+        [text],
         model,
         lang_code=lang_code,
         stride=stride,

@@ -4,74 +4,19 @@ from typing import Optional, Tuple, Union
 
 import torch
 from torch import nn
-from transformers import AutoConfig, AutoModel, AutoModelForTokenClassification, CanineConfig
-from transformers.models.bert.modeling_bert import (
-    BertConfig,
-    BertEncoder,
-    BertForTokenClassification,
-    BertModel,
-    BertPooler,
-)
+from transformers import AutoModel, AutoModelForTokenClassification
+from transformers.models.bert.modeling_bert import (BertConfig, BertEncoder,
+                                                    BertForTokenClassification,
+                                                    BertModel, BertPooler)
 from transformers.models.canine.modeling_canine import (
-    _PRIMES,
-    ACT2FN,
-    BaseModelOutput,
-    CanineAttention,
-    CanineEmbeddings,
-    CanineEncoder,
-    CanineForTokenClassification,
-    CanineIntermediate,
-    CanineLayer,
-    CanineModel,
-    CanineModelOutputWithPooling,
-    CanineOutput,
-    CaninePooler,
-    CanineSelfAttention,
-    CanineSelfOutput,
-    CharactersToMolecules,
-    ConvProjection,
-    TokenClassifierOutput,
-)
+    _PRIMES, ACT2FN, BaseModelOutput, CanineAttention, CanineEmbeddings,
+    CanineEncoder, CanineForTokenClassification, CanineIntermediate,
+    CanineLayer, CanineModel, CanineModelOutputWithPooling, CanineOutput,
+    CaninePooler, CanineSelfAttention, CanineSelfOutput, CharactersToMolecules,
+    ConvProjection, TokenClassifierOutput)
 
+from wtpsplit.configs import BertCharConfig, LACanineConfig
 from wtpsplit.utils import Constants
-
-
-class LACanineConfig(CanineConfig):
-    model_type = "la-canine"
-
-    def __init__(
-        self,
-        n_languages=None,
-        ngram_order=1,
-        bottleneck_factor=2,
-        language_adapter="on",
-        lookahead=None,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-
-        self.n_languages = n_languages
-        self.ngram_order = ngram_order
-        self.language_adapter = language_adapter  # 'on', 'off', 'shared'
-        self.bottleneck_factor = bottleneck_factor
-
-        self.lookahead = lookahead
-        self.lookahead_block_size = 1
-
-
-class BertCharConfig(BertConfig):
-    model_type = "bert-char"
-
-    def __init__(
-        self,
-        num_hash_buckets=8192,
-        num_hash_functions=8,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-
-        self.num_hash_buckets = num_hash_buckets
-        self.num_hash_functions = num_hash_functions
 
 
 # added n-gram representations
@@ -80,6 +25,8 @@ class LACanineEmbeddings(CanineEmbeddings):
         super().__init__(config)
 
         self.ngram_order = getattr(config, "ngram_order", 1)
+        if self.ngram_order > 1:
+            raise NotImplementedError("n-gram representations are not implemented.")
 
         shard_embedding_size = config.hidden_size // config.num_hash_functions
         for j in range(2, self.ngram_order + 1):
@@ -91,7 +38,15 @@ class LACanineEmbeddings(CanineEmbeddings):
                     nn.Embedding(config.num_hash_buckets, shard_embedding_size),
                 )
 
-    def _embed_hash_buckets(self, input_ids, embedding_size: int, num_hashes: int, num_buckets: int):
+    def _embed_hash_buckets(self, input_ids=None, hashed_ids=None):
+        embedding_size = self.config.hidden_size
+        num_hashes = self.config.num_hash_functions
+        num_buckets = self.config.num_hash_buckets
+
+        assert (input_ids is None) + (
+            hashed_ids is None
+        ) == 1, "Either `input_ids` or `hashed_ids` must be provided (and not both!)."
+
         """Converts IDs (e.g. codepoints) into embeddings via multiple hashing."""
         if embedding_size % num_hashes != 0:
             raise ValueError(f"Expected `embedding_size` ({embedding_size}) % `num_hashes` ({num_hashes}) == 0")
@@ -103,25 +58,50 @@ class LACanineEmbeddings(CanineEmbeddings):
         for i in range(num_hashes):
             name = f"HashBucketCodepointEmbedder_{i}"
 
-            hash_ids = (input_ids + 1) * _PRIMES[i]
+            hash_ids = ((input_ids + 1) * _PRIMES[i]) % num_buckets if hashed_ids is None else hashed_ids[:, :, i]
 
-            shard_embeddings = getattr(self, name)(hash_ids % num_buckets)
-
-            for j in range(2, self.ngram_order + 1):
-                name = f"HashBucketCodepointEmbedder_{i}_{j}"
-
-                prev_hash_ids = hash_ids.clone()
-
-                hash_ids[:-1] = (input_ids[:-1] + prev_hash_ids[1:] + 1) * _PRIMES[i]
-                shard_embeddings += getattr(self, name)(hash_ids % num_buckets)
-
+            shard_embeddings = getattr(self, name)(hash_ids)
             embedding_shards.append(shard_embeddings)
 
         return torch.cat(embedding_shards, dim=-1)
 
-    def forward(self, *args, **kwargs):
-        kwargs.pop("past_key_values_length", None)
-        return super().forward(*args, **kwargs)
+    def forward(
+        self,
+        input_ids: Optional[torch.LongTensor] = None,
+        hashed_ids: Optional[torch.LongTensor] = None,
+        token_type_ids: Optional[torch.LongTensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        **kwargs,
+    ) -> torch.FloatTensor:
+        if input_ids is not None:
+            input_shape = input_ids.size()
+        elif hashed_ids is not None:
+            input_shape = hashed_ids.size()[:-1]
+        else:
+            input_shape = inputs_embeds.size()[:-1]
+
+        seq_length = input_shape[1]
+
+        if position_ids is None:
+            position_ids = self.position_ids[:, :seq_length]
+
+        if token_type_ids is None:
+            token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=self.position_ids.device)
+
+        if inputs_embeds is None:
+            inputs_embeds = self._embed_hash_buckets(input_ids, hashed_ids)
+
+        token_type_embeddings = self.token_type_embeddings(token_type_ids)
+
+        embeddings = inputs_embeds + token_type_embeddings
+
+        if self.position_embedding_type == "absolute":
+            position_embeddings = self.char_position_embeddings(position_ids)
+            embeddings += position_embeddings
+        embeddings = self.LayerNorm(embeddings)
+        embeddings = self.dropout(embeddings)
+        return embeddings
 
 
 class LACanineSelfAttention(CanineSelfAttention):
@@ -697,7 +677,9 @@ class LACanineModel(CanineModel):
         # We use a 3D attention mask for the local attention.
         # `input_char_encoding`: shape (batch_size, char_seq_len, char_dim)
         if attention_mask.ndim == 2:
-            char_attention_mask = self._create_3d_attention_mask_from_input_mask(input_ids, attention_mask)
+            char_attention_mask = self._create_3d_attention_mask_from_input_mask(
+                input_ids or inputs_embeds, attention_mask
+            )
         else:
             char_attention_mask = attention_mask
         init_chars_encoder_outputs = self.initial_char_encoder(
@@ -830,12 +812,22 @@ class LACanineForTokenClassification(CanineForTokenClassification):
         labels: Optional[torch.LongTensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
+        hashed_ids: Optional[torch.Tensor] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
+        inputs_embeds = self.canine.char_embeddings(
+            input_ids=input_ids,
+            hashed_ids=hashed_ids,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            inputs_embeds=inputs_embeds,
+        )
+        input_ids = None
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.canine(
@@ -932,9 +924,19 @@ class BertCharForTokenClassification(BertForTokenClassification):
         labels: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
+        hashed_ids: Optional[torch.Tensor] = None,
         language_ids=None,
         return_dict: Optional[bool] = None,
     ):
+        inputs_embeds = self.bert.embeddings(
+            input_ids=input_ids,
+            hashed_ids=hashed_ids,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            inputs_embeds=inputs_embeds,
+        )
+        input_ids = None
+
         return super().forward(
             input_ids,
             attention_mask,
@@ -949,10 +951,8 @@ class BertCharForTokenClassification(BertForTokenClassification):
         )
 
 
-AutoConfig.register("la-canine", LACanineConfig)
 AutoModel.register(LACanineConfig, LACanineModel)
 AutoModelForTokenClassification.register(LACanineConfig, LACanineForTokenClassification)
 
-AutoConfig.register("bert-char", BertCharConfig)
 AutoModel.register(BertCharConfig, BertCharModel)
 AutoModelForTokenClassification.register(BertCharConfig, BertCharForTokenClassification)
