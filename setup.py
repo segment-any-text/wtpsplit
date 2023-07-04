@@ -15,7 +15,7 @@ setup(
         "tqdm",
         "skops",
         "pandas>=1",
-        "cached_property" # for Py37
+        "cached_property",  # for Py37
     ],
     url="https://github.com/bminixhofer/wtpsplit",
     package_data={"wtpsplit": ["data/*"]},

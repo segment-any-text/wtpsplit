@@ -106,4 +106,3 @@ def test_split_threshold():
     splits = wtp.split("This is a test sentence. This is another test sentence.", threshold=0.0)
     # space might still be included in a character split
     assert splits[:3] == list("Thi")
-

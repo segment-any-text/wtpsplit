@@ -18,7 +18,6 @@ from wtpsplit.utils import Constants, indices_to_sentences, sigmoid
 __version__ = "1.2.0"
 
 
-
 class WtP:
     def __init__(
         self,
@@ -79,7 +78,7 @@ class WtP:
                 import wtpsplit.configs  # noqa
 
                 self.model = ORTWrapper(
-                    AutoConfig.from_pretrained(model_name),
+                    AutoConfig.from_pretrained(model_name_to_fetch, **(from_pretrained_kwargs or {})),
                     ort.InferenceSession(str(onnx_path), providers=ort_providers, **(ort_kwargs or {})),
                 )
             else:
@@ -107,7 +106,7 @@ class WtP:
         elif mixture_path is not None:
             self.mixtures = sio.load(
                 mixture_path,
-                ["numpy.float32", "numpy.float64"],
+                ["numpy.float32", "numpy.float64", "sklearn.linear_model._logistic.LogisticRegression"],
             )
         else:
             self.mixtures = None

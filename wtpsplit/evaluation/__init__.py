@@ -5,12 +5,10 @@ import numpy as np
 import regex as re
 import torch
 from sklearn import linear_model
-from sklearn.metrics import (f1_score, precision_recall_curve, precision_score,
-                             recall_score)
+from sklearn.metrics import f1_score, precision_recall_curve, precision_score, recall_score
 
 from wtpsplit.extract import extract
-from wtpsplit.utils import (Constants, indices_to_sentences,
-                            lang_code_to_lang, reconstruct_sentences)
+from wtpsplit.utils import Constants, indices_to_sentences, lang_code_to_lang, reconstruct_sentences
 
 
 def preprocess_sentence(sentence):

@@ -6,11 +6,9 @@ import sacrebleu
 import skops.io as sio
 from datasets import load_dataset
 from tqdm.auto import tqdm
-from transformers import (AutoModelForTokenClassification, HfArgumentParser,
-                          pipeline)
+from transformers import AutoModelForTokenClassification, HfArgumentParser, pipeline
 
-from wtpsplit.evaluation import (ERSATZ_LANGUAGES, ersatz_sentencize,
-                                 our_sentencize, preprocess_sentence)
+from wtpsplit.evaluation import ERSATZ_LANGUAGES, ersatz_sentencize, our_sentencize, preprocess_sentence
 from wtpsplit.utils import Constants
 
 

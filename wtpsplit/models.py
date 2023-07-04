@@ -5,15 +5,27 @@ from typing import Optional, Tuple, Union
 import torch
 from torch import nn
 from transformers import AutoModel, AutoModelForTokenClassification
-from transformers.models.bert.modeling_bert import (BertEncoder,
-                                                    BertForTokenClassification,
-                                                    BertModel, BertPooler)
+from transformers.models.bert.modeling_bert import BertEncoder, BertForTokenClassification, BertModel, BertPooler
 from transformers.models.canine.modeling_canine import (
-    _PRIMES, ACT2FN, BaseModelOutput, CanineAttention, CanineEmbeddings,
-    CanineEncoder, CanineForTokenClassification, CanineIntermediate,
-    CanineLayer, CanineModel, CanineModelOutputWithPooling, CanineOutput,
-    CaninePooler, CanineSelfAttention, CanineSelfOutput, CharactersToMolecules,
-    ConvProjection, TokenClassifierOutput)
+    _PRIMES,
+    ACT2FN,
+    BaseModelOutput,
+    CanineAttention,
+    CanineEmbeddings,
+    CanineEncoder,
+    CanineForTokenClassification,
+    CanineIntermediate,
+    CanineLayer,
+    CanineModel,
+    CanineModelOutputWithPooling,
+    CanineOutput,
+    CaninePooler,
+    CanineSelfAttention,
+    CanineSelfOutput,
+    CharactersToMolecules,
+    ConvProjection,
+    TokenClassifierOutput,
+)
 
 from wtpsplit.configs import BertCharConfig, LACanineConfig
 from wtpsplit.utils import Constants
