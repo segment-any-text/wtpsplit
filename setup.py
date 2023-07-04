@@ -14,7 +14,7 @@ setup(
         "scikit-learn>=1",
         "tqdm",
         "skops",
-        "pandas>=2",
+        "pandas>=1",
     ],
     url="https://github.com/bminixhofer/wtpsplit",
     package_data={"wtpsplit": ["data/*"]},
