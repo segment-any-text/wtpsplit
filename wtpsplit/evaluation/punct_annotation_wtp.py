@@ -7,7 +7,7 @@ from transformers import AutoModelForTokenClassification, HfArgumentParser
 
 import wtpsplit.models  # noqa
 from wtpsplit.extract import extract
-from wtpsplit.utils import Constants, encode
+from wtpsplit.utils import Constants
 
 
 @dataclass
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         args.n_subsample = len(train_text)
 
     train_logits = extract(
-        [encode(train_text[: args.n_subsample])],
+        [train_text[: args.n_subsample]],
         model,
         lang_code=args.lang,
         stride=args.stride,
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     clf.fit(train_logits, train_char_labels[: args.n_subsample])
 
     test_logits = extract(
-        [encode(test_text)],
+        [test_text],
         model,
         lang_code=args.lang,
         stride=args.stride,

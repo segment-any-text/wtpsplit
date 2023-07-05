@@ -1,190 +1,158 @@
 import math
-from collections import defaultdict
+import sys
 
-import torch
-import torch.nn.functional as F
+import numpy as np
 from tqdm.auto import tqdm
 
-from wtpsplit.utils import Constants
+from wtpsplit.utils import Constants, hash_encode
+
+
+class ORTWrapper:
+    def __init__(self, config, ort_session):
+        self.config = config
+        self.ort_session = ort_session
+
+    def __call__(self, hashed_ids, attention_mask):
+        logits = self.ort_session.run(
+            ["logits"],
+            {
+                "attention_mask": attention_mask,
+                "hashed_ids": hashed_ids,
+            },
+        )[0]
+
+        return {"logits": logits}
+
+
+class PyTorchWrapper:
+    def __init__(self, model):
+        self.model = model
+        self.config = model.config
+
+    def __call__(self, hashed_ids, attention_mask, language_ids=None):
+        try:
+            import torch
+        except ImportError:
+            raise ImportError("`torch` must be installed to use PyTorch models!")
+
+        with torch.no_grad():
+            logits = (
+                self.model(
+                    hashed_ids=torch.from_numpy(hashed_ids).to(self.model.device),
+                    attention_mask=torch.from_numpy(attention_mask).to(self.model.device),
+                    language_ids=torch.from_numpy(language_ids).to(self.model.device)
+                    if language_ids is not None
+                    else None,
+                )["logits"]
+                .cpu()
+                .numpy()
+            )
+
+        return {"logits": logits}
 
 
 def extract(
-    batch_of_tokens,
+    batch_of_texts,
     model,
     stride,
     block_size,
     batch_size,
     lang_code=None,
-    pad_last_batch=True,
+    pad_last_batch=False,
     verbose=False,
 ):
-    input_ids = []
-    attention_masks = []
-    position_ids = []
-    locs = defaultdict(lambda: {})
+    text_lengths = [len(text) for text in batch_of_texts]
+    # reduce block size if possible
+    block_size = min(block_size, max(text_lengths))
 
-    only_windowing = all(len(tokens) >= block_size for tokens in batch_of_tokens)
-    downsampling_rate = getattr(model.config, "downsampling_rate", 1)
+    num_chunks = sum(math.ceil(max(length - block_size, 0) / stride) + 1 for length in text_lengths)
+    input_hashes = np.zeros((num_chunks, block_size, model.config.num_hash_functions), dtype=np.int64)
+    attention_mask = np.zeros((num_chunks, block_size), dtype=np.float16)
+    locs = np.zeros((num_chunks, 3), dtype=np.int32)
 
-    current_ids = []
-    current_position_ids = torch.zeros(block_size, dtype=torch.long)
-    if only_windowing:
-        current_attention_mask = torch.zeros((block_size), dtype=torch.float32)
-        position_ids = None
-    else:
-        current_attention_mask = torch.zeros((block_size, block_size), dtype=torch.float32)
-    for idx_in_batch, tokens in enumerate(batch_of_tokens):
-        if len(tokens) >= block_size:
-            # finish packing
-            if len(current_ids) > 0:
-                assert not only_windowing
+    codec = "utf-32-le" if sys.byteorder == "little" else "utf-32-be"
+    ordinals = np.frombuffer(bytearray("".join(batch_of_texts), encoding=codec), dtype=np.int32)
+    flat_hashed_ids = hash_encode(ordinals)
 
-                current_ids.extend([0] * (block_size - len(current_ids)))
-                input_ids.append(torch.tensor(current_ids, dtype=torch.long))
-                attention_masks.append(current_attention_mask)
-                position_ids.append(current_position_ids)
+    offset = 0
+    current_chunk = 0
 
-                current_ids = []
-                current_attention_mask = torch.zeros_like(current_attention_mask)
-                current_position_ids = torch.zeros(block_size, dtype=torch.long)
+    for i in range(len(batch_of_texts)):
+        for j in range(0, text_lengths[i], stride):
+            start, end = j, j + block_size
+            done = False
 
-            # start windowing
-            i = 0
-            while i + block_size < len(tokens):
-                locs[len(input_ids)][(0, block_size)] = (
-                    idx_in_batch,
-                    i,
-                    i + block_size,
-                )
-                input_ids.append(torch.tensor(tokens[i : i + block_size], dtype=torch.long))
-                attention_masks.append(torch.ones_like(current_attention_mask))
-                if position_ids is not None:
-                    position_ids.append(torch.arange(block_size, dtype=torch.long))
+            if end >= text_lengths[i]:
+                end = text_lengths[i]
+                start = max(end - block_size, 0)
+                done = True
 
-                i += stride
+            input_hashes[current_chunk, : end - start] = flat_hashed_ids[offset + start : offset + end]
+            attention_mask[current_chunk, : end - start] = 1
+            locs[current_chunk, :] = [i, start, end]
 
-            # last window
-            locs[len(input_ids)][(0, block_size)] = (
-                idx_in_batch,
-                len(tokens) - block_size,
-                len(tokens),
-            )
-            input_ids.append(torch.tensor(tokens[-block_size:], dtype=torch.long))
-            attention_masks.append(torch.ones_like(current_attention_mask))
-            if position_ids is not None:
-                position_ids.append(torch.arange(block_size, dtype=torch.long))
-        else:
-            assert not only_windowing
+            current_chunk += 1
 
-            padding = downsampling_rate - (len(tokens) % downsampling_rate)
-            if padding == downsampling_rate:
-                padding = 0
+            if done:
+                break
 
-            padded_tokens = tokens + [0] * padding
+        offset += text_lengths[i]
 
-            if len(current_ids) + len(padded_tokens) <= block_size:
-                locs[len(input_ids)][(len(current_ids), len(current_ids) + len(tokens))] = (
-                    idx_in_batch,
-                    0,
-                    len(tokens),
-                )
-                current_attention_mask[
-                    len(current_ids) : len(current_ids) + len(tokens),
-                    len(current_ids) : len(current_ids) + len(tokens),
-                ] = 1
-                current_position_ids[len(current_ids) : len(current_ids) + len(tokens)] = torch.arange(len(tokens))
-                current_ids.extend(padded_tokens)
-            else:
-                current_ids.extend([0] * (block_size - len(current_ids)))
-                input_ids.append(torch.tensor(current_ids, dtype=torch.long))
-                attention_masks.append(current_attention_mask)
-                position_ids.append(current_position_ids)
-
-                current_ids = padded_tokens
-                locs[len(input_ids)][(0, len(tokens))] = (idx_in_batch, 0, len(tokens))
-                current_attention_mask = torch.zeros((block_size, block_size), dtype=torch.float32)
-                current_attention_mask[
-                    : len(tokens),
-                    : len(tokens),
-                ] = 1
-                current_position_ids = torch.zeros(block_size, dtype=torch.long)
-                current_position_ids[: len(tokens)] = torch.arange(len(tokens))
-
-    if len(current_ids) > 0:
-        assert not only_windowing
-
-        current_ids.extend([0] * (block_size - len(current_ids)))
-        input_ids.append(torch.tensor(current_ids, dtype=torch.long))
-        attention_masks.append(current_attention_mask)
-        position_ids.append(current_position_ids)
-
-    input_ids = torch.stack(input_ids, 0)
-    attention_masks = torch.stack(attention_masks, 0)
-    if position_ids is not None:
-        position_ids = torch.stack(position_ids, 0)
-    n_batches = math.ceil(len(input_ids) / batch_size)
+    assert current_chunk == num_chunks
+    n_batches = math.ceil(len(input_hashes) / batch_size)
 
     all_logits = [
-        torch.zeros(
+        np.zeros(
             (
-                len(tokens),
+                length,
                 model.config.num_labels,
             ),
-            dtype=torch.float16,
+            dtype=np.float16,
         )
-        for tokens in batch_of_tokens
+        for length in text_lengths
     ]
-    all_counts = [torch.zeros((len(tokens)), dtype=torch.int16) for tokens in batch_of_tokens]
+    all_counts = [np.zeros(length, dtype=np.int16) for length in text_lengths]
 
     uses_lang_adapters = getattr(model.config, "language_adapter", "off") == "on"
     if uses_lang_adapters:
         if lang_code is None:
             raise ValueError("Please specify a `lang_code` when using a model with language adapters.")
 
-        language_ids = torch.tensor(
+        if isinstance(model, ORTWrapper):
+            raise ValueError("Language adapters are not supported in ONNX models.")
+
+        language_ids = np.array(
             [Constants.LANG_CODE_TO_INDEX[lang_code]] * batch_size,
-            dtype=torch.long,
-            device=model.device,
+            dtype=int,
         )
     else:
         language_ids = None
 
     for batch_idx in tqdm(range(n_batches), disable=not verbose):
-        start, end = batch_idx * batch_size, min(len(input_ids), (batch_idx + 1) * batch_size)
+        start, end = batch_idx * batch_size, min(len(input_hashes), (batch_idx + 1) * batch_size)
 
-        batch_input_ids = input_ids[start:end]
-        batch_attention_mask = attention_masks[start:end]
-        batch_position_ids = position_ids[start:end] if position_ids is not None else None
+        batch_input_hashes = input_hashes[start:end]
+        batch_attention_mask = attention_mask[start:end]
 
-        if len(batch_input_ids) < batch_size and pad_last_batch:
-            n_missing = batch_size - len(batch_input_ids)
+        if len(batch_input_hashes) < batch_size and pad_last_batch:
+            n_missing = batch_size - len(batch_input_hashes)
 
-            batch_input_ids = F.pad(batch_input_ids, (0, 0, 0, n_missing))
-            if only_windowing:  # 1d attention mask
-                batch_attention_mask = F.pad(batch_attention_mask, (0, 0, 0, n_missing))
-            else:
-                batch_attention_mask = F.pad(batch_attention_mask, (0, 0, 0, 0, 0, n_missing))
-            batch_position_ids = (
-                F.pad(batch_position_ids, (0, 0, 0, n_missing)) if batch_position_ids is not None else None
-            )
+            batch_input_hashes = np.pad(batch_input_hashes, (0, n_missing, 0, 0, 0, 0))
+            batch_attention_mask = np.pad(batch_attention_mask, (0, n_missing, 0, 0))
 
-        # no_grad bc inference_mode does not work on TPUs
-        with torch.no_grad():
-            kwargs = {"language_ids": language_ids[: len(batch_input_ids)]} if uses_lang_adapters else {}
+        kwargs = {"language_ids": language_ids[: len(batch_input_hashes)]} if uses_lang_adapters else {}
 
-            out = model(
-                input_ids=batch_input_ids.to(model.device),
-                attention_mask=batch_attention_mask.to(model.device),
-                position_ids=batch_position_ids.to(model.device) if batch_position_ids is not None else None,
-                **kwargs,
-            )
-            logits = out["logits"].cpu()
+        logits = model(
+            hashed_ids=batch_input_hashes,
+            attention_mask=batch_attention_mask,
+            **kwargs,
+        )["logits"]
 
         for i in range(start, end):
-            for key, value in locs[i].items():
-                all_logits[value[0]][value[1] : value[2]] += logits[i - start, key[0] : key[1]]
-                all_counts[value[0]][value[1] : value[2]] += 1
+            original_idx, start_char_idx, end_char_idx = locs[i]
+            all_logits[original_idx][start_char_idx:end_char_idx] += logits[i - start, : end_char_idx - start_char_idx]
+            all_counts[original_idx][start_char_idx:end_char_idx] += 1
 
-    all_logits = [logits / counts.unsqueeze(-1) for logits, counts in zip(all_logits, all_counts)]
+    all_logits = [logits / counts[:, None] for logits, counts in zip(all_logits, all_counts)]
 
     return all_logits

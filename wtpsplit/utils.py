@@ -2,11 +2,15 @@ import json
 import os
 import random
 from dataclasses import dataclass, field
+from cached_property import cached_property
 from pathlib import Path
 from typing import List
-from functools import cached_property
 
+import numpy as np
 import pandas as pd
+
+# same as in CANINE
+PRIMES = [31, 43, 59, 61, 73, 97, 103, 113, 137, 149, 157, 173, 181, 193, 211, 223]
 
 
 class ConstantsClass:
@@ -73,8 +77,24 @@ def get_label_dict(label_args):
     return label_dict
 
 
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+
 def encode(text):
     return [ord(c) for c in text]
+
+
+def hash_encode(encoding, num_hashes=8, num_buckets=8192):
+    if num_hashes > len(PRIMES):
+        raise ValueError(f"`num_hashes` must be <= {len(PRIMES)}")
+
+    hash_ids = np.zeros((len(encoding), num_hashes), dtype=np.int64)
+    for i in range(num_hashes):
+        shard_ids = (encoding + 1) * PRIMES[i]
+        hash_ids[:, i] = shard_ids % num_buckets
+
+    return hash_ids
 
 
 def label(input_ids, label_dict):
