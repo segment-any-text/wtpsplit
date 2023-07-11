@@ -112,6 +112,7 @@ class WtP:
             self.mixtures = None
 
     def __getattr__(self, name):
+        assert hasattr(self, "model")
         return getattr(self.model, name)
 
     def predict_proba(
