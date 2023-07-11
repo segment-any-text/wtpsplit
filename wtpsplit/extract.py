@@ -12,6 +12,10 @@ class ORTWrapper:
         self.config = config
         self.ort_session = ort_session
 
+    def __getattr__(self, name):
+        assert hasattr(self, "ort_session")
+        return getattr(self.ort_session, name)
+
     def __call__(self, hashed_ids, attention_mask):
         logits = self.ort_session.run(
             ["logits"],
@@ -28,6 +32,10 @@ class PyTorchWrapper:
     def __init__(self, model):
         self.model = model
         self.config = model.config
+
+    def __getattr__(self, name):
+        assert hasattr(self, "model")
+        return getattr(self.model, name)
 
     def __call__(self, hashed_ids, attention_mask, language_ids=None):
         try:
