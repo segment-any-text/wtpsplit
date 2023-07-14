@@ -265,6 +265,7 @@ class WtP:
         remove_whitespace_before_inference: bool = False,
         outer_batch_size=1000,
         paragraph_threshold: float = 0.5,
+        strip_whitespace: bool = False,
         do_paragraph_segmentation=False,
         verbose: bool = False,
     ):
@@ -282,6 +283,7 @@ class WtP:
                     remove_whitespace_before_inference=remove_whitespace_before_inference,
                     outer_batch_size=outer_batch_size,
                     paragraph_threshold=paragraph_threshold,
+                    strip_whitespace=strip_whitespace,
                     do_paragraph_segmentation=do_paragraph_segmentation,
                     verbose=verbose,
                 )
@@ -299,6 +301,7 @@ class WtP:
                 remove_whitespace_before_inference=remove_whitespace_before_inference,
                 outer_batch_size=outer_batch_size,
                 paragraph_threshold=paragraph_threshold,
+                strip_whitespace=strip_whitespace,
                 do_paragraph_segmentation=do_paragraph_segmentation,
                 verbose=verbose,
             )
@@ -328,6 +331,7 @@ class WtP:
         outer_batch_size: int,
         paragraph_threshold: float,
         do_paragraph_segmentation: bool,
+        strip_whitespace: bool,
         verbose: bool,
     ):
         if style is not None:
@@ -372,12 +376,15 @@ class WtP:
 
                 paragraphs = []
 
-                # TODO: indices_to_sentences should not be in evaluation module?
                 for paragraph in indices_to_sentences(text, np.where(newline_probs > paragraph_threshold)[0]):
                     sentences = []
 
                     for sentence in indices_to_sentences(
-                        paragraph, np.where(sentence_probs[offset : offset + len(paragraph)] > sentence_threshold)[0]
+                        paragraph,
+                        np.where(
+                            sentence_probs[offset : offset + len(paragraph)] > sentence_threshold,
+                            strip_whitespace=strip_whitespace,
+                        )[0],
                     ):
                         sentences.append(sentence)
 
@@ -386,5 +393,7 @@ class WtP:
 
                 yield paragraphs
             else:
-                sentences = indices_to_sentences(text, np.where(probs > sentence_threshold)[0])
+                sentences = indices_to_sentences(
+                    text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
+                )
                 yield sentences

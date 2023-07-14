@@ -18,6 +18,12 @@ def test_move_device():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
     wtp.half().to("cpu")
 
+def test_strip_whitespace():
+    wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
+
+    splits = wtp.split("This is a test sentence This is another test sentence.   ", strip_whitespace=True)
+    assert splits == ["This is a test sentence", "This is another test sentence."]
+
 def test_split_long():
     prefix = "x" * 2000
 

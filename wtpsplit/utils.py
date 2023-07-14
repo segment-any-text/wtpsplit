@@ -176,7 +176,7 @@ def corrupt(
     return input_ids, block_ids, labels
 
 
-def indices_to_sentences(text, indices):
+def indices_to_sentences(text, indices, strip_whitespace=False):
     sentences = []
 
     offset = 0
@@ -186,11 +186,26 @@ def indices_to_sentences(text, indices):
         while idx < len(text) and text[idx].isspace():
             idx += 1
 
-        sentences.append(text[offset:idx])
+        sentence = text[offset:idx]
+        if strip_whitespace:
+            # NB: I would have thought that this is slower than 
+            # adjusting the start and end indices since there are
+            # two string copies, but it seems to be faster
+            # (at least on short strings). more reason to port to Rust?
+            sentence = sentence.strip()
+
+        if len(sentence) > 0:
+            sentences.append(sentence)
+
         offset = idx
 
     if idx != len(text):
-        sentences.append(text[idx:])
+        last_sentence = text[idx:]
+        if strip_whitespace:
+            last_sentence = last_sentence.strip()
+
+        if len(last_sentence) > 0:
+            sentences.append(last_sentence)
 
     return sentences
 
