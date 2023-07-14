@@ -256,13 +256,19 @@ Ideas to solve this (and the hash embeddings problem) are very welcome!
 Please cite `wtpsplit` as 
 
 ```
-@misc{minixhofer2023wheres,
-      title={Where's the Point? Self-Supervised Multilingual Punctuation-Agnostic Sentence Segmentation}, 
-      author={Benjamin Minixhofer and Jonas Pfeiffer and Ivan Vulić},
-      year={2023},
-      eprint={2305.18893},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL}
+@inproceedings{minixhofer-etal-2023-wheres,
+    title = "Where{'}s the Point? Self-Supervised Multilingual Punctuation-Agnostic Sentence Segmentation",
+    author = "Minixhofer, Benjamin  and
+      Pfeiffer, Jonas  and
+      Vuli{\'c}, Ivan",
+    booktitle = "Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)",
+    month = jul,
+    year = "2023",
+    address = "Toronto, Canada",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.acl-long.398",
+    pages = "7215--7235",
+    abstract = "Many NLP pipelines split text into sentences as one of the crucial preprocessing steps. Prior sentence segmentation tools either rely on punctuation or require a considerable amount of sentence-segmented training data: both central assumptions might fail when porting sentence segmenters to diverse languages on a massive scale. In this work, we thus introduce a multilingual punctuation-agnostic sentence segmentation method, currently covering 85 languages, trained in a self-supervised fashion on unsegmented text, by making use of newline characters which implicitly perform segmentation into paragraphs. We further propose an approach that adapts our method to the segmentation in a given corpus by using only a small number (64-256) of sentence-segmented examples. The main results indicate that our method outperforms all the prior best sentence-segmentation tools by an average of 6.1{\%} F1 points. Furthermore, we demonstrate that proper sentence segmentation has a point: the use of a (powerful) sentence segmenter makes a considerable difference for a downstream application such as machine translation (MT). By using our method to match sentence segmentation to the segmentation used during training of MT models, we achieve an average improvement of 2.3 BLEU points over the best prior segmentation tool, as well as massive gains over a trivial segmenter that splits text into equally-sized blocks.",
 }
 ```
 
