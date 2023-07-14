@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="wtpsplit",
-    version="1.2.1",
+    version="1.2.2",
     packages=["wtpsplit"],
     description="Robust, adaptible sentence segmentation for 85 languages",
     author="Benjamin Minixhofer",
