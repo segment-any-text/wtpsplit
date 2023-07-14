@@ -188,7 +188,7 @@ def indices_to_sentences(text, indices, strip_whitespace=False):
 
         sentence = text[offset:idx]
         if strip_whitespace:
-            # NB: I would have thought that this is slower than 
+            # NB: I would have thought that this is slower than
             # adjusting the start and end indices since there are
             # two string copies, but it seems to be faster
             # (at least on short strings). more reason to port to Rust?

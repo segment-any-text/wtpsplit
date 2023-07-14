@@ -383,8 +383,8 @@ class WtP:
                         paragraph,
                         np.where(
                             sentence_probs[offset : offset + len(paragraph)] > sentence_threshold,
-                            strip_whitespace=strip_whitespace,
                         )[0],
+                        strip_whitespace=strip_whitespace,
                     ):
                         sentences.append(sentence)
 
