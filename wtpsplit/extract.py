@@ -73,6 +73,10 @@ def extract(
     # reduce block size if possible
     block_size = min(block_size, max(text_lengths))
 
+    # make sure block_size is a multiple of downsampling rate
+    downsampling_rate = getattr(model.config, "downsampling_rate", 1)
+    block_size = math.ceil(block_size / downsampling_rate) * downsampling_rate
+
     num_chunks = sum(math.ceil(max(length - block_size, 0) / stride) + 1 for length in text_lengths)
     input_hashes = np.zeros((num_chunks, block_size, model.config.num_hash_functions), dtype=np.int64)
     attention_mask = np.zeros((num_chunks, block_size), dtype=np.float16)

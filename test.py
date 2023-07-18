@@ -14,6 +14,12 @@ def test_split_torch():
     splits = wtp.split("This is a test sentence This is another test sentence.")
     assert splits == ["This is a test sentence ", "This is another test sentence."]
 
+def test_split_torch_canine():
+    wtp = WtP("benjamin/wtp-canine-s-1l", hub_prefix=None)
+
+    splits = wtp.split("This is a test sentence. This is another test sentence.", lang_code="en")
+    assert splits == ["This is a test sentence. ", "This is another test sentence."]
+
 def test_move_device():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
     wtp.half().to("cpu")
