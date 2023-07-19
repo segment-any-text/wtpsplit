@@ -50,13 +50,13 @@ This requires `onnxruntime` and `onnxruntime-gpu`. It should give a good speedup
 >>> texts = ["This is a sentence. This is another sentence."] * 1000
 
 # PyTorch GPU
->>> model = wtpsplit.WtP("wtp-bert-mini")
+>>> model = WtP("wtp-bert-mini")
 >>> model.half().to("cuda")
 >>> %timeit list(model.split(texts))
 272 ms ± 16.1 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
 
 # onnxruntime GPU
->>> model = wtpsplit.WtP("wtp-bert-mini", ort_providers=["CUDAExecutionProvider"])
+>>> model = WtP("wtp-bert-mini", ort_providers=["CUDAExecutionProvider"])
 >>> %timeit list(model.split(texts))
 198 ms ± 1.36 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
 ```
