@@ -18,7 +18,7 @@ from wtpsplit import WtP
 wtp = WtP("wtp-bert-mini")
 # optionally run on GPU for better performance
 # also supports TPUs via e.g. wtp.to("xla:0"), in that case pass `pad_last_batch=True` to wtp.split
-wtp.to("cuda")
+wtp.half().to("cuda")
 
 # returns ["This is a test", "This is another test."]
 wtp.split("This is a test This is another test.")
@@ -34,6 +34,34 @@ wtp.split("This is a test This is another test.", lang_code="en")
 # this always requires a language code
 wtp.split("This is a test This is another test.", lang_code="en", style="ud")
 ```
+
+## ONNX support
+
+You can enable ONNX inference for the `wtp-bert-*` models:
+
+```python
+wtp = WtP("wtp-bert-mini", onnx_providers=["CUDAExecutionProvider"])
+```
+
+This requires `onnxruntime` and `onnxruntime-gpu`. It should give a good speedup on GPU!
+
+```python
+>>> from wtpsplit import WtP
+>>> texts = ["This is a sentence. This is another sentence."] * 1000
+
+# PyTorch GPU
+>>> model = wtpsplit.WtP("wtp-bert-mini")
+>>> model.half().to("cuda")
+>>> %timeit list(model.split(texts))
+272 ms ± 16.1 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+
+# onnxruntime GPU
+>>> model = wtpsplit.WtP("wtp-bert-mini", ort_providers=["CUDAExecutionProvider"])
+>>> %timeit list(model.split(texts))
+198 ms ± 1.36 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+```
+
+The `wtp-canine-*` models are currently not supported with ONNX because the pooling done by CANINE is not trivial to export. Ideas to solve this are very welcome!
 
 ## Available Models
 
@@ -144,22 +172,6 @@ In addition:
   - extrinsic evaluation on Machine Translation in `extrinsic.py`
   - baseline (PySBD, nltk, etc.) intrinsic evaluation in `intrinsic_baselines.py`
   - punctuation annotation experiments in `punct_annotation.py` and `punct_annotation_wtp.py`
-
-## ONNX support (experimental)
-
-You can enable ONNX inference for the `wtp-bert-*` models:
-
-```python
-wtp = WtP("wtp-bert-mini", onnx_providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
-```
-
-This requires `onnxruntime` and `onnxruntime-gpu`.
-
-However, on my hardware, it *did not* produce a speedup over PyTorch. The embeddings in ONNX inference still have to be computed using PyTorch because hash embeddings are not supported by ONNX, so the moving around of tensors might cause it to be slower.
-
-The `wtp-canine-*` models are currently not supported with ONNX because the pooling done by CANINE is not trivial to export. 
-
-Ideas to solve this (and the hash embeddings problem) are very welcome!
 
 ## Supported Languages
 
