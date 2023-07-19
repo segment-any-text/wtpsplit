@@ -61,7 +61,10 @@ This requires `onnxruntime` and `onnxruntime-gpu`. It should give a good speedup
 198 ms ± 1.36 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
 ```
 
-The `wtp-canine-*` models are currently not supported with ONNX because the pooling done by CANINE is not trivial to export. Ideas to solve this are very welcome!
+Notes:
+- The `wtp-canine-*` models are currently not supported with ONNX because the pooling done by CANINE is not trivial to export. Ideas to solve this are very welcome!
+- This does not work with Python 3.7 because `onnxruntime` does not support the opset we need for py37.
+
 
 ## Available Models
 
