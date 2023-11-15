@@ -45,7 +45,7 @@ class WtP:
 
             if is_local:
                 model_path = Path(model_name)
-                mixture_path = model_path / "mixture.skops"
+                mixture_path = model_path / "mixtures.skops"
                 if not mixture_path.exists():
                     mixture_path = None
                 onnx_path = model_path / "model.onnx"
