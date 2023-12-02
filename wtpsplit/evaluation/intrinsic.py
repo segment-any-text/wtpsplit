@@ -10,7 +10,7 @@ from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForTokenClassification, HfArgumentParser
 
-import wtpsplit.models
+import wtpsplit.models # noqa: F401
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture
 from wtpsplit.extract import PyTorchWrapper, extract
 from wtpsplit.utils import Constants
