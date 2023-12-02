@@ -149,8 +149,8 @@ def extract(
         if len(batch_input_hashes) < batch_size and pad_last_batch:
             n_missing = batch_size - len(batch_input_hashes)
 
-            batch_input_hashes = np.pad(batch_input_hashes, (0, n_missing, 0, 0, 0, 0))
-            batch_attention_mask = np.pad(batch_attention_mask, (0, n_missing, 0, 0))
+            batch_input_hashes = np.pad(batch_input_hashes, ((0, n_missing), (0, 0), (0, 0)))
+            batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
 
         kwargs = {"language_ids": language_ids[: len(batch_input_hashes)]} if uses_lang_adapters else {}
 

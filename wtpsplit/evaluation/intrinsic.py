@@ -10,8 +10,9 @@ from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForTokenClassification, HfArgumentParser
 
+import wtpsplit.models
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture
-from wtpsplit.extract import extract
+from wtpsplit.extract import PyTorchWrapper, extract
 from wtpsplit.utils import Constants
 
 
@@ -91,7 +92,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_
                         block_size=args.block_size,
                         batch_size=args.batch_size,
                         pad_last_batch=True,
-                    )[0].numpy()
+                    )[0]
                     test_labels = get_labels(lang_code, test_sentences, after_space=False)
 
                     dset_group.create_dataset("test_logits", data=test_logits)
@@ -110,7 +111,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_
                         block_size=args.block_size,
                         batch_size=args.batch_size,
                         pad_last_batch=False,
-                    )[0].numpy()
+                    )[0]
                     train_labels = get_labels(lang_code, train_sentences, after_space=False)
 
                     dset_group.create_dataset("train_logits", data=train_logits)
@@ -128,7 +129,7 @@ if __name__ == "__main__":
     else:
         valid_data = None
     
-    model = AutoModelForTokenClassification.from_pretrained(args.model_path).to(args.device)
+    model = PyTorchWrapper(AutoModelForTokenClassification.from_pretrained(args.model_path).to(args.device))
 
     # first, logits for everything.
     f = load_or_compute_logits(args, model, eval_data, valid_data)
