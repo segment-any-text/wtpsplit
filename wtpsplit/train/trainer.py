@@ -124,6 +124,7 @@ class Trainer(transformers.Trainer):
         if self.lr_scheduler is None:
             warmup_steps = self.args.get_warmup_steps(self.args.max_steps)
 
+            # MODIFIED: add lang adapter lr scheduler
             def lr_lambda(current_step: int):
                 if current_step < self.args.adapter_warmup_steps:
                     return 0.0

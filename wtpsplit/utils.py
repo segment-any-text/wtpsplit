@@ -116,7 +116,7 @@ def lang_code_to_lang(lang_code):
     except KeyError:
         return languages.get(part3=lang_code).name
 
-
+# does the steps in Figure 2 of the paper
 def corrupt(
     input_ids,
     block_ids,

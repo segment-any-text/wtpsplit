@@ -58,7 +58,7 @@ class PyTorchWrapper:
 
         return {"logits": logits}
 
-
+# TODO: comment
 def extract(
     batch_of_texts,
     model,

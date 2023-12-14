@@ -77,6 +77,7 @@ class Model(nn.Module):
 
             losses = []
 
+            # main (newline prediction) objective
             if self.do_sentence_training:
                 sentence_labels = (0.5 - self.loss_margin) + (labels == Constants.NEWLINE_INDEX + 1).to(
                     logits.dtype
@@ -95,6 +96,7 @@ class Model(nn.Module):
                     / reduced_attention_mask.sum()
                 )
 
+            # auxiliary (punctuation prediction) objective
             if self.do_auxiliary_training:
                 loss_fn = nn.CrossEntropyLoss()
 
@@ -166,6 +168,7 @@ def collate_fn(batch, args, label_args, label_dict):
     all_label_weights = []
 
     for sample in batch:
+        # NOTE: this is specific to characters at the moment!
         input_ids = [ord(c) for c in sample[args.text_column]]
         lang = sample["lang"]
 
@@ -278,6 +281,7 @@ def main():
         if shuffle:
             dataset = dataset.shuffle(seed=42)
 
+        # very likely not relevant / used only for the compound part
         if args.ignore_non_hyphen:
             with training_args.main_process_first():
                 dataset = dataset.filter(
@@ -285,6 +289,7 @@ def main():
                     num_proc=args.preprocessing_num_workers,
                 )
 
+        # "punctuation-specific sampling" in the paper
         if args.non_punctuation_sample_ratio is not None:
             languages_without_punctuation = {
                 lang_code
@@ -330,6 +335,7 @@ def main():
                     num_proc=num_workers,
                 )
 
+        # similar to group_texts in huggingface's run_clm.py / run_mlm.py: https://github.com/huggingface/transformers/blob/main/examples/pytorch/language-modeling/run_mlm.py
         def group_texts(examples):
             all_input_blocks = []
             all_input_block_lengths = []
@@ -352,6 +358,7 @@ def main():
                     if lang == current_lang
                 ]
 
+                # pack_samples used for the compound part, so irrelevant
                 if args.pack_samples:
                     blocks = []
                     block_ids = []
