@@ -28,7 +28,6 @@
     "language_adapter": "off",
     "one_sample_per_line": false,
     "do_sentence_training": true,
-    "do_compound_training": false,
     "do_auxiliary_training": true,
     "warmup_steps": 5000,
     "adapter_warmup_steps": 5000,

@@ -253,7 +253,9 @@ def main():
     elif args.from_scratch:
         backbone = LACanineForTokenClassification(config)
     else:
-        backbone = LACanineForTokenClassification.from_pretrained(args.model_name_or_path, config=config)
+        backbone = LACanineForTokenClassification.from_pretrained(args.model_name_or_path, 
+                                                                  ignore_mismatched_sizes=True, 
+                                                                  config=config)
 
     model = Model(
         backbone,

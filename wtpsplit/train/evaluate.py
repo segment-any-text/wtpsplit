@@ -2,7 +2,7 @@ import numpy as np
 import pysbd
 import sklearn.metrics
 
-from wtpsplit.extract import extract
+from wtpsplit.extract import extract, PyTorchWrapper
 from wtpsplit.utils import Constants
 
 
@@ -69,7 +69,7 @@ def evaluate_sentence(
 
     logits = extract(
         [text],
-        model,
+        PyTorchWrapper(model.backbone),
         lang_code=lang_code,
         stride=stride,
         block_size=block_size,
