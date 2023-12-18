@@ -79,13 +79,14 @@ def extract(
 
     num_chunks = sum(math.ceil(max(length - block_size, 0) / stride) + 1 for length in text_lengths)
     input_hashes = np.zeros((num_chunks, block_size, model.config.num_hash_functions), dtype=np.int64)
-    attention_mask = np.zeros((num_chunks, block_size), dtype=np.float16)
+    attention_mask = np.zeros((num_chunks, block_size), dtype=np.float32)
     locs = np.zeros((num_chunks, 3), dtype=np.int32)
 
     codec = "utf-32-le" if sys.byteorder == "little" else "utf-32-be"
     ordinals = np.frombuffer(bytearray("".join(batch_of_texts), encoding=codec), dtype=np.int32)
-    flat_hashed_ids = hash_encode(ordinals)
-
+    flat_hashed_ids = hash_encode(ordinals, 
+                                  num_hashes=model.config.num_hash_functions, 
+                                  num_buckets=model.config.num_hash_buckets)
     offset = 0
     current_chunk = 0
 
@@ -165,6 +166,6 @@ def extract(
             all_logits[original_idx][start_char_idx:end_char_idx] += logits[i - start, : end_char_idx - start_char_idx]
             all_counts[original_idx][start_char_idx:end_char_idx] += 1
 
-    all_logits = [logits / counts[:, None] for logits, counts in zip(all_logits, all_counts)]
+    all_logits = [(logits / counts[:, None]).astype(np.float16) for logits, counts in zip(all_logits, all_counts)]
 
     return all_logits

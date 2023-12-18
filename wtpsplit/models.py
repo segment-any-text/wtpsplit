@@ -831,12 +831,9 @@ class LACanineForTokenClassification(CanineForTokenClassification):
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
-        inputs_embeds = self.canine.char_embeddings(
+        inputs_embeds = self.canine.char_embeddings._embed_hash_buckets(
             input_ids=input_ids,
             hashed_ids=hashed_ids,
-            token_type_ids=token_type_ids,
-            position_ids=position_ids,
-            inputs_embeds=inputs_embeds,
         )
         input_ids = None
 
@@ -940,12 +937,9 @@ class BertCharForTokenClassification(BertForTokenClassification):
         language_ids=None,
         return_dict: Optional[bool] = None,
     ):
-        inputs_embeds = self.bert.embeddings(
+        inputs_embeds = self.bert.embeddings._embed_hash_buckets(
             input_ids=input_ids,
             hashed_ids=hashed_ids,
-            token_type_ids=token_type_ids,
-            position_ids=position_ids,
-            inputs_embeds=inputs_embeds,
         )
         input_ids = None
 
