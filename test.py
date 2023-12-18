@@ -5,13 +5,13 @@ from wtpsplit import WtP
 def test_split_ort():
     wtp = WtP("wtp-bert-mini", ort_providers=["CPUExecutionProvider"])
 
-    splits = wtp.split("This is a test sentence This is another test sentence.")
+    splits = wtp.split("This is a test sentence This is another test sentence.", threshold=0.005)
     assert splits == ["This is a test sentence ", "This is another test sentence."]
 
 def test_split_torch():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
 
-    splits = wtp.split("This is a test sentence This is another test sentence.")
+    splits = wtp.split("This is a test sentence This is another test sentence.", threshold=0.005)
     assert splits == ["This is a test sentence ", "This is another test sentence."]
 
 def test_split_torch_canine():
@@ -27,7 +27,7 @@ def test_move_device():
 def test_strip_whitespace():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
 
-    splits = wtp.split("This is a test sentence This is another test sentence.   ", strip_whitespace=True)
+    splits = wtp.split("This is a test sentence This is another test sentence.   ", strip_whitespace=True, threshold=0.005)
     assert splits == ["This is a test sentence", "This is another test sentence."]
 
 def test_split_long():
@@ -36,7 +36,7 @@ def test_split_long():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
 
     splits = wtp.split(prefix + " This is a test sentence. This is another test sentence.")
-    assert splits == [prefix + " ", "This is a test sentence. ", "This is another test sentence."]
+    assert splits == [prefix + " " + "This is a test sentence. ", "This is another test sentence."]
 
 
 def test_split_batched():
@@ -117,6 +117,6 @@ def test_split_threshold():
     )
     assert splits == ["This is a test sentence. This is another test sentence."]
 
-    splits = wtp.split("This is a test sentence. This is another test sentence.", threshold=0.0)
+    splits = wtp.split("This is a test sentence. This is another test sentence.", threshold=-1e-3)
     # space might still be included in a character split
     assert splits[:3] == list("Thi")

@@ -20,7 +20,7 @@ class ORTWrapper:
         logits = self.ort_session.run(
             ["logits"],
             {
-                "attention_mask": attention_mask,
+                "attention_mask": attention_mask.astype(np.float16), # ORT expects fp16 mask
                 "hashed_ids": hashed_ids,
             },
         )[0]
