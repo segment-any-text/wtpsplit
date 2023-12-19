@@ -1,5 +1,6 @@
 import subprocess
 import unicodedata
+import os
 
 import numpy as np
 import regex as re
@@ -69,7 +70,7 @@ def train_mixture(lang_code, original_train_x, train_y, n_subsample=None, featur
 
         train_x = train_x.float()
 
-        clf = linear_model.LogisticRegression(max_iter=10_000)
+        clf = linear_model.LogisticRegression(max_iter=10_000, random_state=0)
         clf.fit(train_x, train_y)
         preds = clf.predict_proba(train_x)[:, 1]
 
@@ -229,6 +230,14 @@ def ersatz_sentencize(
 ):
     if lang_code not in ERSATZ_LANGUAGES:
         raise LanguageError(f"ersatz does not support {lang_code}")
+    
+    # check if infile parent dir exists, if not, create it
+    if not os.path.exists(os.path.dirname(infile)):
+        os.makedirs(os.path.dirname(infile))
+    # check if outfile parent dir exists, if not, create it
+    if not os.path.exists(os.path.dirname(outfile)):
+        os.makedirs(os.path.dirname(outfile))
+        
     open(infile, "w").write(text)
 
     subprocess.check_output(

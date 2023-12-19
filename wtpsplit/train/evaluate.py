@@ -74,6 +74,7 @@ def evaluate_sentence(
         stride=stride,
         block_size=block_size,
         batch_size=batch_size,
+        verbose=True,
     )[0]
 
     true_end_indices = np.cumsum(np.array([len(s) for s in sentences])) + np.arange(len(sentences)) * len(separator)

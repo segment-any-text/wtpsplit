@@ -32,9 +32,9 @@ class Args:
     #        }
     #    }
     # }
-    eval_data_path: str = "data/eval_new.pth"
+    eval_data_path: str = "data/eval.pth"
     valid_text_path: str = None#"data/sentence/valid.parquet"
-    device: str = "cuda"
+    device: str = "xla:1"
     block_size: int = 512
     stride: int = 64
     batch_size: int = 32
@@ -70,6 +70,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_
                     block_size=args.block_size,
                     batch_size=args.batch_size,
                     pad_last_batch=True,
+                    verbose=True,
                 )[0]
                 lang_group.create_dataset("valid", data=valid_logits)
 
@@ -92,6 +93,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_
                         block_size=args.block_size,
                         batch_size=args.batch_size,
                         pad_last_batch=True,
+                        verbose=True,
                     )[0]
                     test_labels = get_labels(lang_code, test_sentences, after_space=False)
 

@@ -1,0 +1,1 @@
+python3 $HOME/transformers/examples/pytorch/xla_spawn.py --num_cores ${TPU_NUM_DEVICES} wtpsplit/train/train.py $1

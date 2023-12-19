@@ -1,0 +1,24 @@
+# .bashrc
+export PATH=$PATH:~/.local/bin
+
+export XRT_TPU_CONFIG="localservice;0;localhost:51011"
+
+export XLA_USE_BF16=0
+
+export TPU_NUM_DEVICES=8
+
+export HF_DATASETS_CACHE=/dev/shm/cache
+
+# data
+gcloud auth login
+gsutil -m cp -r gs://trc-transfer-data/sentence/data/eval.pth data/
+
+# cleanup
+pkill -e python3
+(until no more)
+or
+watch -n1 pkill -e python3
+
+# for debugging:
+
+os.environ["PJRT_DEVICE"] = "None"
