@@ -253,9 +253,9 @@ def main():
     elif args.from_scratch:
         backbone = LACanineForTokenClassification(config)
     else:
-        backbone = LACanineForTokenClassification.from_pretrained(args.model_name_or_path, 
-                                                                  ignore_mismatched_sizes=True, 
-                                                                  config=config)
+        backbone = LACanineForTokenClassification.from_pretrained(
+            args.model_name_or_path, ignore_mismatched_sizes=True, config=config
+        )
 
     model = Model(
         backbone,
@@ -270,8 +270,15 @@ def main():
         num_workers=1,
         include_languages=None,
         shuffle=False,
+        split="train",
     ):
-        dataset = load_dataset("parquet", data_files=path, split="train")
+        from datasets.download import DownloadConfig
+
+        dlconf = DownloadConfig(cache_dir="/home/Markus/.cache/huggingface/datasets")
+        dataset = load_dataset("markus583/mC4-TEST", split=split, download_config=dlconf)
+        # optional: delete downloaded dataset, it is stored in /dev/shm/cache now 
+        # os.system("rm -rf /home/Markus/.cache/huggingface/datasets")
+        
         if include_languages is not None:
             include_languages = set(include_languages)
 
@@ -443,6 +450,14 @@ def main():
                     # a bit hacky but oh well, only drop if sentence
                     remove_columns=["ends_with_punctuation"] if args.text_column == "text" else [],
                 )
+        
+        # used dataset is in cache now
+        # recursively remove the files in cache_dir starting with m_c4
+        for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
+            for file in files:
+                if file.startswith("m_c4"):
+                    print(f"Removing {os.path.join(root, file)}")
+                    os.remove(os.path.join(root, file))
 
         return dataset
 
@@ -451,12 +466,14 @@ def main():
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=args.shuffle,
+        split="train",
     )
     valid_dataset = prepare_dataset(
         args.valid_text_path,
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=False,
+        split="valid",
     )
 
     eval_data = torch.load(
