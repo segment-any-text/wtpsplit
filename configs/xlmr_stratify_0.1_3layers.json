@@ -13,7 +13,7 @@
     "gradient_accumulation_steps": 1,
     "eval_accumulation_steps": 8,
     "dataloader_num_workers": 32,
-    "preprocessing_num_workers": 6,
+    "preprocessing_num_workers": 32,
     "learning_rate": 1e-4,
     "save_strategy": "steps",
     "fp16": false,
