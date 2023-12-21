@@ -1,4 +1,4 @@
-from transformers import AutoConfig, BertConfig, CanineConfig
+from transformers import AutoConfig, BertConfig, CanineConfig, XLMRobertaConfig
 
 
 class LACanineConfig(CanineConfig):
@@ -37,7 +37,22 @@ class BertCharConfig(BertConfig):
 
         self.num_hash_buckets = num_hash_buckets
         self.num_hash_functions = num_hash_functions
+        
+class SubwordXLMConfig(XLMRobertaConfig):
+    """Config for XLM-R and XLM-V models. Used for token-level training.
+
+    Args:
+        XLMRobertaConfig: Base class.
+    """
+    model_type = "xlm-token"
+
+    def __init__(
+        self,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
 
 
 AutoConfig.register("bert-char", BertCharConfig)
 AutoConfig.register("la-canine", LACanineConfig)
+AutoConfig.register("xlm-token", SubwordXLMConfig)

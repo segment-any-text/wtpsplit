@@ -6,6 +6,7 @@ import torch
 from torch import nn
 from transformers import AutoModel, AutoModelForTokenClassification
 from transformers.models.bert.modeling_bert import BertEncoder, BertForTokenClassification, BertModel, BertPooler
+from transformers.models.xlm_roberta import XLMRobertaModel, XLMRobertaForTokenClassification
 from transformers.models.canine.modeling_canine import (
     _PRIMES,
     ACT2FN,
@@ -26,8 +27,9 @@ from transformers.models.canine.modeling_canine import (
     ConvProjection,
     TokenClassifierOutput,
 )
+from torchinfo import summary
 
-from wtpsplit.configs import BertCharConfig, LACanineConfig
+from wtpsplit.configs import BertCharConfig, LACanineConfig, SubwordXLMConfig
 from wtpsplit.utils import Constants
 
 
@@ -956,9 +958,84 @@ class BertCharForTokenClassification(BertForTokenClassification):
             return_dict,
         )
 
+class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
+    config_class = SubwordXLMConfig
+    
+    _keys_to_ignore_on_load_unexpected = [r"pooler"]
+    _keys_to_ignore_on_load_missing = [r"position_ids"]
+    
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        
+        self.roberta = XLMRobertaModel(config, add_pooling_layer=False)
+        classifier_dropout = (
+            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+        )
+        self.dropout = nn.Dropout(classifier_dropout)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
+        # Initialize weights and apply final processing
+        self.post_init()
+        
+    def forward(
+        self,
+        input_ids: Optional[torch.LongTensor] = None,
+        attention_mask: Optional[torch.FloatTensor] = None,
+        token_type_ids: Optional[torch.LongTensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        head_mask: Optional[torch.FloatTensor] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        language_ids=None,
+    ) -> Union[Tuple[torch.Tensor], TokenClassifierOutput]:
+        return super().forward(
+            input_ids,
+            attention_mask,
+            token_type_ids,
+            position_ids,
+            head_mask,
+            inputs_embeds,
+            labels,
+            output_attentions,
+            output_hidden_states,
+            return_dict,
+        )
+        
+    
+    
 AutoModel.register(LACanineConfig, LACanineModel)
 AutoModelForTokenClassification.register(LACanineConfig, LACanineForTokenClassification)
 
 AutoModel.register(BertCharConfig, BertCharModel)
 AutoModelForTokenClassification.register(BertCharConfig, BertCharForTokenClassification)
+
+AutoModel.register(SubwordXLMConfig, SubwordXLMForTokenClassification)
+AutoModelForTokenClassification.register(SubwordXLMConfig, SubwordXLMForTokenClassification)
+
+if __name__ == "__main__":
+    # test XLM
+    from transformers import AutoConfig, AutoTokenizer
+    model_str = "xlm-roberta-base"
+    config = AutoConfig.from_pretrained(model_str)
+    config.num_labels = 4
+    config.num_hidden_layers = 9
+    backbone = SubwordXLMForTokenClassification.from_pretrained(model_str, config=config)
+    print(summary(backbone, depth=4))
+    
+    # some sample input
+    text = "This is a test\n sentence \n\n"
+    tokenizer = AutoTokenizer.from_pretrained(model_str)
+    
+    tokens = tokenizer(text, return_tensors="pt")
+    from tokenizers import AddedToken
+    tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
+    print(tokenizer.tokenize(text))
+    print(tokenizer.encode(text))
+    print(tokens)
+    # forward pass
+    print(backbone(**tokens))
+    

@@ -76,6 +76,22 @@ def get_label_dict(label_args):
 
     return label_dict
 
+def get_subword_label_dict(label_args, tokenizer):
+    label_dict = {}
+
+    # Map auxiliary characters to token IDs with labels
+    for i, c in enumerate(label_args.auxiliary_chars):
+        token_id = tokenizer.convert_tokens_to_ids(c)
+        label_dict[token_id] = 1 + Constants.AUX_OFFSET + i
+        print(f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}")
+
+    # Map newline characters to token IDs with labels
+    for c in label_args.newline_chars:
+        token_id = tokenizer.convert_tokens_to_ids(c)
+        label_dict[token_id] = 1 + Constants.NEWLINE_INDEX
+        print(f"newline character {c} has token ID {token_id} and label {label_dict[token_id]}")
+
+    return label_dict
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -125,6 +141,7 @@ def corrupt(
     label_dict,
     pack_samples=False,
     min_length=None,
+    tokenizer=None,
 ):
     input_ids = input_ids.copy()
     block_ids = block_ids.copy()
@@ -144,7 +161,10 @@ def corrupt(
         if labels[i] == Constants.NEWLINE_INDEX + 1:
             if random.random() < label_args.newline_remove_prob:
                 if separator == " " and random.random() < label_args.newline_whitespace_prob:
-                    input_ids[i + 1] = ord(" ")
+                    if tokenizer:
+                        input_ids[i + 1] = tokenizer.convert_tokens_to_ids(" ")
+                    else:
+                        input_ids[i + 1] = ord(" ")
                 else:
                     del input_ids[i + 1]
                     del labels[i + 1]

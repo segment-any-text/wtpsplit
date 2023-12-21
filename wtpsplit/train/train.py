@@ -6,23 +6,37 @@ from dataclasses import dataclass
 from functools import partial
 from glob import glob
 from typing import List
+import random
 
 import numpy as np
 import torch
 import wandb
 from datasets import load_dataset
+from datasets.download import DownloadConfig
 from torch import nn
-from transformers import HfArgumentParser, TrainingArguments
+from transformers import HfArgumentParser, TrainingArguments, AutoTokenizer, set_seed
+from torchinfo import summary
+from tokenizers import AddedToken
 
 from wtpsplit.models import (
     BertCharConfig,
     BertCharForTokenClassification,
     LACanineConfig,
     LACanineForTokenClassification,
+    SubwordXLMConfig,
+    SubwordXLMForTokenClassification,
 )
 from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.trainer import Trainer
-from wtpsplit.utils import Constants, LabelArgs, corrupt, get_label_dict
+from wtpsplit.utils import Constants, LabelArgs, corrupt, get_label_dict, get_subword_label_dict
+
+# TODO: use seed from training args (also add default value)
+
+# TODO: set logger (see ScaLearn?)
+
+# TODO: double-check checkpointing and saving (also to txt)
+
+# os.environ["PJRT_DEVICE"] = "None"
 
 
 class Model(nn.Module):
@@ -132,6 +146,7 @@ class Args:
     use_logits: bool = False
     is_decoder: bool = False
     use_bert: bool = False
+    # TODO: adapt to HF Hub
     train_text_path: str = "data/train.parquet"
     valid_text_path: str = "data/valid.parquet"
     include_languages: List[str] = None
@@ -157,8 +172,11 @@ class Args:
     adapter_lr_multiplier: float = 1.0
     text_column: str = "text"
 
+    # NEW PARAMS
+    use_subwords: bool = False
 
-def collate_fn(batch, args, label_args, label_dict):
+
+def collate_fn(batch, args, label_args, label_dict, tokenizer):
     all_input_ids = []
     all_labels = []
     all_language_ids = []
@@ -168,8 +186,12 @@ def collate_fn(batch, args, label_args, label_dict):
     all_label_weights = []
 
     for sample in batch:
-        # NOTE: this is specific to characters at the moment!
-        input_ids = [ord(c) for c in sample[args.text_column]]
+        # subword-level
+        if args.use_subwords:
+            input_ids = tokenizer.convert_tokens_to_ids(sample[args.text_column])
+        # char-level
+        else:
+            input_ids = [ord(c) for c in sample[args.text_column]]
         lang = sample["lang"]
 
         while len(input_ids) < args.block_size + args.overflow_size:
@@ -185,6 +207,7 @@ def collate_fn(batch, args, label_args, label_dict):
             label_dict=label_dict,
             pack_samples=args.pack_samples,
             min_length=args.block_size,
+            tokenizer=tokenizer if args.use_subwords else None,
         )
 
         if len(input_ids) > args.block_size:
@@ -229,33 +252,53 @@ def main():
         (args, training_args, label_args) = parser.parse_args_into_dataclasses()
         wandb_name = None
 
-    config = LACanineConfig.from_pretrained(
-        args.model_name_or_path,
-        raw_lookahead=args.lookahead,
-        num_hidden_layers=args.num_hidden_layers,
-        num_labels=Constants.AUX_OFFSET + ((1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0),
-        n_languages=len(Constants.LANG_CODE_TO_INDEX),
-        ngram_order=args.ngram_order,
-        language_adapter=args.language_adapter,
-        # upsampling kernel size > 1 is problematic for packing
-        # using ks=1 doesn't allow reusing the pretrained weights
-        # but if we warm it up alongside the adapters
-        # there is almost no difference.
-        upsampling_kernel_size=1,
-    )
-    if args.use_bert:
-        config = BertCharConfig.from_pretrained(
-            args.model_name_or_path,
-            num_labels=Constants.AUX_OFFSET
-            + ((1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0),
-        )
-        backbone = BertCharForTokenClassification(config)
-    elif args.from_scratch:
-        backbone = LACanineForTokenClassification(config)
+    num_labels = Constants.AUX_OFFSET + ((1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0)
+    if args.use_subwords:
+        if args.from_scratch:
+            config = SubwordXLMConfig.from_pretrained(
+                args.model_name_or_path,
+                num_hidden_layers=args.num_hidden_layers,
+                num_labels=num_labels,
+            )
+            backbone = SubwordXLMForTokenClassification(config)
+        else:
+            config = SubwordXLMConfig.from_pretrained(
+                args.model_name_or_path,
+                num_hidden_layers=args.num_hidden_layers,
+                num_labels=num_labels,
+            )
+            backbone = SubwordXLMForTokenClassification(config)
+
+        tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
+        tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
+
     else:
-        backbone = LACanineForTokenClassification.from_pretrained(
-            args.model_name_or_path, ignore_mismatched_sizes=True, config=config
+        config = LACanineConfig.from_pretrained(
+            args.model_name_or_path,
+            raw_lookahead=args.lookahead,
+            num_hidden_layers=args.num_hidden_layers,
+            num_labels=num_labels,
+            n_languages=len(Constants.LANG_CODE_TO_INDEX),
+            ngram_order=args.ngram_order,
+            language_adapter=args.language_adapter,
+            # upsampling kernel size > 1 is problematic for packing
+            # using ks=1 doesn't allow reusing the pretrained weights
+            # but if we warm it up alongside the adapters
+            # there is almost no difference.
+            upsampling_kernel_size=1,
         )
+        if args.use_bert:
+            config = BertCharConfig.from_pretrained(
+                args.model_name_or_path,
+                num_labels=num_labels,
+            )
+            backbone = BertCharForTokenClassification(config)
+        elif args.from_scratch:
+            backbone = LACanineForTokenClassification(config)
+        else:
+            backbone = LACanineForTokenClassification.from_pretrained(
+                args.model_name_or_path, ignore_mismatched_sizes=True, config=config
+            )
 
     model = Model(
         backbone,
@@ -265,20 +308,22 @@ def main():
         do_auxiliary_training=args.do_auxiliary_training,
     )
 
+    with training_args.main_process_first():
+        print(summary(model, depth=3))
+
     def prepare_dataset(
-        path,
         num_workers=1,
         include_languages=None,
         shuffle=False,
         split="train",
     ):
-        from datasets.download import DownloadConfig
-
-        dlconf = DownloadConfig(cache_dir="/home/Markus/.cache/huggingface/datasets")
-        dataset = load_dataset("markus583/mC4-TEST", split=split, download_config=dlconf)
-        # optional: delete downloaded dataset, it is stored in /dev/shm/cache now 
+        with training_args.main_process_first():
+            dlconf = DownloadConfig(cache_dir="/home/Markus/.cache/huggingface/datasets")
+            dataset = load_dataset("markus583/mC4-TEST", split=split, download_config=dlconf)
+        # optional: delete downloaded dataset, it is stored in cache_dir now (but we delete it later)
+        # ~40GB on disk
         # os.system("rm -rf /home/Markus/.cache/huggingface/datasets")
-        
+
         if include_languages is not None:
             include_languages = set(include_languages)
 
@@ -344,6 +389,13 @@ def main():
                     num_proc=num_workers,
                 )
 
+        def tokenize_texts(examples):
+            tokenized = tokenizer(examples[args.text_column], add_special_tokens=False)
+            # also add tokenized tokens in str format
+            tokenized["tokenized_text"] = [tokenizer.convert_ids_to_tokens(ids) for ids in tokenized["input_ids"]]
+
+            return tokenized
+
         # similar to group_texts in huggingface's run_clm.py / run_mlm.py: https://github.com/huggingface/transformers/blob/main/examples/pytorch/language-modeling/run_mlm.py
         def group_texts(examples):
             all_input_blocks = []
@@ -361,14 +413,24 @@ def main():
                 return text
 
             for current_lang in set(examples["lang"]):
-                lang_texts = [
-                    maybe_pad(text)
-                    for text, lang in zip(examples[args.text_column], examples["lang"])
-                    if lang == current_lang
-                ]
+                if not args.use_subwords:
+                    lang_texts = [
+                        maybe_pad(text)
+                        for text, lang in zip(examples[args.text_column], examples["lang"])
+                        if lang == current_lang
+                    ]
+                else:
+                    # only retain current_lang examples (all columns)
+                    lang_subwords = [
+                        subwords
+                        for subwords, lang in zip(examples["tokenized_text"], examples["lang"])
+                        if lang == current_lang
+                    ]
 
                 # pack_samples used for the compound part, so irrelevant
                 if args.pack_samples:
+                    if args.use_subwords:
+                        raise NotImplementedError
                     blocks = []
                     block_ids = []
 
@@ -399,8 +461,13 @@ def main():
                         blocks.append(current_block[0])
                         block_ids.append(current_block[1])
                 else:
-                    concatenated_texts = "".join(lang_texts)
-                    concatenated_ids = [i for i, text in enumerate(lang_texts) for _ in text]
+                    if not args.use_subwords:
+                        concatenated_texts = "".join(lang_texts)
+                        concatenated_ids = [i for i, text in enumerate(lang_texts) for _ in text]
+                    else:
+                        # concatenate lists
+                        concatenated_texts = [item for sublist in lang_subwords for item in sublist]
+                        concatenated_ids = [i for i, subwords in enumerate(lang_subwords) for _ in subwords]
 
                     total_length = len(concatenated_texts)
 
@@ -441,40 +508,58 @@ def main():
         if args.pack_samples:
             assert not args.one_sample_per_line
 
+        if args.use_subwords:
+            with training_args.main_process_first():
+                dataset = dataset.map(
+                    tokenize_texts,
+                    batched=True,
+                    num_proc=num_workers,
+                    # remove_columns=[args.text_column],
+                )
+
         if not args.one_sample_per_line:
             with training_args.main_process_first():
+                # drop columns input_ids, attentionm
                 dataset = dataset.map(
                     group_texts,
                     batched=True,
                     num_proc=num_workers,
                     # a bit hacky but oh well, only drop if sentence
-                    remove_columns=["ends_with_punctuation"] if args.text_column == "text" else [],
+                    # TODO: clean this
+                    remove_columns=["ends_with_punctuation", "input_ids", "attention_mask", "tokenized_text"]
+                    if args.text_column == "text"
+                    else [],
                 )
-        
-        # used dataset is in cache now
-        # recursively remove the files in cache_dir starting with m_c4
-        for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
-            for file in files:
-                if file.startswith("m_c4"):
-                    print(f"Removing {os.path.join(root, file)}")
-                    os.remove(os.path.join(root, file))
 
         return dataset
 
     train_dataset = prepare_dataset(
-        args.train_text_path,
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=args.shuffle,
         split="train",
     )
     valid_dataset = prepare_dataset(
-        args.valid_text_path,
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=False,
         split="valid",
     )
+
+    # print some samples from the dataset
+    for index in random.sample(range(len(train_dataset)), 10):
+        print(f"Sample {index} of the training set: {train_dataset[index]}.")
+        print()
+
+    # dataset we use is in cached now
+    # m_c4 files are test/valid splits of already downloaded data
+    # ~80GB deleted, ~63 GB left in cache/RAM (cache-* files)
+    # with training_args.main_process_first():
+    #     for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
+    #         for file in files:
+    #             if file.startswith("m_c4"):
+    #                 print(f"Removing {os.path.join(root, file)}")
+    #                 os.remove(os.path.join(root, file))
 
     eval_data = torch.load(
         args.eval_data_path,
@@ -520,7 +605,7 @@ def main():
         for file in glob(os.path.join(os.path.dirname(__file__), "*.py")):
             wandb.save(os.path.abspath(file), policy="now")
 
-    label_dict = get_label_dict(label_args)
+    label_dict = get_subword_label_dict(label_args, tokenizer) if args.use_subwords else get_label_dict(label_args)
 
     # needed in the trainer
     training_args.adapter_warmup_steps = args.adapter_warmup_steps
@@ -532,7 +617,13 @@ def main():
         train_dataset=train_dataset,
         eval_dataset=valid_dataset,
         compute_metrics=compute_metrics,
-        data_collator=partial(collate_fn, args=args, label_args=label_args, label_dict=label_dict),
+        data_collator=partial(
+            collate_fn,
+            args=args,
+            label_args=label_args,
+            label_dict=label_dict,
+            tokenizer=tokenizer if args.use_subwords else None,
+        ),
     )
 
     trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
