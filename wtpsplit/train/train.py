@@ -662,7 +662,6 @@ def main():
         for file in glob(os.path.join(os.path.dirname(__file__), "*.py")):
             wandb.save(os.path.abspath(file), policy="now")
 
-    # TODO: check tokenized mapping; UNKs?
     label_dict = get_subword_label_dict(label_args, tokenizer) if args.use_subwords else get_label_dict(label_args)
 
     # needed in the trainer
