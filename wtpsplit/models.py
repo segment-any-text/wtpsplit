@@ -989,8 +989,9 @@ class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
         labels: Optional[torch.LongTensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+        hashed_ids: Optional[torch.Tensor] = None,
         language_ids=None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Tuple[torch.Tensor], TokenClassifierOutput]:
         return super().forward(
             input_ids,
@@ -1030,7 +1031,7 @@ if __name__ == "__main__":
     text = "This is a test\n sentence \n\n"
     tokenizer = AutoTokenizer.from_pretrained(model_str)
     
-    tokens = tokenizer(text, return_tensors="pt")
+    tokens = tokenizer(text, return_tensors="pt", add_special_tokens=False)
     from tokenizers import AddedToken
     tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
     print(tokenizer.tokenize(text))

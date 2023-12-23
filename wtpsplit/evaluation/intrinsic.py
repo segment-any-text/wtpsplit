@@ -34,7 +34,7 @@ class Args:
     # }
     eval_data_path: str = "data/eval.pth"
     valid_text_path: str = None#"data/sentence/valid.parquet"
-    device: str = "xla:1"
+    device: str = "cpu"
     block_size: int = 512
     stride: int = 64
     batch_size: int = 32
@@ -44,7 +44,8 @@ class Args:
 def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_sentences=10_000):
     logits_path = Constants.CACHE_DIR / (model.config.mixture_name + "_logits.h5")
 
-    with h5py.File(logits_path, "a") as f, torch.no_grad():
+    # TODO: revert to "a"
+    with h5py.File(logits_path, "w") as f, torch.no_grad():
         for lang_code in Constants.LANGINFO.index:
             if args.include_langs is not None and lang_code not in args.include_langs:
                 continue
@@ -152,6 +153,7 @@ if __name__ == "__main__":
 
             if "train_logits" in f[lang_code][dataset_name]:
                 feature_indices = None
+                # TODO: tokenize here
                 clf = train_mixture(
                     [lang_code],
                     f[lang_code][dataset_name]["train_logits"][:],
@@ -159,6 +161,7 @@ if __name__ == "__main__":
                     features=feature_indices,
                 )
 
+                # TODO: tokenize here, too
                 score_t, score_punct, _ = evaluate_mixture(
                     lang_code,
                     f[lang_code][dataset_name]["test_logits"][:],

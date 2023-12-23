@@ -30,8 +30,6 @@ from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.trainer import Trainer
 from wtpsplit.utils import Constants, LabelArgs, corrupt, get_label_dict, get_subword_label_dict
 
-# TODO: use seed from training args (also add default value)
-
 # TODO: set logger (see ScaLearn?)
 
 # TODO: double-check checkpointing and saving (also to txt)
@@ -209,18 +207,63 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
             min_length=args.block_size,
             tokenizer=tokenizer if args.use_subwords else None,
         )
+        
+        if input_ids[0] != tokenizer.cls_token_id:
+            print(input_ids)
+            print(len(input_ids))
+            print(tokenizer.cls_token_id)
+            raise ValueError("CLS token not first token")
+        if input_ids[-1] != tokenizer.sep_token_id:
+            print(input_ids)
+            print(len(input_ids))
+            print(tokenizer.sep_token_id)
+            raise ValueError("SEP token not last token")
 
         if len(input_ids) > args.block_size:
-            start = np.random.randint(0, len(input_ids) - args.block_size)
-            input_ids = input_ids[start : start + args.block_size]
-            labels = labels[start : start + args.block_size]
+            if tokenizer:
+                # always include CLS
+                start = np.random.randint(0, len(input_ids) - args.block_size)
+                if start != 0:
+                    # this removes the CLS token
+                    # -1 removes the SEP token, for sure
+                    input_ids = [tokenizer.cls_token_id] + input_ids[start : start + args.block_size - 2]
+                    labels = [0] + labels[start : start + args.block_size - 2]
+                else:
+                    input_ids = input_ids[start : start + args.block_size - 1]
+                    labels = labels[start : start + args.block_size - 1]
+                # always include SEP
+                if input_ids[-1] != tokenizer.sep_token_id:
+                    input_ids = input_ids + [tokenizer.sep_token_id]
+                    labels = labels + [0]
+            else:
+                start = np.random.randint(0, len(input_ids) - args.block_size)
+                input_ids = input_ids[start : start + args.block_size]
+                labels = labels[start : start + args.block_size]
 
         input_ids = torch.tensor(input_ids[: args.block_size], dtype=torch.long)
         labels = torch.tensor(labels[: args.block_size], dtype=torch.long)
+        if input_ids[-1] != tokenizer.sep_token_id:
+            print(input_ids)
+            print(tokenizer.sep_token_id)
+            print(labels)
+            raise ValueError("SEP token not last token")
+        if input_ids[0] != tokenizer.cls_token_id:
+            print(input_ids)
+            print(tokenizer.cls_token_id)
+            print(labels)
+            raise ValueError("CLS token not first token")
+        if (input_ids == tokenizer.cls_token_id).sum() != 1:
+            print(input_ids)
+            print(tokenizer.cls_token_id)
+            print(labels)
+            raise ValueError("CLS token not unique")
 
         position_ids = torch.arange(len(input_ids), dtype=torch.long)
         label_weights = torch.ones(args.block_size, dtype=torch.float32)
-        attention_mask = (input_ids != 0).to(torch.float32)
+        if tokenizer:
+            attention_mask = (input_ids != tokenizer.pad_token_id).to(torch.float32)
+        else:
+            attention_mask = (input_ids != 0).to(torch.float32)
 
         all_input_ids.append(input_ids)
         all_label_weights.append(label_weights)
@@ -233,7 +276,7 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
     out = {
         "input_ids": torch.stack(all_input_ids, 0),
         "attention_mask": torch.stack(all_attention_masks, 0),
-        "position_ids": torch.stack(all_position_ids, 0),
+        "position_ids": torch.stack(all_position_ids, 0) if not args.use_subwords else None,  # safer
         "language_ids": torch.tensor(all_language_ids, dtype=torch.long),
         "label_weights": torch.stack(all_label_weights, 0),
         "labels": torch.stack(all_labels, 0),
@@ -251,6 +294,8 @@ def main():
     else:
         (args, training_args, label_args) = parser.parse_args_into_dataclasses()
         wandb_name = None
+        
+    set_seed(training_args.seed)
 
     num_labels = Constants.AUX_OFFSET + ((1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0)
     if args.use_subwords:
@@ -261,6 +306,7 @@ def main():
                 num_labels=num_labels,
             )
             backbone = SubwordXLMForTokenClassification(config)
+            
         else:
             config = SubwordXLMConfig.from_pretrained(
                 args.model_name_or_path,
@@ -269,6 +315,7 @@ def main():
             )
             backbone = SubwordXLMForTokenClassification(config)
 
+        backbone.config.base_model = args.model_name_or_path
         tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
         tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
 
@@ -309,7 +356,9 @@ def main():
     )
 
     with training_args.main_process_first():
-        print(summary(model, depth=10))
+        print(summary(model, depth=4))
+        # also save base model
+        # backbone.push_to_hub("markus583/xlm-token-untrained", private=True)
 
     def prepare_dataset(
         num_workers=1,
@@ -388,13 +437,14 @@ def main():
                     batch_size=1_000_000,
                     num_proc=num_workers,
                 )
+        
 
         def tokenize_texts(examples):
-            # TODO: before, we used use_special_tokens=False --> check effect!
-            tokenized = tokenizer(examples[args.text_column])
-            # also add tokenized tokens in str format
-            # TODO: only use input_ids, no double conversion
-            return {"input_ids": tokenized["input_ids"]}
+            # do not return CLS and SEP token here
+            # there should only be 1 of these per block later, not multiple
+            # we still can't use return_special_tokens=False since we need the \n token later for the labels
+            tokenized = tokenizer(examples[args.text_column], verbose=False)
+            return {"input_ids": [example[1:-1] for example in tokenized["input_ids"]]}
 
         # similar to group_texts in huggingface's run_clm.py / run_mlm.py: https://github.com/huggingface/transformers/blob/main/examples/pytorch/language-modeling/run_mlm.py
         def group_texts(examples):
@@ -516,15 +566,22 @@ def main():
                     num_proc=num_workers,
                     remove_columns=[args.text_column],
                 )
+                
+        if split == "train":
+            with training_args.main_process_first():
+                for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
+                    for file in files:
+                        if file.startswith("m_c4-test-train"):
+                            print(f"Removing {os.path.join(root, file)}")
+                            os.remove(os.path.join(root, file))
 
         if not args.one_sample_per_line:
             with training_args.main_process_first():
                 dataset = dataset.map(
                     group_texts,
                     batched=True,
-                    num_proc=num_workers,
+                    num_proc=1,
                     # a bit hacky but oh well, only drop if sentence
-                    # TODO: clean this
                     remove_columns=["ends_with_punctuation"]
                     if args.text_column == "text"
                     else [],
@@ -532,22 +589,23 @@ def main():
 
         return dataset
 
-    train_dataset = prepare_dataset(
-        num_workers=args.preprocessing_num_workers,
-        include_languages=args.include_languages,
-        shuffle=args.shuffle,
-        split="train",
-    )
     valid_dataset = prepare_dataset(
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=False,
         split="valid",
     )
+    train_dataset = prepare_dataset(
+        num_workers=args.preprocessing_num_workers,
+        include_languages=args.include_languages,
+        shuffle=args.shuffle,
+        split="valid",
+    )
 
     # print some samples from the dataset
-    for index in random.sample(range(len(train_dataset)), 10):
+    for index in random.sample(range(len(train_dataset)), 5):
         print(f"Sample {index} of the training set: {train_dataset[index]}.")
+        print(tokenizer.decode(train_dataset[index]["input_ids"]))
         print()
 
     # dataset we use is in cached now
@@ -604,6 +662,7 @@ def main():
         for file in glob(os.path.join(os.path.dirname(__file__), "*.py")):
             wandb.save(os.path.abspath(file), policy="now")
 
+    # TODO: check tokenized mapping; UNKs?
     label_dict = get_subword_label_dict(label_args, tokenizer) if args.use_subwords else get_label_dict(label_args)
 
     # needed in the trainer

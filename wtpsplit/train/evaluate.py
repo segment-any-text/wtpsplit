@@ -47,6 +47,33 @@ def get_metrics(labels, preds):
 
     return metrics, info
 
+def get_token_spans(tokenizer: object, offsets_mapping: list, tokens: list):
+    token_spans = []
+    for idx, token in enumerate(tokens):
+        # Skip special tokens like [CLS], [SEP]
+        if idx >= len(offsets_mapping):
+            continue
+        if token in [tokenizer.cls_token, tokenizer.sep_token, tokenizer.pad_token]:
+            continue
+
+        char_start, char_end = offsets_mapping[idx]
+        token_spans.append((char_start, char_end))
+
+    return token_spans
+
+def token_to_char_probs(text: str, tokens: list, token_probs: np.ndarray, tokenizer, offsets_mapping):
+    char_probs = np.zeros(len(text))
+    token_spans = get_token_spans(tokenizer, offsets_mapping, tokens)
+
+    for (start, end), prob in zip(token_spans, token_probs):
+        # assign the token's prob to the last char of the token
+        # Ensure the end index does not exceed the length of the text
+        if end >= len(text):
+            print(f"Adjusting end index from {end} to {len(text)} for token '{text[start:end]}'")
+            end = len(text) - 1
+        char_probs[end] = prob 
+
+    return char_probs
 
 def evaluate_sentence(
     lang_code,
@@ -67,7 +94,7 @@ def evaluate_sentence(
     separator = Constants.SEPARATORS[lang_code]
     text = separator.join(sentences)
 
-    logits = extract(
+    logits, offsets_mapping, tokenizer = extract(
         [text],
         PyTorchWrapper(model.backbone),
         lang_code=lang_code,
@@ -75,13 +102,22 @@ def evaluate_sentence(
         block_size=block_size,
         batch_size=batch_size,
         verbose=True,
-    )[0]
+    )
+    logits, offsets_mapping = logits[0], offsets_mapping[0]
 
     true_end_indices = np.cumsum(np.array([len(s) for s in sentences])) + np.arange(len(sentences)) * len(separator)
     newline_labels = np.zeros(len(text))
     newline_labels[true_end_indices - 1] = 1
-
-    metrics, info = get_metrics(newline_labels, logits[:, positive_index])
+    
+    print("newline_labels", newline_labels.shape)
+    
+    if "xlm" in model.config.model_type:
+        tokens = tokenizer.tokenize(text)
+        char_probs = token_to_char_probs(text, tokens, logits[:, positive_index], tokenizer, offsets_mapping)
+    else:
+        char_probs = logits[:, positive_index]
+    print("char probs", char_probs.shape)
+    metrics, info = get_metrics(newline_labels, char_probs)
 
     info["newline_labels"] = newline_labels
 
@@ -94,3 +130,4 @@ def evaluate_sentence(
         info["newline_probs_pysbd"] = newline_probs_pysbd
 
     return metrics["pr_auc"], info
+

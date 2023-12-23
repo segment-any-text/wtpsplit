@@ -45,12 +45,14 @@ class SubwordXLMConfig(XLMRobertaConfig):
         XLMRobertaConfig: Base class.
     """
     model_type = "xlm-token"
+    mixture_name = "xlm-token"
 
     def __init__(
         self,
         **kwargs,
     ):
         super().__init__(**kwargs)
+        self.mixture_name = "xlm-token"
 
 
 AutoConfig.register("bert-char", BertCharConfig)

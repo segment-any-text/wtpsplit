@@ -79,17 +79,23 @@ def get_label_dict(label_args):
 def get_subword_label_dict(label_args, tokenizer):
     label_dict = {}
 
+    n_unks = 0
     # Map auxiliary characters to token IDs with labels
     for i, c in enumerate(label_args.auxiliary_chars):
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.AUX_OFFSET + i
-        print(f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}")
+        print(f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded: {tokenizer.decode([token_id])}")
+        if token_id == tokenizer.unk_token_id:
+            n_unks += 1
+    
+    print(f"found {n_unks} UNK tokens in auxiliary characters")
 
     # Map newline characters to token IDs with labels
     for c in label_args.newline_chars:
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.NEWLINE_INDEX
-        print(f"newline character {c} has token ID {token_id} and label {label_dict[token_id]}")
+        print(f"newline character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded:")
+        print(r"{}".format(tokenizer.decode([token_id])))
 
     return label_dict
 
@@ -152,8 +158,17 @@ def corrupt(
     try:
         i = next(index for index, label in enumerate(labels) if label != 0)
     except StopIteration:
+        if tokenizer is not None:
+            input_ids = [tokenizer.cls_token_id] + input_ids + [tokenizer.sep_token_id]
+            # Extend block_ids for the added CLS and SEP tokens
+            block_ids = [block_ids[0]] + block_ids + [block_ids[-1]]
+            # labels for CLS and SEP tokens are 0 (none)
+            labels = [0] + labels + [0]
         return input_ids, block_ids, labels
 
+    if tokenizer:
+        # account for CLS and SEP token, added later
+        min_length = min_length - 2 if min_length is not None else None
     while True:
         if min_length is not None and len(input_ids) <= min_length:
             break
@@ -192,6 +207,14 @@ def corrupt(
             i = i + 1 + next(index for index, label in enumerate(labels[i + 1 :]) if label != 0)
         except StopIteration:
             break
+
+    # Add CLS and SEP tokens after the corruption process
+    if tokenizer is not None:
+        input_ids = [tokenizer.cls_token_id] + input_ids + [tokenizer.sep_token_id]
+        # Extend block_ids for the added CLS and SEP tokens
+        block_ids = [block_ids[0]] + block_ids + [block_ids[-1]]
+        # labels for CLS and SEP tokens are 0 (none)
+        labels = [0] + labels + [0]
 
     return input_ids, block_ids, labels
 
