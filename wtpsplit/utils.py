@@ -84,6 +84,7 @@ def get_subword_label_dict(label_args, tokenizer):
     for i, c in enumerate(label_args.auxiliary_chars):
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.AUX_OFFSET + i
+        # TODO: remove UNKs?
         print(f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded: {tokenizer.decode([token_id])}")
         if token_id == tokenizer.unk_token_id:
             n_unks += 1
@@ -177,7 +178,11 @@ def corrupt(
             if random.random() < label_args.newline_remove_prob:
                 if separator == " " and random.random() < label_args.newline_whitespace_prob:
                     if tokenizer:
-                        input_ids[i + 1] = tokenizer.convert_tokens_to_ids(" ")
+                        # inserting " " leaks \n information
+                        # the token is never there naturally, so it is a 1:1 proxy for \n
+                        del input_ids[i + 1]
+                        del labels[i + 1]
+                        del block_ids[i + 1]
                     else:
                         input_ids[i + 1] = ord(" ")
                 else:

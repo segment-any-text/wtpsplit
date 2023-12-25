@@ -103,20 +103,17 @@ def evaluate_sentence(
         batch_size=batch_size,
         verbose=True,
     )
-    logits, offsets_mapping = logits[0], offsets_mapping[0]
+    logits, offsets_mapping = logits[0], offsets_mapping[0]  # FIXME
 
     true_end_indices = np.cumsum(np.array([len(s) for s in sentences])) + np.arange(len(sentences)) * len(separator)
     newline_labels = np.zeros(len(text))
     newline_labels[true_end_indices - 1] = 1
-    
-    print("newline_labels", newline_labels.shape)
-    
+        
     if "xlm" in model.config.model_type:
         tokens = tokenizer.tokenize(text)
         char_probs = token_to_char_probs(text, tokens, logits[:, positive_index], tokenizer, offsets_mapping)
     else:
         char_probs = logits[:, positive_index]
-    print("char probs", char_probs.shape)
     metrics, info = get_metrics(newline_labels, char_probs)
 
     info["newline_labels"] = newline_labels

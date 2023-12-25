@@ -85,6 +85,7 @@ def extract(
         tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
         tokens = tokenizer(batch_of_texts, return_offsets_mapping=True)
         # remove CLS and SEP tokens, they are added later anyhow
+        old_batch_of_texts = batch_of_texts
         batch_of_texts = [text[1:-1] for text in tokens["input_ids"]]
         offset_mapping = [offset[1:-1] for offset in tokens["offset_mapping"]]
         cls_token_id = tokenizer.cls_token_id
@@ -219,6 +220,7 @@ def extract(
             attention_mask=batch_attention_mask,
             **kwargs,
         )["logits"]
+        print(np.max(logits[0, :, 0]))
 
         for i in range(start, end):
             original_idx, start_char_idx, end_char_idx = locs[i]

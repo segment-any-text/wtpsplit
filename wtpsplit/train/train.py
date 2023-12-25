@@ -71,7 +71,11 @@ class Model(nn.Module):
         label_weights=None,
         **kwargs,
     ):
-        reduced_attention_mask = (input_ids != 0).to(torch.long)
+        if position_ids is not None:
+            reduced_attention_mask = (input_ids != 0).to(torch.long)
+        else:
+            # XXX: 1 is pad token id
+            reduced_attention_mask = (input_ids != 1).to(torch.long)
 
         output = dict(
             self.backbone.forward(
@@ -91,6 +95,7 @@ class Model(nn.Module):
 
             # main (newline prediction) objective
             if self.do_sentence_training:
+                # label smoothing
                 sentence_labels = (0.5 - self.loss_margin) + (labels == Constants.NEWLINE_INDEX + 1).to(
                     logits.dtype
                 ).view(-1) * self.loss_margin * 2
@@ -112,11 +117,13 @@ class Model(nn.Module):
             if self.do_auxiliary_training:
                 loss_fn = nn.CrossEntropyLoss()
 
+                # exclude newline and no labels
                 aux_labels = torch.where(
                     (labels == 0) | (labels == Constants.NEWLINE_INDEX + 1),
                     0,
                     labels - Constants.AUX_OFFSET,
                 )
+                # exclude reduced_attention_mask tokens from labels
                 aux_labels = torch.where(
                     reduced_attention_mask == 1,
                     aux_labels,
@@ -208,16 +215,16 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
             tokenizer=tokenizer if args.use_subwords else None,
         )
         
-        if input_ids[0] != tokenizer.cls_token_id:
-            print(input_ids)
-            print(len(input_ids))
-            print(tokenizer.cls_token_id)
-            raise ValueError("CLS token not first token")
-        if input_ids[-1] != tokenizer.sep_token_id:
-            print(input_ids)
-            print(len(input_ids))
-            print(tokenizer.sep_token_id)
-            raise ValueError("SEP token not last token")
+        # if input_ids[0] != tokenizer.cls_token_id:
+        #     print(input_ids)
+        #     print(len(input_ids))
+        #     print(tokenizer.cls_token_id)
+        #     raise ValueError("CLS token not first token")
+        # if input_ids[-1] != tokenizer.sep_token_id:
+        #     print(input_ids)
+        #     print(len(input_ids))
+        #     print(tokenizer.sep_token_id)
+        #     raise ValueError("SEP token not last token")
 
         if len(input_ids) > args.block_size:
             if tokenizer:
@@ -242,21 +249,22 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
 
         input_ids = torch.tensor(input_ids[: args.block_size], dtype=torch.long)
         labels = torch.tensor(labels[: args.block_size], dtype=torch.long)
-        if input_ids[-1] != tokenizer.sep_token_id:
-            print(input_ids)
-            print(tokenizer.sep_token_id)
-            print(labels)
-            raise ValueError("SEP token not last token")
-        if input_ids[0] != tokenizer.cls_token_id:
-            print(input_ids)
-            print(tokenizer.cls_token_id)
-            print(labels)
-            raise ValueError("CLS token not first token")
-        if (input_ids == tokenizer.cls_token_id).sum() != 1:
-            print(input_ids)
-            print(tokenizer.cls_token_id)
-            print(labels)
-            raise ValueError("CLS token not unique")
+        # if input_ids[-1] != tokenizer.sep_token_id:
+        #     print(input_ids)
+        #     print(tokenizer.sep_token_id)
+        #     print(labels)
+        #     raise ValueError("SEP token not last token")
+        # if input_ids[0] != tokenizer.cls_token_id:
+        #     print(input_ids)
+        #     print(tokenizer.cls_token_id)
+        #     print(labels)
+        #     raise ValueError("CLS token not first token")
+        # TODO: check this - why does it occur in train split?
+        # if (input_ids == tokenizer.cls_token_id).sum() != 1:
+        #     print(input_ids)
+        #     print(tokenizer.cls_token_id)
+        #     print(labels)
+        #     raise ValueError("CLS token not unique")
 
         position_ids = torch.arange(len(input_ids), dtype=torch.long)
         label_weights = torch.ones(args.block_size, dtype=torch.float32)
@@ -317,9 +325,12 @@ def main():
 
         backbone.config.base_model = args.model_name_or_path
         tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
+        # needed since we create labels in collate_fn based on tokens
+        # TODO: problematic for <UNK> tokens!
         tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
 
     else:
+        tokenizer = None
         config = LACanineConfig.from_pretrained(
             args.model_name_or_path,
             raw_lookahead=args.lookahead,
@@ -357,7 +368,6 @@ def main():
 
     with training_args.main_process_first():
         print(summary(model, depth=4))
-        # also save base model
         # backbone.push_to_hub("markus583/xlm-token-untrained", private=True)
 
     def prepare_dataset(
@@ -582,9 +592,9 @@ def main():
                     batched=True,
                     num_proc=num_workers,
                     # a bit hacky but oh well, only drop if sentence
-                    remove_columns=["ends_with_punctuation"]
+                    remove_columns=["ends_with_punctuation", args.text_column]
                     if args.text_column == "text"
-                    else [],
+                    else [args.text_column],
                 )
 
         return dataset
@@ -599,14 +609,21 @@ def main():
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=args.shuffle,
-        split="train",
+        split="valid",
     )
 
     # print some samples from the dataset
-    for index in random.sample(range(len(train_dataset)), 5):
-        print(f"Sample {index} of the training set: {train_dataset[index]}.")
-        print(tokenizer.decode(train_dataset[index]["input_ids"]))
-        print()
+    count = 0
+    while count < 5:
+        index = random.choice(range(len(train_dataset)))
+        sample = train_dataset[index]
+
+        if sample.get('lang') == "de":
+            print(f"Sample {index} of the training set: {sample}.")
+            if tokenizer:
+                print(tokenizer.decode(sample["input_ids"]))
+            print()
+            count += 1
 
     # dataset we use is in cached now
     # m_c4 files are test/valid splits of already downloaded data
@@ -628,7 +645,7 @@ def main():
 
         model = trainer._wrap_model(trainer.model, training=False)
 
-        for lang_code, lang_data in eval_data.items():
+        for lang_code, lang_data in eval_data.items():  # TODO: tqdm integration
             if args.include_languages is not None and lang_code not in args.include_languages:
                 continue
 
