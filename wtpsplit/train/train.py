@@ -592,9 +592,9 @@ def main():
                     batched=True,
                     num_proc=num_workers,
                     # a bit hacky but oh well, only drop if sentence
-                    remove_columns=["ends_with_punctuation", args.text_column]
+                    remove_columns=["ends_with_punctuation"]  # FIXME: needed for char-based args.text_column dropping
                     if args.text_column == "text"
-                    else [args.text_column],
+                    else [],
                 )
 
         return dataset
@@ -609,7 +609,7 @@ def main():
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=args.shuffle,
-        split="valid",
+        split="train",
     )
 
     # print some samples from the dataset

@@ -83,7 +83,7 @@ def extract(
         use_subwords = True
         tokenizer = AutoTokenizer.from_pretrained(model.config.base_model)
         tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
-        tokens = tokenizer(batch_of_texts, return_offsets_mapping=True)
+        tokens = tokenizer(batch_of_texts, return_offsets_mapping=True, verbose=False)
         # remove CLS and SEP tokens, they are added later anyhow
         old_batch_of_texts = batch_of_texts
         batch_of_texts = [text[1:-1] for text in tokens["input_ids"]]
@@ -220,6 +220,8 @@ def extract(
             attention_mask=batch_attention_mask,
             **kwargs,
         )["logits"]
+        if use_subwords:
+            logits = logits[:, 1:-1, :]  # remove CLS and SEP tokens
         print(np.max(logits[0, :, 0]))
 
         for i in range(start, end):

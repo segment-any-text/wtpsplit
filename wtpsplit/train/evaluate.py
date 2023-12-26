@@ -32,6 +32,7 @@ def compute_f1(pred, true):
 def get_metrics(labels, preds):
     precision, recall, thresholds = sklearn.metrics.precision_recall_curve(labels, preds)
 
+    # we can use raw logits (no sigmoid) since we only care about the ordering here
     pr_auc = sklearn.metrics.auc(recall, precision)
 
     metrics = {
@@ -62,16 +63,13 @@ def get_token_spans(tokenizer: object, offsets_mapping: list, tokens: list):
     return token_spans
 
 def token_to_char_probs(text: str, tokens: list, token_probs: np.ndarray, tokenizer, offsets_mapping):
-    char_probs = np.zeros(len(text))
+    # some very low number since at non-ending position, predicting a newline is impossible
+    char_probs = np.zeros(len(text)) - 10000
     token_spans = get_token_spans(tokenizer, offsets_mapping, tokens)
 
-    for (start, end), prob in zip(token_spans, token_probs):
+    for i, ((start, end), prob, token) in enumerate(zip(token_spans, token_probs, tokens)):
         # assign the token's prob to the last char of the token
-        # Ensure the end index does not exceed the length of the text
-        if end >= len(text):
-            print(f"Adjusting end index from {end} to {len(text)} for token '{text[start:end]}'")
-            end = len(text) - 1
-        char_probs[end] = prob 
+        char_probs[end - 1] = prob 
 
     return char_probs
 
