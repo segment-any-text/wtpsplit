@@ -51,8 +51,8 @@ def setup_logging(training_args: transformers.TrainingArguments) -> None:
     )
     log_level = training_args.get_process_log_level()
     logger.setLevel(log_level)
-    datasets.utils.logging.set_verbosity(log_level - 10)
-    transformers.utils.logging.set_verbosity(log_level - 10)
+    datasets.utils.logging.set_verbosity_warning()
+    transformers.utils.logging.set_verbosity_warning()
     transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
     # Log on each process the small summary:
