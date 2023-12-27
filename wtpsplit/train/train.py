@@ -240,6 +240,10 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
                     labels = labels[start : start + args.block_size - 1]
                 # always include SEP
                 if input_ids[-1] != tokenizer.sep_token_id:
+                    # also insert PAD token as long as len < block_size
+                    while len(input_ids) < args.block_size - 1:
+                        input_ids = input_ids + [tokenizer.pad_token_id]
+                        labels = labels + [0]
                     input_ids = input_ids + [tokenizer.sep_token_id]
                     labels = labels + [0]
             else:
