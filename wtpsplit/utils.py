@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from cached_property import cached_property
 from pathlib import Path
 from typing import List
+import logging
 
 import numpy as np
 import pandas as pd
@@ -12,10 +13,17 @@ import pandas as pd
 # same as in CANINE
 PRIMES = [31, 43, 59, 61, 73, 97, 103, 113, 137, 149, 157, 173, 181, 193, 211, 223]
 
+logger = logging.getLogger(__name__)
 
 class ConstantsClass:
     NEWLINE_INDEX = 0
     AUX_OFFSET = 1
+    DEFAULT_PUNCTUATION_FILE = "punctuation.txt"
+    _PUNCTUATION_FILE = "punctuation.txt"
+
+    @classmethod
+    def set_punctuation_file(cls, file_name):
+        cls._PUNCTUATION_FILE = file_name
 
     @cached_property
     def ROOT_DIR(self):
@@ -25,16 +33,19 @@ class ConstantsClass:
     def CACHE_DIR(self):
         CACHE_DIR = self.ROOT_DIR / ".cache"
         CACHE_DIR.mkdir(exist_ok=True)
-
         return CACHE_DIR
 
     @cached_property
     def LANGINFO(self):
         return pd.read_csv(os.path.join(self.ROOT_DIR, "data", "language_info.csv"), index_col=0)
 
-    @cached_property
+    @property
     def PUNCTUATION_CHARS(self):
-        return [x.strip() for x in open(os.path.join(self.ROOT_DIR, "data", "punctuation.txt")).readlines()]
+        punctuation_path = os.path.join(self.ROOT_DIR, "data", self._PUNCTUATION_FILE)
+        if os.path.exists(punctuation_path):
+            return [x.strip() for x in open(punctuation_path).readlines()]
+        else:
+            raise FileNotFoundError(f"The file {punctuation_path} does not exist.")
 
     @cached_property
     def PUNCTUATION_MAP(self):
@@ -42,12 +53,11 @@ class ConstantsClass:
 
     @cached_property
     def LANG_CODE_TO_INDEX(self):
-        return {lang: i for i, lang in enumerate(Constants.LANGINFO.index)}
+        return {lang: i for i, lang in enumerate(self.LANGINFO.index)}
 
     @cached_property
     def SEPARATORS(self):
         return {lang: ("" if row["no_whitespace"] else " ") for lang, row in Constants.LANGINFO.iterrows()}
-
 
 Constants = ConstantsClass()
 
@@ -60,9 +70,17 @@ class LabelArgs:
     newline_whitespace_prob: float = 0.99
     hyphen_smooth_prob: float = 0.9
     newline_chars: List[str] = field(default_factory=lambda: ["\n"])
-    auxiliary_chars: List[str] = field(default_factory=lambda: Constants.PUNCTUATION_CHARS.copy())
+    auxiliary_chars: List[str] = field(default_factory=lambda: [])
     hyphen_chars: List[str] = field(default_factory=lambda: ["-", "‐"])
     use_auxiliary: bool = False
+    custom_punctuation_file: str = None
+
+    def __post_init__(self):
+        if self.custom_punctuation_file:
+            Constants.set_punctuation_file(self.custom_punctuation_file)
+        else:
+            Constants.set_punctuation_file("punctuation.txt")
+        self.auxiliary_chars = Constants.DEFAULT_PUNCTUATION_FILE
 
 
 def get_label_dict(label_args):
@@ -84,19 +102,18 @@ def get_subword_label_dict(label_args, tokenizer):
     for i, c in enumerate(label_args.auxiliary_chars):
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.AUX_OFFSET + i
-        # TODO: remove UNKs?
-        print(f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded: {tokenizer.decode([token_id])}")
+        logger.info(f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded: {tokenizer.decode([token_id])}")
         if token_id == tokenizer.unk_token_id:
             n_unks += 1
     
-    print(f"found {n_unks} UNK tokens in auxiliary characters")
+    logger.warn(f"found {n_unks} UNK tokens in auxiliary characters")
 
     # Map newline characters to token IDs with labels
     for c in label_args.newline_chars:
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.NEWLINE_INDEX
-        print(f"newline character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded:")
-        print(r"{}".format(tokenizer.decode([token_id])))
+        logger.info(f"newline character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded:")
+        logger.info(r"{}".format(tokenizer.decode([token_id])))
 
     return label_dict
 
@@ -289,3 +306,4 @@ def reconstruct_sentences(text, partial_sentences):
         fixed_sentences.append(text[i:])
 
     return fixed_sentences
+
