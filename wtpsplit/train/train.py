@@ -10,6 +10,7 @@ import random
 
 import numpy as np
 import torch
+from tqdm.auto import tqdm
 import wandb
 from datasets import load_dataset
 from datasets.download import DownloadConfig
@@ -34,7 +35,7 @@ from wtpsplit.utils import Constants, LabelArgs, corrupt, get_label_dict, get_su
 
 # TODO: double-check checkpointing and saving (also to txt)
 
-# os.environ["PJRT_DEVICE"] = "None"
+os.environ["PJRT_DEVICE"] = "None"
 
 
 class Model(nn.Module):
@@ -241,7 +242,8 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
                 # always include SEP
                 if input_ids[-1] != tokenizer.sep_token_id:
                     # also insert PAD token as long as len < block_size
-                    while len(input_ids) < args.block_size - 1:
+                    while len(input_ids) <= args.block_size - 1:
+                        print("first", len(input_ids))
                         input_ids = input_ids + [tokenizer.pad_token_id]
                         labels = labels + [0]
                     input_ids = input_ids + [tokenizer.sep_token_id]
@@ -250,6 +252,16 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
                 start = np.random.randint(0, len(input_ids) - args.block_size)
                 input_ids = input_ids[start : start + args.block_size]
                 labels = labels[start : start + args.block_size]
+        elif len(input_ids) != args.block_size and args.use_subwords:
+            del input_ids[-1]
+            del labels[-1]
+            while len(input_ids) <= args.block_size - 1:
+                # insert pad token at second-to-last position
+                print("second", len(input_ids))
+                input_ids = input_ids + [tokenizer.pad_token_id]
+                labels = labels + [0]
+            input_ids = input_ids + [tokenizer.sep_token_id]
+            labels = labels + [0]                
 
         input_ids = torch.tensor(input_ids[: args.block_size], dtype=torch.long)
         labels = torch.tensor(labels[: args.block_size], dtype=torch.long)
@@ -580,6 +592,10 @@ def main():
                     num_proc=num_workers,
                     remove_columns=[args.text_column],
                 )
+        else:
+            # this is no longer used and would cause an error otherwise
+            with training_args.main_process_first():
+                dataset = dataset.remove_columns([args.text_column])
                 
         if split == "train":
             with training_args.main_process_first():
@@ -596,7 +612,7 @@ def main():
                     batched=True,
                     num_proc=num_workers,
                     # a bit hacky but oh well, only drop if sentence
-                    remove_columns=["ends_with_punctuation"]  # FIXME: needed for char-based args.text_column dropping
+                    remove_columns=["ends_with_punctuation"]
                     if args.text_column == "text"
                     else [],
                 )
@@ -649,7 +665,7 @@ def main():
 
         model = trainer._wrap_model(trainer.model, training=False)
 
-        for lang_code, lang_data in eval_data.items():  # TODO: tqdm integration
+        for lang_code, lang_data in tqdm(eval_data.items(), desc="Evaluate!"):
             if args.include_languages is not None and lang_code not in args.include_languages:
                 continue
 

@@ -110,7 +110,7 @@ def evaluate_sentence(
     newline_labels[true_end_indices - 1] = 1
         
     if "xlm" in model.config.model_type:
-        tokens = tokenizer.tokenize(text)
+        tokens = tokenizer.tokenize(text, verbose=False)
         char_probs = token_to_char_probs(text, tokens, logits[:, positive_index], tokenizer, offsets_mapping)
     else:
         char_probs = logits[:, positive_index]
