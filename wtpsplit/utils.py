@@ -86,7 +86,7 @@ class LabelArgs:
 def get_label_dict(label_args):
     label_dict = {}
 
-    for i, c in enumerate(label_args.auxiliary_chars):
+    for i, c in enumerate(Constants.PUNCTUATION_CHARS):
         label_dict[ord(c)] = 1 + Constants.AUX_OFFSET + i
 
     for c in label_args.newline_chars:
@@ -99,10 +99,11 @@ def get_subword_label_dict(label_args, tokenizer):
 
     n_unks = 0
     # Map auxiliary characters to token IDs with labels
-    for i, c in enumerate(label_args.auxiliary_chars):
+    logger.warn(f"Using {Constants.PUNCTUATION_CHARS} auxiliary characters.")
+    for i, c in enumerate(Constants.PUNCTUATION_CHARS):
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.AUX_OFFSET + i
-        logger.info(f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded: {tokenizer.decode([token_id])}")
+        logger.warn(f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded: {tokenizer.decode([token_id])}")
         if token_id == tokenizer.unk_token_id:
             n_unks += 1
     
@@ -112,8 +113,8 @@ def get_subword_label_dict(label_args, tokenizer):
     for c in label_args.newline_chars:
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.NEWLINE_INDEX
-        logger.info(f"newline character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded:")
-        logger.info(r"{}".format(tokenizer.decode([token_id])))
+        logger.warn(f"newline character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded:")
+        logger.warn(r"{}".format(tokenizer.decode([token_id])))
 
     return label_dict
 

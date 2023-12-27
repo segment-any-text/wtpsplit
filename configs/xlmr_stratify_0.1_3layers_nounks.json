@@ -38,5 +38,6 @@
     "ddp_timeout": 3600,
     "use_subwords": true,
     "num_hidden_layers": 3,
-    "custom_punctuation_file": "punctuation_xlmr.txt"
+    "custom_punctuation_file": "punctuation_xlmr.txt",
+    "log_level": "info"
 }

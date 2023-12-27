@@ -37,5 +37,7 @@
     "use_auxiliary": true,
     "ddp_timeout": 3600,
     "use_subwords": true,
-    "num_hidden_layers": 3
+    "num_hidden_layers": 3,
+    "custom_punctuation_file": "punctuation_xlmr_unk.txt",
+    "log_level": "info"
 }

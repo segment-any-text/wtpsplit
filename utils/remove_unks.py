@@ -8,7 +8,7 @@ def get_subword_label_dict(label_args, tokenizer):
 
     n_unks = 0
     # Map auxiliary characters to token IDs with labels
-    for i, c in enumerate(label_args.auxiliary_chars):
+    for i, c in enumerate(Constants.PUNCTUATION_CHARS):
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.AUX_OFFSET + i
         # TODO: remove UNKs?
@@ -33,7 +33,7 @@ def get_subword_label_dict(label_args, tokenizer):
 tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
 tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
 
-label_dict = get_subword_label_dict(LabelArgs(custom_punctuation_file='punctuation_xlmr.txt'), tokenizer)
+label_dict = get_subword_label_dict(LabelArgs(), tokenizer)
 print(len(label_dict))
 
 def write_punctuation_file():
@@ -42,8 +42,21 @@ def write_punctuation_file():
             token_id = tokenizer.convert_tokens_to_ids(char)
             if token_id != tokenizer.unk_token_id:
                 file.write(char + '\n')
+                
+def write_punctuation_file_unk():
+    added_unk = False
+    with open(os.path.join(Constants.ROOT_DIR, "punctuation_xlmr_unk.txt"), 'w', encoding='utf-8') as file:
+        for char in Constants.PUNCTUATION_CHARS:
+            token_id = tokenizer.convert_tokens_to_ids(char)
+            if token_id != tokenizer.unk_token_id:
+                file.write(char + '\n')
+            elif not added_unk:
+                print("added unk")
+                file.write('<unk>\n')
+                added_unk = True
 
 write_punctuation_file()
+write_punctuation_file_unk()
 
 label_args_default = LabelArgs()
 print(Constants.PUNCTUATION_CHARS, len(Constants.PUNCTUATION_CHARS))

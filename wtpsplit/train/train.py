@@ -238,17 +238,6 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
             tokenizer=tokenizer if args.use_subwords else None,
         )
         
-        if input_ids[0] != tokenizer.cls_token_id:
-            logger.warn(input_ids)
-            logger.warn(len(input_ids))
-            logger.warn(tokenizer.cls_token_id)
-            # raise ValueError("CLS token not first token")
-        if input_ids[-1] != tokenizer.sep_token_id:
-            logger.warn(input_ids)
-            logger.warn(len(input_ids))
-            logger.warn(tokenizer.sep_token_id)
-            # raise ValueError("SEP token not last token")
-
         if len(input_ids) > args.block_size:
             if tokenizer:
                 # always include CLS
@@ -264,7 +253,7 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
                 # always include SEP
                 if input_ids[-1] != tokenizer.sep_token_id:
                     # also insert PAD token as long as len < block_size
-                    while len(input_ids) <= args.block_size - 1:
+                    while len(input_ids) < args.block_size - 1:
                         input_ids = input_ids + [tokenizer.pad_token_id]
                         labels = labels + [0]
                     input_ids = input_ids + [tokenizer.sep_token_id]
@@ -273,34 +262,33 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
                 start = np.random.randint(0, len(input_ids) - args.block_size)
                 input_ids = input_ids[start : start + args.block_size]
                 labels = labels[start : start + args.block_size]
-        elif len(input_ids) != args.block_size and args.use_subwords:
+        if len(input_ids) != args.block_size and tokenizer:
             del input_ids[-1]
             del labels[-1]
-            while len(input_ids) <= args.block_size - 1:
+            while len(input_ids) < args.block_size - 1:
                 # insert pad token at second-to-last position
-                logger.debug("second", len(input_ids))
+                logger.warn("second", len(input_ids))
                 input_ids = input_ids + [tokenizer.pad_token_id]
                 labels = labels + [0]
             input_ids = input_ids + [tokenizer.sep_token_id]
             labels = labels + [0]                
 
+        if len(input_ids) != args.block_size:
+            logger.warn(len(input_ids))
         input_ids = torch.tensor(input_ids[: args.block_size], dtype=torch.long)
         labels = torch.tensor(labels[: args.block_size], dtype=torch.long)
         if input_ids[-1] != tokenizer.sep_token_id:
             logger.warn(input_ids)
             logger.warn(tokenizer.sep_token_id)
-            logger.warn(labels)
             # raise ValueError("SEP token not last token")
         if input_ids[0] != tokenizer.cls_token_id:
             logger.warn(input_ids)
             logger.warn(tokenizer.cls_token_id)
-            logger.warn(labels)
             # raise ValueError("CLS token not first token")
         # FIXME: check this - why does it occur in train split?
         if (input_ids == tokenizer.cls_token_id).sum() != 1:
             logger.warn(input_ids)
             logger.warn(tokenizer.cls_token_id)
-            logger.warn(labels)
             # raise ValueError("CLS token not unique")
 
         position_ids = torch.arange(len(input_ids), dtype=torch.long)
@@ -657,7 +645,7 @@ def main():
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=args.shuffle,
-        split="train",
+        split="valid",
     )
     logger.info(f"Train dataset has {len(train_dataset)} examples.")
 
@@ -671,7 +659,6 @@ def main():
             logger.info(f"Sample {index} of the training set: {sample}.")
             if tokenizer:
                 logger.info(tokenizer.decode(sample["input_ids"]))
-            logger.info()
             count += 1
 
     # dataset we use is in cached now
