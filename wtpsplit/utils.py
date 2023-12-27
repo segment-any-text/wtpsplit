@@ -119,7 +119,7 @@ def get_subword_label_dict(label_args, tokenizer):
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.NEWLINE_INDEX
         logger.warning(f"newline character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded:")
-        logger.warning(r"{}".format(tokenizer.decode([token_id])))
+        logger.warning(f"{tokenizer.decode([token_id])}")
 
     return label_dict
 
@@ -195,10 +195,7 @@ def corrupt(
     if tokenizer:
         # account for CLS and SEP token, added later
         min_length = min_length - 2 if min_length is not None else None
-    while True:
-        if min_length is not None and len(input_ids) <= min_length:
-            break
-
+    while min_length is None or len(input_ids) > min_length:
         if labels[i] == Constants.NEWLINE_INDEX + 1:
             if random.random() < label_args.newline_remove_prob:
                 if separator == " " and random.random() < label_args.newline_whitespace_prob:
@@ -216,8 +213,11 @@ def corrupt(
 
                     if pack_samples:
                         last_index_in_block = i
-                        while last_index_in_block + 1 == len(block_ids) or (
-                            last_index_in_block < len(block_ids) and block_ids[last_index_in_block + 1] == block_ids[i]
+                        while (
+                            last_index_in_block + 1 == len(block_ids)
+                            or last_index_in_block < len(block_ids)
+                            and block_ids[last_index_in_block + 1]
+                            == block_ids[last_index_in_block]
                         ):
                             last_index_in_block += 1
                         input_ids.insert(last_index_in_block, 0)
@@ -232,7 +232,6 @@ def corrupt(
                 del input_ids[i + 1]
                 del labels[i + 1]
                 del block_ids[i + 1]
-
         try:
             i = i + 1 + next(index for index, label in enumerate(labels[i + 1 :]) if label != 0)
         except StopIteration:

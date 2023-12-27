@@ -20,7 +20,6 @@ from transformers import HfArgumentParser, TrainingArguments, AutoTokenizer, set
 from torchinfo import summary
 from tokenizers import AddedToken
 import transformers
-import datasets
 
 from wtpsplit.models import (
     BertCharConfig,
@@ -33,6 +32,7 @@ from wtpsplit.models import (
 from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.trainer import Trainer
 from wtpsplit.utils import Constants, LabelArgs, corrupt, get_label_dict, get_subword_label_dict
+import datasets
 
 
 logger = logging.getLogger(__name__)
@@ -51,14 +51,16 @@ def setup_logging(training_args: transformers.TrainingArguments) -> None:
     )
     log_level = training_args.get_process_log_level()
     logger.setLevel(log_level)
-    # datasets.utils.logging.set_verbosity(log_level)
-    # transformers.utils.logging.set_verbosity(log_level)
+    datasets.utils.logging.set_verbosity(log_level - 10)
+    transformers.utils.logging.set_verbosity(log_level - 10)
     transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
     # Log on each process the small summary:
     logger.warning(
-        f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
-        + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
+        (
+            f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
+            + f"distributed training: {training_args.local_rank != -1}, 16-bits training: {training_args.fp16}"
+        )
     )
     # logger.info(f"Training/evaluation parameters {training_args}")
 
@@ -290,7 +292,6 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
             logger.warning(tokenizer.cls_token_id)
             logger.warning(lang)
             # raise ValueError("CLS token not first token")
-        # FIXME: check this - why does it occur in train split?
         if (input_ids == tokenizer.cls_token_id).sum() != 1:
             logger.warning(input_ids)
             logger.warning(tokenizer.cls_token_id)
@@ -320,7 +321,7 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
     out = {
         "input_ids": torch.stack(all_input_ids, 0),
         "attention_mask": torch.stack(all_attention_masks, 0),
-        "position_ids": torch.stack(all_position_ids, 0) if not args.use_subwords else None,  # safer
+        "position_ids": None if args.use_subwords else torch.stack(all_position_ids, 0),  # safer
         "language_ids": torch.tensor(all_language_ids, dtype=torch.long),
         "label_weights": torch.stack(all_label_weights, 0),
         "labels": torch.stack(all_labels, 0),
@@ -405,8 +406,6 @@ def main():
         do_sentence_training=args.do_sentence_training,
         do_auxiliary_training=args.do_auxiliary_training,
     )
-    
-    
 
     with training_args.main_process_first():
         logger.info(summary(model, depth=4))
@@ -437,7 +436,7 @@ def main():
 
         if shuffle:
             dataset = dataset.shuffle(seed=42)
-            logger.info(f"Shuffled dataset.")
+            logger.info("Shuffled dataset.")
 
         # very likely not relevant / used only for the compound part
         if args.ignore_non_hyphen:
@@ -460,9 +459,9 @@ def main():
                 include_indices = set(
                     np.where([lang_code not in languages_without_punctuation for lang_code in examples["lang"]])[0]
                 )
-                punctuation_indices = set(
+                punctuation_indices = {
                     i for i in np.where(examples["ends_with_punctuation"])[0] if i in include_indices
-                )
+                }
 
                 target_n_non_punct = int(
                     (len(punctuation_indices) * args.non_punctuation_sample_ratio)
@@ -474,17 +473,16 @@ def main():
 
                 if n_drop <= 0:
                     return out
-                else:
-                    drop_indices = np.random.choice(
-                        list(include_indices - punctuation_indices),
-                        n_drop,
-                        replace=False,
-                    )
+                drop_indices = np.random.choice(
+                    list(include_indices - punctuation_indices),
+                    n_drop,
+                    replace=False,
+                )
 
-                    for i in drop_indices:
-                        out[i] = False
+                for i in drop_indices:
+                    out[i] = False
 
-                    return out
+                return out
 
             with training_args.main_process_first():
                 dataset = dataset.filter(
@@ -536,7 +534,7 @@ def main():
                     lang_subwords = [
                         [subword for subword in subwords if subword not in special_tokens_ids]
                         for subwords in lang_subwords
-                    ]               
+                    ]
                 # pack_samples used for the compound part, so irrelevant
                 if args.pack_samples:
                     if args.use_subwords:

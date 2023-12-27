@@ -218,7 +218,7 @@ def extract(
 
         logits = model(
             input_ids=batch_input_ids if use_subwords else None,
-            hashed_ids=batch_input_hashes if not use_subwords else None,
+            hashed_ids=None if use_subwords else batch_input_hashes,
             attention_mask=batch_attention_mask,
             **kwargs,
         )["logits"]

@@ -12,7 +12,7 @@ def get_subword_label_dict(label_args, tokenizer):
     for i, c in enumerate(Constants.PUNCTUATION_CHARS):
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.AUX_OFFSET + i
-        # TODO: remove UNKs?
+
         print(
             f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded: {tokenizer.decode([token_id])}"
         )
