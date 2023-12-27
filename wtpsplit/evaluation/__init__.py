@@ -230,14 +230,14 @@ def ersatz_sentencize(
 ):
     if lang_code not in ERSATZ_LANGUAGES:
         raise LanguageError(f"ersatz does not support {lang_code}")
-    
+
     # check if infile parent dir exists, if not, create it
     if not os.path.exists(os.path.dirname(infile)):
         os.makedirs(os.path.dirname(infile))
     # check if outfile parent dir exists, if not, create it
     if not os.path.exists(os.path.dirname(outfile)):
         os.makedirs(os.path.dirname(outfile))
-        
+
     open(infile, "w").write(text)
 
     subprocess.check_output(

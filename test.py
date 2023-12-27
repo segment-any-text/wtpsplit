@@ -8,11 +8,13 @@ def test_split_ort():
     splits = wtp.split("This is a test sentence This is another test sentence.", threshold=0.005)
     assert splits == ["This is a test sentence ", "This is another test sentence."]
 
+
 def test_split_torch():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
 
     splits = wtp.split("This is a test sentence This is another test sentence.", threshold=0.005)
     assert splits == ["This is a test sentence ", "This is another test sentence."]
+
 
 def test_split_torch_canine():
     wtp = WtP("benjamin/wtp-canine-s-1l", hub_prefix=None)
@@ -20,15 +22,20 @@ def test_split_torch_canine():
     splits = wtp.split("This is a test sentence. This is another test sentence.", lang_code="en")
     assert splits == ["This is a test sentence. ", "This is another test sentence."]
 
+
 def test_move_device():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
     wtp.half().to("cpu")
 
+
 def test_strip_whitespace():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
 
-    splits = wtp.split("This is a test sentence This is another test sentence.   ", strip_whitespace=True, threshold=0.005)
+    splits = wtp.split(
+        "This is a test sentence This is another test sentence.   ", strip_whitespace=True, threshold=0.005
+    )
     assert splits == ["This is a test sentence", "This is another test sentence."]
+
 
 def test_split_long():
     prefix = "x" * 2000

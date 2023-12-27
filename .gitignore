@@ -11,3 +11,4 @@ notebooks
 final_outputs
 .cache*
 data_subset/**
+*.pth

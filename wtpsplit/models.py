@@ -958,16 +958,17 @@ class BertCharForTokenClassification(BertForTokenClassification):
             return_dict,
         )
 
+
 class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
     config_class = SubwordXLMConfig
-    
+
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
     _keys_to_ignore_on_load_missing = [r"position_ids"]
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
-        
+
         self.roberta = XLMRobertaModel(config, add_pooling_layer=False)
         classifier_dropout = (
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
@@ -977,7 +978,7 @@ class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
 
         # Initialize weights and apply final processing
         self.post_init()
-        
+
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
@@ -1005,9 +1006,8 @@ class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
             output_hidden_states,
             return_dict,
         )
-        
-    
-    
+
+
 AutoModel.register(LACanineConfig, LACanineModel)
 AutoModelForTokenClassification.register(LACanineConfig, LACanineForTokenClassification)
 
@@ -1020,23 +1020,24 @@ AutoModelForTokenClassification.register(SubwordXLMConfig, SubwordXLMForTokenCla
 if __name__ == "__main__":
     # test XLM
     from transformers import AutoConfig, AutoTokenizer
+
     model_str = "xlm-roberta-base"
     config = AutoConfig.from_pretrained(model_str)
     config.num_labels = 4
     config.num_hidden_layers = 9
     backbone = SubwordXLMForTokenClassification.from_pretrained(model_str, config=config)
     print(summary(backbone, depth=4))
-    
+
     # some sample input
     text = "This is a test\n sentence \n\n"
     tokenizer = AutoTokenizer.from_pretrained(model_str)
-    
+
     tokens = tokenizer(text, return_tensors="pt", add_special_tokens=False)
     from tokenizers import AddedToken
+
     tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
     print(tokenizer.tokenize(text))
     print(tokenizer.encode(text))
     print(tokens)
     # forward pass
     print(backbone(**tokens))
-    

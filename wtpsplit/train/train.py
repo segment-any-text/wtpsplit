@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 
 # os.environ["PJRT_DEVICE"] = "None"
 
+
 def setup_logging(training_args: transformers.TrainingArguments) -> None:
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -50,8 +51,8 @@ def setup_logging(training_args: transformers.TrainingArguments) -> None:
     )
     log_level = training_args.get_process_log_level()
     logger.setLevel(log_level)
-    datasets.utils.logging.set_verbosity(log_level)
-    transformers.utils.logging.set_verbosity(log_level)
+    # datasets.utils.logging.set_verbosity(log_level)
+    # transformers.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
     # Log on each process the small summary:
@@ -59,7 +60,9 @@ def setup_logging(training_args: transformers.TrainingArguments) -> None:
         f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
         + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
     )
-    logger.info(f"Training/evaluation parameters {training_args}")
+    # logger.info(f"Training/evaluation parameters {training_args}")
+
+
 class Model(nn.Module):
     def __init__(
         self,
@@ -237,7 +240,7 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
             min_length=args.block_size,
             tokenizer=tokenizer if args.use_subwords else None,
         )
-        
+
         if len(input_ids) > args.block_size:
             if tokenizer:
                 # always include CLS
@@ -267,28 +270,36 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
             del labels[-1]
             while len(input_ids) < args.block_size - 1:
                 # insert pad token at second-to-last position
-                logger.warn("second", len(input_ids))
+                logger.warning("second", len(input_ids))
                 input_ids = input_ids + [tokenizer.pad_token_id]
                 labels = labels + [0]
             input_ids = input_ids + [tokenizer.sep_token_id]
-            labels = labels + [0]                
+            labels = labels + [0]
 
         if len(input_ids) != args.block_size:
-            logger.warn(len(input_ids))
+            logger.warning(len(input_ids))
         input_ids = torch.tensor(input_ids[: args.block_size], dtype=torch.long)
         labels = torch.tensor(labels[: args.block_size], dtype=torch.long)
         if input_ids[-1] != tokenizer.sep_token_id:
-            logger.warn(input_ids)
-            logger.warn(tokenizer.sep_token_id)
+            logger.warning(input_ids)
+            logger.warning(tokenizer.sep_token_id)
+            logger.warning(lang)
             # raise ValueError("SEP token not last token")
         if input_ids[0] != tokenizer.cls_token_id:
-            logger.warn(input_ids)
-            logger.warn(tokenizer.cls_token_id)
+            logger.warning(input_ids)
+            logger.warning(tokenizer.cls_token_id)
+            logger.warning(lang)
             # raise ValueError("CLS token not first token")
         # FIXME: check this - why does it occur in train split?
         if (input_ids == tokenizer.cls_token_id).sum() != 1:
-            logger.warn(input_ids)
-            logger.warn(tokenizer.cls_token_id)
+            logger.warning(input_ids)
+            logger.warning(tokenizer.cls_token_id)
+            logger.warning(lang)
+            # raise ValueError("CLS token not unique")
+        if (input_ids == tokenizer.sep_token_id).sum() != 1:
+            logger.warning(input_ids)
+            logger.warning(tokenizer.sep_token_id)
+            logger.warning(lang)
             # raise ValueError("CLS token not unique")
 
         position_ids = torch.arange(len(input_ids), dtype=torch.long)
@@ -327,8 +338,8 @@ def main():
     else:
         (args, training_args, label_args) = parser.parse_args_into_dataclasses()
         wandb_name = None
-    
-    setup_logging(training_args) 
+
+    setup_logging(training_args)
     set_seed(training_args.seed)
 
     num_labels = Constants.AUX_OFFSET + ((1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0)
@@ -340,7 +351,7 @@ def main():
                 num_labels=num_labels,
             )
             backbone = SubwordXLMForTokenClassification(config)
-            
+
         else:
             config = SubwordXLMConfig.from_pretrained(
                 args.model_name_or_path,
@@ -353,6 +364,10 @@ def main():
         tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
         # needed since we create labels in collate_fn based on tokens
         tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
+        custom_token_id = tokenizer.convert_tokens_to_ids("\n")
+        # used later to filter out special tokens
+        special_tokens_ids = set(tokenizer.all_special_ids)
+        special_tokens_ids.discard(custom_token_id)
 
     else:
         tokenizer = None
@@ -390,6 +405,8 @@ def main():
         do_sentence_training=args.do_sentence_training,
         do_auxiliary_training=args.do_auxiliary_training,
     )
+    
+    
 
     with training_args.main_process_first():
         logger.info(summary(model, depth=4))
@@ -476,7 +493,6 @@ def main():
                     batch_size=1_000_000,
                     num_proc=num_workers,
                 )
-        
 
         def tokenize_texts(examples):
             # do not return CLS and SEP token here
@@ -515,7 +531,12 @@ def main():
                         for subwords, lang in zip(examples["input_ids"], examples["lang"])
                         if lang == current_lang
                     ]
-
+                    # filter out some special tokens
+                    # from html tags, mostly in Latin, Thai & Korean
+                    lang_subwords = [
+                        [subword for subword in subwords if subword not in special_tokens_ids]
+                        for subwords in lang_subwords
+                    ]               
                 # pack_samples used for the compound part, so irrelevant
                 if args.pack_samples:
                     if args.use_subwords:
@@ -554,7 +575,7 @@ def main():
                         concatenated_texts = "".join(lang_texts)
                         concatenated_ids = [i for i, text in enumerate(lang_texts) for _ in text]
                     else:
-                        # concatenate lists
+                        # concatenate token lists
                         concatenated_texts = [item for sublist in lang_subwords for item in sublist]
                         concatenated_ids = [i for i, subwords in enumerate(lang_subwords) for _ in subwords]
 
@@ -609,8 +630,8 @@ def main():
             # this is no longer used and would cause an error otherwise
             with training_args.main_process_first():
                 dataset = dataset.remove_columns([args.text_column])
-        logger.info(f"Tokenized {split} dataset.")        
-                        
+        logger.info(f"Tokenized {split} dataset.")
+
         if split == "train":
             with training_args.main_process_first():
                 for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
@@ -626,9 +647,7 @@ def main():
                     batched=True,
                     num_proc=num_workers,
                     # a bit hacky but oh well, only drop if sentence
-                    remove_columns=["ends_with_punctuation"]
-                    if args.text_column == "text"
-                    else [],
+                    remove_columns=["ends_with_punctuation"] if args.text_column == "text" else [],
                 )
         logger.info(f"Grouped {split} dataset.")
 
@@ -641,7 +660,7 @@ def main():
         split="valid",
     )
     logger.info(f"Valid dataset has {len(valid_dataset)} examples.")
-    
+
     train_dataset = prepare_dataset(
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
@@ -656,7 +675,7 @@ def main():
         index = random.choice(range(len(train_dataset)))
         sample = train_dataset[index]
 
-        if sample.get('lang') == "de":
+        if sample.get("lang") == "de":
             logger.info(f"Sample {index} of the training set: {sample}.")
             if tokenizer:
                 logger.info(tokenizer.decode(sample["input_ids"]))

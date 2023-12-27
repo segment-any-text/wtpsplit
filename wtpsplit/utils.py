@@ -15,6 +15,7 @@ PRIMES = [31, 43, 59, 61, 73, 97, 103, 113, 137, 149, 157, 173, 181, 193, 211, 2
 
 logger = logging.getLogger(__name__)
 
+
 class ConstantsClass:
     NEWLINE_INDEX = 0
     AUX_OFFSET = 1
@@ -59,6 +60,7 @@ class ConstantsClass:
     def SEPARATORS(self):
         return {lang: ("" if row["no_whitespace"] else " ") for lang, row in Constants.LANGINFO.iterrows()}
 
+
 Constants = ConstantsClass()
 
 
@@ -94,29 +96,33 @@ def get_label_dict(label_args):
 
     return label_dict
 
+
 def get_subword_label_dict(label_args, tokenizer):
     label_dict = {}
 
     n_unks = 0
     # Map auxiliary characters to token IDs with labels
-    logger.warn(f"Using {Constants.PUNCTUATION_CHARS} auxiliary characters.")
+    logger.warning(f"Using {Constants.PUNCTUATION_CHARS} auxiliary characters.")
     for i, c in enumerate(Constants.PUNCTUATION_CHARS):
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.AUX_OFFSET + i
-        logger.warn(f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded: {tokenizer.decode([token_id])}")
+        logger.warning(
+            f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded: {tokenizer.decode([token_id])}"
+        )
         if token_id == tokenizer.unk_token_id:
             n_unks += 1
-    
-    logger.warn(f"found {n_unks} UNK tokens in auxiliary characters")
+
+    logger.warning(f"found {n_unks} UNK tokens in auxiliary characters")
 
     # Map newline characters to token IDs with labels
     for c in label_args.newline_chars:
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.NEWLINE_INDEX
-        logger.warn(f"newline character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded:")
-        logger.warn(r"{}".format(tokenizer.decode([token_id])))
+        logger.warning(f"newline character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded:")
+        logger.warning(r"{}".format(tokenizer.decode([token_id])))
 
     return label_dict
+
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -156,6 +162,7 @@ def lang_code_to_lang(lang_code):
         return languages.get(alpha2=lang_code).name
     except KeyError:
         return languages.get(part3=lang_code).name
+
 
 # does the steps in Figure 2 of the paper
 def corrupt(
@@ -307,4 +314,3 @@ def reconstruct_sentences(text, partial_sentences):
         fixed_sentences.append(text[i:])
 
     return fixed_sentences
-

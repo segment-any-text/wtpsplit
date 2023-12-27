@@ -48,6 +48,7 @@ def get_metrics(labels, preds):
 
     return metrics, info
 
+
 def get_token_spans(tokenizer: object, offsets_mapping: list, tokens: list):
     token_spans = []
     for idx, token in enumerate(tokens):
@@ -62,6 +63,7 @@ def get_token_spans(tokenizer: object, offsets_mapping: list, tokens: list):
 
     return token_spans
 
+
 def token_to_char_probs(text: str, tokens: list, token_probs: np.ndarray, tokenizer, offsets_mapping):
     # some very low number since at non-ending position, predicting a newline is impossible
     char_probs = np.zeros(len(text)) - 10000
@@ -69,9 +71,10 @@ def token_to_char_probs(text: str, tokens: list, token_probs: np.ndarray, tokeni
 
     for i, ((start, end), prob, token) in enumerate(zip(token_spans, token_probs, tokens)):
         # assign the token's prob to the last char of the token
-        char_probs[end - 1] = prob 
+        char_probs[end - 1] = prob
 
     return char_probs
+
 
 def evaluate_sentence(
     lang_code,
@@ -104,11 +107,11 @@ def evaluate_sentence(
     logits = logits[0]
     if offsets_mapping is not None:
         offsets_mapping = offsets_mapping[0]
-        
+
     true_end_indices = np.cumsum(np.array([len(s) for s in sentences])) + np.arange(len(sentences)) * len(separator)
     newline_labels = np.zeros(len(text))
     newline_labels[true_end_indices - 1] = 1
-        
+
     if "xlm" in model.config.model_type:
         tokens = tokenizer.tokenize(text, verbose=False)
         char_probs = token_to_char_probs(text, tokens, logits[:, positive_index], tokenizer, offsets_mapping)
@@ -127,4 +130,3 @@ def evaluate_sentence(
         info["newline_probs_pysbd"] = newline_probs_pysbd
 
     return metrics["pr_auc"], info
-

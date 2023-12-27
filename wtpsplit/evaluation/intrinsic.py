@@ -10,7 +10,7 @@ from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForTokenClassification, HfArgumentParser
 
-import wtpsplit.models # noqa: F401
+import wtpsplit.models  # noqa: F401
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture
 from wtpsplit.extract import PyTorchWrapper, extract
 from wtpsplit.utils import Constants
@@ -27,13 +27,13 @@ class Args:
     #                 "meta": {
     #                     "train_data": ["train sentence 1", "train sentence 2"]
     #                 },
-    #                 "data": ["test sentence 1", "test sentence 2"] 
+    #                 "data": ["test sentence 1", "test sentence 2"]
     #            }
     #        }
     #    }
     # }
     eval_data_path: str = "data/eval.pth"
-    valid_text_path: str = None#"data/sentence/valid.parquet"
+    valid_text_path: str = None  # "data/sentence/valid.parquet"
     device: str = "cpu"
     block_size: int = 512
     stride: int = 64
@@ -131,7 +131,7 @@ if __name__ == "__main__":
         valid_data = load_dataset("parquet", data_files=args.valid_text_path, split="train")
     else:
         valid_data = None
-    
+
     model = PyTorchWrapper(AutoModelForTokenClassification.from_pretrained(args.model_path).to(args.device))
 
     # first, logits for everything.

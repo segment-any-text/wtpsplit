@@ -11,6 +11,7 @@ from wtpsplit.utils import Constants, hash_encode
 
 logger = logging.getLogger(__name__)
 
+
 class ORTWrapper:
     def __init__(self, config, ort_session):
         self.config = config
@@ -24,7 +25,7 @@ class ORTWrapper:
         logits = self.ort_session.run(
             ["logits"],
             {
-                "attention_mask": attention_mask.astype(np.float16), # ORT expects fp16 mask
+                "attention_mask": attention_mask.astype(np.float16),  # ORT expects fp16 mask
                 "hashed_ids": hashed_ids,
             },
         )[0]
@@ -62,6 +63,7 @@ class PyTorchWrapper:
             )
 
         return {"logits": logits}
+
 
 def extract(
     batch_of_texts,
@@ -104,11 +106,11 @@ def extract(
     # make sure block_size is a multiple of downsampling rate
     downsampling_rate = getattr(model.config, "downsampling_rate", 1)
     block_size = math.ceil(block_size / downsampling_rate) * downsampling_rate
-    actual_block_size = block_size - 2 if use_subwords else block_size # account for CLS and SEP tokens
+    actual_block_size = block_size - 2 if use_subwords else block_size  # account for CLS and SEP tokens
 
     # total number of forward passes
     num_chunks = sum(math.ceil(max(length - actual_block_size, 0) / stride) + 1 for length in text_lengths)
-    
+
     # preallocate a buffer for all input hashes & attention masks
     if not use_subwords:
         input_hashes = np.zeros((num_chunks, block_size, model.config.num_hash_functions), dtype=np.int64)
@@ -121,18 +123,17 @@ def extract(
     locs = np.zeros((num_chunks, 3), dtype=np.int32)
 
     if not use_subwords:
-        # this is equivalent to (but faster than) np.array([ord(c) for c in "".join(batch_of_texts)]) 
+        # this is equivalent to (but faster than) np.array([ord(c) for c in "".join(batch_of_texts)])
         codec = "utf-32-le" if sys.byteorder == "little" else "utf-32-be"
         ordinals = np.frombuffer(bytearray("".join(batch_of_texts), encoding=codec), dtype=np.int32)
         # hash encode all ids
-        flat_hashed_ids = hash_encode(ordinals, 
-                                    num_hashes=model.config.num_hash_functions, 
-                                    num_buckets=model.config.num_hash_buckets)
+        flat_hashed_ids = hash_encode(
+            ordinals, num_hashes=model.config.num_hash_functions, num_buckets=model.config.num_hash_buckets
+        )
     # note that ordinals and flat_hashed_ids have the same length
     offset = 0
     current_chunk = 0
-    
-    
+
     # create chunks
     for i in range(len(batch_of_texts)):
         for j in range(0, text_lengths[i], stride):
@@ -150,9 +151,9 @@ def extract(
                 attention_mask[current_chunk, : end - start] = 1
             else:
                 chunk = [cls_token_id] + batch_of_texts[i][start:end] + [sep_token_id]
-                input_ids[current_chunk, :len(chunk)] = chunk
-                attention_mask[current_chunk, :len(chunk)] = 1
-            
+                input_ids[current_chunk, : len(chunk)] = chunk
+                attention_mask[current_chunk, : len(chunk)] = 1
+
             locs[current_chunk, :] = [i, start, end]
             current_chunk += 1
 
@@ -212,7 +213,6 @@ def extract(
                 # Pad with the specific pad_token_id for the tokenizer
                 batch_input_ids = np.pad(batch_input_ids, ((0, n_missing), (0, 0)), constant_values=pad_token_id)
             batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
-           
 
         kwargs = {"language_ids": language_ids[: len(batch_attention_mask)]} if uses_lang_adapters else {}
 

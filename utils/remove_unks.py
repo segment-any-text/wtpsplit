@@ -3,6 +3,7 @@ from transformers import AutoTokenizer
 from tokenizers import AddedToken
 from wtpsplit.utils import Constants, LabelArgs
 
+
 def get_subword_label_dict(label_args, tokenizer):
     label_dict = {}
 
@@ -36,24 +37,27 @@ tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
 label_dict = get_subword_label_dict(LabelArgs(), tokenizer)
 print(len(label_dict))
 
+
 def write_punctuation_file():
-    with open(os.path.join(Constants.ROOT_DIR, "punctuation_xlmr.txt"), 'w', encoding='utf-8') as file:
+    with open(os.path.join(Constants.ROOT_DIR, "punctuation_xlmr.txt"), "w", encoding="utf-8") as file:
         for char in Constants.PUNCTUATION_CHARS:
             token_id = tokenizer.convert_tokens_to_ids(char)
             if token_id != tokenizer.unk_token_id:
-                file.write(char + '\n')
-                
+                file.write(char + "\n")
+
+
 def write_punctuation_file_unk():
     added_unk = False
-    with open(os.path.join(Constants.ROOT_DIR, "punctuation_xlmr_unk.txt"), 'w', encoding='utf-8') as file:
+    with open(os.path.join(Constants.ROOT_DIR, "punctuation_xlmr_unk.txt"), "w", encoding="utf-8") as file:
         for char in Constants.PUNCTUATION_CHARS:
             token_id = tokenizer.convert_tokens_to_ids(char)
             if token_id != tokenizer.unk_token_id:
-                file.write(char + '\n')
+                file.write(char + "\n")
             elif not added_unk:
                 print("added unk")
-                file.write('<unk>\n')
+                file.write("<unk>\n")
                 added_unk = True
+
 
 write_punctuation_file()
 write_punctuation_file_unk()
@@ -61,5 +65,5 @@ write_punctuation_file_unk()
 label_args_default = LabelArgs()
 print(Constants.PUNCTUATION_CHARS, len(Constants.PUNCTUATION_CHARS))
 
-label_args_custom = LabelArgs(custom_punctuation_file='punctuation_xlmr.txt')
+label_args_custom = LabelArgs(custom_punctuation_file="punctuation_xlmr.txt")
 print(Constants.PUNCTUATION_CHARS, len(Constants.PUNCTUATION_CHARS))
