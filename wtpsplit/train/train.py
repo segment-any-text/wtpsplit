@@ -1,27 +1,28 @@
 import logging
 import math
 import os
+import random
 import sys
+import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from functools import partial
 from glob import glob
 from typing import List
-import random
-import time
 
+import datasets
 import numpy as np
 import torch
-from tqdm.auto import tqdm
-import wandb
+import transformers
 from datasets import load_dataset
 from datasets.download import DownloadConfig
-from torch import nn
-from transformers import HfArgumentParser, TrainingArguments, AutoTokenizer, set_seed
-from torchinfo import summary
 from tokenizers import AddedToken
-import transformers
+from torch import nn
+from torchinfo import summary
+from tqdm.auto import tqdm
+from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments, set_seed
 
+import wandb
 from wtpsplit.models import (
     BertCharConfig,
     BertCharForTokenClassification,
@@ -32,9 +33,8 @@ from wtpsplit.models import (
 )
 from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.trainer import Trainer
+from wtpsplit.train.utils import cleanup_cache_files
 from wtpsplit.utils import Constants, LabelArgs, corrupt, get_label_dict, get_subword_label_dict
-import datasets
-
 
 logger = logging.getLogger(__name__)
 
@@ -680,16 +680,6 @@ def main():
                 logger.info(tokenizer.decode(sample["input_ids"]))
             count += 1
 
-    # dataset we use is in cached now
-    # m_c4 files are test/valid splits of already downloaded data
-    # ~80GB deleted, ~63 GB left in cache/RAM (cache-* files)
-    # with training_args.main_process_first():
-    #     for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
-    #         for file in files:
-    #             if file.startswith("m_c4"):
-    #                 print(f"Removing {os.path.join(root, file)}")
-    #                 os.remove(os.path.join(root, file))
-
     eval_data = torch.load(
         args.eval_data_path,
     )
@@ -740,15 +730,14 @@ def main():
     # needed in the trainer
     training_args.adapter_warmup_steps = args.adapter_warmup_steps
     training_args.adapter_lr_multiplier = args.adapter_lr_multiplier
-    
-    
-    # give .map in multiprocessing enough of time to finish
+
+    # give .map in multiprocessing enough of time to finish, to be safe
     time.sleep(10)
     if training_args.local_rank == 0:
-        train_dataset.cleanup_cache_files()
-        logger.warning("Cleaned up train cache files.")
-        valid_dataset.cleanup_cache_files()
-        logger.warning("Cleaned up valid cache files.")
+        # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
+        # because that would remove the cache files of the other dataset!
+        cleanup_cache_files([train_dataset, valid_dataset])
+        logger.warning("Cleaned up cache files.")
 
     trainer = Trainer(
         model,
