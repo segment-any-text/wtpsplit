@@ -1,6 +1,6 @@
 {
     "model_name_or_path": "xlm-roberta-base",
-    "output_dir": "xlmr-normal",
+    "output_dir": "xlmr-normal-bs256",
     "train_text_path": "data/sentence/train.parquet",
     "valid_text_path": "data/sentence/valid.parquet",
     "block_size": 256,

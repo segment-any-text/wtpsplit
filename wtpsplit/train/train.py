@@ -666,6 +666,11 @@ def main():
         split="train",
     )
     logger.info(f"Train dataset has {len(train_dataset)} examples.")
+    
+    with training_args.main_process_first():
+        train_dataset.cleanup_cache_files()
+        valid_dataset.cleanup_cache_files()
+        logger.warning("Cleaned up cache files.")
 
     # print some samples from the dataset
     count = 0
