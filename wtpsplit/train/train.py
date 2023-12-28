@@ -8,6 +8,7 @@ from functools import partial
 from glob import glob
 from typing import List
 import random
+import time
 
 import numpy as np
 import torch
@@ -666,11 +667,6 @@ def main():
         split="train",
     )
     logger.info(f"Train dataset has {len(train_dataset)} examples.")
-    
-    with training_args.main_process_first():
-        train_dataset.cleanup_cache_files()
-        valid_dataset.cleanup_cache_files()
-        logger.warning("Cleaned up cache files.")
 
     # print some samples from the dataset
     count = 0
@@ -744,6 +740,15 @@ def main():
     # needed in the trainer
     training_args.adapter_warmup_steps = args.adapter_warmup_steps
     training_args.adapter_lr_multiplier = args.adapter_lr_multiplier
+    
+    
+    # give .map in multiprocessing enough of time to finish
+    time.sleep(10)
+    if training_args.local_rank == 0:
+        train_dataset.cleanup_cache_files()
+        logger.warning("Cleaned up train cache files.")
+        valid_dataset.cleanup_cache_files()
+        logger.warning("Cleaned up valid cache files.")
 
     trainer = Trainer(
         model,
