@@ -9,7 +9,7 @@ from tokenizers import AddedToken
 
 from wtpsplit.utils import Constants, hash_encode
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 class ORTWrapper:
@@ -224,7 +224,7 @@ def extract(
         )["logits"]
         if use_subwords:
             logits = logits[:, 1:-1, :]  # remove CLS and SEP tokens
-        logger.debug(np.max(logits[0, :, 0]))
+        # logger.debug(np.max(logits[0, :, 0]))
 
         for i in range(start, end):
             original_idx, start_char_idx, end_char_idx = locs[i]

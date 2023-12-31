@@ -132,6 +132,7 @@ if __name__ == "__main__":
     else:
         valid_data = None
 
+    print("Loading model...")
     model = PyTorchWrapper(AutoModelForTokenClassification.from_pretrained(args.model_path).to(args.device))
 
     # first, logits for everything.

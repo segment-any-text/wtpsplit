@@ -738,6 +738,7 @@ def main():
         # because that would remove the cache files of the other dataset!
         cleanup_cache_files([train_dataset, valid_dataset])
         logger.warning("Cleaned up cache files.")
+    time.sleep(20)
 
     trainer = Trainer(
         model,

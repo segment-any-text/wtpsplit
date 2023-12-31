@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,10 @@ def cleanup_cache_files(datasets) -> int:
 
     for file_path in files_to_remove:
         logger.warning(f"Removing {file_path}")
-        os.remove(file_path)
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            logger.warning(f"Error while trying to remove {file_path}: {e}")
+        time.sleep(0.5)
 
     return len(files_to_remove)
