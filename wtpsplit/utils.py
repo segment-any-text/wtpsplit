@@ -102,7 +102,7 @@ def get_subword_label_dict(label_args, tokenizer):
 
     n_unks = 0
     # Map auxiliary characters to token IDs with labels
-    logger.info(f"Using {Constants.PUNCTUATION_CHARS} auxiliary characters.")
+    logger.warning(f"Using {Constants.PUNCTUATION_CHARS} auxiliary characters.")
     for i, c in enumerate(Constants.PUNCTUATION_CHARS):
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.AUX_OFFSET + i
@@ -216,8 +216,7 @@ def corrupt(
                         while (
                             last_index_in_block + 1 == len(block_ids)
                             or last_index_in_block < len(block_ids)
-                            and block_ids[last_index_in_block + 1]
-                            == block_ids[last_index_in_block]
+                            and block_ids[last_index_in_block + 1] == block_ids[last_index_in_block]
                         ):
                             last_index_in_block += 1
                         input_ids.insert(last_index_in_block, 0)

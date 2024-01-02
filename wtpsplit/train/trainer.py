@@ -245,12 +245,12 @@ class Trainer(transformers.Trainer):
 
         batch_size = self.args.eval_batch_size
 
-        logger.info(f"***** Running {description} *****")
+        logger.warning(f"***** Running {description} *****")
         if has_length(dataloader):
-            logger.info(f"  Num examples = {self.num_examples(dataloader)}")
+            logger.warning(f"  Num examples = {self.num_examples(dataloader)}")
         else:
-            logger.info("  Num examples: Unknown")
-        logger.info(f"  Batch size = {batch_size}")
+            logger.warning("  Num examples: Unknown")
+        logger.warning(f"  Batch size = {batch_size}")
 
         model.eval()
 
@@ -415,10 +415,10 @@ class Trainer(transformers.Trainer):
             metrics=metrics,
             num_samples=num_samples,
         )
-        
+
     def _save_tpu(self, output_dir: Optional[str] = None):
         output_dir = output_dir if output_dir is not None else self.args.output_dir
-        logger.info(f"Saving model checkpoint to {output_dir}")
+        logger.warning(f"Saving model checkpoint to {output_dir}")
 
         if xm.is_master_ordinal():
             os.makedirs(output_dir, exist_ok=True)
@@ -440,7 +440,7 @@ class Trainer(transformers.Trainer):
                     save_function=xm.save,
                 )
             else:
-                logger.info("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
+                logger.warning("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
                 state_dict = actual_model.state_dict()
                 xm.save(state_dict, os.path.join(output_dir, WEIGHTS_NAME))
         else:

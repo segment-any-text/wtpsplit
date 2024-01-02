@@ -1,6 +1,6 @@
 {
     "model_name_or_path": "xlm-roberta-base",
-    "output_dir": "xlmr-normal-shorter",
+    "output_dir": "xlmr-normal-400k-3e-4",
     "train_text_path": "data/sentence/train.parquet",
     "valid_text_path": "data/sentence/valid.parquet",
     "block_size": 512,
@@ -14,7 +14,7 @@
     "eval_accumulation_steps": 8,
     "dataloader_num_workers": 4,
     "preprocessing_num_workers": 32,
-    "learning_rate": 1e-4,
+    "learning_rate": 3e-4,
     "save_strategy": "steps",
     "fp16": false,
     "max_steps": 400000,

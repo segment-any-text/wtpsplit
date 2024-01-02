@@ -18,7 +18,7 @@
     "learning_rate": 1e-4,
     "save_strategy": "steps",
     "fp16": false,
-    "max_steps": 2000000,
+    "max_steps": 200000,
     "save_steps": 100000,
     "eval_steps": 5000,
     "logging_steps": 50,
@@ -40,5 +40,5 @@
     "use_subwords": true,
     "num_hidden_layers": 3,
     "custom_punctuation_file": "punctuation_xlmr_unk.txt",
-    "log_level": "info"
+    "log_level": "warning"
 }

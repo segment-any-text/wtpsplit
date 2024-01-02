@@ -65,8 +65,6 @@ def setup_logging(training_args: transformers.TrainingArguments) -> None:
     # logger.info(f"Training/evaluation parameters {training_args}")
 
 
-
-
 @dataclass
 class Args:
     model_name_or_path: str
@@ -303,7 +301,7 @@ def main():
     )
 
     if training_args.local_rank == 0:
-        logger.info(summary(model, depth=4))
+        logger.warning(summary(model, depth=4))
         # backbone.push_to_hub("markus583/xlm-token-untrained", private=True)
 
     def prepare_dataset(
@@ -315,7 +313,7 @@ def main():
         with training_args.main_process_first():
             dlconf = DownloadConfig(cache_dir="/home/Markus/.cache/huggingface/datasets")
             dataset = load_dataset("markus583/mC4-TEST", split=split, download_config=dlconf)
-        logger.info(f"Loaded {split} dataset.")
+        logger.warning(f"Loaded {split} dataset.")
         # optional: delete downloaded dataset, it is stored in cache_dir now (but we delete it later)
         # ~40GB on disk
         # os.system("rm -rf /home/Markus/.cache/huggingface/datasets")
@@ -327,11 +325,11 @@ def main():
                 lambda example: example["lang"] in include_languages,
                 num_proc=args.preprocessing_num_workers,
             )
-            logger.info(f"Filtered to {len(dataset)} examples.")
+            logger.warning(f"Filtered to {len(dataset)} examples.")
 
         if shuffle:
             dataset = dataset.shuffle(seed=42)
-            logger.info("Shuffled dataset.")
+            logger.warning("Shuffled dataset.")
 
         # very likely not relevant / used only for the compound part
         if args.ignore_non_hyphen:
@@ -523,14 +521,14 @@ def main():
             # this is no longer used and would cause an error otherwise
             with training_args.main_process_first():
                 dataset = dataset.remove_columns([args.text_column])
-        logger.info(f"Tokenized {split} dataset.")
+        logger.warning(f"Tokenized {split} dataset.")
 
         if split == "train":
             with training_args.main_process_first():
                 for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
                     for file in files:
                         if file.startswith("m_c4-test-train"):
-                            logger.info(f"Removing {os.path.join(root, file)}")
+                            logger.warning(f"Removing {os.path.join(root, file)}")
                             os.remove(os.path.join(root, file))
 
         if not args.one_sample_per_line:
@@ -542,7 +540,7 @@ def main():
                     # a bit hacky but oh well, only drop if sentence
                     remove_columns=["ends_with_punctuation"] if args.text_column == "text" else [],
                 )
-        logger.info(f"Grouped {split} dataset.")
+        logger.warning(f"Grouped {split} dataset.")
 
         return dataset
 
@@ -552,7 +550,7 @@ def main():
         shuffle=False,
         split="valid",
     )
-    logger.info(f"Valid dataset has {len(valid_dataset)} examples.")
+    logger.warning(f"Valid dataset has {len(valid_dataset)} examples.")
 
     train_dataset = prepare_dataset(
         num_workers=args.preprocessing_num_workers,
@@ -560,7 +558,7 @@ def main():
         shuffle=args.shuffle,
         split="train",
     )
-    logger.info(f"Train dataset has {len(train_dataset)} examples.")
+    logger.warning(f"Train dataset has {len(train_dataset)} examples.")
 
     # print some samples from the dataset
     count = 0
@@ -569,9 +567,9 @@ def main():
         sample = train_dataset[index]
 
         if sample.get("lang") == "de":
-            logger.info(f"Sample {index} of the training set: {sample}.")
+            logger.warning(f"Sample {index} of the training set: {sample}.")
             if tokenizer:
-                logger.info(tokenizer.decode(sample["input_ids"]))
+                logger.warning(tokenizer.decode(sample["input_ids"]))
             count += 1
 
     eval_data = torch.load(

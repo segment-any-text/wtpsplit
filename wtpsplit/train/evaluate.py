@@ -1,9 +1,12 @@
 import numpy as np
 import pysbd
 import sklearn.metrics
+import logging
 
 from wtpsplit.extract import extract, PyTorchWrapper
 from wtpsplit.utils import Constants
+
+logger = logging.getLogger(__name__)
 
 
 def compute_iou(a, b):
