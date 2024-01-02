@@ -1,10 +1,119 @@
 import logging
 import os
-import time
+import torch
+import torch.nn as nn
+from wtpsplit.utils import Constants
 
 logger = logging.getLogger(__name__)
 
 
+class Model(nn.Module):
+    def __init__(
+        self,
+        backbone,
+        loss_margin=0.5,
+        use_loss_weights=False,
+        do_sentence_training=True,
+        do_auxiliary_training=False,
+    ):
+        super().__init__()
+        self.backbone = backbone
+        self.config = self.backbone.config
+
+        assert loss_margin <= 0.5
+
+        self.loss_margin = loss_margin
+        self.use_loss_weights = use_loss_weights
+        self.do_sentence_training = do_sentence_training
+        self.do_auxiliary_training = do_auxiliary_training
+
+    @property
+    def device(self):
+        return self.backbone.device
+
+    def forward(
+        self,
+        input_ids,
+        language_ids=None,
+        attention_mask=None,
+        position_ids=None,
+        labels=None,
+        label_weights=None,
+        **kwargs,
+    ):
+        if position_ids is not None:
+            reduced_attention_mask = (input_ids != 0).to(torch.long)
+        else:
+            # XXX: 1 is pad token id
+            reduced_attention_mask = (input_ids != 1).to(torch.long)
+
+        output = dict(
+            self.backbone.forward(
+                input_ids=input_ids,
+                language_ids=language_ids,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+                **kwargs,
+            )
+        )
+        logits = output["logits"]
+
+        if labels is not None:
+            loss_fn = nn.BCEWithLogitsLoss(reduction="none")
+
+            losses = []
+
+            # main (newline prediction) objective
+            if self.do_sentence_training:
+                # label smoothing
+                sentence_labels = (0.5 - self.loss_margin) + (labels == Constants.NEWLINE_INDEX + 1).to(
+                    logits.dtype
+                ).view(-1) * self.loss_margin * 2
+                sentence_logits = logits[:, :, Constants.NEWLINE_INDEX].view(-1)
+
+                losses.append(
+                    (
+                        loss_fn(
+                            sentence_logits,
+                            sentence_labels,
+                        )
+                        * (label_weights.view(-1) if label_weights is not None and self.use_loss_weights else 1)
+                        * reduced_attention_mask.view(-1)
+                    ).sum()
+                    / reduced_attention_mask.sum()
+                )
+
+            # auxiliary (punctuation prediction) objective
+            if self.do_auxiliary_training:
+                loss_fn = nn.CrossEntropyLoss()
+
+                # exclude newline and no labels
+                aux_labels = torch.where(
+                    (labels == 0) | (labels == Constants.NEWLINE_INDEX + 1),
+                    0,
+                    labels - Constants.AUX_OFFSET,
+                )
+                # exclude reduced_attention_mask tokens from labels
+                aux_labels = torch.where(
+                    reduced_attention_mask == 1,
+                    aux_labels,
+                    loss_fn.ignore_index,
+                )
+
+                losses.append(
+                    loss_fn(
+                        logits[:, :, Constants.AUX_OFFSET :].view(-1, self.config.num_labels - Constants.AUX_OFFSET),
+                        aux_labels.view(-1),
+                    )
+                )
+
+            loss = torch.stack(losses).sum()
+
+            output["loss"] = loss
+
+        return output
+    
+    
 def cleanup_cache_files(datasets) -> int:
     """Clean up all cache files in the dataset cache directory, except those currently used by any of the provided datasets.
 
@@ -41,10 +150,6 @@ def cleanup_cache_files(datasets) -> int:
 
     for file_path in files_to_remove:
         logger.warning(f"Removing {file_path}")
-        try:
-            os.remove(file_path)
-        except Exception as e:
-            logger.warning(f"Error while trying to remove {file_path}: {e}")
-        time.sleep(0.5)
+        os.remove(file_path)
 
     return len(files_to_remove)

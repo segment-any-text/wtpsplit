@@ -17,7 +17,6 @@ import transformers
 from datasets import load_dataset
 from datasets.download import DownloadConfig
 from tokenizers import AddedToken
-from torch import nn
 from torchinfo import summary
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments, set_seed
@@ -33,8 +32,8 @@ from wtpsplit.models import (
 )
 from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.trainer import Trainer
-from wtpsplit.train.utils import cleanup_cache_files
 from wtpsplit.utils import Constants, LabelArgs, corrupt, get_label_dict, get_subword_label_dict
+from wtpsplit.train.utils import Model, cleanup_cache_files
 
 logger = logging.getLogger(__name__)
 
@@ -66,111 +65,6 @@ def setup_logging(training_args: transformers.TrainingArguments) -> None:
     # logger.info(f"Training/evaluation parameters {training_args}")
 
 
-class Model(nn.Module):
-    def __init__(
-        self,
-        backbone,
-        loss_margin=0.5,
-        use_loss_weights=False,
-        do_sentence_training=True,
-        do_auxiliary_training=False,
-    ):
-        super().__init__()
-        self.backbone = backbone
-        self.config = self.backbone.config
-
-        assert loss_margin <= 0.5
-
-        self.loss_margin = loss_margin
-        self.use_loss_weights = use_loss_weights
-        self.do_sentence_training = do_sentence_training
-        self.do_auxiliary_training = do_auxiliary_training
-
-    @property
-    def device(self):
-        return self.backbone.device
-
-    def forward(
-        self,
-        input_ids,
-        language_ids=None,
-        attention_mask=None,
-        position_ids=None,
-        labels=None,
-        label_weights=None,
-        **kwargs,
-    ):
-        if position_ids is not None:
-            reduced_attention_mask = (input_ids != 0).to(torch.long)
-        else:
-            # XXX: 1 is pad token id
-            reduced_attention_mask = (input_ids != 1).to(torch.long)
-
-        output = dict(
-            self.backbone.forward(
-                input_ids=input_ids,
-                language_ids=language_ids,
-                attention_mask=attention_mask,
-                position_ids=position_ids,
-                **kwargs,
-            )
-        )
-        logits = output["logits"]
-
-        if labels is not None:
-            loss_fn = nn.BCEWithLogitsLoss(reduction="none")
-
-            losses = []
-
-            # main (newline prediction) objective
-            if self.do_sentence_training:
-                # label smoothing
-                sentence_labels = (0.5 - self.loss_margin) + (labels == Constants.NEWLINE_INDEX + 1).to(
-                    logits.dtype
-                ).view(-1) * self.loss_margin * 2
-                sentence_logits = logits[:, :, Constants.NEWLINE_INDEX].view(-1)
-
-                losses.append(
-                    (
-                        loss_fn(
-                            sentence_logits,
-                            sentence_labels,
-                        )
-                        * (label_weights.view(-1) if label_weights is not None and self.use_loss_weights else 1)
-                        * reduced_attention_mask.view(-1)
-                    ).sum()
-                    / reduced_attention_mask.sum()
-                )
-
-            # auxiliary (punctuation prediction) objective
-            if self.do_auxiliary_training:
-                loss_fn = nn.CrossEntropyLoss()
-
-                # exclude newline and no labels
-                aux_labels = torch.where(
-                    (labels == 0) | (labels == Constants.NEWLINE_INDEX + 1),
-                    0,
-                    labels - Constants.AUX_OFFSET,
-                )
-                # exclude reduced_attention_mask tokens from labels
-                aux_labels = torch.where(
-                    reduced_attention_mask == 1,
-                    aux_labels,
-                    loss_fn.ignore_index,
-                )
-
-                losses.append(
-                    loss_fn(
-                        logits[:, :, Constants.AUX_OFFSET :].view(-1, self.config.num_labels - Constants.AUX_OFFSET),
-                        aux_labels.view(-1),
-                    )
-                )
-
-            loss = torch.stack(losses).sum()
-
-            output["loss"] = loss
-
-        return output
 
 
 @dataclass
@@ -347,7 +241,7 @@ def main():
     num_labels = Constants.AUX_OFFSET + ((1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0)
     if args.use_subwords:
         if args.from_scratch:
-            config = SubwordXLMConfig.from_pretrained(
+            config = SubwordXLMConfig(
                 args.model_name_or_path,
                 num_hidden_layers=args.num_hidden_layers,
                 num_labels=num_labels,
@@ -408,7 +302,7 @@ def main():
         do_auxiliary_training=args.do_auxiliary_training,
     )
 
-    with training_args.main_process_first():
+    if training_args.local_rank == 0:
         logger.info(summary(model, depth=4))
         # backbone.push_to_hub("markus583/xlm-token-untrained", private=True)
 
@@ -738,7 +632,7 @@ def main():
         # because that would remove the cache files of the other dataset!
         cleanup_cache_files([train_dataset, valid_dataset])
         logger.warning("Cleaned up cache files.")
-    time.sleep(20)
+    time.sleep(10)
 
     trainer = Trainer(
         model,

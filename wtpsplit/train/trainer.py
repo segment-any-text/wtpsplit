@@ -1,3 +1,4 @@
+import os
 from typing import Dict
 
 import numpy as np
@@ -5,8 +6,11 @@ import torch
 import transformers
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
+from transformers import PreTrainedModel
 from transformers.trainer import (
     ALL_LAYERNORM_LAYERS,
+    TRAINING_ARGS_NAME,
+    WEIGHTS_NAME,
     DataLoader,
     EvalLoopOutput,
     IterableDatasetShard,
@@ -25,6 +29,9 @@ from transformers.trainer import (
     nested_numpify,
     nested_truncate,
 )
+from transformers.modeling_utils import unwrap_model
+
+from wtpsplit.train.utils import Model
 
 if is_torch_tpu_available(check_device=False):
     import torch_xla.core.xla_model as xm  # noqa: F401
@@ -408,3 +415,35 @@ class Trainer(transformers.Trainer):
             metrics=metrics,
             num_samples=num_samples,
         )
+        
+    def _save_tpu(self, output_dir: Optional[str] = None):
+        output_dir = output_dir if output_dir is not None else self.args.output_dir
+        logger.info(f"Saving model checkpoint to {output_dir}")
+
+        if xm.is_master_ordinal():
+            os.makedirs(output_dir, exist_ok=True)
+            torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
+
+        # Save a trained model and configuration using `save_pretrained()`.
+        # They can then be reloaded using `from_pretrained()`
+        xm.rendezvous("saving_checkpoint")
+        if isinstance(self.model, Model):
+            actual_model = self.model.backbone
+        else:
+            actual_model = self.model
+        if not isinstance(actual_model, PreTrainedModel):
+            if isinstance(unwrap_model(actual_model), PreTrainedModel):
+                unwrap_model(actual_model).save_pretrained(
+                    output_dir,
+                    is_main_process=self.args.should_save,
+                    state_dict=actual_model.state_dict(),
+                    save_function=xm.save,
+                )
+            else:
+                logger.info("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
+                state_dict = actual_model.state_dict()
+                xm.save(state_dict, os.path.join(output_dir, WEIGHTS_NAME))
+        else:
+            actual_model.save_pretrained(output_dir, is_main_process=self.args.should_save, save_function=xm.save)
+        if self.tokenizer is not None and self.args.should_save:
+            self.tokenizer.save_pretrained(output_dir)
