@@ -338,3 +338,32 @@ def punkt_sentencize(lang_code, text):
         return reconstruct_sentences(text, sent_tokenize(text, language=lang_code_to_lang(lang_code).lower()))
     except LookupError:
         raise LanguageError(f"punkt does not support {lang_code}")
+
+
+def get_token_spans(tokenizer, offsets_mapping, tokens):
+    # Filter out special tokens and get their character start and end positions
+    valid_indices = np.array(
+        [
+            idx
+            for idx, token in enumerate(tokens)
+            if token not in [tokenizer.cls_token, tokenizer.sep_token, tokenizer.pad_token]
+            and idx < len(offsets_mapping)
+        ]
+    )
+    valid_offsets = np.array(offsets_mapping)[valid_indices]
+    return valid_indices, valid_offsets
+
+
+def token_to_char_probs(text, tokens, token_logits, tokenizer, offsets_mapping):
+    char_probs = np.full(
+        (len(text), token_logits.shape[1]), np.min(token_logits)
+    )  # Initialize with very low numbers
+
+    valid_indices, valid_offsets = get_token_spans(tokenizer, offsets_mapping, tokens)
+
+    # Assign the token's probability to the last character of the token
+    for i in range(valid_offsets.shape[0]):
+        start, end = valid_offsets[i]
+        char_probs[end - 1] = token_logits[valid_indices[i]]
+
+    return char_probs

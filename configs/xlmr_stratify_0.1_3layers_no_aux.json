@@ -17,7 +17,7 @@
     "learning_rate": 1e-4,
     "save_strategy": "steps",
     "fp16": false,
-    "max_steps": 2000000,
+    "max_steps": 200000,
     "save_steps": 100000,
     "eval_steps": 5000,
     "logging_steps": 50,

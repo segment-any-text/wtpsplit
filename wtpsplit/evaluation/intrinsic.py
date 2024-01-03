@@ -9,9 +9,10 @@ import torch
 from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForTokenClassification, HfArgumentParser
+import numpy as np
 
 import wtpsplit.models  # noqa: F401
-from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture
+from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture, token_to_char_probs
 from wtpsplit.extract import PyTorchWrapper, extract
 from wtpsplit.utils import Constants
 
@@ -41,8 +42,35 @@ class Args:
     include_langs: List[str] = None
 
 
+def process_logits(text, model, lang_code, args):
+    # Extract necessary data
+    logits, offsets_mapping, tokenizer = extract(
+        [text],
+        model,
+        lang_code=lang_code,
+        stride=args.stride,
+        block_size=args.block_size,
+        batch_size=args.batch_size,
+        pad_last_batch=True,
+        verbose=True,
+    )
+    logits = logits[0]
+    if offsets_mapping is not None:
+        offsets_mapping = offsets_mapping[0]
+
+    if "xlm" in model.config.model_type:
+        tokens = tokenizer.tokenize(text, verbose=False)
+
+        # Use the vectorized function to convert token probabilities to character probabilities for the entire array
+        char_probs = token_to_char_probs(text, tokens, logits, tokenizer, offsets_mapping)
+
+        logits = char_probs
+
+    return logits
+
+
 def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_sentences=10_000):
-    logits_path = Constants.CACHE_DIR / (model.config.mixture_name + "_logits.h5")
+    logits_path = Constants.CACHE_DIR / (model.config.mixture_name + "_logits_u0001.h5")
 
     # TODO: revert to "a"
     with h5py.File(logits_path, "w") as f, torch.no_grad():
@@ -50,6 +78,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_
             if args.include_langs is not None and lang_code not in args.include_langs:
                 continue
 
+            print(f"Processing {lang_code}...")
             if lang_code not in f:
                 lang_group = f.create_group(lang_code)
             else:
@@ -61,18 +90,10 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_
                 assert len(sentences) > 0
 
                 separator = Constants.SEPARATORS[lang_code]
-                text = separator.join(sentences)
+                valid_text = separator.join(sentences)
 
-                valid_logits = extract(
-                    [text],
-                    model,
-                    lang_code=lang_code,
-                    stride=args.stride,
-                    block_size=args.block_size,
-                    batch_size=args.batch_size,
-                    pad_last_batch=True,
-                    verbose=True,
-                )[0]
+                valid_logits = process_logits(valid_text, model, lang_code, args)
+
                 lang_group.create_dataset("valid", data=valid_logits)
 
             # eval data
@@ -86,16 +107,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_
                     test_sentences = dataset["data"]
                     test_text = Constants.SEPARATORS[lang_code].join(test_sentences)
 
-                    test_logits = extract(
-                        [test_text],
-                        model,
-                        lang_code=lang_code,
-                        stride=args.stride,
-                        block_size=args.block_size,
-                        batch_size=args.batch_size,
-                        pad_last_batch=True,
-                        verbose=True,
-                    )[0]
+                    test_logits = process_logits(test_text, model, lang_code, args)
                     test_labels = get_labels(lang_code, test_sentences, after_space=False)
 
                     dset_group.create_dataset("test_logits", data=test_logits)
@@ -106,15 +118,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_
                     train_sentences = train_sentences[:max_n_train_sentences]
                     train_text = Constants.SEPARATORS[lang_code].join(train_sentences)
 
-                    train_logits = extract(
-                        [train_text],
-                        model,
-                        lang_code=lang_code,
-                        stride=args.stride,
-                        block_size=args.block_size,
-                        batch_size=args.batch_size,
-                        pad_last_batch=False,
-                    )[0]
+                    train_logits = process_logits(train_text, model, lang_code, args)
                     train_labels = get_labels(lang_code, train_sentences, after_space=False)
 
                     dset_group.create_dataset("train_logits", data=train_logits)
@@ -146,6 +150,7 @@ if __name__ == "__main__":
         if args.include_langs is not None and lang_code not in args.include_langs:
             continue
 
+        print(f"Predicting {lang_code}...")
         results[lang_code] = {}
         clfs[lang_code] = {}
 
@@ -154,15 +159,15 @@ if __name__ == "__main__":
 
             if "train_logits" in f[lang_code][dataset_name]:
                 feature_indices = None
-                # TODO: tokenize here
                 clf = train_mixture(
                     [lang_code],
                     f[lang_code][dataset_name]["train_logits"][:],
                     f[lang_code][dataset_name]["train_labels"][:],
                     features=feature_indices,
                 )
-
-                # TODO: tokenize here, too
+                print(clf)
+                print(np.argsort(clf[0].coef_[0])[:10], "...", np.argsort(clf[0].coef_[0])[-10:])
+                print(np.where(np.argsort(clf[0].coef_[0]) == 0)[0])
                 score_t, score_punct, _ = evaluate_mixture(
                     lang_code,
                     f[lang_code][dataset_name]["test_logits"][:],
@@ -173,7 +178,7 @@ if __name__ == "__main__":
                 clfs[lang_code][dataset_name] = clf
 
                 clf = list(copy.deepcopy(clf))
-                clf[-1] = 0.01
+                clf[-1] = 0.005  # 0.01
             else:
                 score_t = score_punct = None
 
@@ -200,7 +205,7 @@ if __name__ == "__main__":
     json.dump(
         results,
         open(
-            Constants.CACHE_DIR / (model.config.mixture_name + "_intrinsic_results.json"),
+            Constants.CACHE_DIR / (model.config.mixture_name + "_intrinsic_results_u0005.json"),
             "w",
         ),
         indent=4,

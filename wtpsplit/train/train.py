@@ -175,26 +175,6 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
             logger.warning(len(input_ids))
         input_ids = torch.tensor(input_ids[: args.block_size], dtype=torch.long)
         labels = torch.tensor(labels[: args.block_size], dtype=torch.long)
-        if input_ids[-1] != tokenizer.sep_token_id:
-            logger.warning(input_ids)
-            logger.warning(tokenizer.sep_token_id)
-            logger.warning(lang)
-            # raise ValueError("SEP token not last token")
-        if input_ids[0] != tokenizer.cls_token_id:
-            logger.warning(input_ids)
-            logger.warning(tokenizer.cls_token_id)
-            logger.warning(lang)
-            # raise ValueError("CLS token not first token")
-        if (input_ids == tokenizer.cls_token_id).sum() != 1:
-            logger.warning(input_ids)
-            logger.warning(tokenizer.cls_token_id)
-            logger.warning(lang)
-            # raise ValueError("CLS token not unique")
-        if (input_ids == tokenizer.sep_token_id).sum() != 1:
-            logger.warning(input_ids)
-            logger.warning(tokenizer.sep_token_id)
-            logger.warning(lang)
-            # raise ValueError("CLS token not unique")
 
         position_ids = torch.arange(len(input_ids), dtype=torch.long)
         label_weights = torch.ones(args.block_size, dtype=torch.float32)
@@ -523,7 +503,7 @@ def main():
                 dataset = dataset.rename_column(args.text_column, "input_ids")
         logger.warning(f"Tokenized {split} dataset.")
 
-        if split == "train":
+        if split == "train" and args.use_subwords:
             with training_args.main_process_first():
                 for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
                     for file in files:

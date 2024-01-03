@@ -1,3 +1,4 @@
+
 import numpy as np
 import pysbd
 import sklearn.metrics
@@ -5,6 +6,7 @@ import logging
 
 from wtpsplit.extract import extract, PyTorchWrapper
 from wtpsplit.utils import Constants
+from wtpsplit.evaluation import token_to_char_probs
 
 logger = logging.getLogger(__name__)
 
@@ -52,31 +54,6 @@ def get_metrics(labels, preds):
     return metrics, info
 
 
-def get_token_spans(tokenizer: object, offsets_mapping: list, tokens: list):
-    token_spans = []
-    for idx, token in enumerate(tokens):
-        # Skip special tokens like [CLS], [SEP]
-        if idx >= len(offsets_mapping):
-            continue
-        if token in [tokenizer.cls_token, tokenizer.sep_token, tokenizer.pad_token]:
-            continue
-
-        char_start, char_end = offsets_mapping[idx]
-        token_spans.append((char_start, char_end))
-
-    return token_spans
-
-
-def token_to_char_probs(text: str, tokens: list, token_probs: np.ndarray, tokenizer, offsets_mapping):
-    # some very low number since at non-ending position, predicting a newline is impossible
-    char_probs = np.zeros(len(text)) - 10000
-    token_spans = get_token_spans(tokenizer, offsets_mapping, tokens)
-
-    for i, ((start, end), prob, token) in enumerate(zip(token_spans, token_probs, tokens)):
-        # assign the token's prob to the last char of the token
-        char_probs[end - 1] = prob
-
-    return char_probs
 
 
 def evaluate_sentence(
@@ -105,7 +82,6 @@ def evaluate_sentence(
         stride=stride,
         block_size=block_size,
         batch_size=batch_size,
-        verbose=True,
     )
     logits = logits[0]
     if offsets_mapping is not None:
@@ -117,10 +93,11 @@ def evaluate_sentence(
 
     if "xlm" in model.config.model_type:
         tokens = tokenizer.tokenize(text, verbose=False)
-        char_probs = token_to_char_probs(text, tokens, logits[:, positive_index], tokenizer, offsets_mapping)
+        char_probs = token_to_char_probs(text, tokens, logits, tokenizer, offsets_mapping)
     else:
-        char_probs = logits[:, positive_index]
-    metrics, info = get_metrics(newline_labels, char_probs)
+        char_probs = logits
+    newline_probs = char_probs[:, positive_index]
+    metrics, info = get_metrics(newline_labels, newline_probs)
 
     info["newline_labels"] = newline_labels
 
