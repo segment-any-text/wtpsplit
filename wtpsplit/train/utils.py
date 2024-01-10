@@ -15,6 +15,7 @@ class Model(nn.Module):
         use_loss_weights=False,
         do_sentence_training=True,
         do_auxiliary_training=False,
+        aux_training_weight=1.0,
     ):
         super().__init__()
         self.backbone = backbone
@@ -26,6 +27,7 @@ class Model(nn.Module):
         self.use_loss_weights = use_loss_weights
         self.do_sentence_training = do_sentence_training
         self.do_auxiliary_training = do_auxiliary_training
+        self.aux_training_weight = aux_training_weight
 
     @property
     def device(self):
@@ -107,7 +109,9 @@ class Model(nn.Module):
                     )
                 )
 
-            loss = torch.stack(losses).sum()
+            loss = losses[0]
+            if len(losses) > 1:
+                loss += self.aux_training_weight * losses[1]
 
             output["loss"] = loss
 

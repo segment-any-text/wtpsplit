@@ -92,6 +92,7 @@ class Args:
     use_loss_weights: bool = False
     do_sentence_training: bool = True
     do_auxiliary_training: bool = True
+    aux_training_weight: float = 1.0
     ignore_non_hyphen: bool = False
     non_punctuation_sample_ratio: float = None
     adapter_warmup_steps: int = 0
@@ -267,6 +268,7 @@ def main():
         use_loss_weights=args.use_loss_weights,
         do_sentence_training=args.do_sentence_training,
         do_auxiliary_training=args.do_auxiliary_training,
+        aux_training_weight=args.aux_training_weight,
     )
 
     if training_args.local_rank == 0:
@@ -525,7 +527,7 @@ def main():
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=args.shuffle,
-        split="valid",
+        split="train",
     )
     logger.warning(f"Train dataset has {len(train_dataset)} examples.")
 
@@ -597,13 +599,13 @@ def main():
     training_args.adapter_lr_multiplier = args.adapter_lr_multiplier
 
     # give .map in multiprocessing enough of time to finish, to be safe
-    # time.sleep(10)
-    # if training_args.local_rank == 0:
-    #     # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
-    #     # because that would remove the cache files of the other dataset!
-    #     cleanup_cache_files([train_dataset, valid_dataset])
-    #     logger.warning("Cleaned up cache files.")
-    # time.sleep(10)
+    time.sleep(10)
+    if training_args.local_rank == 0:
+        # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
+        # because that would remove the cache files of the other dataset!
+        cleanup_cache_files([train_dataset, valid_dataset])
+        logger.warning("Cleaned up cache files.")
+    time.sleep(10)
 
     trainer = Trainer(
         model,
