@@ -78,6 +78,7 @@ class LabelArgs:
     custom_punctuation_file: str = None
     retain_first_consecutive_punctuation: bool = True
     non_whitespace_remove_spaces: bool = True
+    case_corruption_prob: float = 0.5
 
     def __post_init__(self):
         if self.custom_punctuation_file:
@@ -219,7 +220,12 @@ def corrupt(
                         labels.insert(last_index_in_block, 0)
                     else:
                         del block_ids[i + 1]
-                    if tokenizer and separator == "" and label_args.non_whitespace_remove_spaces and i + 1 < len(input_ids):
+                    if (
+                        tokenizer
+                        and separator == ""
+                        and label_args.non_whitespace_remove_spaces
+                        and i + 1 < len(input_ids)
+                    ):
                         # tokenizer.decode() retains the space that leaks the information
                         # so we need to get the position within the tokenized text and then remove the space
                         # (so there is no more space when fed into the tokenizer call)
@@ -251,12 +257,47 @@ def corrupt(
                                     del input_ids[i + 1]
                                     del labels[i + 1]
                                     del block_ids[i + 1]
+                if random.random() < label_args.case_corruption_prob and i + 1 < len(input_ids):
+                    if not tokenizer:
+                        raise NotImplementedError()
+                    # corrupt case
+                    token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
+                    insert_ = False
+                    if token.startswith("▁"):
+                        insert_ = True
+                        token = token[1:]
+                    if token.istitle():
+                        token = token.lower()
+                    # re-tokenize
+                    # token_ids = tokenizer.convert_tokens_to_ids(token if not insert_ else "▁" + token)
+                    token_ids = tokenizer(token if not insert_ else "▁" + token, add_special_tokens=False)["input_ids"]
+                    if len(token_ids) == 0 or input_ids[i + 1] == tokenizer.unk_token_id:
+                        # UNK or whitespace token, remove it
+                        del input_ids[i + 1]
+                        del labels[i + 1]
+                        del block_ids[i + 1]
+                    else:
+                        if token_ids[0] == tokenizer.convert_tokens_to_ids("▁"):
+                            token_ids = token_ids[1:]
+                        elif len(token_ids) > 1:
+                            # replace the token with the remaining token
+                            input_ids[i + 1] = token_ids[0]
+                            for token_id in token_ids[1:]:
+                                input_ids.insert(i + 2, token_id)
+                                labels.insert(i + 2, 0)
+                                block_ids.insert(i + 2, block_ids[i + 1])
+                        elif len(token_ids) == 1:
+                            input_ids[i + 1] = token_ids[0]
+                        else:
+                            print(token, token_ids, input_ids[i + 1], tokenizer.decode(input_ids[i + 1]))
+                    
 
         elif label_args.use_auxiliary and labels[i] > Constants.AUX_OFFSET:  # auxiliary
             if pack_samples:
                 raise NotImplementedError()
 
-            if random.random() < label_args.auxiliary_remove_prob:                
+            if random.random() < label_args.auxiliary_remove_prob:
+                removed_aux_char = False
                 if label_args.retain_first_consecutive_punctuation:
                     # remove only if the next token is not a newline
                     # this retains the current auxiliary character, even though we decided to remove it
@@ -265,12 +306,47 @@ def corrupt(
                         del input_ids[i + 1]
                         del labels[i + 1]
                         del block_ids[i + 1]
+                        removed_aux_char = True
                 else:
                     # in case of something like ".\n", this removes the "." and the \n label (=1)
                     # so the newline in the text is kept, but the label is removed!
                     del input_ids[i + 1]
                     del labels[i + 1]
                     del block_ids[i + 1]
+                    removed_aux_char = True
+                if random.random() < label_args.case_corruption_prob and removed_aux_char and i + 1 < len(input_ids):
+                    if not tokenizer:
+                        raise NotImplementedError()
+                    # corrupt case
+                    token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
+                    insert_ = False
+                    if token.startswith("▁"):
+                        insert_ = True
+                        token = token[1:]
+                    if token.istitle():
+                        token = token.lower()
+                    # re-tokenize
+                    # token_ids = tokenizer.convert_tokens_to_ids(token if not insert_ else "▁" + token)
+                    token_ids = tokenizer(token if not insert_ else "▁" + token, add_special_tokens=False)["input_ids"]
+                    if len(token_ids) == 0 or input_ids[i + 1] == tokenizer.unk_token_id:
+                        # UNK or whitespace token, remove it
+                        del input_ids[i + 1]
+                        del labels[i + 1]
+                        del block_ids[i + 1]
+                    else:
+                        if token_ids[0] == tokenizer.convert_tokens_to_ids("▁"):
+                            token_ids = token_ids[1:]
+                        elif len(token_ids) > 1:
+                            # replace the token with the remaining token
+                            input_ids[i + 1] = token_ids[0]
+                            for token_id in token_ids[1:]:
+                                input_ids.insert(i + 2, token_id)
+                                labels.insert(i + 2, 0)
+                                block_ids.insert(i + 2, block_ids[i + 1])
+                        elif len(token_ids) == 1:
+                            input_ids[i + 1] = token_ids[0]
+                        else:
+                            print(token, token_ids, input_ids[i + 1], tokenizer.decode(input_ids[i + 1]))
 
         try:
             i = i + 1 + next(index for index, label in enumerate(labels[i + 1 :]) if label != 0)
