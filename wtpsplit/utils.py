@@ -76,6 +76,8 @@ class LabelArgs:
     hyphen_chars: List[str] = field(default_factory=lambda: ["-", "‐"])
     use_auxiliary: bool = False
     custom_punctuation_file: str = None
+    retain_first_consecutive_punctuation: bool = True
+    non_whitespace_remove_spaces: bool = True
 
     def __post_init__(self):
         if self.custom_punctuation_file:
@@ -184,12 +186,6 @@ def corrupt(
     try:
         i = next(index for index, label in enumerate(labels) if label != 0)
     except StopIteration:
-        if tokenizer is not None:
-            input_ids = [tokenizer.cls_token_id] + input_ids + [tokenizer.sep_token_id]
-            # Extend block_ids for the added CLS and SEP tokens
-            block_ids = [block_ids[0]] + block_ids + [block_ids[-1]]
-            # labels for CLS and SEP tokens are 0 (none)
-            labels = [0] + labels + [0]
         return input_ids, block_ids, labels
 
     if tokenizer:
@@ -223,26 +219,63 @@ def corrupt(
                         labels.insert(last_index_in_block, 0)
                     else:
                         del block_ids[i + 1]
+                    if tokenizer and separator == "" and label_args.non_whitespace_remove_spaces and i + 1 < len(input_ids):
+                        # tokenizer.decode() retains the space that leaks the information
+                        # so we need to get the position within the tokenized text and then remove the space
+                        # (so there is no more space when fed into the tokenizer call)
+                        if input_ids[i + 1] == tokenizer.convert_tokens_to_ids("▁"):
+                            # remove artificial space
+                            del input_ids[i + 1]
+                            del labels[i + 1]
+                            del block_ids[i + 1]
+                        if i + 1 < len(input_ids):
+                            next_token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
+                            if next_token.startswith("▁"):
+                                # next token starts with _ --> remove the _ from the token and re-tokenize
+                                remove_next = False
+                                remaining_token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
+                                if len(remaining_token) > 1:
+                                    # ▁Test --> Test
+                                    remaining_token = remaining_token[1:]
+                                else:
+                                    # ▁ --> remove
+                                    remove_next = True
+                                remaining_id = tokenizer.convert_tokens_to_ids(remaining_token)
+                                # replace the token with the remaining token
+                                if remaining_id != tokenizer.unk_token_id:
+                                    input_ids[i + 1] = remaining_id
+                                else:
+                                    # UNK token, remove it
+                                    remove_next = True
+                                if remove_next:
+                                    del input_ids[i + 1]
+                                    del labels[i + 1]
+                                    del block_ids[i + 1]
+
         elif label_args.use_auxiliary and labels[i] > Constants.AUX_OFFSET:  # auxiliary
             if pack_samples:
                 raise NotImplementedError()
 
-            if random.random() < label_args.auxiliary_remove_prob:
-                del input_ids[i + 1]
-                del labels[i + 1]
-                del block_ids[i + 1]
+            if random.random() < label_args.auxiliary_remove_prob:                
+                if label_args.retain_first_consecutive_punctuation:
+                    # remove only if the next token is not a newline
+                    # this retains the current auxiliary character, even though we decided to remove it
+                    # it may skew the statistics since an auxiliary character is a better proxy for a newline
+                    if labels[i + 1] != 1:
+                        del input_ids[i + 1]
+                        del labels[i + 1]
+                        del block_ids[i + 1]
+                else:
+                    # in case of something like ".\n", this removes the "." and the \n label (=1)
+                    # so the newline in the text is kept, but the label is removed!
+                    del input_ids[i + 1]
+                    del labels[i + 1]
+                    del block_ids[i + 1]
+
         try:
             i = i + 1 + next(index for index, label in enumerate(labels[i + 1 :]) if label != 0)
         except StopIteration:
             break
-
-    # Add CLS and SEP tokens after the corruption process
-    if tokenizer is not None:
-        input_ids = [tokenizer.cls_token_id] + input_ids + [tokenizer.sep_token_id]
-        # Extend block_ids for the added CLS and SEP tokens
-        block_ids = [block_ids[0]] + block_ids + [block_ids[-1]]
-        # labels for CLS and SEP tokens are 0 (none)
-        labels = [0] + labels + [0]
 
     return input_ids, block_ids, labels
 
@@ -312,3 +345,47 @@ def reconstruct_sentences(text, partial_sentences):
         fixed_sentences.append(text[i:])
 
     return fixed_sentences
+
+
+if __name__ == "__main__":
+    # test corrupt function
+    from transformers import AutoTokenizer
+    from tokenizers import AddedToken
+
+    tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
+    tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
+    text = "That's right, Five!\n!\n!!!\n!\n Always lay the blame on others!"
+    input_ids = tokenizer(text)["input_ids"]
+    block_ids = [0] * len(input_ids)
+    label_args = LabelArgs(
+        custom_punctuation_file="punctuation_xlmr_unk.txt",
+        use_auxiliary=True,
+        auxiliary_remove_prob=1.0,
+        newline_whitespace_prob=1.0,
+    )
+    label_dict = get_subword_label_dict(label_args, tokenizer)
+
+    # corrupt
+    input_ids, block_ids, labels = corrupt(input_ids, block_ids, "en", label_args, label_dict, tokenizer=tokenizer)
+    print(input_ids)
+    print(labels)
+    print(tokenizer.tokenize(text))
+    print([(tokenizer.decode([input_id]), label) for input_id, label in zip(input_ids, labels)])
+    print("newline labels in text:")
+    print(np.where(np.array(labels) == 1))
+    print("newline ids in output text:")
+    print(np.where(np.array(input_ids) == tokenizer.all_special_ids[-1]))
+    print(tokenizer.decode(input_ids))
+
+    # ords = [ord(c) for c in text]
+    # block_ords = [0] * len(ords)
+    # label_args = LabelArgs(use_auxiliary=True, auxiliary_remove_prob=1.0)
+    # label_dict = get_label_dict(label_args)
+
+    # ords, block_ords, labels = corrupt(ords, block_ords, "en", label_args, label_dict)
+    # print("ords", ords)
+    # print("labels", labels)
+    # print("newline labels in text:")
+    # print(np.where(np.array(labels) == 1))
+    # print("newline ids in output text:")
+    # print(np.where(np.array([ord("\n")]) == ords))

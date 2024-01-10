@@ -165,9 +165,10 @@ if __name__ == "__main__":
                     f[lang_code][dataset_name]["train_labels"][:],
                     features=feature_indices,
                 )
-                print(clf)
-                print(np.argsort(clf[0].coef_[0])[:10], "...", np.argsort(clf[0].coef_[0])[-10:])
-                print(np.where(np.argsort(clf[0].coef_[0]) == 0)[0])
+                if clf[0] is not None:
+                    print(clf)
+                    print(np.argsort(clf[0].coef_[0])[:10], "...", np.argsort(clf[0].coef_[0])[-10:])
+                    print(np.where(np.argsort(clf[0].coef_[0]) == 0)[0])
                 score_t, score_punct, _ = evaluate_mixture(
                     lang_code,
                     f[lang_code][dataset_name]["test_logits"][:],
@@ -178,7 +179,7 @@ if __name__ == "__main__":
                 clfs[lang_code][dataset_name] = clf
 
                 clf = list(copy.deepcopy(clf))
-                clf[-1] = 0.005  # 0.01
+                clf[-1] = 0.01  # 0.01
             else:
                 score_t = score_punct = None
 

@@ -121,7 +121,10 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
         lang = sample["lang"]
 
         while len(input_ids) < args.block_size + args.overflow_size:
-            input_ids.append(0)
+            if tokenizer:
+                input_ids.append(tokenizer.pad_token_id)
+            else:
+                input_ids.append(0)
 
         block_ids = [0] * len(input_ids)
 
@@ -135,47 +138,30 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
             min_length=args.block_size,
             tokenizer=tokenizer if args.use_subwords else None,
         )
+        
+        actual_block_size = args.block_size - 2 if args.use_subwords else args.block_size
 
         if len(input_ids) > args.block_size:
-            if tokenizer:
-                # always include CLS
-                start = np.random.randint(0, len(input_ids) - args.block_size)
-                if start != 0:
-                    # this removes the CLS token
-                    # -1 removes the SEP token, for sure
-                    input_ids = [tokenizer.cls_token_id] + input_ids[start : start + args.block_size - 2]
-                    labels = [0] + labels[start : start + args.block_size - 2]
-                else:
-                    input_ids = input_ids[start : start + args.block_size - 1]
-                    labels = labels[start : start + args.block_size - 1]
-                # always include SEP
-                if input_ids[-1] != tokenizer.sep_token_id:
-                    # also insert PAD token as long as len < block_size
-                    while len(input_ids) < args.block_size - 1:
-                        input_ids = input_ids + [tokenizer.pad_token_id]
-                        labels = labels + [0]
-                    input_ids = input_ids + [tokenizer.sep_token_id]
-                    labels = labels + [0]
-            else:
-                start = np.random.randint(0, len(input_ids) - args.block_size)
-                input_ids = input_ids[start : start + args.block_size]
-                labels = labels[start : start + args.block_size]
-        if len(input_ids) != args.block_size and tokenizer:
-            del input_ids[-1]
-            del labels[-1]
-            while len(input_ids) < args.block_size - 1:
-                # insert pad token at second-to-last position
-                logger.warning("second", len(input_ids))
-                input_ids = input_ids + [tokenizer.pad_token_id]
-                labels = labels + [0]
-            input_ids = input_ids + [tokenizer.sep_token_id]
-            labels = labels + [0]
+            start = np.random.randint(0, len(input_ids) - actual_block_size)
+            input_ids = input_ids[start : start + actual_block_size]
+            labels = labels[start : start + actual_block_size]
+        elif len(input_ids) < actual_block_size:
+            padding = actual_block_size - len(input_ids)
+            # print(padding, lang)
+            input_ids += [tokenizer.pad_token_id] * padding if tokenizer else [0] * padding
+            labels += [0] * padding
+            
+        if tokenizer:
+            input_ids = [tokenizer.cls_token_id] + input_ids[: actual_block_size] + [tokenizer.sep_token_id]
+            # labels for CLS and SEP tokens are 0 (none)
+            labels = [0] + labels[: actual_block_size] + [0]
+        else:
+            input_ids = input_ids[: actual_block_size]
+            labels = labels[: actual_block_size]
+        
 
-        if len(input_ids) != args.block_size:
-            logger.warning(len(input_ids))
-        input_ids = torch.tensor(input_ids[: args.block_size], dtype=torch.long)
-        labels = torch.tensor(labels[: args.block_size], dtype=torch.long)
-
+        input_ids = torch.tensor(input_ids, dtype=torch.long)
+        labels = torch.tensor(labels, dtype=torch.long)
         position_ids = torch.arange(len(input_ids), dtype=torch.long)
         label_weights = torch.ones(args.block_size, dtype=torch.float32)
         if tokenizer:
@@ -232,7 +218,10 @@ def main():
                 num_hidden_layers=args.num_hidden_layers,
                 num_labels=num_labels,
             )
-            backbone = SubwordXLMForTokenClassification(config)
+            backbone = SubwordXLMForTokenClassification.from_pretrained(
+                args.model_name_or_path,
+                config=config,
+            )
 
         backbone.config.base_model = args.model_name_or_path
         tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
@@ -536,17 +525,17 @@ def main():
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=args.shuffle,
-        split="train",
+        split="valid",
     )
     logger.warning(f"Train dataset has {len(train_dataset)} examples.")
 
     # print some samples from the dataset
     count = 0
-    while count < 5:
+    while count < 20:
         index = random.choice(range(len(train_dataset)))
         sample = train_dataset[index]
 
-        if sample.get("lang") == "de":
+        if sample.get("lang") in ["zh", "ja", "my", "km"]:
             logger.warning(f"Sample {index} of the training set: {sample}.")
             if tokenizer:
                 logger.warning(tokenizer.decode(sample["input_ids"]))
@@ -578,6 +567,10 @@ def main():
                     )
                     metrics[f"{lang_code}_{dataset_name}_pr_auc"] = score
                     avg_metrics[f"average_{dataset_name}_pr_auc"].append(score)
+                    if lang_code in ["zh", "ja", "my", "km"]:
+                        avg_metrics[f"average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
+                    else:
+                        avg_metrics[f"average_whitespace_{dataset_name}_pr_auc"].append(score)
 
         for name, values in avg_metrics.items():
             if len(values) > 1:
@@ -604,13 +597,13 @@ def main():
     training_args.adapter_lr_multiplier = args.adapter_lr_multiplier
 
     # give .map in multiprocessing enough of time to finish, to be safe
-    time.sleep(10)
-    if training_args.local_rank == 0:
-        # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
-        # because that would remove the cache files of the other dataset!
-        cleanup_cache_files([train_dataset, valid_dataset])
-        logger.warning("Cleaned up cache files.")
-    time.sleep(10)
+    # time.sleep(10)
+    # if training_args.local_rank == 0:
+    #     # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
+    #     # because that would remove the cache files of the other dataset!
+    #     cleanup_cache_files([train_dataset, valid_dataset])
+    #     logger.warning("Cleaned up cache files.")
+    # time.sleep(10)
 
     trainer = Trainer(
         model,
