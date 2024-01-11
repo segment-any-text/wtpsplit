@@ -78,7 +78,7 @@ class LabelArgs:
     custom_punctuation_file: str = None
     retain_first_consecutive_punctuation: bool = True
     non_whitespace_remove_spaces: bool = True
-    case_corruption_prob: float = 0.5
+    case_corruption_prob: float = 0.0
 
     def __post_init__(self):
         if self.custom_punctuation_file:
