@@ -63,8 +63,6 @@ class Model(nn.Module):
         if labels is not None:
             loss_fn = nn.BCEWithLogitsLoss(reduction="none")
 
-            losses = []
-
             # main (newline prediction) objective
             if self.do_sentence_training:
                 # label smoothing
@@ -73,17 +71,14 @@ class Model(nn.Module):
                 ).view(-1) * self.loss_margin * 2
                 sentence_logits = logits[:, :, Constants.NEWLINE_INDEX].view(-1)
 
-                losses.append(
-                    (
-                        loss_fn(
-                            sentence_logits,
-                            sentence_labels,
-                        )
-                        * (label_weights.view(-1) if label_weights is not None and self.use_loss_weights else 1)
-                        * reduced_attention_mask.view(-1)
-                    ).sum()
-                    / reduced_attention_mask.sum()
-                )
+                loss = (
+                    loss_fn(
+                        sentence_logits,
+                        sentence_labels,
+                    )
+                    * (label_weights.view(-1) if label_weights is not None and self.use_loss_weights else 1)
+                    * reduced_attention_mask.view(-1)
+                ).sum() / reduced_attention_mask.sum()
 
             # auxiliary (punctuation prediction) objective
             if self.do_auxiliary_training:
@@ -102,22 +97,18 @@ class Model(nn.Module):
                     loss_fn.ignore_index,
                 )
 
-                losses.append(
-                    loss_fn(
-                        logits[:, :, Constants.AUX_OFFSET :].view(-1, self.config.num_labels - Constants.AUX_OFFSET),
-                        aux_labels.view(-1),
-                    )
+                aux_loss = loss_fn(
+                    logits[:, :, Constants.AUX_OFFSET :].view(-1, self.config.num_labels - Constants.AUX_OFFSET),
+                    aux_labels.view(-1),
                 )
 
-            loss = losses[0]
-            if len(losses) > 1:
-                loss += self.aux_training_weight * losses[1]
+                loss = loss + self.aux_training_weight * aux_loss
 
             output["loss"] = loss
 
         return output
-    
-    
+
+
 def cleanup_cache_files(datasets) -> int:
     """Clean up all cache files in the dataset cache directory, except those currently used by any of the provided datasets.
 
