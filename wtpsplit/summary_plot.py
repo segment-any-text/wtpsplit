@@ -3,9 +3,9 @@ import plotly.graph_objects as go
 import json
 
 FILES = [
-    ".cache/xlmr-normal-v2_b512+s_64_intrinsic_results_u0.01.json",
+    ".cache/xlmr-normal-v2_b128+s64_intrinsic_results_u0.01.json",
+    ".cache/xlmr-normal-v2_b256+s64_intrinsic_results_u0.01.json",
     ".cache/xlmr-normal-v2_b512+s64_intrinsic_results_u0.01.json",
-    ".cache/xlm-tokenv2_intrinsic_results_u001.json",
 ]
 NAME = "test"
 
@@ -21,9 +21,9 @@ def darken_color(color, factor):
 
 def plot_violin_from_json(files, name):
     # Prepare data
-    data = {"score": [], "metric": [], "file": [], "x": []}
+    data = {"score": [], "metric": [], "file": [], "x": [], "lang": []}
     spacing = 1.0  # Space between groups of metrics
-    violin_width = 0.3  # Width of each violin
+    violin_width = 0.5 / len(files)  # Width of each violin
 
     # Base colors for each metric
     base_colors = {"u": (0, 123, 255, 0.6), "t": (40, 167, 69, 0.6), "punct": (255, 193, 7, 0.6)}
@@ -52,6 +52,7 @@ def plot_violin_from_json(files, name):
                             file.split("/")[-1].split(".")[0]
                         )  # Use file base name without extension for legend
                         data["x"].append(x_positions[metric][file])  # Use computed x position
+                        data["lang"].append(lang)
 
     # Convert to DataFrame
     df = pd.DataFrame(data)
@@ -74,6 +75,8 @@ def plot_violin_from_json(files, name):
                         box_visible=True,
                         meanline_visible=True,
                         width=violin_width,
+                        points="all",
+                        hovertext=file_df["lang"],
                     )
                 )
 

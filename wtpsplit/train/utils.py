@@ -41,6 +41,7 @@ class Model(nn.Module):
         position_ids=None,
         labels=None,
         label_weights=None,
+        lookahead=None,
         **kwargs,
     ):
         if position_ids is not None:
@@ -55,6 +56,7 @@ class Model(nn.Module):
                 language_ids=language_ids,
                 attention_mask=attention_mask,
                 position_ids=position_ids,
+                lookahead=lookahead,
                 **kwargs,
             )
         )
