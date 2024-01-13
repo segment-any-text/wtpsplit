@@ -6,6 +6,12 @@ FILES = [
     ".cache/xlmr-normal-v2_b128+s64_intrinsic_results_u0.01.json",
     ".cache/xlmr-normal-v2_b256+s64_intrinsic_results_u0.01.json",
     ".cache/xlmr-normal-v2_b512+s64_intrinsic_results_u0.01.json",
+    ".cache/xlmr-normal-p-v2_auxp0.3_n0.9_b256_s64_intrinsic_results_u0.01.json",
+    ".cache/xlm-normal-p-v2_auxp0.3_n0.9_b512_s64_intrinsic_results_u0.001.json",
+    ".cache/xlmr-normal-p-v2_n0.9_b512+s64_intrinsic_results_u0.01.json",
+    ".cache/xlmr-normal-p-v2-auxp0.1_b512+s64_intrinsic_results_u0.01.json",
+    # "evaluation/evaluation_results/wtp-canine-s-3l-no-adapters_intrinsic_results.json",
+    # "evaluation/evaluation_results/wtp-canine-s-3l_intrinsic_results.json",
 ]
 NAME = "test"
 
@@ -21,7 +27,7 @@ def darken_color(color, factor):
 
 def plot_violin_from_json(files, name):
     # Prepare data
-    data = {"score": [], "metric": [], "file": [], "x": [], "lang": []}
+    data = {"score": [], "metric": [], "file": [], "x": [], "lang": [], "dataset": []}
     spacing = 1.0  # Space between groups of metrics
     violin_width = 0.5 / len(files)  # Width of each violin
 
@@ -48,11 +54,10 @@ def plot_violin_from_json(files, name):
                     for metric in ["u", "t", "punct"]:
                         data["score"].append(values[metric])
                         data["metric"].append(metric)
-                        data["file"].append(
-                            file.split("/")[-1].split(".")[0]
-                        )  # Use file base name without extension for legend
+                        data["file"].append(file.split("/")[-1])  # Use file base name without extension for legend
                         data["x"].append(x_positions[metric][file])  # Use computed x position
                         data["lang"].append(lang)
+                        data["dataset"].append(dataset)
 
     # Convert to DataFrame
     df = pd.DataFrame(data)
@@ -62,7 +67,7 @@ def plot_violin_from_json(files, name):
     for metric in ["u", "t", "punct"]:
         metric_df = df[df["metric"] == metric]
         for file in files:
-            file_name = file.split("/")[-1].split(".")[0]
+            file_name = file.split("/")[-1]
             file_df = metric_df[metric_df["file"] == file_name]
             if not file_df.empty:
                 fig.add_trace(
@@ -76,7 +81,9 @@ def plot_violin_from_json(files, name):
                         meanline_visible=True,
                         width=violin_width,
                         points="all",
-                        hovertext=file_df["lang"],
+                        hovertext=file_df["lang"] + " " + file_df["dataset"],
+                        hovertemplate=file_name + "<br>%{hovertext}<extra></extra>",
+                        # hoveron="points+violins+kde"
                     )
                 )
 

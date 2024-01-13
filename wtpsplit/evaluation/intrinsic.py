@@ -203,7 +203,7 @@ if __name__ == "__main__":
                 clfs[lang_code][dataset_name] = clf
 
                 clf = list(copy.deepcopy(clf))
-                clf[-1] = 0.01  # 0.01
+                clf[-1] = args.threshold
             else:
                 score_t = score_punct = None
 
