@@ -185,6 +185,7 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
         "language_ids": torch.tensor(all_language_ids, dtype=torch.long),
         "label_weights": torch.stack(all_label_weights, 0),
         "labels": torch.stack(all_labels, 0),
+        "lookahead": args.lookahead,
     }
 
     return out

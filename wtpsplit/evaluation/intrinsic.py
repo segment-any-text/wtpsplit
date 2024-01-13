@@ -40,6 +40,7 @@ class Args:
     stride: int = 64
     batch_size: int = 32
     include_langs: List[str] = None
+    threshold: float = 0.01
 
 
 def process_logits(text, model, lang_code, args):
@@ -70,10 +71,12 @@ def process_logits(text, model, lang_code, args):
 
 
 def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_sentences=10_000):
-    logits_path = Constants.CACHE_DIR / (model.config.mixture_name + "_logits_u0001.h5")
+    logits_path = Constants.CACHE_DIR / (
+        f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_logits_u{args.threshold}.h5"
+    )
 
     # TODO: revert to "a"
-    with h5py.File(logits_path, "w") as f, torch.no_grad():
+    with h5py.File(logits_path, "a") as f, torch.no_grad():
         for lang_code in Constants.LANGINFO.index:
             if args.include_langs is not None and lang_code not in args.include_langs:
                 continue
@@ -127,6 +130,24 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_
     return h5py.File(logits_path, "r")
 
 
+def compute_statistics(values):
+    if not values:  # Check for empty values list
+        return {"mean": None, "median": None, "std": None, "min": None, "min_lang": None, "max": None, "max_lang": None}
+
+    scores, langs = zip(*values)  # Unpack scores and languages
+    min_index = np.argmin(scores)
+    max_index = np.argmax(scores)
+    return {
+        "mean": np.mean(scores),
+        "median": np.median(scores),
+        "std": np.std(scores),
+        "min": scores[min_index],
+        "min_lang": langs[min_index],
+        "max": scores[max_index],
+        "max_lang": langs[max_index]
+    }
+
+
 if __name__ == "__main__":
     (args,) = HfArgumentParser([Args]).parse_args_into_dataclasses()
 
@@ -145,6 +166,8 @@ if __name__ == "__main__":
     # now, compute the intrinsic scores.
     results = {}
     clfs = {}
+    # Initialize lists to store scores for each metric across all languages
+    u_scores, t_scores, punct_scores = [], [], []
 
     for lang_code, dsets in tqdm(eval_data.items()):
         if args.include_langs is not None and lang_code not in args.include_langs:
@@ -169,6 +192,7 @@ if __name__ == "__main__":
                     print(clf)
                     print(np.argsort(clf[0].coef_[0])[:10], "...", np.argsort(clf[0].coef_[0])[-10:])
                     print(np.where(np.argsort(clf[0].coef_[0]) == 0)[0])
+
                 score_t, score_punct, _ = evaluate_mixture(
                     lang_code,
                     f[lang_code][dataset_name]["test_logits"][:],
@@ -194,20 +218,40 @@ if __name__ == "__main__":
             # just for printing
             score_t = score_t or 0.0
             score_punct = score_punct or 0.0
+
+            u_scores.append((score_u, lang_code))
+            t_scores.append((score_t, lang_code))
+            punct_scores.append((score_punct, lang_code))
             print(f"{lang_code} {dataset_name} {score_u:.3f} {score_t:.3f} {score_punct:.3f}")
+
+    # Compute statistics for each metric across all languages
+    results_avg = {
+        "u": compute_statistics(u_scores),
+        "t": compute_statistics(t_scores),
+        "punct": compute_statistics(punct_scores),
+        "include_langs": args.include_langs,
+    }
 
     sio.dump(
         clfs,
         open(
-            Constants.CACHE_DIR / (model.config.mixture_name + ".skops"),
+            Constants.CACHE_DIR / (f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}.skops"),
             "wb",
         ),
     )
     json.dump(
         results,
         open(
-            Constants.CACHE_DIR / (model.config.mixture_name + "_intrinsic_results_u0005.json"),
+            Constants.CACHE_DIR
+            / (f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_intrinsic_results_u{args.threshold}.json"),
             "w",
         ),
+        indent=4,
+    )
+
+    # Write results_avg to JSON
+    json.dump(
+        results_avg,
+        open(Constants.CACHE_DIR / (f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_u{args.threshold}_AVG.json"), "w"),
         indent=4,
     )
