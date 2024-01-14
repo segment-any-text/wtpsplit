@@ -65,6 +65,7 @@ def evaluate_sentence(
     batch_size,
     use_pysbd=False,
     positive_index=None,
+    # do_lowercase=False,
 ):
     if positive_index is None:
         positive_index = Constants.NEWLINE_INDEX
@@ -74,6 +75,8 @@ def evaluate_sentence(
 
     separator = Constants.SEPARATORS[lang_code]
     text = separator.join(sentences)
+    # if do_lowercase:
+    #     text = text.lower()
 
     logits, offsets_mapping, tokenizer = extract(
         [text],
