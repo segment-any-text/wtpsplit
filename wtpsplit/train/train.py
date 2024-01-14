@@ -551,6 +551,8 @@ def main():
     def compute_metrics(trainer):
         metrics = {}
         avg_metrics = defaultdict(lambda: [])
+        # metrics_lower = {}
+        # avg_metrics_lower = defaultdict(lambda: [])
 
         model = trainer._wrap_model(trainer.model, training=False)
 
@@ -574,10 +576,30 @@ def main():
                         avg_metrics[f"average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
                     else:
                         avg_metrics[f"average_whitespace_{dataset_name}_pr_auc"].append(score)
+            #     for dataset_name, dataset in lang_data["sentence"].items():
+            #         score, _ = evaluate_sentence(
+            #             lang_code,
+            #             dataset["data"],
+            #             model,
+            #             stride=args.eval_stride,
+            #             block_size=args.block_size,
+            #             batch_size=training_args.per_device_eval_batch_size,
+            #             do_lowercase=True,
+            #         )
+            #         metrics_lower[f"lower_{lang_code}_{dataset_name}_pr_auc"] = score
+            #         avg_metrics_lower[f"lower_average_{dataset_name}_pr_auc"].append(score)
+            #         if lang_code in ["zh", "ja", "my", "km"]:
+            #             avg_metrics_lower[f"lower_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
+            #         else:
+            #             avg_metrics_lower[f"lower_average_whitespace_{dataset_name}_pr_auc"].append(score)
+
 
         for name, values in avg_metrics.items():
             if len(values) > 1:
                 metrics[name] = np.mean(values)
+        # for name, values in avg_metrics_lower.items():
+        #     if len(values) > 1:
+        #         metrics_lower[name] = np.mean(values)
 
         return metrics
 

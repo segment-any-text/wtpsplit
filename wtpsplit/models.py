@@ -1291,7 +1291,7 @@ if __name__ == "__main__":
     text = "This is a test\n sentence \n\n"
     tokenizer = AutoTokenizer.from_pretrained(model_str)
 
-    tokens = tokenizer(text, return_tensors="pt", add_special_tokens=False, pad_to_multiple_of=8, padding=True)
+    tokens = tokenizer(text, return_tensors="pt", add_special_tokens=False, pad_to_multiple_of=512, padding=True)
     from tokenizers import AddedToken
 
     tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
@@ -1300,5 +1300,5 @@ if __name__ == "__main__":
     print(tokens)
     
     # forward pass
-    lookahead = 1
+    lookahead = 512
     print(backbone(**tokens, lookahead=lookahead))
