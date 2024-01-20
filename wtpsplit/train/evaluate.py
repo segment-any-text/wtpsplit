@@ -7,6 +7,7 @@ from wtpsplit.extract import extract, PyTorchWrapper
 from wtpsplit.utils import Constants
 from wtpsplit.evaluation import token_to_char_probs
 import random
+import copy
 
 logger = logging.getLogger(__name__)
 
@@ -140,8 +141,10 @@ def evaluate_sentence_pairwise(
     separator = Constants.SEPARATORS[lang_code]
     metrics_list = []
 
-    model = PyTorchWrapper(model.backbone)
-    model.model = model.model.to("cpu")
+    # Make a copy of the model for CPU operations
+    cpu_model = copy.deepcopy(model)
+    cpu_model = PyTorchWrapper(cpu_model.backbone)
+    cpu_model.model = cpu_model.model.to("cpu")
 
     # Generate all possible sentence pairs
     all_pairs = list(zip(sentences[:-1], sentences[1:]))
@@ -172,7 +175,7 @@ def evaluate_sentence_pairwise(
 
         logits, offsets_mapping, tokenizer, skip = extract(
             [pair_text],
-            model,
+            cpu_model,
             lang_code=lang_code,
             stride=stride,
             block_size=block_size,
@@ -190,7 +193,7 @@ def evaluate_sentence_pairwise(
         true_end_index = len(sentence1)
         newline_labels[true_end_index] = 1
 
-        if "xlm" in model.config.model_type:
+        if "xlm" in cpu_model.config.model_type:
             tokens = tokenizer.tokenize(pair_text, verbose=False)
             char_probs = token_to_char_probs(pair_text, tokens, logits, tokenizer, offsets_mapping)
         else:

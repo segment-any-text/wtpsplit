@@ -140,7 +140,7 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
             min_length=args.block_size,
             tokenizer=tokenizer if args.use_subwords else None,
         )
-        
+
         actual_block_size = args.block_size - 2 if args.use_subwords else args.block_size
 
         if len(input_ids) > args.block_size:
@@ -152,15 +152,14 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
             # print(padding, lang)
             input_ids += [tokenizer.pad_token_id] * padding if tokenizer else [0] * padding
             labels += [0] * padding
-            
+
         if tokenizer:
-            input_ids = [tokenizer.cls_token_id] + input_ids[: actual_block_size] + [tokenizer.sep_token_id]
+            input_ids = [tokenizer.cls_token_id] + input_ids[:actual_block_size] + [tokenizer.sep_token_id]
             # labels for CLS and SEP tokens are 0 (none)
-            labels = [0] + labels[: actual_block_size] + [0]
+            labels = [0] + labels[:actual_block_size] + [0]
         else:
-            input_ids = input_ids[: actual_block_size]
-            labels = labels[: actual_block_size]
-        
+            input_ids = input_ids[:actual_block_size]
+            labels = labels[:actual_block_size]
 
         input_ids = torch.tensor(input_ids, dtype=torch.long)
         labels = torch.tensor(labels, dtype=torch.long)
@@ -609,8 +608,6 @@ def main():
                         avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
                     else:
                         avg_metrics[f"pairwise_average_whitespace_{dataset_name}_pr_auc"].append(score)
-                    
-
 
         for name, values in avg_metrics.items():
             if len(values) > 1:
@@ -661,7 +658,7 @@ def main():
     )
 
     trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
-    trainer.save_model()   
+    trainer.save_model()
     trainer.save_state()
     # Pattern for checkpoint directories
     checkpoint_pattern = os.path.join(training_args.output_dir, "checkpoint-*")
