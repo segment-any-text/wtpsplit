@@ -80,7 +80,7 @@ def evaluate_sentence(
             sentences = [sentence.replace(punct, "") for sentence in sentences]
     text = separator.join(sentences)
 
-    logits, offsets_mapping, tokenizer = extract(
+    logits, offsets_mapping, tokenizer, _ = extract(
         [text],
         PyTorchWrapper(model.backbone),
         lang_code=lang_code,
@@ -170,7 +170,7 @@ def evaluate_sentence_pairwise(
 
         pair_text = sentence1 + separator + sentence2
 
-        logits, offsets_mapping, tokenizer = extract(
+        logits, offsets_mapping, tokenizer, skip = extract(
             [pair_text],
             model,
             lang_code=lang_code,
@@ -179,6 +179,8 @@ def evaluate_sentence_pairwise(
             batch_size=batch_size,
             pairwise=True,
         )
+        if skip:
+            continue
         logits = logits[0]
         if offsets_mapping is not None:
             offsets_mapping = offsets_mapping[0]

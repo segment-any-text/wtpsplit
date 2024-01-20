@@ -100,9 +100,12 @@ def extract(
         use_subwords = False
     if pairwise:
         # we need at least 2 passes to not get NaNs using our logic
-        stride = len(batch_of_texts[0]) // 2 - 1
-        if stride == 0:
-            stride = 1
+        stride = (len(batch_of_texts[0]) + 1) // 2
+        if len(batch_of_texts[0]) < 4:
+            # some sentences are only 2-3 tokens long
+            # not compatible with our logic and not sensible anyhow --> skip.
+            logger.warning(f"Skipping short sentence pair: {batch_of_texts[0]}, {tokenizer.decode(batch_of_texts[0])}")
+            return None, None, None, True
 
     text_lengths = [len(text) for text in batch_of_texts]
     # reduce block size if possible
@@ -238,4 +241,4 @@ def extract(
     # so far, logits are summed, so we average them here
     all_logits = [(logits / counts[:, None]).astype(np.float16) for logits, counts in zip(all_logits, all_counts)]
 
-    return all_logits, offset_mapping if use_subwords else None, tokenizer if use_subwords else None
+    return all_logits, offset_mapping if use_subwords else None, tokenizer if use_subwords else None, False

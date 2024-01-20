@@ -46,7 +46,7 @@ class Args:
 def process_logits(text, model, lang_code, args):
     # Extract necessary data
     text = text.lower()
-    logits, offsets_mapping, tokenizer = extract(
+    logits, offsets_mapping, tokenizer, _ = extract(
         [text],
         model,
         lang_code=lang_code,
