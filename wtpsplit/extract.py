@@ -100,7 +100,9 @@ def extract(
         use_subwords = False
     if pairwise:
         # we need at least 2 passes to not get NaNs using our logic
-        stride = len(batch_of_texts[0]) // 2
+        stride = len(batch_of_texts[0]) // 2 - 1
+        if stride == 0:
+            stride = 1
 
     text_lengths = [len(text) for text in batch_of_texts]
     # reduce block size if possible
