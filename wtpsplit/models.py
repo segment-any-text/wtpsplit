@@ -840,6 +840,7 @@ class LACanineForTokenClassification(CanineForTokenClassification):
         output_hidden_states: Optional[bool] = None,
         hashed_ids: Optional[torch.Tensor] = None,
         return_dict: Optional[bool] = None,
+        lookahead: Optional[int] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
@@ -1288,7 +1289,7 @@ if __name__ == "__main__":
     print(summary(backbone, depth=4))
 
     # some sample input
-    text = "This is a test\n sentence \n\n"
+    text = "A sentence.\n And"
     tokenizer = AutoTokenizer.from_pretrained(model_str)
 
     tokens = tokenizer(text, return_tensors="pt", add_special_tokens=False, pad_to_multiple_of=512, padding=True)

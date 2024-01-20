@@ -9,6 +9,7 @@ import logging
 
 import numpy as np
 import pandas as pd
+from transformers import AutoTokenizer
 
 # same as in CANINE
 PRIMES = [31, 43, 59, 61, 73, 97, 103, 113, 137, 149, 157, 173, 181, 193, 211, 223]
@@ -78,7 +79,8 @@ class LabelArgs:
     custom_punctuation_file: str = None
     retain_first_consecutive_punctuation: bool = True
     non_whitespace_remove_spaces: bool = True
-    case_corruption_prob: float = 0.0
+    case_corruption_prob_after_newline: float = 0.0
+    case_corruption_prob_after_punct: float = 0.0
 
     def __post_init__(self):
         if self.custom_punctuation_file:
@@ -257,39 +259,8 @@ def corrupt(
                                     del input_ids[i + 1]
                                     del labels[i + 1]
                                     del block_ids[i + 1]
-                if random.random() < label_args.case_corruption_prob and i + 1 < len(input_ids):
-                    if not tokenizer:
-                        raise NotImplementedError()
-                    # corrupt case
-                    token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
-                    insert_ = False
-                    if token.startswith("▁"):
-                        insert_ = True
-                        token = token[1:]
-                    if token.istitle():
-                        token = token.lower()
-                    # re-tokenize
-                    # token_ids = tokenizer.convert_tokens_to_ids(token if not insert_ else "▁" + token)
-                    token_ids = tokenizer(token if not insert_ else "▁" + token, add_special_tokens=False)["input_ids"]
-                    if len(token_ids) == 0 or input_ids[i + 1] == tokenizer.unk_token_id:
-                        # UNK or whitespace token, remove it
-                        del input_ids[i + 1]
-                        del labels[i + 1]
-                        del block_ids[i + 1]
-                    else:
-                        if token_ids[0] == tokenizer.convert_tokens_to_ids("▁"):
-                            token_ids = token_ids[1:]
-                        elif len(token_ids) > 1:
-                            # replace the token with the remaining token
-                            input_ids[i + 1] = token_ids[0]
-                            for token_id in token_ids[1:]:
-                                input_ids.insert(i + 2, token_id)
-                                labels.insert(i + 2, 0)
-                                block_ids.insert(i + 2, block_ids[i + 1])
-                        elif len(token_ids) == 1:
-                            input_ids[i + 1] = token_ids[0]
-                        else:
-                            print(token, token_ids, input_ids[i + 1], tokenizer.decode(input_ids[i + 1]))
+                if random.random() < label_args.case_corruption_prob_after_newline and i + 1 < len(input_ids):
+                    input_ids, labels, block_ids = _corrupt_case(tokenizer, input_ids, labels, block_ids, i)
                     
 
         elif label_args.use_auxiliary and labels[i] > Constants.AUX_OFFSET:  # auxiliary
@@ -314,39 +285,8 @@ def corrupt(
                     del labels[i + 1]
                     del block_ids[i + 1]
                     removed_aux_char = True
-                if random.random() < label_args.case_corruption_prob and removed_aux_char and i + 1 < len(input_ids):
-                    if not tokenizer:
-                        raise NotImplementedError()
-                    # corrupt case
-                    token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
-                    insert_ = False
-                    if token.startswith("▁"):
-                        insert_ = True
-                        token = token[1:]
-                    if token.istitle():
-                        token = token.lower()
-                    # re-tokenize
-                    # token_ids = tokenizer.convert_tokens_to_ids(token if not insert_ else "▁" + token)
-                    token_ids = tokenizer(token if not insert_ else "▁" + token, add_special_tokens=False)["input_ids"]
-                    if len(token_ids) == 0 or input_ids[i + 1] == tokenizer.unk_token_id:
-                        # UNK or whitespace token, remove it
-                        del input_ids[i + 1]
-                        del labels[i + 1]
-                        del block_ids[i + 1]
-                    else:
-                        if token_ids[0] == tokenizer.convert_tokens_to_ids("▁"):
-                            token_ids = token_ids[1:]
-                        elif len(token_ids) > 1:
-                            # replace the token with the remaining token
-                            input_ids[i + 1] = token_ids[0]
-                            for token_id in token_ids[1:]:
-                                input_ids.insert(i + 2, token_id)
-                                labels.insert(i + 2, 0)
-                                block_ids.insert(i + 2, block_ids[i + 1])
-                        elif len(token_ids) == 1:
-                            input_ids[i + 1] = token_ids[0]
-                        else:
-                            print(token, token_ids, input_ids[i + 1], tokenizer.decode(input_ids[i + 1]))
+                if random.random() < label_args.case_corruption_prob_after_punct and removed_aux_char and i + 1 < len(input_ids):
+                    input_ids, labels, block_ids = _corrupt_case(tokenizer, input_ids, labels, block_ids, i)
 
         try:
             i = i + 1 + next(index for index, label in enumerate(labels[i + 1 :]) if label != 0)
@@ -355,6 +295,40 @@ def corrupt(
 
     return input_ids, block_ids, labels
 
+def _corrupt_case(tokenizer: AutoTokenizer, input_ids: List[int], labels: List[int], block_ids: List[int], i: int):
+    if not tokenizer:
+        raise NotImplementedError()
+
+    token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
+    insert_ = token.startswith("▁")
+    if insert_:
+        token = token[1:]
+
+    do_exchange = token.istitle()
+    if do_exchange:
+        token = token.lower()
+
+        # Re-tokenize
+        token_ids = tokenizer.encode(token if not insert_ else "▁" + token, add_special_tokens=False)
+        if len(token_ids) == 0 or input_ids[i + 1] == tokenizer.unk_token_id:
+            # UNK or whitespace token, remove it
+            del input_ids[i + 1]
+            del labels[i + 1]
+            del block_ids[i + 1]
+        else:
+            if token_ids[0] == tokenizer.convert_tokens_to_ids("▁"):
+                token_ids = token_ids[1:]
+            elif len(token_ids) > 1:
+                # Replace the token with the remaining token
+                input_ids[i + 1] = token_ids[0]
+                for token_id in token_ids[1:]:
+                    input_ids.insert(i + 2, token_id)
+                    labels.insert(i + 2, 0)
+                    block_ids.insert(i + 2, block_ids[i + 1])
+            elif len(token_ids) == 1:
+                input_ids[i + 1] = token_ids[0]
+
+    return input_ids, labels, block_ids
 
 def indices_to_sentences(text, indices, strip_whitespace=False):
     sentences = []
@@ -425,12 +399,11 @@ def reconstruct_sentences(text, partial_sentences):
 
 if __name__ == "__main__":
     # test corrupt function
-    from transformers import AutoTokenizer
     from tokenizers import AddedToken
 
     tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
     tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
-    text = "That's right, Five!\n!\n!!!\n!\n Always lay the blame on others!"
+    text = "That's right, Five!\n!\n!!!\n!\n Always lay the!Blame on others!"
     input_ids = tokenizer(text)["input_ids"]
     block_ids = [0] * len(input_ids)
     label_args = LabelArgs(
@@ -438,6 +411,8 @@ if __name__ == "__main__":
         use_auxiliary=True,
         auxiliary_remove_prob=1.0,
         newline_whitespace_prob=1.0,
+        case_corruption_prob_after_punct=1.0,
+        case_corruption_prob_after_newline=1.0,
     )
     label_dict = get_subword_label_dict(label_args, tokenizer)
 
@@ -451,6 +426,7 @@ if __name__ == "__main__":
     print(np.where(np.array(labels) == 1))
     print("newline ids in output text:")
     print(np.where(np.array(input_ids) == tokenizer.all_special_ids[-1]))
+    print(tokenizer.decode(input_ids))
     print(tokenizer.decode(input_ids))
 
     # ords = [ord(c) for c in text]
