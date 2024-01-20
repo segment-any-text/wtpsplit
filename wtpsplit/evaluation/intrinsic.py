@@ -2,6 +2,8 @@ import copy
 import json
 from dataclasses import dataclass
 from typing import List
+import os
+import time
 
 import h5py
 import skops.io as sio
@@ -41,6 +43,7 @@ class Args:
     batch_size: int = 32
     include_langs: List[str] = None
     threshold: float = 0.01
+    max_n_train_sentences: int = 10_000
 
 
 def process_logits(text, model, lang_code, args):
@@ -70,12 +73,15 @@ def process_logits(text, model, lang_code, args):
     return logits
 
 
-def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_sentences=10_000):
+def load_or_compute_logits(args, model, eval_data, valid_data=None):
     logits_path = Constants.CACHE_DIR / (
         f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_logits_u{args.threshold}.h5"
     )
+    
+    total_test_time = 0  # Initialize total test processing time
 
     # TODO: revert to "a"
+    start_time = time.time()
     with h5py.File(logits_path, "a") as f, torch.no_grad():
         for lang_code in Constants.LANGINFO.index:
             if args.include_langs is not None and lang_code not in args.include_langs:
@@ -110,7 +116,11 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_
                     test_sentences = dataset["data"]
                     test_text = Constants.SEPARATORS[lang_code].join(test_sentences)
 
+                    start_time = time.time()  # Start timing for test logits processing
                     test_logits = process_logits(test_text, model, lang_code, args)
+                    end_time = time.time()  # End timing for test logits processing
+                    total_test_time += end_time - start_time  # Accumulate test processing time
+                    
                     test_labels = get_labels(lang_code, test_sentences, after_space=False)
 
                     dset_group.create_dataset("test_logits", data=test_logits)
@@ -118,7 +128,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_
 
                 train_sentences = dataset["meta"].get("train_data")
                 if train_sentences is not None and "train_logits" not in dset_group:
-                    train_sentences = train_sentences[:max_n_train_sentences]
+                    train_sentences = train_sentences[: args.max_n_train_sentences]
                     train_text = Constants.SEPARATORS[lang_code].join(train_sentences)
 
                     train_logits = process_logits(train_text, model, lang_code, args)
@@ -127,7 +137,8 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, max_n_train_
                     dset_group.create_dataset("train_logits", data=train_logits)
                     dset_group.create_dataset("train_labels", data=train_labels)
 
-    return h5py.File(logits_path, "r")
+    end_time = time.time()
+    return h5py.File(logits_path, "r"), total_test_time / 60  # to minutes
 
 
 def compute_statistics(values):
@@ -144,13 +155,11 @@ def compute_statistics(values):
         "min": scores[min_index],
         "min_lang": langs[min_index],
         "max": scores[max_index],
-        "max_lang": langs[max_index]
+        "max_lang": langs[max_index],
     }
 
 
-if __name__ == "__main__":
-    (args,) = HfArgumentParser([Args]).parse_args_into_dataclasses()
-
+def main(args):
     eval_data = torch.load(args.eval_data_path)
     if args.valid_text_path is not None:
         valid_data = load_dataset("parquet", data_files=args.valid_text_path, split="train")
@@ -161,7 +170,7 @@ if __name__ == "__main__":
     model = PyTorchWrapper(AutoModelForTokenClassification.from_pretrained(args.model_path).to(args.device))
 
     # first, logits for everything.
-    f = load_or_compute_logits(args, model, eval_data, valid_data)
+    f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data)
 
     # now, compute the intrinsic scores.
     results = {}
@@ -243,7 +252,9 @@ if __name__ == "__main__":
         results,
         open(
             Constants.CACHE_DIR
-            / (f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_intrinsic_results_u{args.threshold}.json"),
+            / (
+                f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_intrinsic_results_u{args.threshold}.json"
+            ),
             "w",
         ),
         indent=4,
@@ -252,6 +263,18 @@ if __name__ == "__main__":
     # Write results_avg to JSON
     json.dump(
         results_avg,
-        open(Constants.CACHE_DIR / (f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_u{args.threshold}_AVG.json"), "w"),
+        open(
+            Constants.CACHE_DIR
+            / (f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_u{args.threshold}_AVG.json"),
+            "w",
+        ),
         indent=4,
     )
+    os.remove(f.filename)
+    return results, results_avg, total_test_time
+
+
+if __name__ == "__main__":
+    (args,) = HfArgumentParser([Args]).parse_args_into_dataclasses()
+    results, results_avg, total_test_time = main(args)
+    print(total_test_time)
