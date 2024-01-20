@@ -531,7 +531,7 @@ def main():
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=args.shuffle,
-        split="valid",
+        split="train",
     )
     logger.warning(f"Train dataset has {len(train_dataset)} examples.")
 
@@ -637,13 +637,13 @@ def main():
     training_args.adapter_lr_multiplier = args.adapter_lr_multiplier
 
     # give .map in multiprocessing enough of time to finish, to be safe
-    # time.sleep(10)
-    # if training_args.local_rank == 0:
-    #     # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
-    #     # because that would remove the cache files of the other dataset!
-    #     cleanup_cache_files([train_dataset, valid_dataset])
-    #     logger.warning("Cleaned up cache files.")
-    # time.sleep(10)
+    time.sleep(10)
+    if training_args.local_rank == 0:
+        # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
+        # because that would remove the cache files of the other dataset!
+        cleanup_cache_files([train_dataset, valid_dataset])
+        logger.warning("Cleaned up cache files.")
+    time.sleep(10)
 
     trainer = Trainer(
         model,
