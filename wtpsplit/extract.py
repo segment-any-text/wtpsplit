@@ -74,6 +74,7 @@ def extract(
     lang_code=None,
     pad_last_batch=False,
     verbose=False,
+    pairwise: bool = False,
 ):
     """
     Computes logits for the given batch of texts by:
@@ -97,6 +98,9 @@ def extract(
     else:
         pad_token_id = 0
         use_subwords = False
+    if pairwise:
+        # we need at least 2 passes to not get NaNs using our logic
+        stride = len(batch_of_texts[0]) // 2
 
     text_lengths = [len(text) for text in batch_of_texts]
     # reduce block size if possible
@@ -223,7 +227,6 @@ def extract(
         )["logits"]
         if use_subwords:
             logits = logits[:, 1:-1, :]  # remove CLS and SEP tokens
-        logger.debug(np.max(logits[0, :, 0]))
 
         for i in range(start, end):
             original_idx, start_char_idx, end_char_idx = locs[i]

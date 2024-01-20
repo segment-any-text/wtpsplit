@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from functools import partial
 from glob import glob
 from typing import List
+import shutil
 
 import datasets
 import numpy as np
@@ -30,7 +31,7 @@ from wtpsplit.models import (
     SubwordXLMConfig,
     SubwordXLMForTokenClassification,
 )
-from wtpsplit.train.evaluate import evaluate_sentence
+from wtpsplit.train.evaluate import evaluate_sentence, evaluate_sentence_pairwise
 from wtpsplit.train.trainer import Trainer
 from wtpsplit.utils import Constants, LabelArgs, corrupt, get_label_dict, get_subword_label_dict
 from wtpsplit.train.utils import Model, cleanup_cache_files
@@ -203,6 +204,8 @@ def main():
 
     setup_logging(training_args)
     set_seed(training_args.seed)
+    training_args.hub_strategy = "end"
+    training_args.save_total_limit = 1
 
     num_labels = Constants.AUX_OFFSET + ((1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0)
     if args.use_subwords:
@@ -528,7 +531,7 @@ def main():
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=args.shuffle,
-        split="train",
+        split="valid",
     )
     logger.warning(f"Train dataset has {len(train_dataset)} examples.")
 
@@ -583,13 +586,30 @@ def main():
                         block_size=args.block_size,
                         batch_size=training_args.per_device_eval_batch_size,
                         do_lowercase=True,
+                        do_remove_punct=True,
                     )
-                    metrics[f"lower_{lang_code}_{dataset_name}_pr_auc"] = score
-                    avg_metrics[f"lower_average_{dataset_name}_pr_auc"].append(score)
+                    metrics[f"lower_rmp_{lang_code}_{dataset_name}_pr_auc"] = score
+                    avg_metrics[f"lower_rmp_average_{dataset_name}_pr_auc"].append(score)
                     if lang_code in ["zh", "ja", "my", "km"]:
-                        avg_metrics[f"lower_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
+                        avg_metrics[f"lower_rmp_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
                     else:
-                        avg_metrics[f"lower_average_whitespace_{dataset_name}_pr_auc"].append(score)
+                        avg_metrics[f"lower_rmp_average_whitespace_{dataset_name}_pr_auc"].append(score)
+                for dataset_name, dataset in lang_data["sentence"].items():
+                    score, _ = evaluate_sentence_pairwise(
+                        lang_code,
+                        dataset["data"],
+                        model,
+                        stride=args.eval_stride,
+                        block_size=args.block_size,
+                        batch_size=training_args.per_device_eval_batch_size,
+                    )
+                    metrics[f"pairwise_{lang_code}_{dataset_name}_pr_auc"] = score
+                    avg_metrics[f"pairwise_average_{dataset_name}_pr_auc"].append(score)
+                    if lang_code in ["zh", "ja", "my", "km"]:
+                        avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
+                    else:
+                        avg_metrics[f"pairwise_average_whitespace_{dataset_name}_pr_auc"].append(score)
+                    
 
 
         for name, values in avg_metrics.items():
@@ -617,13 +637,13 @@ def main():
     training_args.adapter_lr_multiplier = args.adapter_lr_multiplier
 
     # give .map in multiprocessing enough of time to finish, to be safe
-    time.sleep(10)
-    if training_args.local_rank == 0:
-        # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
-        # because that would remove the cache files of the other dataset!
-        cleanup_cache_files([train_dataset, valid_dataset])
-        logger.warning("Cleaned up cache files.")
-    time.sleep(10)
+    # time.sleep(10)
+    # if training_args.local_rank == 0:
+    #     # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
+    #     # because that would remove the cache files of the other dataset!
+    #     cleanup_cache_files([train_dataset, valid_dataset])
+    #     logger.warning("Cleaned up cache files.")
+    # time.sleep(10)
 
     trainer = Trainer(
         model,
@@ -641,6 +661,15 @@ def main():
     )
 
     trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
+    trainer.save_model()   
+    trainer.save_state()
+    # Pattern for checkpoint directories
+    checkpoint_pattern = os.path.join(training_args.output_dir, "checkpoint-*")
+
+    # Use glob.glob to find all directories matching the pattern
+    for checkpoint_dir in glob.glob(checkpoint_pattern):
+        if os.path.isdir(checkpoint_dir):
+            shutil.rmtree(checkpoint_dir)
 
 
 def _mp_fn(index):
