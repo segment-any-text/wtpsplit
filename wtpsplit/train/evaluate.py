@@ -142,9 +142,7 @@ def evaluate_sentence_pairwise(
     metrics_list = []
 
     # Make a copy of the model for CPU operations
-    cpu_model = copy.deepcopy(model)
-    cpu_model = PyTorchWrapper(cpu_model.backbone)
-    cpu_model.model = cpu_model.model.to("cpu")
+    model = PyTorchWrapper(model.backbone)
 
     # Generate all possible sentence pairs
     all_pairs = list(zip(sentences[:-1], sentences[1:]))
@@ -175,7 +173,7 @@ def evaluate_sentence_pairwise(
 
         logits, offsets_mapping, tokenizer, skip = extract(
             [pair_text],
-            cpu_model,
+            model,
             lang_code=lang_code,
             stride=stride,
             block_size=block_size,
@@ -189,11 +187,11 @@ def evaluate_sentence_pairwise(
             offsets_mapping = offsets_mapping[0]
 
         # Calculate newline labels and probabilities
+        true_end_indices = np.cumsum(np.array([len(s) for s in [sentence1, sentence2]])) + np.arange(2) * len(separator)
         newline_labels = np.zeros(len(pair_text))
-        true_end_index = len(sentence1)
-        newline_labels[true_end_index] = 1
+        newline_labels[true_end_indices - 1] = 1
 
-        if "xlm" in cpu_model.config.model_type:
+        if "xlm" in model.config.model_type:
             tokens = tokenizer.tokenize(pair_text, verbose=False)
             char_probs = token_to_char_probs(pair_text, tokens, logits, tokenizer, offsets_mapping)
         else:
