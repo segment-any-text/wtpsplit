@@ -20,19 +20,19 @@ wtp = WtP("wtp-bert-mini")
 # also supports TPUs via e.g. wtp.to("xla:0"), in that case pass `pad_last_batch=True` to wtp.split
 wtp.half().to("cuda")
 
-# returns ["This is a test", "This is another test."]
-wtp.split("This is a test This is another test.")
+# returns ["Hello ", "This is a test."]
+wtp.split("Hello This is a test.")
 
 # returns an iterator yielding a lists of sentences for every text
 # do this instead of calling wtp.split on every text individually for much better performance
-wtp.split(["This is a test This is another test.", "And some more texts..."])
+wtp.split(["Hello This is a test.", "And some more texts..."])
 
 # if you're using a model with language adapters, also pass a `lang_code`
-wtp.split("This is a test This is another test.", lang_code="en")
+wtp.split("Hello This is a test.", lang_code="en")
 
 # depending on your usecase, adaptation to e.g. the Universal Dependencies style may give better results
 # this always requires a language code
-wtp.split("This is a test This is another test.", lang_code="en", style="ud")
+wtp.split("Hello This is a test.", lang_code="en", style="ud")
 ```
 
 ## ONNX support
