@@ -78,7 +78,7 @@ def get_label_dict(label_args):
 
 
 def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+    return 1 / (1 + np.exp(-x.astype(np.float32))) # fp32 for better precision
 
 
 def encode(text):
