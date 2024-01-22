@@ -15,7 +15,7 @@ from transformers.utils.hub import cached_file
 from wtpsplit.extract import ORTWrapper, PyTorchWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid
 
-__version__ = "1.2.4"
+__version__ = "1.3.0"
 
 
 class WtP:
