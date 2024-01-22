@@ -139,7 +139,7 @@ wtp.split(text, threshold=threshold)
 
 ### Advanced Usage
 
-Get the newline or sentence boundary probabilities for a text:
+__Get the newline or sentence boundary probabilities for a text:__
 
 ```python
 # returns newline probabilities (supports batching!)
@@ -149,7 +149,7 @@ wtp.predict_proba(text)
 wtp.predict_proba(text, lang_code="en", style="ud")
 ```
 
-Load a WtP model in [HuggingFace `transformers`](https://github.com/huggingface/transformers):
+__Load a WtP model in [HuggingFace `transformers`](https://github.com/huggingface/transformers):__
 
 ```python
 # import wtpsplit to register the custom models 
@@ -159,6 +159,73 @@ from transformers import AutoModelForTokenClassification
 
 model = AutoModelForTokenClassification.from_pretrained("benjamin/wtp-bert-mini") # or some other model name
 ```
+
+__** NEW ** Adapt to your own corpus using WtP_Punct:__
+
+Clone the repository:
+
+```
+git clone https://github.com/bminixhofer/wtpsplit
+cd wtpsplit
+```
+
+Create your data:
+```python
+import torch
+
+torch.save(
+    {
+        "en": {
+            "sentence": {
+                "dummy-dataset": {
+                    "meta": {
+                        "train_data": ["train sentence 1", "train sentence 2"],
+                    },
+                    "data": [
+                        "test sentence 1",
+                        "test sentence 2",
+                    ]
+                }
+            }
+        }
+    },
+    "dummy-dataset.pth"
+)
+```
+
+Run adaptation:
+
+```
+python3 wtpsplit/evaluation/adapt.py --model_path=benjamin/wtp-bert-mini --eval_data_path dummy-dataset.pth --include_langs=en
+```
+
+This should print something like 
+
+```
+en dummy-dataset U=0.500 T=0.667 PUNCT=0.667
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 30.52it/s]
+Wrote mixture to /Users/bminixhofer/Documents/wtpsplit/wtpsplit/.cache/wtp-bert-mini.skops
+Wrote results to /Users/bminixhofer/Documents/wtpsplit/wtpsplit/.cache/wtp-bert-mini_intrinsic_results.json
+```
+
+i.e. run adaptation on your data and save the mixtures and evaluation results. You can then load and use the mixture like this:
+
+```python
+from wtpsplit import WtP
+import skops.io as sio
+
+wtp = WtP(
+    "wtp-bert-mini",
+    mixtures=sio.load(
+        "wtpsplit/.cache/wtp-bert-mini.skops",
+        ["numpy.float32", "numpy.float64", "sklearn.linear_model._logistic.LogisticRegression"],
+    ),
+)
+
+wtp.split("your text here", lang_code="en", style="dummy-dataset")
+```
+
+... and adjust the dataset name, language and model in the above to your needs.
 
 ## Reproducing the paper
 
