@@ -35,6 +35,7 @@ class Args:
     #        }
     #    }
     # }
+    # TODO: for songs/etc., maybe feed in each sample separately?
     eval_data_path: str = "data/eval.pth"
     valid_text_path: str = None  # "data/sentence/valid.parquet"
     device: str = "cpu"
@@ -42,8 +43,10 @@ class Args:
     stride: int = 64
     batch_size: int = 32
     include_langs: List[str] = None
+    custom_language_list: str = None
     threshold: float = 0.01
     max_n_train_sentences: int = 10_000
+    save_suffix: str = ""
 
 
 def process_logits(text, model, lang_code, args):
@@ -75,15 +78,21 @@ def process_logits(text, model, lang_code, args):
 
 def load_or_compute_logits(args, model, eval_data, valid_data=None):
     logits_path = Constants.CACHE_DIR / (
-        f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_logits_u{args.threshold}.h5"
+        f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_logits_u{args.threshold}_{args.save_suffix}.h5"
     )
-    
+    if args.custom_language_list is not None:
+        with open(args.custom_language_list, "r") as f:
+            # file is a csv: l1,l2,...
+            use_langs = f.read().strip().split(",")
+    else:
+        use_langs = Constants.LANGINFO.index
+            
+            
     total_test_time = 0  # Initialize total test processing time
 
     # TODO: revert to "a"
-    start_time = time.time()
     with h5py.File(logits_path, "a") as f, torch.no_grad():
-        for lang_code in Constants.LANGINFO.index:
+        for lang_code in use_langs:
             if args.include_langs is not None and lang_code not in args.include_langs:
                 continue
 
@@ -107,6 +116,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None):
 
             # eval data
             for dataset_name, dataset in eval_data[lang_code]["sentence"].items():
+                print(dataset_name)
                 if dataset_name not in lang_group:
                     dset_group = lang_group.create_group(dataset_name)
                 else:
@@ -114,6 +124,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None):
 
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"]
+                    print(len(test_sentences))
                     test_text = Constants.SEPARATORS[lang_code].join(test_sentences)
 
                     start_time = time.time()  # Start timing for test logits processing
@@ -128,6 +139,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None):
 
                 train_sentences = dataset["meta"].get("train_data")
                 if train_sentences is not None and "train_logits" not in dset_group:
+                    print(len(train_sentences))
                     train_sentences = train_sentences[: args.max_n_train_sentences]
                     train_text = Constants.SEPARATORS[lang_code].join(train_sentences)
 
@@ -187,6 +199,7 @@ def main(args):
         clfs[lang_code] = {}
 
         for dataset_name, dataset in dsets["sentence"].items():
+            print(dataset_name)
             sentences = dataset["data"]
 
             if "train_logits" in f[lang_code][dataset_name]:
@@ -199,8 +212,6 @@ def main(args):
                 )
                 if clf[0] is not None:
                     print(clf)
-                    print(np.argsort(clf[0].coef_[0])[:10], "...", np.argsort(clf[0].coef_[0])[-10:])
-                    print(np.where(np.argsort(clf[0].coef_[0]) == 0)[0])
 
                 score_t, score_punct, _ = evaluate_mixture(
                     lang_code,
@@ -244,7 +255,7 @@ def main(args):
     sio.dump(
         clfs,
         open(
-            Constants.CACHE_DIR / (f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}.skops"),
+            Constants.CACHE_DIR / (f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_{args.save_suffix}.skops"),
             "wb",
         ),
     )
@@ -253,7 +264,7 @@ def main(args):
         open(
             Constants.CACHE_DIR
             / (
-                f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_intrinsic_results_u{args.threshold}.json"
+                f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_intrinsic_results_u{args.threshold}_{args.save_suffix}.json"
             ),
             "w",
         ),
@@ -265,7 +276,7 @@ def main(args):
         results_avg,
         open(
             Constants.CACHE_DIR
-            / (f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_u{args.threshold}_AVG.json"),
+            / (f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_u{args.threshold}_{args.save_suffix}_AVG.json"),
             "w",
         ),
         indent=4,

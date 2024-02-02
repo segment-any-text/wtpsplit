@@ -6,6 +6,7 @@ from cached_property import cached_property
 from pathlib import Path
 from typing import List
 import logging
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -59,7 +60,9 @@ class ConstantsClass:
 
     @cached_property
     def SEPARATORS(self):
-        return {lang: ("" if row["no_whitespace"] else " ") for lang, row in Constants.LANGINFO.iterrows()}
+        return defaultdict(
+            lambda: " ", {lang: ("" if row["no_whitespace"] else " ") for lang, row in self.LANGINFO.iterrows()}
+        )
 
 
 Constants = ConstantsClass()
@@ -261,7 +264,6 @@ def corrupt(
                                     del block_ids[i + 1]
                 if random.random() < label_args.case_corruption_prob_after_newline and i + 1 < len(input_ids):
                     input_ids, labels, block_ids = _corrupt_case(tokenizer, input_ids, labels, block_ids, i)
-                    
 
         elif label_args.use_auxiliary and labels[i] > Constants.AUX_OFFSET:  # auxiliary
             if pack_samples:
@@ -285,7 +287,11 @@ def corrupt(
                     del labels[i + 1]
                     del block_ids[i + 1]
                     removed_aux_char = True
-                if random.random() < label_args.case_corruption_prob_after_punct and removed_aux_char and i + 1 < len(input_ids):
+                if (
+                    random.random() < label_args.case_corruption_prob_after_punct
+                    and removed_aux_char
+                    and i + 1 < len(input_ids)
+                ):
                     input_ids, labels, block_ids = _corrupt_case(tokenizer, input_ids, labels, block_ids, i)
 
         try:
@@ -294,6 +300,7 @@ def corrupt(
             break
 
     return input_ids, block_ids, labels
+
 
 def _corrupt_case(tokenizer: AutoTokenizer, input_ids: List[int], labels: List[int], block_ids: List[int], i: int):
     if not tokenizer:
@@ -329,6 +336,7 @@ def _corrupt_case(tokenizer: AutoTokenizer, input_ids: List[int], labels: List[i
                 input_ids[i + 1] = token_ids[0]
 
     return input_ids, labels, block_ids
+
 
 def indices_to_sentences(text, indices, strip_whitespace=False):
     sentences = []
