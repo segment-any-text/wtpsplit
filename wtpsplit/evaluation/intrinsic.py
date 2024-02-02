@@ -47,9 +47,16 @@ class Args:
     threshold: float = 0.01
     max_n_train_sentences: int = 10_000
     save_suffix: str = ""
+    do_lowercase: bool = False
+    do_remove_punct: bool = False
 
 
 def process_logits(text, model, lang_code, args):
+    if args.do_lowercase:
+        text = text.lower()
+    if args.do_remove_punct:
+        for punct in Constants.PUNCTUATION_CHARS:
+            text = text.replace(punct, "")
     # Extract necessary data
     logits, offsets_mapping, tokenizer, _ = extract(
         [text],
@@ -76,18 +83,19 @@ def process_logits(text, model, lang_code, args):
     return logits
 
 
-def load_or_compute_logits(args, model, eval_data, valid_data=None):
-    logits_path = Constants.CACHE_DIR / (
-        f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_logits_u{args.threshold}_{args.save_suffix}.h5"
-    )
+def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: str = None):
+    logits_path = Constants.CACHE_DIR / "intrinsic" / f"{save_str}.h5"
+
+    if not os.path.exists(Constants.CACHE_DIR / "intrinsic"):
+        os.makedirs(Constants.CACHE_DIR / "intrinsic")
+
     if args.custom_language_list is not None:
         with open(args.custom_language_list, "r") as f:
             # file is a csv: l1,l2,...
             use_langs = f.read().strip().split(",")
     else:
         use_langs = Constants.LANGINFO.index
-            
-            
+
     total_test_time = 0  # Initialize total test processing time
 
     # TODO: revert to "a"
@@ -131,7 +139,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None):
                     test_logits = process_logits(test_text, model, lang_code, args)
                     end_time = time.time()  # End timing for test logits processing
                     total_test_time += end_time - start_time  # Accumulate test processing time
-                    
+
                     test_labels = get_labels(lang_code, test_sentences, after_space=False)
 
                     dset_group.create_dataset("test_logits", data=test_logits)
@@ -172,6 +180,14 @@ def compute_statistics(values):
 
 
 def main(args):
+    save_str = (
+        f"{args.model_path.replace('/','_')}_b{args.block_size}_s{args.stride}_u{args.threshold}{args.save_suffix}"
+    )
+    if args.do_lowercase:
+        save_str += "_lc"
+    if args.do_remove_punct:
+        save_str += "_rmp"
+
     eval_data = torch.load(args.eval_data_path)
     if args.valid_text_path is not None:
         valid_data = load_dataset("parquet", data_files=args.valid_text_path, split="train")
@@ -182,7 +198,7 @@ def main(args):
     model = PyTorchWrapper(AutoModelForTokenClassification.from_pretrained(args.model_path).to(args.device))
 
     # first, logits for everything.
-    f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data)
+    f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data, save_str)
 
     # now, compute the intrinsic scores.
     results = {}
@@ -255,17 +271,14 @@ def main(args):
     sio.dump(
         clfs,
         open(
-            Constants.CACHE_DIR / (f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_{args.save_suffix}.skops"),
+            Constants.CACHE_DIR / "intrinsic" / save_str + ".skops",
             "wb",
         ),
     )
     json.dump(
         results,
         open(
-            Constants.CACHE_DIR
-            / (
-                f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_intrinsic_results_u{args.threshold}_{args.save_suffix}.json"
-            ),
+            Constants.CACHE_DIR / "intrinsic" / save_str + ".json",
             "w",
         ),
         indent=4,
@@ -275,8 +288,7 @@ def main(args):
     json.dump(
         results_avg,
         open(
-            Constants.CACHE_DIR
-            / (f"{args.model_path.split('/')[0]}_b{args.block_size}+s{args.stride}_u{args.threshold}_{args.save_suffix}_AVG.json"),
+            Constants.CACHE_DIR / "intrinsic" / save_str + "_AVG.json",
             "w",
         ),
         indent=4,
