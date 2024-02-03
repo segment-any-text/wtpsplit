@@ -52,11 +52,6 @@ class Args:
 
 
 def process_logits(text, model, lang_code, args):
-    if args.do_lowercase:
-        text = text.lower()
-    if args.do_remove_punct:
-        for punct in Constants.PUNCTUATION_CHARS:
-            text = text.replace(punct, "")
     # Extract necessary data
     logits, offsets_mapping, tokenizer, _ = extract(
         [text],
@@ -83,6 +78,15 @@ def process_logits(text, model, lang_code, args):
     return logits
 
 
+def corrupt(text: str, args: Args):
+    if args.do_lowercase:
+        text = text.lower()
+    if args.do_remove_punct:
+        for punct in Constants.PUNCTUATION_CHARS:
+            text = text.replace(punct, "")
+    return text
+
+
 def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: str = None):
     logits_path = Constants.CACHE_DIR / "intrinsic" / f"{save_str}.h5"
 
@@ -99,7 +103,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
     total_test_time = 0  # Initialize total test processing time
 
     # TODO: revert to "a"
-    with h5py.File(logits_path, "a") as f, torch.no_grad():
+    with h5py.File(logits_path, "w") as f, torch.no_grad():
         for lang_code in use_langs:
             if args.include_langs is not None and lang_code not in args.include_langs:
                 continue
@@ -112,11 +116,12 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
             # valid data
             if valid_data is not None and "valid" not in lang_group:
-                sentences = [sample["text"].strip() for sample in valid_data if sample["lang"] == lang_code]
-                assert len(sentences) > 0
+                valid_sentences = [sample["text"].strip() for sample in valid_data if sample["lang"] == lang_code]
+                assert len(valid_sentences) > 0
 
+                valid_sentences = [corrupt(sentence, args) for sentence in valid_sentences]
                 separator = Constants.SEPARATORS[lang_code]
-                valid_text = separator.join(sentences)
+                valid_text = separator.join(valid_sentences)
 
                 valid_logits = process_logits(valid_text, model, lang_code, args)
 
@@ -132,7 +137,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"]
-                    print(len(test_sentences))
+                    test_sentences = [corrupt(sentence, args) for sentence in test_sentences]
                     test_text = Constants.SEPARATORS[lang_code].join(test_sentences)
 
                     start_time = time.time()  # Start timing for test logits processing
@@ -147,7 +152,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                 train_sentences = dataset["meta"].get("train_data")
                 if train_sentences is not None and "train_logits" not in dset_group:
-                    print(len(train_sentences))
+                    train_sentences = [corrupt(sentence, args) for sentence in train_sentences]
                     train_sentences = train_sentences[: args.max_n_train_sentences]
                     train_text = Constants.SEPARATORS[lang_code].join(train_sentences)
 
@@ -215,7 +220,6 @@ def main(args):
         clfs[lang_code] = {}
 
         for dataset_name, dataset in dsets["sentence"].items():
-            print(dataset_name)
             sentences = dataset["data"]
 
             if "train_logits" in f[lang_code][dataset_name]:
@@ -271,14 +275,14 @@ def main(args):
     sio.dump(
         clfs,
         open(
-            Constants.CACHE_DIR / "intrinsic" / save_str + ".skops",
+            Constants.CACHE_DIR / "intrinsic" / f"{save_str}.skops",
             "wb",
         ),
     )
     json.dump(
         results,
         open(
-            Constants.CACHE_DIR / "intrinsic" / save_str + ".json",
+            Constants.CACHE_DIR / "intrinsic" / f"{save_str}.json",
             "w",
         ),
         indent=4,
@@ -288,7 +292,7 @@ def main(args):
     json.dump(
         results_avg,
         open(
-            Constants.CACHE_DIR / "intrinsic" / save_str + "_AVG.json",
+            Constants.CACHE_DIR / "intrinsic" / f"{save_str}_AVG.json",
             "w",
         ),
         indent=4,
