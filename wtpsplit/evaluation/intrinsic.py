@@ -145,7 +145,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     end_time = time.time()  # End timing for test logits processing
                     total_test_time += end_time - start_time  # Accumulate test processing time
 
-                    test_labels = get_labels(lang_code, test_sentences, after_space=args.do_remove_punct)
+                    test_labels = get_labels(lang_code, test_sentences, after_space=False)
 
                     dset_group.create_dataset("test_logits", data=test_logits)
                     dset_group.create_dataset("test_labels", data=test_labels)
@@ -157,7 +157,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     train_text = Constants.SEPARATORS[lang_code].join(train_sentences)
 
                     train_logits = process_logits(train_text, model, lang_code, args)
-                    train_labels = get_labels(lang_code, train_sentences, after_space=args.do_remove_punct)
+                    train_labels = get_labels(lang_code, train_sentences, after_space=False)
 
                     dset_group.create_dataset("train_logits", data=train_logits)
                     dset_group.create_dataset("train_labels", data=train_labels)
@@ -221,6 +221,7 @@ def main(args):
 
         for dataset_name, dataset in dsets["sentence"].items():
             sentences = dataset["data"]
+            sentences = [corrupt(sentence, args) for sentence in sentences]
 
             if "train_logits" in f[lang_code][dataset_name]:
                 feature_indices = None

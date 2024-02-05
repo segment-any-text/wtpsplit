@@ -26,11 +26,12 @@ def get_labels(lang_code, sentences, after_space=True):
     true_end_indices = np.cumsum(np.array([len(s) for s in sentences])) + np.arange(1, len(sentences) + 1) * len(
         separator
     )
-    # no space after last
-    true_end_indices[-1] -= len(separator)
 
     if not after_space:
         true_end_indices -= len(separator) + 1
+    else:
+        # no space after last
+        true_end_indices[-1] -= len(separator)
 
     labels = np.zeros(len(text) + 1)
     labels[true_end_indices] = 1
