@@ -152,9 +152,9 @@ wtp.predict_proba(text, lang_code="en", style="ud")
 __Load a WtP model in [HuggingFace `transformers`](https://github.com/huggingface/transformers):__
 
 ```python
-# import wtpsplit to register the custom models 
+# import wtpsplit.models to register the custom models 
 # (character-level BERT w/ hash embeddings and canine with language adapters)
-import wtpsplit
+import wtpsplit.models
 from transformers import AutoModelForTokenClassification
 
 model = AutoModelForTokenClassification.from_pretrained("benjamin/wtp-bert-mini") # or some other model name
