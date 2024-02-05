@@ -83,7 +83,7 @@ def corrupt(text: str, args: Args):
         text = text.lower()
     if args.do_remove_punct:
         for punct in Constants.PUNCTUATION_CHARS:
-            text = text.replace(punct, "")
+            text = text.replace(punct, '')
     return text
 
 
@@ -145,7 +145,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     end_time = time.time()  # End timing for test logits processing
                     total_test_time += end_time - start_time  # Accumulate test processing time
 
-                    test_labels = get_labels(lang_code, test_sentences, after_space=False)
+                    test_labels = get_labels(lang_code, test_sentences, after_space=args.do_remove_punct)
 
                     dset_group.create_dataset("test_logits", data=test_logits)
                     dset_group.create_dataset("test_labels", data=test_labels)
@@ -157,7 +157,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     train_text = Constants.SEPARATORS[lang_code].join(train_sentences)
 
                     train_logits = process_logits(train_text, model, lang_code, args)
-                    train_labels = get_labels(lang_code, train_sentences, after_space=False)
+                    train_labels = get_labels(lang_code, train_sentences, after_space=args.do_remove_punct)
 
                     dset_group.create_dataset("train_logits", data=train_logits)
                     dset_group.create_dataset("train_labels", data=train_labels)
@@ -272,13 +272,13 @@ def main(args):
         "include_langs": args.include_langs,
     }
 
-    sio.dump(
-        clfs,
-        open(
-            Constants.CACHE_DIR / "intrinsic" / f"{save_str}.skops",
-            "wb",
-        ),
-    )
+    # sio.dump(
+    #     clfs,
+    #     open(
+    #         Constants.CACHE_DIR / "intrinsic" / f"{save_str}.skops",
+    #         "wb",
+    #     ),
+    # )
     json.dump(
         results,
         open(
