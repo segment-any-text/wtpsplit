@@ -55,6 +55,14 @@ def evaluate_sentences(lang_code, sentences, predicted_sentences):
     return f1_score(labels, predictions), {
         "recall": recall_score(labels, predictions),
         "precision": precision_score(labels, predictions),
+        # pairwise: ignore end-of-text label
+        # only correct if we correctly predict the single newline in between the sentence pair
+        # --> no false positives, no false negatives allowed!
+        "correct_pairwise": (
+            (np.where(labels[:-1] == 1)[0] == predicted_end_indices[:-1]).all()
+            if len(predicted_end_indices) > 1
+            else False
+        ),
     }
 
 
@@ -356,9 +364,7 @@ def get_token_spans(tokenizer, offsets_mapping, tokens):
 
 
 def token_to_char_probs(text, tokens, token_logits, tokenizer, offsets_mapping):
-    char_probs = np.full(
-        (len(text), token_logits.shape[1]), np.min(token_logits)
-    )  # Initialize with very low numbers
+    char_probs = np.full((len(text), token_logits.shape[1]), np.min(token_logits))  # Initialize with very low numbers
 
     valid_indices, valid_offsets = get_token_spans(tokenizer, offsets_mapping, tokens)
 

@@ -98,14 +98,6 @@ def extract(
     else:
         pad_token_id = 0
         use_subwords = False
-    if pairwise:
-        # we need at least 2 passes to not get NaNs using our logic
-        stride = (len(batch_of_texts[0]) + 1) // 2
-        if len(batch_of_texts[0]) < 4:
-            # some sentences are only 2-3 tokens long
-            # not compatible with our logic and not sensible anyhow --> skip.
-            logger.warning(f"Skipping short sentence pair: {batch_of_texts[0]}, {tokenizer.decode(batch_of_texts[0])}")
-            return None, None, None, True
 
     text_lengths = [len(text) for text in batch_of_texts]
     # reduce block size if possible
@@ -118,6 +110,10 @@ def extract(
 
     # total number of forward passes
     num_chunks = sum(math.ceil(max(length - actual_block_size, 0) / stride) + 1 for length in text_lengths)
+    if text_lengths[0] <= block_size:
+        # if the input is smaller than the block size, we only need one forward pass
+        num_chunks = 1
+        actual_block_size, block_size = actual_block_size + 2, block_size + 2  # account for CLS and SEP tokens
 
     # preallocate a buffer for all input hashes & attention masks
     if not use_subwords:
