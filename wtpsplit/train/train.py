@@ -21,6 +21,7 @@ from tokenizers import AddedToken
 from torchinfo import summary
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments, set_seed
+import pdb
 
 import wandb
 from wtpsplit.models import (
@@ -181,7 +182,7 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
     out = {
         "input_ids": torch.stack(all_input_ids, 0),
         "attention_mask": torch.stack(all_attention_masks, 0),
-        "position_ids": None if args.use_subwords else torch.stack(all_position_ids, 0),  # safer
+        "position_ids": torch.stack(all_position_ids, 0),
         "language_ids": torch.tensor(all_language_ids, dtype=torch.long),
         "label_weights": torch.stack(all_label_weights, 0),
         "labels": torch.stack(all_labels, 0),
@@ -536,15 +537,14 @@ def main():
 
     # print some samples from the dataset
     count = 0
-    while count < 20:
+    while count < 5:
         index = random.choice(range(len(train_dataset)))
         sample = train_dataset[index]
 
-        if sample.get("lang") in ["zh", "ja", "my", "km"]:
-            logger.warning(f"Sample {index} of the training set: {sample}.")
-            if tokenizer:
-                logger.warning(tokenizer.decode(sample["input_ids"]))
-            count += 1
+        logger.warning(f"Sample {index} of the training set: {sample}.")
+        if tokenizer:
+            logger.warning(tokenizer.decode(sample["input_ids"]))
+        count += 1
 
     eval_data = torch.load(
         args.eval_data_path,
@@ -561,6 +561,7 @@ def main():
                 continue
 
             if trainer.args.process_index == 0 and args.do_sentence_training:
+                # with training_args.main_process_first():
                 for dataset_name, dataset in lang_data["sentence"].items():
                     score, _ = evaluate_sentence(
                         lang_code,
@@ -576,7 +577,6 @@ def main():
                         avg_metrics[f"average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
                     else:
                         avg_metrics[f"average_whitespace_{dataset_name}_pr_auc"].append(score)
-                for dataset_name, dataset in lang_data["sentence"].items():
                     score, _ = evaluate_sentence(
                         lang_code,
                         dataset["data"],
@@ -593,8 +593,7 @@ def main():
                         avg_metrics[f"lower_rmp_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
                     else:
                         avg_metrics[f"lower_rmp_average_whitespace_{dataset_name}_pr_auc"].append(score)
-                for dataset_name, dataset in lang_data["sentence"].items():
-                    score, _ = evaluate_sentence_pairwise(
+                    score, avg_acc = evaluate_sentence_pairwise(
                         lang_code,
                         dataset["data"],
                         model,
@@ -604,10 +603,14 @@ def main():
                     )
                     metrics[f"pairwise_{lang_code}_{dataset_name}_pr_auc"] = score
                     avg_metrics[f"pairwise_average_{dataset_name}_pr_auc"].append(score)
+                    metrics[f"pairwise_{lang_code}_{dataset_name}_acc"] = avg_acc
+                    avg_metrics[f"pairwise_average_{dataset_name}_acc"].append(avg_acc)
                     if lang_code in ["zh", "ja", "my", "km"]:
                         avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
+                        avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_acc"].append(avg_acc)
                     else:
                         avg_metrics[f"pairwise_average_whitespace_{dataset_name}_pr_auc"].append(score)
+                        avg_metrics[f"pairwise_average_whitespace_{dataset_name}_acc"].append(avg_acc)
 
         for name, values in avg_metrics.items():
             if len(values) > 1:
@@ -664,7 +667,7 @@ def main():
     checkpoint_pattern = os.path.join(training_args.output_dir, "checkpoint-*")
 
     # Use glob.glob to find all directories matching the pattern
-    for checkpoint_dir in glob.glob(checkpoint_pattern):
+    for checkpoint_dir in glob(checkpoint_pattern):
         if os.path.isdir(checkpoint_dir):
             shutil.rmtree(checkpoint_dir)
 
@@ -675,4 +678,10 @@ def _mp_fn(index):
 
 
 if __name__ == "__main__":
+    # try:
     main()
+    # except Exception:
+    #     # extype, value, tb = sys.exc_info()
+    #     # tb.print_exc()
+    #     # pdb.post_mortem(tb)
+    #     pass

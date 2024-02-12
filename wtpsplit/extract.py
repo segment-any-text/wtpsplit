@@ -74,7 +74,6 @@ def extract(
     lang_code=None,
     pad_last_batch=False,
     verbose=False,
-    pairwise: bool = False,
 ):
     """
     Computes logits for the given batch of texts by:
@@ -113,7 +112,8 @@ def extract(
     if text_lengths[0] <= block_size:
         # if the input is smaller than the block size, we only need one forward pass
         num_chunks = 1
-        actual_block_size, block_size = actual_block_size + 2, block_size + 2  # account for CLS and SEP tokens
+        if use_subwords:
+            actual_block_size, block_size = actual_block_size + 2, block_size + 2  # account for CLS and SEP tokens
 
     # preallocate a buffer for all input hashes & attention masks
     if not use_subwords:
@@ -237,4 +237,4 @@ def extract(
     # so far, logits are summed, so we average them here
     all_logits = [(logits / counts[:, None]).astype(np.float16) for logits, counts in zip(all_logits, all_counts)]
 
-    return all_logits, offset_mapping if use_subwords else None, tokenizer if use_subwords else None, False
+    return all_logits, offset_mapping if use_subwords else None, tokenizer if use_subwords else None

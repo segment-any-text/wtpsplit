@@ -56,22 +56,22 @@ class Args:
     min_pair_length: int = 0
 
 
-def process_logits_pairwise(pairs, model, lang_code, args):
+def process_logits_pairwise(pairs, model, lang_code, block_size, batch_size, verbose=True) -> List[np.ndarray]:
     logits_list = []
     # create batches of sentence pairs
-    batched_pairs = [pairs[i : i + args.batch_size] for i in range(0, len(pairs), args.batch_size)]
-    for batch in tqdm(batched_pairs):
+    batched_pairs = [pairs[i : i + batch_size] for i in range(0, len(pairs), batch_size)]
+    for batch in tqdm(batched_pairs, disable=not verbose):
         pair_texts = [pair[0] + Constants.SEPARATORS[lang_code] + pair[1] for pair in batch]
-        logits, offsets_mapping, tokenizer = extract_batched(
+        all_logits, offsets_mapping, tokenizer = extract_batched(
             pair_texts,
             model,
             lang_code=lang_code,
-            block_size=args.block_size,
-            batch_size=args.batch_size,
+            block_size=block_size,
+            batch_size=batch_size,
             pad_last_batch=True,
         )
 
-        for pair, logit, offset_mapping in zip(pair_texts, logits, offsets_mapping):
+        for pair, logit, offset_mapping in zip(pair_texts, all_logits, offsets_mapping):
             if "xlm" in model.config.model_type:
                 tokens = tokenizer.tokenize(pair, verbose=False)
 
@@ -90,24 +90,30 @@ def process_logits_pairwise(pairs, model, lang_code, args):
     return logits_list
 
 
-def generate_pairs(sentences: List[str], args) -> List[Tuple[str, str]]:
+def generate_pairs(
+    sentences: List[str],
+    do_lowercase: bool,
+    do_remove_punct: bool,
+    pair_sample_pct: float = 1,
+    max_n_pairs: int = sys.maxsize,
+    min_pair_length: int = 0,
+) -> List[Tuple[str, str]]:
     """Generate sentence pairs from a list of sentences.
 
     Args:
         sentences (List[str]): Input list of sentences.
-        args: Args object containing the following relevant attributes:
-            - pair_sample_pct: Percentage of all possible pairs to sample.
-            - min_pair_length: Minimum length of a sentence pair.
-            - max_n_sentences: Maximum number of sentences to sample.
-            - do_lowercase: Whether to lowercase the sentences.
-            - do_remove_punct: Whether to remove punctuation from the sentences.
+        pair_sample_pct (float): Percentage of pairs to sample.
+        max_n_pairs (int): Maximum number of pairs to sample.
+        min_pair_length (int): Minimum length of a sentence pair.
+        do_lowercase (bool): Whether to lowercase the sentences.
+        do_remove_punct (bool): Whether to remove punctuation from the sentences.
 
     Returns:
         List[Tuple[str, str]]: List of sentence pairs.
     """
     random.seed(42)
     n_pairs = len(sentences) // 2
-    sample_size = min(round(n_pairs * args.pair_sample_pct), args.max_n_pairs)
+    sample_size = min(round(n_pairs * pair_sample_pct), max_n_pairs)
 
     # If we need to sample a subset of all possible pairs, do so efficiently
     if sample_size < n_pairs:
@@ -115,18 +121,21 @@ def generate_pairs(sentences: List[str], args) -> List[Tuple[str, str]]:
         all_pairs = [
             (sentences[2 * i], sentences[2 * i + 1])
             for i in sampled_indices
-            if len(sentences[2 * i]) + len(sentences[2 * i + 1]) > args.min_pair_length
+            if len(sentences[2 * i]) + len(sentences[2 * i + 1]) > min_pair_length
         ]
     else:
         # Generate all pairs that meet the min_pair_length criterion
         all_pairs = [
             (sentences[i], sentences[i + 1])
             for i in range(0, len(sentences) - 1, 2)
-            if len(sentences[i]) + len(sentences[i + 1]) > args.min_pair_length
+            if len(sentences[i]) + len(sentences[i + 1]) > min_pair_length
         ]
 
     # corrupt pairs
-    all_pairs = [(corrupt(pair[0], args), corrupt(pair[1], args)) for pair in all_pairs]
+    all_pairs = [
+        (corrupt(pair[0], do_lowercase, do_remove_punct), corrupt(pair[1], do_lowercase, do_remove_punct))
+        for pair in all_pairs
+    ]
     return all_pairs
 
 
@@ -161,14 +170,22 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"]
-                    all_pairs_test = generate_pairs(test_sentences, args)
+                    all_pairs_test = generate_pairs(
+                        test_sentences,
+                        do_lowercase=args.do_lowercase,
+                        do_remove_punct=args.do_remove_punct,
+                        pair_sample_pct=args.pair_sample_pct,
+                        max_n_pairs=args.max_n_pairs,
+                        min_pair_length=args.min_pair_length,
+                    )
 
                     start_time = time.time()  # Start timing for test logits processing
                     test_logits = process_logits_pairwise(
                         all_pairs_test,
                         model,
                         lang_code,
-                        args,
+                        args.block_size,
+                        args.batch_size,
                     )
                     end_time = time.time()
 
@@ -200,9 +217,18 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                 train_sentences = dataset["meta"].get("train_data")
                 if train_sentences is not None and "train_logits" not in dset_group:
                     train_sentences = train_sentences[: args.max_n_train_sentences]
-                    all_pairs_train = generate_pairs(train_sentences, args)
+                    all_pairs_train = generate_pairs(
+                        train_sentences,
+                        do_lowercase=args.do_lowercase,
+                        do_remove_punct=args.do_remove_punct,
+                        pair_sample_pct=args.pair_sample_pct,
+                        max_n_pairs=args.max_n_pairs,
+                        min_pair_length=args.min_pair_length,
+                    )
 
-                    train_logits = process_logits_pairwise(all_pairs_train, model, lang_code, args)
+                    train_logits = process_logits_pairwise(
+                        all_pairs_train, model, lang_code, args.block_size, args.batch_size
+                    )
                     train_logits = np.concatenate(train_logits)
 
                     train_labels = [
@@ -255,7 +281,14 @@ def main(args):
 
         for dataset_name, dataset in dsets["sentence"].items():
             sentences = dataset["data"]
-            sent_pairs = generate_pairs(sentences, args)
+            sent_pairs = generate_pairs(
+                sentences, 
+                do_lowercase=args.do_lowercase,
+                do_remove_punct=args.do_remove_punct,
+                pair_sample_pct=args.pair_sample_pct,
+                max_n_pairs=args.max_n_pairs,
+                min_pair_length=args.min_pair_length,
+            )
 
             if "train_logits" in f[lang_code][dataset_name]:
                 feature_indices = None

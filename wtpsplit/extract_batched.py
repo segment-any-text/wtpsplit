@@ -34,9 +34,10 @@ def extract_batched(
             batch_of_texts,
             return_offsets_mapping=True,
             verbose=False,
-            padding=True,
+            padding="max_length",  # pad to max length (TPUs need fixed length inputs)
             return_tensors="np",
             truncation=True,
+            max_length=block_size,
         )
         attention_mask = tokens["attention_mask"]
         input_ids = tokens["input_ids"]
@@ -46,7 +47,8 @@ def extract_batched(
     else:
         pad_token_id = 0
         use_subwords = False
-        text_lengths = [len(text) for text in batch_of_texts]
+        input_ids = batch_of_texts.copy()
+        text_lengths = [len(text) for text in input_ids]
         offset_mapping = text_lengths
 
     # when using ChLMs, it can be that the input is too long --> simply truncate
@@ -56,10 +58,7 @@ def extract_batched(
         if verbose:
             logger.info(f"Truncating {len(longer_than_block_size)} texts longer than block_size={block_size}")
         for i in longer_than_block_size:
-            batch_of_texts[i] = batch_of_texts[i][:block_size]
-            
-    # reduce block size if possible    
-    block_size = min(block_size, max(text_lengths))
+            input_ids[i] = input_ids[i][:block_size]
 
     # make sure block_size is a multiple of downsampling rate
     downsampling_rate = getattr(model.config, "downsampling_rate", 1)
@@ -68,18 +67,17 @@ def extract_batched(
     if not use_subwords:
         codec = "utf-32-le" if sys.byteorder == "little" else "utf-32-be"
         hashed_ids = []
-        attention_mask = np.ones((len(batch_of_texts), block_size), dtype=int)
-        for i, text in enumerate(batch_of_texts):
+        attention_mask = np.ones((len(input_ids), block_size), dtype=int)
+        for i, text in enumerate(input_ids):
             ord = np.frombuffer(bytearray(text, encoding=codec), dtype=np.int32)
             # pad
             if len(ord) < block_size:
                 # mask out padding
                 attention_mask[i, len(ord) :] = 0
-                # pad to max length
-                ord = np.pad(ord, (pad_token_id, block_size - len(ord)))
+                # pad to max length, i.e., block size (no truncation due to TPUs)
+                ord = np.pad(ord, (0, block_size - len(ord)))
             hashed_ids.append(hash_encode(ord, model.config.num_hash_functions, model.config.num_hash_buckets))
         hashed_ids = np.array(hashed_ids)
-            
 
     uses_lang_adapters = getattr(model.config, "language_adapter", "off") == "on"
     if uses_lang_adapters:

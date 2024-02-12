@@ -45,10 +45,11 @@ class Model(nn.Module):
         **kwargs,
     ):
         if position_ids is not None:
-            reduced_attention_mask = (input_ids != 0).to(torch.long)
-        else:
             # XXX: 1 is pad token id
-            reduced_attention_mask = (input_ids != 1).to(torch.long)
+            if "xlm" in self.config.model_type:
+                reduced_attention_mask = (input_ids != 1).to(torch.long)
+            else:
+                reduced_attention_mask = (input_ids != 0).to(torch.long)
 
         output = dict(
             self.backbone.forward(

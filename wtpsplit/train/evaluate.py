@@ -1,13 +1,16 @@
+import copy
+import logging
+import sys
+
 import numpy as np
 import pysbd
 import sklearn.metrics
-import logging
 
-from wtpsplit.extract import extract, PyTorchWrapper
-from wtpsplit.utils import Constants
 from wtpsplit.evaluation import token_to_char_probs
-import random
-import copy
+from wtpsplit.evaluation.intrinsic_pairwise import generate_pairs, process_logits_pairwise
+from wtpsplit.extract import PyTorchWrapper, extract
+from wtpsplit.utils import Constants
+from wtpsplit.evaluation.intrinsic import corrupt
 
 logger = logging.getLogger(__name__)
 
@@ -74,14 +77,10 @@ def evaluate_sentence(
     sentences = [sentence.lstrip("-").strip() for sentence in sentences]
 
     separator = Constants.SEPARATORS[lang_code]
-    if do_lowercase:
-        sentences = [sentence.lower() for sentence in sentences]
-    if do_remove_punct:
-        for punct in Constants.PUNCTUATION_CHARS:
-            sentences = [sentence.replace(punct, "") for sentence in sentences]
+    sentences = [corrupt(sentence, do_lowercase, do_remove_punct) for sentence in sentences]
     text = separator.join(sentences)
 
-    logits, offsets_mapping, tokenizer, _ = extract(
+    logits, offsets_mapping, tokenizer = extract(
         [text],
         PyTorchWrapper(model.backbone),
         lang_code=lang_code,
@@ -125,8 +124,8 @@ def evaluate_sentence_pairwise(
     stride,
     block_size,
     batch_size,
-    pair_sample_pct: float = 0.01,
-    max_pairs: int = 10,
+    pair_sample_pct: float = 0.1,
+    max_pairs: int = sys.maxsize,
     use_pysbd=False,
     positive_index=None,
     do_lowercase=False,
@@ -140,68 +139,55 @@ def evaluate_sentence_pairwise(
 
     separator = Constants.SEPARATORS[lang_code]
     metrics_list = []
+    accuracy_list = []
 
-    # Make a copy of the model for CPU operations
-    model = PyTorchWrapper(model.backbone)
 
-    # Generate all possible sentence pairs
-    all_pairs = list(zip(sentences[:-1], sentences[1:]))
-
-    # Randomly sample N% of the sentence pairs
-    sample_size = (
-        min(int(len(all_pairs) * pair_sample_pct) + 1, max_pairs)
-        if max_pairs is not None
-        else int(len(all_pairs) * pair_sample_pct) + 1
+    # get pairs of sentences (non-overlapping)
+    sampled_pairs = generate_pairs(
+        sentences=sentences,
+        pair_sample_pct=pair_sample_pct,
+        max_n_pairs=max_pairs,
+        min_pair_length=0,
+        do_lowercase=do_lowercase,
+        do_remove_punct=do_remove_punct,
     )
-    # set seed so we get the same pairs every time
-    random.seed(42)
-    sampled_pairs = random.sample(all_pairs, sample_size)
 
-    separator = Constants.SEPARATORS[lang_code]
-    metrics_list = []
+    # get logits for each pair
+    logits = process_logits_pairwise(
+        pairs=sampled_pairs,
+        model=PyTorchWrapper(model.backbone),
+        lang_code=lang_code,
+        block_size=block_size,
+        batch_size=batch_size,
+        verbose=False,
+    )
 
-    for sentence1, sentence2 in sampled_pairs:
-        if do_lowercase:
-            sentence1 = sentence1.lower()
-            sentence2 = sentence2.lower()
-        if do_remove_punct:
-            for punct in Constants.PUNCTUATION_CHARS:
-                sentence1 = sentence1.replace(punct, "")
-                sentence2 = sentence2.replace(punct, "")
+    # simulate performance for WtP-U
+    DEFAULT_THRESHOLD = 0.01
+    
+
+    for i, (sentence1, sentence2) in enumerate(sampled_pairs):
+        newline_probs = logits[i][:, positive_index]
 
         pair_text = sentence1 + separator + sentence2
-
-        logits, offsets_mapping, tokenizer, skip = extract(
-            [pair_text],
-            model,
-            lang_code=lang_code,
-            stride=stride,
-            block_size=block_size,
-            batch_size=batch_size,
-            pairwise=True,
-        )
-        if skip:
-            continue
-        logits = logits[0]
-        if offsets_mapping is not None:
-            offsets_mapping = offsets_mapping[0]
 
         # Calculate newline labels and probabilities
         true_end_indices = np.cumsum(np.array([len(s) for s in [sentence1, sentence2]])) + np.arange(2) * len(separator)
         newline_labels = np.zeros(len(pair_text))
         newline_labels[true_end_indices - 1] = 1
 
-        if "xlm" in model.config.model_type:
-            tokens = tokenizer.tokenize(pair_text, verbose=False)
-            char_probs = token_to_char_probs(pair_text, tokens, logits, tokenizer, offsets_mapping)
-        else:
-            char_probs = logits
-        newline_probs = char_probs[:, positive_index]
-
         # Get metrics for the pair
         pair_metrics, _ = get_metrics(newline_labels, newline_probs)
         metrics_list.append(pair_metrics["pr_auc"])
+        predicted_labels = newline_probs > np.log(DEFAULT_THRESHOLD / (1 - DEFAULT_THRESHOLD))  # inverse sigmoid
+        # for accuracy, check if the single label in between is correctly predicted (ignore the one at the end)
+        if sum(predicted_labels[:-1]) > 0:
+            correct = (np.where(newline_labels[:-1])[0] == np.where(predicted_labels[:-1])[0]).all()
+            accuracy_list.append(correct)
+        else:
+            accuracy_list.append(False)
 
     # Compute and return the average metric
     average_metric = np.mean(metrics_list)
-    return average_metric, _
+    avg_accuracy = np.mean(accuracy_list)
+    return average_metric, avg_accuracy

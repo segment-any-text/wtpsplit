@@ -53,7 +53,7 @@ class Args:
 
 def process_logits(text, model, lang_code, args):
     # Extract necessary data
-    logits, offsets_mapping, tokenizer, _ = extract(
+    logits, offsets_mapping, tokenizer = extract(
         [text],
         model,
         lang_code=lang_code,
@@ -78,12 +78,12 @@ def process_logits(text, model, lang_code, args):
     return logits
 
 
-def corrupt(text: str, args: Args):
-    if args.do_lowercase:
+def corrupt(text: str, do_lowercase: bool, do_remove_punct: bool):
+    if do_lowercase:
         text = text.lower()
-    if args.do_remove_punct:
+    if do_remove_punct:
         for punct in Constants.PUNCTUATION_CHARS:
-            text = text.replace(punct, '')
+            text = text.replace(punct, "")
     return text
 
 
@@ -119,7 +119,10 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                 valid_sentences = [sample["text"].strip() for sample in valid_data if sample["lang"] == lang_code]
                 assert len(valid_sentences) > 0
 
-                valid_sentences = [corrupt(sentence, args) for sentence in valid_sentences]
+                valid_sentences = [
+                    corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
+                    for sentence in valid_sentences
+                ]
                 separator = Constants.SEPARATORS[lang_code]
                 valid_text = separator.join(valid_sentences)
 
@@ -137,7 +140,10 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"]
-                    test_sentences = [corrupt(sentence, args) for sentence in test_sentences]
+                    test_sentences = [
+                        corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
+                        for sentence in test_sentences
+                    ]
                     test_text = Constants.SEPARATORS[lang_code].join(test_sentences)
 
                     start_time = time.time()  # Start timing for test logits processing
@@ -152,7 +158,10 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                 train_sentences = dataset["meta"].get("train_data")
                 if train_sentences is not None and "train_logits" not in dset_group:
-                    train_sentences = [corrupt(sentence, args) for sentence in train_sentences]
+                    train_sentences = [
+                        corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
+                        for sentence in train_sentences
+                    ]
                     train_sentences = train_sentences[: args.max_n_train_sentences]
                     train_text = Constants.SEPARATORS[lang_code].join(train_sentences)
 
@@ -221,7 +230,10 @@ def main(args):
 
         for dataset_name, dataset in dsets["sentence"].items():
             sentences = dataset["data"]
-            sentences = [corrupt(sentence, args) for sentence in sentences]
+            sentences = [
+                corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
+                for sentence in sentences
+            ]
 
             if "train_logits" in f[lang_code][dataset_name]:
                 feature_indices = None
