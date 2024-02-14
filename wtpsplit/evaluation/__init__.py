@@ -58,11 +58,7 @@ def evaluate_sentences(lang_code, sentences, predicted_sentences):
         # pairwise: ignore end-of-text label
         # only correct if we correctly predict the single newline in between the sentence pair
         # --> no false positives, no false negatives allowed!
-        "correct_pairwise": (
-            (np.where(labels[:-1] == 1)[0] == predicted_end_indices[:-1]).all()
-            if len(predicted_end_indices) > 1
-            else False
-        ),
+        "correct_pairwise": np.all(labels[:-1] == predictions[:-1]),
     }
 
 
