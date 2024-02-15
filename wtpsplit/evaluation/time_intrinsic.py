@@ -39,6 +39,7 @@ def benchmark_strides(low_stride, high_stride, args):
                 "max_n_train_sentences": args.max_n_train_sentences,
             }
         )
+        print(results_data)
 
     return pd.DataFrame(results_data)
 
@@ -73,5 +74,5 @@ if __name__ == "__main__":
     # Optionally save df_results to a file
     # to csv
     df_results.to_csv(
-        f"timing_results_{args.model_path.replace('/','__')}_batch{args.batch_size}_b{args.block_size}+s{args.stride}_u{args.threshold}_AVG.csv"
+        f"timing_results_{args.model_path.replace('/','__')}_batch{args.batch_size}_b{args.block_size}+s{args.stride}_n{args.max_n_train_sentences}_u{args.threshold}_AVG.csv"
     )

@@ -267,14 +267,17 @@ def main(args):
                 "t": score_t,
                 "punct": score_punct,
             }
+            
+            if score_u is not None:
+                u_scores.append((score_u, lang_code))
+            if score_t is not None:
+                t_scores.append((score_t, lang_code))
+            if score_punct is not None:
+                punct_scores.append((score_punct, lang_code))
 
             # just for printing
             score_t = score_t or 0.0
             score_punct = score_punct or 0.0
-
-            u_scores.append((score_u, lang_code))
-            t_scores.append((score_t, lang_code))
-            punct_scores.append((score_punct, lang_code))
             print(f"{lang_code} {dataset_name} {score_u:.3f} {score_t:.3f} {score_punct:.3f}")
 
     # Compute statistics for each metric across all languages
