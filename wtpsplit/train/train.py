@@ -40,8 +40,6 @@ from wtpsplit.train.utils import Model, cleanup_cache_files
 logger = logging.getLogger(__name__)
 
 
-# TODO: double-check checkpointing and saving (also to txt)
-
 # os.environ["PJRT_DEVICE"] = "None"
 
 
@@ -186,7 +184,6 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
         "language_ids": torch.tensor(all_language_ids, dtype=torch.long),
         "label_weights": torch.stack(all_label_weights, 0),
         "labels": torch.stack(all_labels, 0),
-        "lookahead": args.lookahead,
     }
 
     return out
@@ -214,6 +211,7 @@ def main():
                 args.model_name_or_path,
                 num_hidden_layers=args.num_hidden_layers,
                 num_labels=num_labels,
+                lookahead=args.lookahead,
             )
             backbone = SubwordXLMForTokenClassification(config)
 
@@ -222,6 +220,7 @@ def main():
                 args.model_name_or_path,
                 num_hidden_layers=args.num_hidden_layers,
                 num_labels=num_labels,
+                lookahead=args.lookahead,
             )
             backbone = SubwordXLMForTokenClassification.from_pretrained(
                 args.model_name_or_path,
@@ -236,6 +235,9 @@ def main():
         # used later to filter out special tokens
         special_tokens_ids = set(tokenizer.all_special_ids)
         special_tokens_ids.discard(custom_token_id)
+        if args.lookahead:
+            assert args.lookahead % args.num_hidden_layers == 0
+
 
     else:
         tokenizer = None
@@ -265,7 +267,8 @@ def main():
             backbone = LACanineForTokenClassification.from_pretrained(
                 args.model_name_or_path, ignore_mismatched_sizes=True, config=config
             )
-
+            
+            
     model = Model(
         backbone,
         loss_margin=args.loss_margin,
@@ -637,13 +640,13 @@ def main():
     training_args.adapter_lr_multiplier = args.adapter_lr_multiplier
 
     # give .map in multiprocessing enough of time to finish, to be safe
-    time.sleep(10)
-    if training_args.local_rank == 0:
-        # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
-        # because that would remove the cache files of the other dataset!
-        cleanup_cache_files([train_dataset, valid_dataset])
-        logger.warning("Cleaned up cache files.")
-    time.sleep(10)
+    # time.sleep(10)
+    # if training_args.local_rank == 0:
+    #     # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
+    #     # because that would remove the cache files of the other dataset!
+    #     cleanup_cache_files([train_dataset, valid_dataset])
+    #     logger.warning("Cleaned up cache files.")
+    # time.sleep(10)
 
     trainer = Trainer(
         model,

@@ -840,7 +840,6 @@ class LACanineForTokenClassification(CanineForTokenClassification):
         output_hidden_states: Optional[bool] = None,
         hashed_ids: Optional[torch.Tensor] = None,
         return_dict: Optional[bool] = None,
-        lookahead: Optional[int] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
@@ -1006,7 +1005,6 @@ class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
         hashed_ids: Optional[torch.Tensor] = None,
         language_ids=None,
         return_dict: Optional[bool] = None,
-        lookahead: Optional[int] = None,
     ) -> Union[Tuple[torch.Tensor], TokenClassifierOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
@@ -1024,7 +1022,6 @@ class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
-            lookahead=lookahead,
         )
 
         sequence_output = outputs[0]
@@ -1063,6 +1060,9 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
         self.encoder = XLMRobertaEncoder(config)
 
         self.pooler = XLMRobertaPooler(config) if add_pooling_layer else None
+        self.effective_lookahead = (
+            config.lookahead // config.num_hidden_layers if config.lookahead is not None else None
+        )
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1083,7 +1083,6 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-        lookahead: Optional[int] = None,
     ) -> Union[Tuple[torch.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
         encoder_hidden_states  (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
@@ -1144,7 +1143,9 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        extended_attention_mask: torch.Tensor = self.get_extended_attention_mask(attention_mask, input_shape, lookahead)
+        extended_attention_mask: torch.Tensor = self.get_extended_attention_mask(
+            attention_mask, input_shape, self.effective_lookahead
+        )
 
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
@@ -1289,7 +1290,7 @@ if __name__ == "__main__":
     print(summary(backbone, depth=4))
 
     # some sample input
-    text = "A sentence.\n And"
+    text = "A sentence. Now we move on. And on and this is the last sentence. Now, we are starting to move on to the next sentence. This is the last sentence."
     tokenizer = AutoTokenizer.from_pretrained(model_str)
 
     tokens = tokenizer(text, return_tensors="pt", add_special_tokens=False, pad_to_multiple_of=512, padding=True)
@@ -1301,5 +1302,4 @@ if __name__ == "__main__":
     print(tokens)
     
     # forward pass
-    lookahead = 512
-    print(backbone(**tokens, lookahead=lookahead))
+    print(backbone(**tokens))
