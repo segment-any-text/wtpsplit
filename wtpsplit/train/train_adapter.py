@@ -356,8 +356,6 @@ def main():
     for lang in data.keys():
         if lang in args.include_languages:
             for dataset_name in data[lang]["sentence"].keys():
-                if "a" in lang or "b" in lang or "cs" in lang:
-                    continue
                 # do model stuff here; otherwise, head params would be overwritten every time
                 backbone = SubwordXLMForTokenClassification.from_pretrained(
                     args.model_name_or_path, config=config, ignore_mismatched_sizes=True
@@ -446,7 +444,7 @@ def main():
                             eval_data,
                             model,
                             stride=64,
-                            block_size=512,
+                            block_size=512,  ## TODO: change to args version x2?
                             batch_size=training_args.per_device_eval_batch_size,
                         )
                         metrics[f"{lang}_{dataset_name}_pr_auc"] = score
@@ -495,7 +493,7 @@ def main():
                 with training_args.main_process_first():
                     if not os.path.exists(os.path.join(training_args.output_dir, dataset_name, lang)):
                         os.makedirs(os.path.join(training_args.output_dir, dataset_name, lang))
-                    save_model = copy.deepcopy(model)
+                    save_model = copy.deepcopy(model.backbone)
                     save_model = save_model.to("cpu")
                     save_model.to("cpu").save_adapter(
                         adapter_name="text",
@@ -509,6 +507,7 @@ def main():
 
 # TODO: try 1. double aux, 2. no aux at all (new head?), 3. no aux training but use_aux 4. higher/different aux prob
 # TODO: try freezing head
+# TODO: faster safe?!
 
 
 def _mp_fn(index):
