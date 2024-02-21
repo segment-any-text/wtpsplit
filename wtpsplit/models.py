@@ -1300,6 +1300,6 @@ if __name__ == "__main__":
     print(tokenizer.tokenize(text))
     print(tokenizer.encode(text))
     print(tokens)
-    
+
     # forward pass
     print(backbone(**tokens))

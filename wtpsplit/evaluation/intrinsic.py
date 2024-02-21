@@ -12,6 +12,7 @@ from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForTokenClassification, HfArgumentParser
 import numpy as np
+import adapters
 
 import wtpsplit.models  # noqa: F401
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture, token_to_char_probs
@@ -22,6 +23,7 @@ from wtpsplit.utils import Constants
 @dataclass
 class Args:
     model_path: str
+    adapter_path: str = None
     # eval data in the format:
     # {
     #    "<lang_code>": {
@@ -116,6 +118,8 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
             # valid data
             if valid_data is not None and "valid" not in lang_group:
+                if args.adapter_path:
+                    raise NotImplementedError("Adapters not supported for valid data")
                 valid_sentences = [sample["text"].strip() for sample in valid_data if sample["lang"] == lang_code]
                 assert len(valid_sentences) > 0
 
@@ -132,6 +136,17 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
             # eval data
             for dataset_name, dataset in eval_data[lang_code]["sentence"].items():
+                try:
+                    if args.adapter_path:
+                        model.model.load_adapter(
+                            args.adapter_path + "/" + dataset_name + "/" + lang_code,
+                            set_active=True,
+                            with_head=True,
+                            load_as="text",
+                        )
+                except Exception as e:
+                    print(f"Error loading adapter for {dataset_name} in {lang_code}: {e}")
+                    continue
                 print(dataset_name)
                 if dataset_name not in lang_group:
                     dset_group = lang_group.create_group(dataset_name)
@@ -194,8 +209,11 @@ def compute_statistics(values):
 
 
 def main(args):
+    save_model_path = args.model_path
+    if args.adapter_path:
+        save_model_path = args.adapter_path
     save_str = (
-        f"{args.model_path.replace('/','_')}_b{args.block_size}_s{args.stride}_u{args.threshold}{args.save_suffix}"
+        f"{save_model_path.replace('/','_')}_b{args.block_size}_s{args.stride}_u{args.threshold}{args.save_suffix}"
     )
     if args.do_lowercase:
         save_str += "_lc"
@@ -210,6 +228,13 @@ def main(args):
 
     print("Loading model...")
     model = PyTorchWrapper(AutoModelForTokenClassification.from_pretrained(args.model_path).to(args.device))
+    if args.adapter_path:
+        model_type = model.model.config.model_type
+        # adapters need xlm-roberta as model type.
+        model.model.config.model_type = "xlm-roberta"
+        adapters.init(model.model)
+        # reset model type (used later)
+        model.model.config.model_type = model_type
 
     # first, logits for everything.
     f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data, save_str)
@@ -267,7 +292,7 @@ def main(args):
                 "t": score_t,
                 "punct": score_punct,
             }
-            
+
             if score_u is not None:
                 u_scores.append((score_u, lang_code))
             if score_t is not None:

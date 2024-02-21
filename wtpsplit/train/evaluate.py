@@ -1,4 +1,3 @@
-import copy
 import logging
 import sys
 
@@ -7,10 +6,10 @@ import pysbd
 import sklearn.metrics
 
 from wtpsplit.evaluation import token_to_char_probs
+from wtpsplit.evaluation.intrinsic import corrupt
 from wtpsplit.evaluation.intrinsic_pairwise import generate_pairs, process_logits_pairwise
 from wtpsplit.extract import PyTorchWrapper, extract
-from wtpsplit.utils import Constants
-from wtpsplit.evaluation.intrinsic import corrupt
+from wtpsplit.utils import Constants, sigmoid
 
 logger = logging.getLogger(__name__)
 
@@ -38,20 +37,32 @@ def compute_f1(pred, true):
     )
 
 
-def get_metrics(labels, preds):
+def get_metrics(labels, preds, threshold: float = 0.01):
+    # Compute precision-recall curve and AUC
     precision, recall, thresholds = sklearn.metrics.precision_recall_curve(labels, preds)
-
-    # we can use raw logits (no sigmoid) since we only care about the ordering here
     pr_auc = sklearn.metrics.auc(recall, precision)
 
-    metrics = {
-        "pr_auc": pr_auc,
-    }
+    # Compute F1 scores for all thresholds
+    f1_scores = 2 * (precision * recall) / (precision + recall + 1e-10)
+
+    # Find best F1 score and its corresponding threshold
+    best_f1_index = np.argmax(f1_scores[:-1])  # Exclude last value because it corresponds to recall of 0.
+    best_f1 = f1_scores[best_f1_index]
+    best_threshold = thresholds[best_f1_index]
+
+    # Compute F1 score for a specific threshold (e.g., 0.01 after applying sigmoid)
+    f1_at_specific_threshold = sklearn.metrics.f1_score(labels, sigmoid(preds) > threshold)
+
+    metrics = {"pr_auc": pr_auc}
     info = {
         "probs": preds,
         "labels": labels,
         "recalls": recall,
         "precisions": precision,
+        "f1_scores": f1_scores,
+        "f1_best": best_f1,
+        "threshold_best": sigmoid(best_threshold).item(),
+        "f1": f1_at_specific_threshold,
         "thresholds": thresholds,
     }
 
@@ -141,7 +152,6 @@ def evaluate_sentence_pairwise(
     metrics_list = []
     accuracy_list = []
 
-
     # get pairs of sentences (non-overlapping)
     sampled_pairs = generate_pairs(
         sentences=sentences,
@@ -164,7 +174,6 @@ def evaluate_sentence_pairwise(
 
     # simulate performance for WtP-U
     DEFAULT_THRESHOLD = 0.01
-    
 
     for i, (sentence1, sentence2) in enumerate(sampled_pairs):
         newline_probs = logits[i][:, positive_index]

@@ -132,8 +132,31 @@ def get_subword_label_dict(label_args, tokenizer):
     return label_dict
 
 
-def sigmoid(x):
+# numerically more stable sigmoid taken from 
+# https://stackoverflow.com/questions/51976461/optimal-way-of-defining-a-numerically-stable-sigmoid-function-for-a-list-in-pyth
+def _positive_sigmoid(x):
     return 1 / (1 + np.exp(-x))
+
+
+def _negative_sigmoid(x):
+    # Cache exp so you won't have to calculate it twice
+    exp = np.exp(x)
+    return exp / (exp + 1)
+
+
+def sigmoid(x):
+    positive = x >= 0
+    # Boolean array inversion is faster than another comparison
+    negative = ~positive
+
+    # empty contains junk hence will be faster to allocate
+    # Zeros has to zero-out the array after allocation, no need for that
+    # See comment to the answer when it comes to dtype
+    result = np.empty_like(x, dtype=np.float)
+    result[positive] = _positive_sigmoid(x[positive])
+    result[negative] = _negative_sigmoid(x[negative])
+
+    return result
 
 
 def encode(text):
