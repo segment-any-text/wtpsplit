@@ -259,6 +259,9 @@ def main(args):
                 corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
                 for sentence in sentences
             ]
+            # check if f[lang_code][dataset_name] exists
+            if lang_code not in f or dataset_name not in f[lang_code]:
+                continue
 
             if "train_logits" in f[lang_code][dataset_name]:
                 feature_indices = None
