@@ -25,21 +25,22 @@ import adapters
 import wandb
 from adapters import AdapterArguments
 from wtpsplit.models import SubwordXLMConfig, SubwordXLMForTokenClassification
+from wtpsplit.train.adapter_utils import (
+    ParallelTPUAdapterTrainingArguments as TrainingArguments,
+)
+from wtpsplit.train.adapter_utils import (
+    ParallelTPUWandbCallback as WandbCallback,
+)
 from wtpsplit.train.adaptertrainer import AdapterTrainer
 from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.train import collate_fn
 from wtpsplit.train.utils import Model
 from wtpsplit.utils import Constants, LabelArgs, get_label_dict, get_subword_label_dict
-from wtpsplit.train.adapter_utils import (
-    ParallelTPUAdapterTrainingArguments as TrainingArguments,
-    ParallelTPUWandbCallback as WandbCallback,
-)
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def setup_logging(training_args, job_id=None) -> None:
-    # TODO: log saving based on folders
     # Generate a unique logger name based on the job_id or process identifier
     unique_logger_name = f"{__name__}.{job_id}" if job_id is not None else __name__
     logger = logging.getLogger(unique_logger_name)
@@ -241,7 +242,7 @@ def main(
                     p.requires_grad = False
         if args.clf_from_scratch:
             model.backbone.classifier = torch.nn.Linear(model.backbone.config.hidden_size, num_labels)
-            
+
         trainer = AdapterTrainer(
             model,
             training_args,
@@ -257,9 +258,9 @@ def main(
             ),
             logging_prefix=f"{dataset_name}/{lang}/",
         )
-        if callbacks:   
+        if callbacks:
             trainer.add_callback(callbacks)
-        
+
         logger.warning(f"{tpu_core_idx}: START TRAIN {lang} {dataset_name}.")
         # wait until all TPUs are ready
         xm.rendezvous("start_training")
@@ -674,11 +675,8 @@ if __name__ == "__main__":
         nprocs=8,
     )
 
-# FIXME: integrate trainer, training_args (world!)
-# FIXME: grouping for TPUs: 1k, 10k, ...
-# TODO: what if very different token distribution? check & fix - duplicate data?
-# TODO: accomodate last batch (or, generally, leverage division by 8)
+# TODO: check grouping for TPUs: 1k, 10k, ...; what is most sensible?
 
 # TODO: see if shuffle x1, shuffle x num_epochs, or no shuffle is best
 # TODO: double-check effect of non_punctuation_sample_ratio
-# TODO: try Benjamin's idea: freeze head, add clf on top
+# TODO: try: freeze head, add clf on top (or do not freeze head, diff LR, etc.)

@@ -72,7 +72,9 @@ def main():
     setup_logging(training_args)
     set_seed(training_args.seed)
 
-    num_labels = Constants.AUX_OFFSET + ((1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0)
+    num_labels = Constants.AUX_OFFSET + (
+        (1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training or label_args.use_auxiliary else 0
+    )
     config = SubwordXLMConfig.from_pretrained(
         args.model_name_or_path,
         num_labels=num_labels,
@@ -349,7 +351,7 @@ def main():
         wandb.config.update(args)
         wandb.config.update(training_args)
         wandb.config.update(label_args)
-        
+
         for file in glob(os.path.join(os.path.dirname(__file__), "*.py")):
             wandb.save(os.path.abspath(file), policy="now")
 
@@ -488,7 +490,6 @@ def main():
                     ),
                     logging_suffix=f"{lang}_{dataset_name}",
                 )
-
                 trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
                 with training_args.main_process_first():
                     if not os.path.exists(os.path.join(training_args.output_dir, dataset_name, lang)):
@@ -500,15 +501,6 @@ def main():
                         save_directory=os.path.join(training_args.output_dir, dataset_name, lang),
                         with_head=True,
                     )
-
-
-# TODO: at end, do full eval?
-# TODO: multi-TPU training - split up?
-
-# TODO: try 1. double aux, 2. no aux at all (new head?), 3. no aux training but use_aux 4. higher/different aux prob
-# TODO: try freezing head
-# TODO: faster safe?!
-
 
 def _mp_fn(index):
     # For xla_spawn (TPUs)
