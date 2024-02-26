@@ -110,7 +110,7 @@ def get_subword_label_dict(label_args, tokenizer):
 
     n_unks = 0
     # Map auxiliary characters to token IDs with labels
-    logger.warning(f"Using {Constants.PUNCTUATION_CHARS} auxiliary characters.")
+    logger.info(f"Using {Constants.PUNCTUATION_CHARS} auxiliary characters.")
     for i, c in enumerate(Constants.PUNCTUATION_CHARS):
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.AUX_OFFSET + i
@@ -120,7 +120,7 @@ def get_subword_label_dict(label_args, tokenizer):
         if token_id == tokenizer.unk_token_id:
             n_unks += 1
 
-    logger.warning(f"found {n_unks} UNK tokens in auxiliary characters")
+    logger.info(f"found {n_unks} UNK tokens in auxiliary characters")
 
     # Map newline characters to token IDs with labels
     for c in label_args.newline_chars:

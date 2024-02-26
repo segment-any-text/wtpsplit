@@ -17,5 +17,7 @@ data_subset/**
 *.html
 *.csv
 *.png
+*.txt
+*.log
 xlmr-*/**
 **/checkpoint-*/**
