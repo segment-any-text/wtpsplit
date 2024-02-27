@@ -115,6 +115,7 @@ class Args:
     clf_from_scratch: bool = False
     do_process: bool = False
     n_train_steps: List[int] = field(default_factory=lambda: [1000, 10000, 100000])
+    meta_clf: bool = False
 
 
 def main(
@@ -140,7 +141,7 @@ def main(
     )
     config = SubwordXLMConfig.from_pretrained(
         args.model_name_or_path,
-        num_labels=num_labels,
+        num_labels=num_labels if not args.meta_clf else 1,
     )
 
     # 1 wandb run for all language-dataset combinations
@@ -242,6 +243,12 @@ def main(
                     p.requires_grad = False
         if args.clf_from_scratch:
             model.backbone.classifier = torch.nn.Linear(model.backbone.config.hidden_size, num_labels)
+        if args.meta_clf:
+            clf = model.backbone.classifier
+            model.backbone.classifier = torch.nn.Sequential(
+                clf,  # original classifier - if frozen above, also frozen here
+                torch.nn.Linear(clf.out_features, num_labels)
+            )
 
         trainer = AdapterTrainer(
             model,
