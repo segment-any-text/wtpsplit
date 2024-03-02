@@ -144,6 +144,14 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                             with_head=True,
                             load_as="text",
                         )
+                    if hasattr(model.model.config, "unfreeze_ln"):
+                        if model.model.config.unfreeze_ln:
+                            ln_dict = torch.load(
+                                args.adapter_path + "/" + dataset_name + "/" + lang_code + "/ln_dict.pth"
+                            )
+                            for n, p in model.backbone.named_parameters():
+                                if "LayerNorm" in n:
+                                    p.data = ln_dict[n].data
                 except Exception as e:
                     print(f"Error loading adapter for {dataset_name} in {lang_code}: {e}")
                     continue
