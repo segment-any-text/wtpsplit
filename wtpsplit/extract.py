@@ -174,7 +174,7 @@ def extract(
         np.zeros(
             (
                 length,
-                model.classifier.out_features
+                model.config.num_labels
             ),
             dtype=np.float16,
         )
