@@ -36,6 +36,7 @@ from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.train import collate_fn
 from wtpsplit.train.utils import Model
 from wtpsplit.utils import Constants, LabelArgs, get_label_dict, get_subword_label_dict
+from wtpsplit.evaluation.intrinsic import corrupt
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -117,6 +118,9 @@ class Args:
     do_process: bool = False
     n_train_steps: List[int] = field(default_factory=lambda: [1000, 10000, 100000])
     meta_clf: bool = False
+    # corruption
+    do_lowercase: bool = False
+    do_remove_punct: bool = False
 
 
 def main(
@@ -226,6 +230,23 @@ def main(
             metrics[f"{dataset_name}/{lang}/f1"] = info["f1"]
             metrics[f"{dataset_name}/{lang}/f1_best"] = info["f1_best"]
             metrics[f"{dataset_name}/{lang}/threshold_best"] = info["threshold_best"]
+            if args.do_lowercase and args.do_remove_punct: 
+                score_corrupted, info_corrupted = evaluate_sentence(
+                    lang,
+                    eval_data,
+                    model,
+                    stride=64,
+                    block_size=512,
+                    batch_size=training_args.per_device_eval_batch_size,
+                    do_lowercase=True,
+                    do_remove_punct=True    
+                )
+                metrics[f"{dataset_name}/{lang}/corrupted/pr_auc"] = score_corrupted
+                metrics[f"{dataset_name}/{lang}/corrupted/f1"] = info_corrupted["f1"]
+                metrics[f"{dataset_name}/{lang}/corrupted/f1_best"] = info_corrupted["f1_best"]
+                metrics[f"{dataset_name}/{lang}/corrupted/threshold_best"] = info_corrupted["threshold_best"]
+            elif args.do_lowercase or args.do_remove_punct:
+                raise NotImplementedError("Currently we only corrupt both ways!")
             xm.rendezvous("eval log done")
 
             return metrics
@@ -343,6 +364,8 @@ def setup(index):
         dataset_name="ud",
         shuffle=False,
         split="train",
+        do_lowercase=False,
+        do_remove_punct=False,
     ):
         # maybe we use more than 1 lang later at once.
         for lang in include_languages:
@@ -355,7 +378,7 @@ def setup(index):
             dataset = datasets.Dataset.from_list(
                 [
                     {
-                        args.text_column: sample + "\n" if sample and sample[-1] != "\n" else sample,
+                        args.text_column: corrupt(sample, do_lowercase, do_remove_punct) + "\n" if sample and sample[-1] != "\n" else corrupt(sample, do_lowercase, do_remove_punct),
                         "lang": lang,
                         "ends_with_punctuation": sample.endswith(tuple(Constants.PUNCTUATION_CHARS)),
                     }
@@ -562,6 +585,8 @@ def setup(index):
                             dataset_name=dataset_name,
                             shuffle=False,
                             split="valid",
+                            do_lowercase=args.do_lowercase,
+                            do_remove_punct=args.do_remove_punct,
                         )
 
                         train_dataset = prepare_dataset(
@@ -571,6 +596,8 @@ def setup(index):
                             dataset_name=dataset_name,
                             shuffle=args.shuffle,
                             split="train",
+                            do_lowercase=args.do_lowercase,
+                            do_remove_punct=args.do_remove_punct,
                         )
 
                         all_ds["valid"][(lang, dataset_name)] = valid_dataset
