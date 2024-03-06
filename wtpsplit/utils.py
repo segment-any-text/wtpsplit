@@ -114,7 +114,7 @@ def get_subword_label_dict(label_args, tokenizer):
     for i, c in enumerate(Constants.PUNCTUATION_CHARS):
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.AUX_OFFSET + i
-        logger.info(
+        logger.warning(
             f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded: {tokenizer.decode([token_id])}"
         )
         if token_id == tokenizer.unk_token_id:
@@ -126,8 +126,8 @@ def get_subword_label_dict(label_args, tokenizer):
     for c in label_args.newline_chars:
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.NEWLINE_INDEX
-        logger.info(f"newline character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded:")
-        logger.info(f"{tokenizer.decode([token_id])}")
+        logger.warning(f"newline character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded:")
+        logger.warning(f"{tokenizer.decode([token_id])}")
 
     return label_dict
 

@@ -32,7 +32,7 @@ from wtpsplit.train.adapter_utils import (
     ParallelTPUWandbCallback as WandbCallback,
 )
 from wtpsplit.train.adaptertrainer import AdapterTrainer
-from wtpsplit.train.evaluate import evaluate_sentence
+from wtpsplit.train.evaluate import evaluate_sentence, evaluate_sentence_pairwise
 from wtpsplit.train.train import collate_fn
 from wtpsplit.train.utils import Model
 from wtpsplit.utils import Constants, LabelArgs, get_label_dict, get_subword_label_dict
@@ -118,9 +118,11 @@ class Args:
     do_process: bool = False
     n_train_steps: List[int] = field(default_factory=lambda: [1000, 10000, 100000])
     meta_clf: bool = False
+    wandb_project = "sentence"
     # corruption
     do_lowercase: bool = False
     do_remove_punct: bool = False
+    eval_pairwise: bool = False
 
 
 def main(
@@ -151,7 +153,7 @@ def main(
 
     # 1 wandb run for all language-dataset combinations
     if "wandb" in training_args.report_to:
-        wandb.init(name=f"{wandb_name}-{tpu_core_idx}", project="sentence-peft-v2", group=wandb_name)
+        wandb.init(name=f"{wandb_name}-{tpu_core_idx}", project=args.wandb_project, group=wandb_name)
         wandb.config.update(args)
         wandb.config.update(training_args)
         wandb.config.update(label_args)
@@ -207,7 +209,7 @@ def main(
             index = random.choice(range(len(train_ds[(lang, dataset_name)])))
             sample = train_ds[(lang, dataset_name)][index]
 
-            logger.warning(f"TPU {tpu_core_idx}: Sample {index} of the training set: {sample}.")
+            logger.warning(f"{tpu_core_idx}: Sample {index} of the training set: {sample}.")
             if tokenizer:
                 logger.warning(tokenizer.decode(sample["input_ids"]))
             count += 1
@@ -247,6 +249,18 @@ def main(
                 metrics[f"{dataset_name}/{lang}/corrupted/threshold_best"] = info_corrupted["threshold_best"]
             elif args.do_lowercase or args.do_remove_punct:
                 raise NotImplementedError("Currently we only corrupt both ways!")
+            if args.eval_pairwise:
+                score_pairwise, avg_acc = evaluate_sentence_pairwise(
+                    lang,
+                    eval_data,
+                    model,
+                    stride=args.eval_stride,
+                    block_size=args.block_size,
+                    batch_size=training_args.per_device_eval_batch_size,
+                    threshold=0.1,
+                )
+                metrics[f"{dataset_name}/{lang}/pairwise/pr_auc"] = score_pairwise
+                metrics[f"{dataset_name}/{lang}/pairwise/acc"] = avg_acc
             xm.rendezvous("eval log done")
 
             return metrics
@@ -312,7 +326,7 @@ def main(
             save_directory=os.path.join(training_args.output_dir, dataset_name, lang),
             with_head=True,
         )
-        # also save LNs
+
         if args.unfreeze_ln:
             # no way within adapters to do this, need to do it manually
             ln_dict = {n: p for n, p in save_model.named_parameters() if "LayerNorm" in n}
@@ -715,9 +729,26 @@ def setup(index):
     xm.rendezvous("all training done")
     if index == 0:
         # eval here within 1 go
-        os.system(
-            f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.5"
-        )
+        if args.do_lowercase and args.do_remove_punct:
+            os.system(
+                f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --do_lowercase --do_remove_punct"
+            )
+        elif args.eval_pairwise:
+            os.system(
+                f"python3 wtpsplit/evaluation/intrinsic_pairwise.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1"
+           )
+        elif "lines" in args.text_path:
+            os.system(
+                f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1--custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_lines.pt --save_suffix lines"
+            )
+        elif "verses" in args.text_path:
+            os.system(
+                f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_verses_strip_n.pt --save_suffix verses"
+           )
+        else:
+            os.system(
+                f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1"
+            )
 
 
 if __name__ == "__main__":

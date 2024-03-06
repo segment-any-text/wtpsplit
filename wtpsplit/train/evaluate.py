@@ -37,7 +37,7 @@ def compute_f1(pred, true):
     )
 
 
-def get_metrics(labels, preds, threshold: float = 0.5):
+def get_metrics(labels, preds, threshold: float = 0.1):
     # Compute precision-recall curve and AUC
     precision, recall, thresholds = sklearn.metrics.precision_recall_curve(labels, preds)
     pr_auc = sklearn.metrics.auc(recall, precision)
@@ -141,6 +141,7 @@ def evaluate_sentence_pairwise(
     positive_index=None,
     do_lowercase=False,
     do_remove_punct=False,
+    threshold: float = 0.1
 ):
     if positive_index is None:
         positive_index = Constants.NEWLINE_INDEX
@@ -173,7 +174,6 @@ def evaluate_sentence_pairwise(
     )
 
     # simulate performance for WtP-U
-    DEFAULT_THRESHOLD = 0.01
 
     for i, (sentence1, sentence2) in enumerate(sampled_pairs):
         newline_probs = logits[i][:, positive_index]
@@ -188,7 +188,7 @@ def evaluate_sentence_pairwise(
         # Get metrics for the pair
         pair_metrics, _ = get_metrics(newline_labels, newline_probs)
         metrics_list.append(pair_metrics["pr_auc"])
-        predicted_labels = newline_probs > np.log(DEFAULT_THRESHOLD / (1 - DEFAULT_THRESHOLD))  # inverse sigmoid
+        predicted_labels = newline_probs > np.log(threshold / (1 - threshold))  # inverse sigmoid
         # for accuracy, check if the single label in between is correctly predicted (ignore the one at the end)
         if sum(predicted_labels[:-1]) > 0:
             correct = (np.where(newline_labels[:-1])[0] == np.where(predicted_labels[:-1])[0]).all()

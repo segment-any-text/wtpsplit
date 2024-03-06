@@ -6,6 +6,7 @@ import os
 import time
 import random
 import sys
+import logging
 
 import h5py
 import skops.io as sio
@@ -14,6 +15,7 @@ from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForTokenClassification, HfArgumentParser
 import numpy as np
+import adapters
 
 import wtpsplit.models  # noqa: F401
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture, token_to_char_probs
@@ -22,10 +24,13 @@ from wtpsplit.extract_batched import extract_batched
 from wtpsplit.utils import Constants
 from wtpsplit.evaluation.intrinsic import compute_statistics, corrupt
 
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 @dataclass
 class Args:
     model_path: str
+    adapter_path: str = None
     # eval data in the format:
     # {
     #    "<lang_code>": {
@@ -162,6 +167,25 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
             # eval data
             for dataset_name, dataset in eval_data[lang_code]["sentence"].items():
+                try:
+                    if args.adapter_path:
+                        model.model.load_adapter(
+                            args.adapter_path + "/" + dataset_name + "/" + lang_code,
+                            set_active=True,
+                            with_head=True,
+                            load_as="text",
+                        )
+                    if hasattr(model.model.config, "unfreeze_ln"):
+                        if model.model.config.unfreeze_ln:
+                            ln_dict = torch.load(
+                                args.adapter_path + "/" + dataset_name + "/" + lang_code + "/ln_dict.pth"
+                            )
+                            for n, p in model.backbone.named_parameters():
+                                if "LayerNorm" in n:
+                                    p.data = ln_dict[n].data
+                except Exception as e:
+                    print(f"Error loading adapter for {dataset_name} in {lang_code}: {e}")
+                    continue
                 print(dataset_name)
                 if dataset_name not in lang_group:
                     dset_group = lang_group.create_group(dataset_name)
@@ -246,7 +270,12 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
 
 def main(args):
-    save_str = f"{args.model_path.replace('/','_')}_b{args.block_size}_u{args.threshold}{args.save_suffix}"
+    save_model_path = args.model_path
+    if args.adapter_path:
+        save_model_path = args.adapter_path
+    save_str = (
+        f"{save_model_path.replace('/','_')}_b{args.block_size}_u{args.threshold}{args.save_suffix}"
+    )    
     if args.do_lowercase:
         save_str += "_lc"
     if args.do_remove_punct:
@@ -260,7 +289,20 @@ def main(args):
 
     print("Loading model...")
     model = PyTorchWrapper(AutoModelForTokenClassification.from_pretrained(args.model_path).to(args.device))
-
+    if args.adapter_path:
+        model_type = model.model.config.model_type
+        # adapters need xlm-roberta as model type.
+        model.model.config.model_type = "xlm-roberta"
+        adapters.init(model.model)
+        # reset model type (used later)
+        model.model.config.model_type = model_type
+        if "meta-clf" in args.adapter_path:
+            clf = model.model.classifier
+            model.model.classifier = torch.nn.Sequential(
+                clf,
+                torch.nn.Linear(clf.out_features, 1)
+            )
+            
     # first, logits for everything.
     f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data, save_str)
 
