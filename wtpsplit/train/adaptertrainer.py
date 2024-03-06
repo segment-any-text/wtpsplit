@@ -981,7 +981,7 @@ class AdapterTrainer(Trainer):
             all_inputs = nested_truncate(all_inputs, num_samples)
 
         # Metrics!
-        # MODIFIED: removed sincedone in compute_metrics
+        # MODIFIED: removed since done in compute_metrics
         # xm.rendezvous("eval_metrics")
         # MODIFIED: always compute metrics
         if self.compute_metrics is not None:

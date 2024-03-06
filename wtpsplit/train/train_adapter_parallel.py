@@ -118,7 +118,7 @@ class Args:
     do_process: bool = False
     n_train_steps: List[int] = field(default_factory=lambda: [1000, 10000, 100000])
     meta_clf: bool = False
-    wandb_project = "sentence"
+    wandb_project: str = "sentence"
     # corruption
     do_lowercase: bool = False
     do_remove_punct: bool = False
@@ -305,6 +305,7 @@ def main(
                 label_args=label_args,
                 label_dict=label_dict,
                 tokenizer=tokenizer,
+                add_lang_ids=False
             ),
             logging_prefix=f"{dataset_name}/{lang}/",
         )
@@ -738,13 +739,23 @@ def setup(index):
                 f"python3 wtpsplit/evaluation/intrinsic_pairwise.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1"
            )
         elif "lines" in args.text_path:
-            os.system(
-                f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1--custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_lines.pt --save_suffix lines"
-            )
+            if args.do_lowercase and args.do_remove_punct:
+                os.system(
+                    f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1--custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_lines.pt --save_suffix lines --do_lowercase --do_remove_punct"
+                )
+            else:
+                os.system(
+                    f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1--custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_lines.pt --save_suffix lines"
+                )
         elif "verses" in args.text_path:
-            os.system(
-                f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_verses_strip_n.pt --save_suffix verses"
-           )
+            if args.do_lowercase and args.do_remove_punct:
+                os.system(
+                        f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_verses_strip_n.pt --save_suffix verses --do_lowercase --do_remove_punct"
+                )
+            else:
+                os.system(
+                    f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_verses_strip_n.pt --save_suffix verses"
+                )
         else:
             os.system(
                 f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1"

@@ -1,6 +1,7 @@
 {
     "model_name_or_path": "xlmr-normal-p-v3",
-    "output_dir": "xlmr-3l-v3_adapter_rf32_ep20_v2_100-1k-10k_lines",
+    "output_dir": "xlmr-3l-v3_adapter_rf32_ep20_v2_100-1k-10k_lines_corrupted",
+    "text_path": "data/lyrics_lines.pt",
     "block_size": 256,
     "eval_stride": 128,
     "do_train": true,

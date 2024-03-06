@@ -103,7 +103,7 @@ class Args:
     use_subwords: bool = False
 
 
-def collate_fn(batch, args, label_args, label_dict, tokenizer):
+def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: bool = False):
     all_input_ids = []
     all_labels = []
     all_language_ids = []
@@ -172,7 +172,7 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer):
         all_input_ids.append(input_ids)
         all_label_weights.append(label_weights)
         all_labels.append(labels)
-        all_language_ids.append(Constants.LANG_CODE_TO_INDEX[lang])
+        all_language_ids.append(Constants.LANG_CODE_TO_INDEX[lang] if add_lang_ids else 0)
 
         all_attention_masks.append(attention_mask)
         all_position_ids.append(position_ids)
