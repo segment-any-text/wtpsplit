@@ -123,6 +123,7 @@ class Args:
     do_lowercase: bool = False
     do_remove_punct: bool = False
     eval_pairwise: bool = False
+    skip_eval_loss: bool = False
 
 
 def main(
@@ -308,6 +309,7 @@ def main(
                 add_lang_ids=False
             ),
             logging_prefix=f"{dataset_name}/{lang}/",
+            skip_eval_loss=args.skip_eval_loss
         )
         if callbacks:
             trainer.add_callback(callbacks)
