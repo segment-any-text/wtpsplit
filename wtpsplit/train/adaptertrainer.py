@@ -806,22 +806,22 @@ class AdapterTrainer(Trainer):
         """
         args = self.args
         
+        prediction_loss_only = prediction_loss_only if prediction_loss_only is not None else args.prediction_loss_only
+
+        # if eval is called w/o train init deepspeed here
+        if args.deepspeed and not self.deepspeed:
+            # XXX: eval doesn't have `resume_from_checkpoint` arg but we should be able to do eval
+            # from the checkpoint eventually
+            deepspeed_engine, _, _ = deepspeed_init(
+                self, num_training_steps=0, resume_from_checkpoint=None, inference=True
+            )
+            self.model = deepspeed_engine.module
+            self.model_wrapped = deepspeed_engine
+            self.deepspeed = deepspeed_engine
+
+        model = self._wrap_model(self.model, training=False, dataloader=dataloader)
+        
         if not self.skip_eval_loss:
-            prediction_loss_only = prediction_loss_only if prediction_loss_only is not None else args.prediction_loss_only
-
-            # if eval is called w/o train init deepspeed here
-            if args.deepspeed and not self.deepspeed:
-                # XXX: eval doesn't have `resume_from_checkpoint` arg but we should be able to do eval
-                # from the checkpoint eventually
-                deepspeed_engine, _, _ = deepspeed_init(
-                    self, num_training_steps=0, resume_from_checkpoint=None, inference=True
-                )
-                self.model = deepspeed_engine.module
-                self.model_wrapped = deepspeed_engine
-                self.deepspeed = deepspeed_engine
-
-            model = self._wrap_model(self.model, training=False, dataloader=dataloader)
-
             # if full fp16 or bf16 eval is wanted and this ``evaluation`` or ``predict`` isn't called
             # while ``train`` is running, cast it to the right dtype first and then put on device
             if not self.is_in_train:
@@ -832,7 +832,7 @@ class AdapterTrainer(Trainer):
 
             batch_size = self.args.eval_batch_size
 
-            logger.info(f"***** Running {description} *****")
+            logger.warning(f"***** Running {description} *****")
             if has_length(dataloader):
                 logger.warning(f"  Num examples = {self.num_examples(dataloader)}")
             else:
@@ -983,6 +983,7 @@ class AdapterTrainer(Trainer):
             if all_inputs is not None:
                 all_inputs = nested_truncate(all_inputs, num_samples)
         else:
+            xm.rendezvous("eval_metrics")
             all_losses, all_preds, all_labels, all_inputs, num_samples = None, None, None, None, 0
 
         # Metrics!
