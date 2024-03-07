@@ -1,7 +1,6 @@
 {
     "model_name_or_path": "xlmr-normal-p-v3",
-    "output_dir": "xlmr-3l-v3_adapter_rf32_ep20_v2_100-1k-10k_lines_corrupted",
-    "text_path": "data/lyrics_lines.pt",
+    "output_dir": "xlmr-3l-v3_adapter_rf32_ep30_v2_100-1k-10k_lines_np_no-sl",
     "block_size": 256,
     "eval_stride": 128,
     "do_train": true,
@@ -10,11 +9,12 @@
     "per_device_eval_batch_size": 32,
     "gradient_accumulation_steps": 1,
     "eval_accumulation_steps": 8,
+    "evaluation_strategy": "epoch",
     "dataloader_num_workers": 1,
     "preprocessing_num_workers": 1,
     "learning_rate": 3e-4,
     "fp16": false,
-    "num_train_epochs": 20,
+    "num_train_epochs": 30,
     "logging_steps": 50,
     "report_to": "wandb",
     "wandb_project": "lyrics-peft",
@@ -35,7 +35,7 @@
     "weight_decay": 0.0,
     "auxiliary_remove_prob": 0.0,
     "do_process": true,
-    "n_train_steps": [100, 1000, 10000],
-    "do_lowercase": true,
-    "do_remove_punct": true
+    "text_path": "data/lyrics_lines.pt",
+    "skip_eval_loss": false,
+    "shuffle": false
 }
