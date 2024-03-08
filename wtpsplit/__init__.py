@@ -199,7 +199,7 @@ class WtP:
             input_texts = []
             space_positions = []
 
-            for text in input_texts:
+            for text in outer_batch_texts:
                 if remove_whitespace_before_inference:
                     text_space_positions = []
                     input_text = ""
@@ -217,7 +217,7 @@ class WtP:
                 input_texts.append(input_text)
 
             outer_batch_logits = extract(
-                outer_batch_texts,
+                input_texts,
                 self.model,
                 lang_code=lang_code,
                 stride=stride,
@@ -238,14 +238,14 @@ class WtP:
                     sentence_probs = newline_probs = newline_probability_fn(logits)
 
                 if remove_whitespace_before_inference:
-                    newline_probs, sentence_probs = list(newline_probs), list(sentence_probs)
+                    full_newline_probs, full_sentence_probs = list(newline_probs), list(sentence_probs)
 
-                    for i in space_positions:
-                        newline_probs.insert(i, np.zeros_like(newline_probs[0]))
-                        sentence_probs.insert(i, np.zeros_like(sentence_probs[0]))
+                    for j in space_positions[i]:
+                        full_newline_probs.insert(j, np.zeros_like(newline_probs[0]))
+                        full_sentence_probs.insert(j, np.zeros_like(sentence_probs[0]))
 
-                    newline_probs = np.array(newline_probs)
-                    sentence_probs = np.array(sentence_probs)
+                    newline_probs = np.array(full_newline_probs)
+                    sentence_probs = np.array(full_sentence_probs)
 
                 if return_paragraph_probabilities:
                     yield sentence_probs, newline_probs
