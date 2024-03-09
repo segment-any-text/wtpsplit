@@ -1,6 +1,6 @@
 {
     "model_name_or_path": "xlmr-normal-p-v3",
-    "output_dir": "xlmr-3l-v3_adapter_rf32_ep30_v2_100-1k-10k_lines_np_no-sl",
+    "output_dir": "xlmr-3l-v3_adapter_rf32_ep30_v2_corrupted_np_no-sl",
     "block_size": 256,
     "eval_stride": 128,
     "do_train": true,
@@ -37,5 +37,7 @@
     "do_process": true,
     "text_path": "data/lyrics_lines.pt",
     "skip_eval_loss": false,
-    "shuffle": false
+    "shuffle": false,
+    "do_remove_punct": true,
+    "do_lowercase": true
 }
