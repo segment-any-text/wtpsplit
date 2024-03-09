@@ -114,18 +114,37 @@ def main():
                     dataset = data[lang]["sentence"][dataset_name]["data"]
                 if dataset is None:
                     return None
-                dataset = datasets.Dataset.from_list(
-                    [
-                        {
-                            args.text_column: corrupt(sample, do_lowercase, do_remove_punct) + "\n"
-                            if sample and sample[-1] != "\n"
-                            else corrupt(sample, do_lowercase, do_remove_punct),
-                            "lang": lang,
-                            "ends_with_punctuation": sample.endswith(tuple(Constants.PUNCTUATION_CHARS)),
-                        }
-                        for sample in dataset
-                    ]
-                )
+
+                if args.one_sample_per_line:
+                    processed_dataset = []
+                    for chunk in dataset:
+                        processed_chunk = {}
+                        processed_chunk["lang"] = lang
+                        processed_chunk["ends_with_punctuation"] = chunk[-1].endswith(
+                            tuple(Constants.PUNCTUATION_CHARS)
+                        )
+                        # join all chunks
+                        processed_chunk[args.text_column] = "\n".join(chunk)
+                        # corrupt
+                        processed_chunk[args.text_column] = corrupt(
+                            processed_chunk[args.text_column], do_lowercase, do_remove_punct
+                        )
+                        processed_dataset.append(processed_chunk)
+                    dataset = datasets.Dataset.from_list(processed_dataset)
+
+                else:
+                    dataset = datasets.Dataset.from_list(
+                        [
+                            {
+                                args.text_column: corrupt(sample, do_lowercase, do_remove_punct) + "\n"
+                                if sample and sample[-1] != "\n"
+                                else corrupt(sample, do_lowercase, do_remove_punct),
+                                "lang": lang,
+                                "ends_with_punctuation": sample.endswith(tuple(Constants.PUNCTUATION_CHARS)),
+                            }
+                            for sample in dataset
+                        ]
+                    )
             with training_args.main_process_first():
                 logger.warning(f"Loaded {len(dataset)} examples for {lang} {dataset_name} {split} dataset.")
 
@@ -330,6 +349,18 @@ def main():
                     # a bit hacky but oh well, only drop if sentence
                     remove_columns=["ends_with_punctuation"] if args.text_column == "text" else [],
                 )
+        else:
+            if args.use_subwords:
+                # add back the special tokens for every sample
+                with training_args.main_process_first():
+                    dataset = dataset.map(
+                        lambda x: {
+                            "input_ids": [
+                                tokenizer.convert_tokens_to_ids(tokenizer.bos_token)
+                            ] + x["input_ids"] + [tokenizer.convert_tokens_to_ids(tokenizer.eos_token)]
+                        },
+                        batched=False,
+                    )
 
         return dataset
 
@@ -432,35 +463,44 @@ def main():
                     model = trainer._wrap_model(trainer.model, training=False)
 
                     with training_args.main_process_first():
-                        score, info = evaluate_sentence(
-                            lang,
-                            eval_data,
-                            model,
-                            stride=64,
-                            block_size=512,
-                            batch_size=training_args.per_device_eval_batch_size,
-                        )
+                        if args.one_sample_per_line:
+                            score = []
+                            info = []
+                            for chunk in eval_data:
+                                score_chunk, info_chunk = evaluate_sentence(
+                                    lang,
+                                    chunk,
+                                    model,
+                                    stride=64,
+                                    block_size=512,
+                                    batch_size=training_args.per_device_eval_batch_size,
+                                    do_lowercase=args.do_lowercase,
+                                    do_remove_punct=args.do_remove_punct,
+                                )
+                                score.append(score_chunk)
+                                info.append(info_chunk)
+
+                            score = np.mean(score)
+                            info = {
+                                "f1": np.mean([i["f1"] for i in info]),
+                                "f1_best": np.mean([i["f1_best"] for i in info]),
+                                "threshold_best": np.mean([i["threshold_best"] for i in info]),
+                            }
+                        else:
+                            score, info = evaluate_sentence(
+                                lang,
+                                eval_data,
+                                model,
+                                stride=64,
+                                block_size=512,
+                                batch_size=training_args.per_device_eval_batch_size,
+                                do_lowercase=args.do_lowercase,
+                                do_remove_punct=args.do_remove_punct,
+                            )
                     metrics[f"{dataset_name}/{lang}/pr_auc"] = score
                     metrics[f"{dataset_name}/{lang}/f1"] = info["f1"]
                     metrics[f"{dataset_name}/{lang}/f1_best"] = info["f1_best"]
                     metrics[f"{dataset_name}/{lang}/threshold_best"] = info["threshold_best"]
-                    if args.do_lowercase and args.do_remove_punct:
-                        score_corrupted, info_corrupted = evaluate_sentence(
-                            lang,
-                            eval_data,
-                            model,
-                            stride=64,
-                            block_size=512,
-                            batch_size=training_args.per_device_eval_batch_size,
-                            do_lowercase=True,
-                            do_remove_punct=True,
-                        )
-                        metrics[f"{dataset_name}/{lang}/corrupted/pr_auc"] = score_corrupted
-                        metrics[f"{dataset_name}/{lang}/corrupted/f1"] = info_corrupted["f1"]
-                        metrics[f"{dataset_name}/{lang}/corrupted/f1_best"] = info_corrupted["f1_best"]
-                        metrics[f"{dataset_name}/{lang}/corrupted/threshold_best"] = info_corrupted["threshold_best"]
-                    elif args.do_lowercase or args.do_remove_punct:
-                        raise NotImplementedError("Currently we only corrupt both ways!")
                     if args.eval_pairwise:
                         score_pairwise, avg_acc = evaluate_sentence_pairwise(
                             lang,
@@ -507,6 +547,13 @@ def main():
                         torch.nn.Linear(clf.out_features, 1),
                     )
                     model.backbone.config.num_labels = 1
+                    
+                if args.one_sample_per_line:
+                    # eval only 10x during the entire training
+                    training_args.evaluation_strategy = "steps"
+                    training_args.eval_steps = max(len(train_dataset) // training_args.per_device_train_batch_size, 5)    
+                    # log twice as often
+                    training_args.logging_steps = training_args.eval_steps // 2
 
                 trainer = AdapterTrainer(
                     model,
@@ -539,25 +586,30 @@ def main():
     if training_args.local_rank == 0:
         # eval here within 1 go
         cmd = ""
-        if args.do_lowercase and args.do_remove_punct:
-            cmd = f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --do_lowercase --do_remove_punct"
-        elif args.eval_pairwise:
-            cmd = f"python3 wtpsplit/evaluation/intrinsic_pairwise.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1"
-        elif "lines" in args.text_path:
+
+        if args.eval_pairwise:
+            eval_function = "intrinsic_pairwise"
+        elif args.one_sample_per_line:
+            eval_function = "intrinsic_list"
+        else:
+            eval_function = "intrinsic"
+            cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1"
+        if "lines" in args.text_path:
             if args.do_lowercase and args.do_remove_punct:
-                cmd = f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_lines.pt --save_suffix lines --do_lowercase --do_remove_punct"
+                cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_lines.pt --save_suffix lines --do_lowercase --do_remove_punct"
             else:
-                cmd = f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_lines.pt --save_suffix lines"
+                cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_lines.pt --save_suffix lines"
         elif "verses" in args.text_path:
             if args.do_lowercase and args.do_remove_punct:
-                cmd = f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_verses_strip_n.pt --save_suffix verses --do_lowercase --do_remove_punct"
+                cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_verses_strip_n.pt --save_suffix verses --do_lowercase --do_remove_punct"
             else:
-                cmd = f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_verses_strip_n.pt --save_suffix verses"
+                cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_verses_strip_n.pt --save_suffix verses"
+        elif args.do_lowercase and args.do_remove_punct:
+            cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --do_lowercase --do_remove_punct"
         else:
-            cmd = f"python3 wtpsplit/evaluation/intrinsic.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1"
+            cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1"
         print(cmd)
         os.system(cmd)
-
 
 
 def _mp_fn(index):
