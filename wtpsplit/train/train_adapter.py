@@ -464,55 +464,33 @@ def main():
 
                     with training_args.main_process_first():
                         if args.one_sample_per_line:
-                            score = []
-                            info = []
-                            for chunk in eval_data:
-                                score_chunk, info_chunk = evaluate_sentence(
-                                    lang,
-                                    chunk,
-                                    model,
-                                    stride=64,
-                                    block_size=512,
-                                    batch_size=training_args.per_device_eval_batch_size,
-                                    do_lowercase=args.do_lowercase,
-                                    do_remove_punct=args.do_remove_punct,
-                                )
-                                score.append(score_chunk)
-                                info.append(info_chunk)
-
-                            score = np.mean(score)
-                            info = {
-                                "f1": np.mean([i["f1"] for i in info]),
-                                "f1_best": np.mean([i["f1_best"] for i in info]),
-                                "threshold_best": np.mean([i["threshold_best"] for i in info]),
-                            }
-                        else:
-                            score, info = evaluate_sentence(
-                                lang,
-                                eval_data,
-                                model,
-                                stride=64,
-                                block_size=512,
-                                batch_size=training_args.per_device_eval_batch_size,
-                                do_lowercase=args.do_lowercase,
-                                do_remove_punct=args.do_remove_punct,
-                            )
-                    metrics[f"{dataset_name}/{lang}/pr_auc"] = score
-                    metrics[f"{dataset_name}/{lang}/f1"] = info["f1"]
-                    metrics[f"{dataset_name}/{lang}/f1_best"] = info["f1_best"]
-                    metrics[f"{dataset_name}/{lang}/threshold_best"] = info["threshold_best"]
-                    if args.eval_pairwise:
-                        score_pairwise, avg_acc = evaluate_sentence_pairwise(
+                            eval_data = [item for sublist in eval_data for item in sublist]
+                        score, info = evaluate_sentence(
                             lang,
                             eval_data,
                             model,
-                            stride=args.eval_stride,
-                            block_size=args.block_size,
+                            stride=64,
+                            block_size=512,
                             batch_size=training_args.per_device_eval_batch_size,
-                            threshold=0.1,
+                            do_lowercase=args.do_lowercase,
+                            do_remove_punct=args.do_remove_punct,
                         )
-                        metrics[f"{dataset_name}/{lang}/pairwise/pr_auc"] = score_pairwise
-                        metrics[f"{dataset_name}/{lang}/pairwise/acc"] = avg_acc
+                        metrics[f"{dataset_name}/{lang}/pr_auc"] = score
+                        metrics[f"{dataset_name}/{lang}/f1"] = info["f1"]
+                        metrics[f"{dataset_name}/{lang}/f1_best"] = info["f1_best"]
+                        metrics[f"{dataset_name}/{lang}/threshold_best"] = info["threshold_best"]
+                        if args.eval_pairwise:
+                            score_pairwise, avg_acc = evaluate_sentence_pairwise(
+                                lang,
+                                eval_data,
+                                model,
+                                stride=args.eval_stride,
+                                block_size=args.block_size,
+                                batch_size=training_args.per_device_eval_batch_size,
+                                threshold=0.1,
+                            )
+                            metrics[f"{dataset_name}/{lang}/pairwise/pr_auc"] = score_pairwise
+                            metrics[f"{dataset_name}/{lang}/pairwise/acc"] = avg_acc
 
                     return metrics
 

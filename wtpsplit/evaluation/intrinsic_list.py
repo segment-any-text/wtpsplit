@@ -44,7 +44,7 @@ class Args:
     eval_data_path: str = "data/eval.pth"
     valid_text_path: str = None  # "data/sentence/valid.parquet"
     device: str = "cpu"
-    block_size: int = 512
+    block_size: int = 510
     stride: int = 64
     batch_size: int = 1
     include_langs: List[str] = None
