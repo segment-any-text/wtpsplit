@@ -152,11 +152,14 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"]
+                    
                     test_sentences = [
-                        corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
-                        for sentence in test_sentences
+                        [
+                            corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
+                            for sentence in chunk
+                        ]
+                        for chunk in test_sentences
                     ]
-                    # test_text = Constants.SEPARATORS[lang_code].join(test_sentences)
 
                     start_time = time.time()  # Start timing for test logits processing
                     test_logits = process_logits_list(
@@ -190,8 +193,11 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                 train_sentences = dataset["meta"].get("train_data")
                 if train_sentences is not None and "train_logits" not in dset_group:
                     train_sentences = [
-                        corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
-                        for sentence in train_sentences
+                        [
+                            corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
+                            for sentence in chunk
+                        ]
+                        for chunk in train_sentences
                     ]
                     train_sentences = train_sentences[: args.max_n_train_sentences]
 
@@ -293,8 +299,11 @@ def main(args):
         for dataset_name, dataset in dsets["sentence"].items():
             sentences = dataset["data"]
             sentences = [
-                corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
-                for sentence in sentences
+                [
+                    corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
+                    for sentence in chunk
+                ]
+                for chunk in sentences
             ]
             # check if f[lang_code][dataset_name] exists
             if lang_code not in f or dataset_name not in f[lang_code]:
