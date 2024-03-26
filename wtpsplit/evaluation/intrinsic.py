@@ -54,6 +54,7 @@ class Args:
     save_suffix: str = ""
     do_lowercase: bool = False
     do_remove_punct: bool = False
+    do_strip: bool = False
 
 
 def process_logits(text, model, lang_code, args):
@@ -166,6 +167,11 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"]
+                    # if list of lists: flatten
+                    if isinstance(test_sentences[0], list):
+                        test_sentences = [item for sublist in test_sentences for item in sublist]
+                    if args.do_strip:
+                        test_sentences = [sentence.lstrip("-").strip() for sentence in test_sentences]
                     test_sentences = [
                         corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
                         for sentence in test_sentences
@@ -184,6 +190,10 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                 train_sentences = dataset["meta"].get("train_data")
                 if train_sentences is not None and "train_logits" not in dset_group:
+                    if isinstance(train_sentences[0], list):
+                        train_sentences = [item for sublist in train_sentences for item in sublist]
+                    if args.do_strip:
+                        train_sentences = [sentence.lstrip("-").strip() for sentence in train_sentences]
                     train_sentences = [
                         corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
                         for sentence in train_sentences
@@ -272,6 +282,10 @@ def main(args):
 
         for dataset_name, dataset in dsets["sentence"].items():
             sentences = dataset["data"]
+            if isinstance(sentences[0], list):
+                sentences = [item for sublist in sentences for item in sublist]
+            if args.do_strip:
+                sentences = [sentence.lstrip("-").strip() for sentence in sentences]
             sentences = [
                 corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
                 for sentence in sentences

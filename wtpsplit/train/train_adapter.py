@@ -133,6 +133,9 @@ def main():
                     dataset = datasets.Dataset.from_list(processed_dataset)
 
                 else:
+                    if isinstance(dataset[0], list):
+                        # flatten
+                        dataset = [item for sublist in dataset for item in sublist]
                     dataset = datasets.Dataset.from_list(
                         [
                             {
@@ -465,6 +468,8 @@ def main():
                     with training_args.main_process_first():
                         if args.one_sample_per_line:
                             eval_data = [item for sublist in eval_data for item in sublist]
+                        elif isinstance(eval_data[0], list):
+                            eval_data = [item for sublist in eval_data for item in sublist]
                         score, info = evaluate_sentence(
                             lang,
                             eval_data,
@@ -579,7 +584,7 @@ def main():
                 cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_lines.pt --save_suffix lines"
         elif "verses" in args.text_path:
             if args.do_lowercase and args.do_remove_punct:
-                cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_verses_strip_n.pt --save_suffix verses --do_lowercase --do_remove_punct"
+                cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_verses_strip_n_single.pt --save_suffix verses --do_lowercase --do_remove_punct"
             else:
                 cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_verses_strip_n.pt --save_suffix verses"
         elif args.do_lowercase and args.do_remove_punct:
