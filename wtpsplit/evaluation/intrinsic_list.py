@@ -55,6 +55,7 @@ class Args:
     do_lowercase: bool = False
     do_remove_punct: bool = False
     do_strip: bool = False
+    tqdm: bool = False
 
 
 def process_logits_list(text, model, lang_code, block_size, stride, batch_size, verbose=True) -> List[np.ndarray]:
@@ -154,7 +155,9 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"]
                     if args.do_strip:
-                        test_sentences = [[sentence.lstrip("-").strip() for sentence in chunk] for chunk in test_sentences]
+                        test_sentences = [
+                            [sentence.lstrip("-").strip() for sentence in chunk] for chunk in test_sentences
+                        ]
                     test_sentences = [
                         [
                             corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
@@ -202,7 +205,9 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                         for chunk in train_sentences
                     ]
                     if args.do_strip:
-                        train_sentences = [[sentence.lstrip("-").strip() for sentence in chunk] for chunk in train_sentences]
+                        train_sentences = [
+                            [sentence.lstrip("-").strip() for sentence in chunk] for chunk in train_sentences
+                        ]
                     train_sentences = train_sentences[: args.max_n_train_sentences]
 
                     train_logits = process_logits_list(
@@ -328,7 +333,7 @@ def main(args):
 
                 score_t = []
                 score_punct = []
-                for i, chunk in enumerate(sentences):
+                for i, chunk in tqdm(enumerate(sentences), total=len(sentences), disable=args.tqdm):
                     start, end = f[lang_code][dataset_name]["test_logit_lengths"][i]
                     single_score_t, single_score_punct, info = evaluate_mixture(
                         lang_code,
@@ -347,7 +352,7 @@ def main(args):
                 score_t = score_punct = None
 
             score_u = []
-            for i, chunk in enumerate(sentences):
+            for i, chunk in tqdm(enumerate(sentences), total=len(sentences), disable=args.tqdm):
                 start, end = f[lang_code][dataset_name]["test_logit_lengths"][i]
                 single_score_u, _, info = evaluate_mixture(
                     lang_code,
