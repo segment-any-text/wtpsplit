@@ -567,16 +567,20 @@ def main():
                     **kwargs,
                 )
                 trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
-                with training_args.main_process_first():
+                logger.warning(f"Finished training for {lang} {dataset_name}.")
+                if training_args.local_rank == 0:
                     if not os.path.exists(os.path.join(training_args.output_dir, dataset_name, lang)):
                         os.makedirs(os.path.join(training_args.output_dir, dataset_name, lang))
                     save_model = copy.deepcopy(model.backbone)
                     save_model = save_model.to("cpu")
-                    save_model.to("cpu").save_adapter(
-                        adapter_name="text",
-                        save_directory=os.path.join(training_args.output_dir, dataset_name, lang),
-                        with_head=True,
-                    )
+                    if adapter_args.train_adapter:
+                        save_model.to("cpu").save_adapter(
+                            adapter_name="text",
+                            save_directory=os.path.join(training_args.output_dir, dataset_name, lang),
+                            with_head=True,
+                        )
+                    else:
+                        save_model.save_pretrained(os.path.join(training_args.output_dir, dataset_name, lang))
     if training_args.local_rank == 0:
         # eval here within 1 go
         cmd = ""
