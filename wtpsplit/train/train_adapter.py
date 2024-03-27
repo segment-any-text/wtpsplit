@@ -22,6 +22,7 @@ from adapters import AdapterArguments
 from wtpsplit.evaluation.intrinsic import corrupt
 from wtpsplit.models import SubwordXLMConfig, SubwordXLMForTokenClassification
 from wtpsplit.train.adaptertrainer import AdapterTrainer
+from wtpsplit.train.trainer import Trainer
 from wtpsplit.train.evaluate import evaluate_sentence, evaluate_sentence_pairwise
 from wtpsplit.train.train import collate_fn, setup_logging
 from wtpsplit.train.utils import Model
@@ -502,12 +503,20 @@ def main():
                 label_dict = (
                     get_subword_label_dict(label_args, tokenizer) if args.use_subwords else get_label_dict(label_args)
                 )
-
-                # init new adapter
-                model.backbone.add_adapter(
-                    "text", config=adapter_args.adapter_config, set_active=True, overwrite_ok=True
-                )
-                model.backbone.train_adapter("text")
+                
+                if adapter_args.train_adapter:
+                    # init new adapter
+                    model.backbone.add_adapter(
+                        "text", config=adapter_args.adapter_config, set_active=True, overwrite_ok=True
+                    )
+                    model.backbone.train_adapter("text")
+                    kwargs = {"logging_prefix": f"{dataset_name}/{lang}/", "skip_eval_loss": args.skip_eval_loss}
+                else:
+                    # needed in the trainer otherwise
+                    training_args.adapter_warmup_steps = args.adapter_warmup_steps
+                    training_args.adapter_lr_multiplier = args.adapter_lr_multiplier
+                    kwargs = {}
+                    
                 with training_args.main_process_first():
                     logger.warning(model.backbone.adapter_summary())
 
@@ -538,7 +547,10 @@ def main():
                     # log twice as often
                     training_args.logging_steps = training_args.eval_steps // 2
 
-                trainer = AdapterTrainer(
+                trainer_cls = AdapterTrainer if adapter_args.train_adapter else Trainer 
+                # add logging_prefix and skip_eval_loss as args to trainer_cls if trainer_cls is AdapterTrainer only
+                    
+                trainer = trainer_cls(
                     model,
                     training_args,
                     train_dataset=train_dataset,
@@ -552,8 +564,7 @@ def main():
                         tokenizer=tokenizer,
                         add_lang_ids=False,
                     ),
-                    logging_prefix=f"{dataset_name}/{lang}/",
-                    skip_eval_loss=args.skip_eval_loss,
+                    **kwargs,
                 )
                 trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
                 with training_args.main_process_first():
