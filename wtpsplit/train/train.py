@@ -534,7 +534,7 @@ def main():
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=args.shuffle,
-        split="valid",
+        split="train",
     )
     logger.warning(f"Train dataset has {len(train_dataset)} examples.")
 
