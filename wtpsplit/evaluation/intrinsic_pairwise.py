@@ -61,14 +61,14 @@ class Args:
     min_pair_length: int = 0
 
 
-def process_logits_pairwise(pairs, model, lang_code, block_size, batch_size, verbose=True) -> List[np.ndarray]:
+def process_logits_k_mers(pairs, model, lang_code, block_size, batch_size, verbose=True) -> List[np.ndarray]:
     logits_list = []
     # create batches of sentence pairs
-    batched_pairs = [pairs[i : i + batch_size] for i in range(0, len(pairs), batch_size)]
-    for batch in tqdm(batched_pairs, disable=not verbose):
-        pair_texts = [pair[0] + Constants.SEPARATORS[lang_code] + pair[1] for pair in batch]
+    batched_k_mers = [pairs[i : i + batch_size] for i in range(0, len(pairs), batch_size)]
+    for batch in tqdm(batched_k_mers, disable=not verbose):
+        k_mer_texts = [Constants.SEPARATORS[lang_code].join(pair) for pair in batch]
         all_logits, offsets_mapping, tokenizer = extract_batched(
-            pair_texts,
+            k_mer_texts,
             model,
             lang_code=lang_code,
             block_size=block_size,
@@ -76,12 +76,12 @@ def process_logits_pairwise(pairs, model, lang_code, block_size, batch_size, ver
             pad_last_batch=True,
         )
 
-        for pair, logit, offset_mapping in zip(pair_texts, all_logits, offsets_mapping):
+        for k_mer, logit, offset_mapping in zip(k_mer_texts, all_logits, offsets_mapping):
             if "xlm" in model.config.model_type:
-                tokens = tokenizer.tokenize(pair, verbose=False)
+                tokens = tokenizer.tokenize(k_mer, verbose=False)
 
                 # padding is also removed here (via offset_mapping)
-                logits = token_to_char_probs(pair, tokens, logit, tokenizer, offset_mapping)
+                logits = token_to_char_probs(k_mer, tokens, logit, tokenizer, offset_mapping)
                 logits_list.append(logits)
             else:
                 if len(logit) < offset_mapping:
@@ -143,6 +143,56 @@ def generate_pairs(
     ]
     return all_pairs
 
+def generate_k_mers(
+    sentences: List[str],
+    k: int,
+    do_lowercase: bool,
+    do_remove_punct: bool,
+    sample_pct: float = 1,
+    max_n_samples: int = sys.maxsize,
+    min_k_mer_length: int = 0,
+) -> List[Tuple[str, ...]]:
+    """Generate k-mers from a list of sentences.
+
+    Args:
+        sentences (List[str]): Input list of sentences.
+        k (int): The number of sentences to include in each k-mer.
+        sample_pct (float): Percentage of k-mers to sample.
+        max_n_samples (int): Maximum number of k-mers to sample.
+        min_k_mer_length (int): Minimum length of a k-mer.
+        do_lowercase (bool): Whether to lowercase the sentences.
+        do_remove_punct (bool): Whether to remove punctuation from the sentences.
+
+    Returns:
+        List[Tuple[str, ...]]: List of k-mers.
+    """
+    random.seed(42)
+    n_k_mers = len(sentences) // k
+    sample_size = min(round(n_k_mers * sample_pct), max_n_samples)
+
+    # Efficient sampling of a subset of all possible k-mers if needed
+    if sample_size < n_k_mers:
+        sampled_indices = set(random.sample(range(n_k_mers), sample_size))
+        all_k_mers = [
+            tuple(sentences[i*k+j] for j in range(k))
+            for i in sampled_indices
+            if sum(len(sentences[i*k+j]) for j in range(k)) > min_k_mer_length
+        ]
+    else:
+        # Generate all k-mers that meet the min_k_mer_length criterion
+        all_k_mers = [
+            tuple(sentences[i+j] for j in range(k))
+            for i in range(0, len(sentences) - k + 1, k)
+            if sum(len(sentences[i+j]) for j in range(k)) > min_k_mer_length
+        ]
+
+    # Apply corruption to k-mers
+    all_k_mers = [
+        tuple(corrupt(sentence, do_lowercase, do_remove_punct) for sentence in k_mer)
+        for k_mer in all_k_mers
+    ]
+
+    return all_k_mers
 
 def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: str = None):
     logits_path = Constants.CACHE_DIR / "intrinsic_pairwise" / f"{save_str}.h5"
@@ -204,7 +254,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     )
 
                     start_time = time.time()  # Start timing for test logits processing
-                    test_logits = process_logits_pairwise(
+                    test_logits = process_logits_k_mers(
                         all_pairs_test,
                         model,
                         lang_code,
@@ -250,7 +300,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                         min_pair_length=args.min_pair_length,
                     )
 
-                    train_logits = process_logits_pairwise(
+                    train_logits = process_logits_k_mers(
                         all_pairs_train, model, lang_code, args.block_size, args.batch_size
                     )
                     train_logits = np.concatenate(train_logits)

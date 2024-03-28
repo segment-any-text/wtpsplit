@@ -32,7 +32,7 @@ from wtpsplit.models import (
     SubwordXLMConfig,
     SubwordXLMForTokenClassification,
 )
-from wtpsplit.train.evaluate import evaluate_sentence, evaluate_sentence_pairwise
+from wtpsplit.train.evaluate import evaluate_sentence, evaluate_sentence_pairwise, evaluate_sentence_kmers
 from wtpsplit.train.trainer import Trainer
 from wtpsplit.utils import Constants, LabelArgs, corrupt, get_label_dict, get_subword_label_dict
 from wtpsplit.train.utils import Model, cleanup_cache_files
@@ -501,13 +501,13 @@ def main():
                 dataset = dataset.rename_column(args.text_column, "input_ids")
         logger.warning(f"Tokenized {split} dataset.")
 
-        if split == "train" and args.use_subwords:
-            with training_args.main_process_first():
-                for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
-                    for file in files:
-                        if file.startswith("m_c4-test-train"):
-                            logger.warning(f"Removing {os.path.join(root, file)}")
-                            os.remove(os.path.join(root, file))
+        # if split == "train" and args.use_subwords:
+        #     with training_args.main_process_first():
+        #         for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
+        #             for file in files:
+        #                 if file.startswith("m_c4-test-train"):
+        #                     logger.warning(f"Removing {os.path.join(root, file)}")
+        #                     os.remove(os.path.join(root, file))
 
         if not args.one_sample_per_line:
             with training_args.main_process_first():
@@ -534,7 +534,7 @@ def main():
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=args.shuffle,
-        split="train",
+        split="valid",
     )
     logger.warning(f"Train dataset has {len(train_dataset)} examples.")
 
@@ -566,54 +566,70 @@ def main():
             if trainer.args.process_index == 0 and args.do_sentence_training:
                 # with training_args.main_process_first():
                 for dataset_name, dataset in lang_data["sentence"].items():
-                    score, _ = evaluate_sentence(
-                        lang_code,
-                        dataset["data"],
-                        model,
-                        stride=args.eval_stride,
-                        block_size=args.block_size,
-                        batch_size=training_args.per_device_eval_batch_size,
-                    )
-                    metrics[f"{lang_code}_{dataset_name}_pr_auc"] = score
-                    avg_metrics[f"average_{dataset_name}_pr_auc"].append(score)
-                    if lang_code in ["zh", "ja", "my", "km"]:
-                        avg_metrics[f"average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
-                    else:
-                        avg_metrics[f"average_whitespace_{dataset_name}_pr_auc"].append(score)
-                    score, _ = evaluate_sentence(
-                        lang_code,
-                        dataset["data"],
-                        model,
-                        stride=args.eval_stride,
-                        block_size=args.block_size,
-                        batch_size=training_args.per_device_eval_batch_size,
-                        do_lowercase=True,
-                        do_remove_punct=True,
-                    )
-                    metrics[f"lower_rmp_{lang_code}_{dataset_name}_pr_auc"] = score
-                    avg_metrics[f"lower_rmp_average_{dataset_name}_pr_auc"].append(score)
-                    if lang_code in ["zh", "ja", "my", "km"]:
-                        avg_metrics[f"lower_rmp_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
-                    else:
-                        avg_metrics[f"lower_rmp_average_whitespace_{dataset_name}_pr_auc"].append(score)
-                    score, avg_acc = evaluate_sentence_pairwise(
-                        lang_code,
-                        dataset["data"],
-                        model,
-                        stride=args.eval_stride,
-                        block_size=args.block_size,
-                        batch_size=training_args.per_device_eval_batch_size,
-                    )
-                    metrics[f"pairwise_{lang_code}_{dataset_name}_pr_auc"] = score
-                    avg_metrics[f"pairwise_average_{dataset_name}_pr_auc"].append(score)
-                    metrics[f"pairwise_{lang_code}_{dataset_name}_acc"] = avg_acc
-                    avg_metrics[f"pairwise_average_{dataset_name}_acc"].append(avg_acc)
-                    if lang_code in ["zh", "ja", "my", "km"]:
-                        avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
-                        avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_acc"].append(avg_acc)
-                    else:
-                        avg_metrics[f"pairwise_average_whitespace_{dataset_name}_pr_auc"].append(score)
-                        avg_metrics[f"pairwise_average_whitespace_{dataset_name}_acc"].append(avg_acc)
+                    # score, _ = evaluate_sentence(
+                    #     lang_code,
+                    #     dataset["data"],
+                    #     model,
+                    #     stride=args.eval_stride,
+                    #     block_size=args.block_size,
+                    #     batch_size=training_args.per_device_eval_batch_size,
+                    # )
+                    # metrics[f"{lang_code}_{dataset_name}_pr_auc"] = score
+                    # avg_metrics[f"average_{dataset_name}_pr_auc"].append(score)
+                    # if lang_code in ["zh", "ja", "my", "km"]:
+                    #     avg_metrics[f"average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
+                    # else:
+                    #     avg_metrics[f"average_whitespace_{dataset_name}_pr_auc"].append(score)
+                    # score, _ = evaluate_sentence(
+                    #     lang_code,
+                    #     dataset["data"],
+                    #     model,
+                    #     stride=args.eval_stride,
+                    #     block_size=args.block_size,
+                    #     batch_size=training_args.per_device_eval_batch_size,
+                    #     do_lowercase=True,
+                    #     do_remove_punct=True,
+                    # )
+                    # metrics[f"lower_rmp_{lang_code}_{dataset_name}_pr_auc"] = score
+                    # avg_metrics[f"lower_rmp_average_{dataset_name}_pr_auc"].append(score)
+                    # if lang_code in ["zh", "ja", "my", "km"]:
+                    #     avg_metrics[f"lower_rmp_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
+                    # else:
+                    #     avg_metrics[f"lower_rmp_average_whitespace_{dataset_name}_pr_auc"].append(score)
+                    # k-mer based evaluation
+                    for k in [2, 3, 4]:
+                        score, avg_acc = evaluate_sentence_kmers(
+                            lang_code,
+                            dataset["data"],
+                            model,
+                            stride=args.eval_stride,
+                            block_size=args.block_size,
+                            batch_size=training_args.per_device_eval_batch_size,
+                            k=k,
+                            # sample_pct=0.1,
+                        )
+                        metrics[f"k_{k}_{lang_code}_{dataset_name}_pr_auc"] = score
+                        avg_metrics[f"k_{k}_average_{dataset_name}_pr_auc"].append(score)
+                        metrics[f"k_{k}_{lang_code}_{dataset_name}_acc"] = avg_acc
+                        avg_metrics[f"k_{k}_average_{dataset_name}_acc"].append(avg_acc)
+                        if lang_code in ["zh", "ja", "my", "km"]:
+                            avg_metrics[f"k_{k}_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
+                            avg_metrics[f"k_{k}_average_nonwhitespace_{dataset_name}_acc"].append(avg_acc)
+                        else:
+                            avg_metrics[f"k_{k}_average_whitespace_{dataset_name}_pr_auc"].append(score)
+                            avg_metrics[f"k_{k}_average_whitespace_{dataset_name}_acc"].append(avg_acc)
+                    if k == 2:
+                        # keep keys for backwards compat in wandb
+                        metrics[f"pairwise_{lang_code}_{dataset_name}_pr_auc"] = score
+                        avg_metrics[f"pairwise_average_{dataset_name}_pr_auc"].append(score)
+                        metrics[f"pairwise_{lang_code}_{dataset_name}_acc"] = avg_acc
+                        avg_metrics[f"pairwise_average_{dataset_name}_acc"].append(avg_acc)
+                        if lang_code in ["zh", "ja", "my", "km"]:
+                            avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
+                            avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_acc"].append(avg_acc)
+                        else:
+                            avg_metrics[f"pairwise_average_whitespace_{dataset_name}_pr_auc"].append(score)
+                            avg_metrics[f"pairwise_average_whitespace_{dataset_name}_acc"].append(avg_acc)
 
         for name, values in avg_metrics.items():
             if len(values) > 1:
@@ -622,7 +638,7 @@ def main():
         return metrics
 
     if "wandb" in training_args.report_to and training_args.process_index == 0:
-        wandb.init(name=wandb_name, project="sentence")
+        wandb.init(name=wandb_name, project="sentence", entity="markus_583")
         wandb.config.update(args)
         wandb.config.update(training_args)
         wandb.config.update(label_args)

@@ -7,7 +7,7 @@ import sklearn.metrics
 
 from wtpsplit.evaluation import token_to_char_probs
 from wtpsplit.evaluation.intrinsic import corrupt
-from wtpsplit.evaluation.intrinsic_pairwise import generate_pairs, process_logits_pairwise
+from wtpsplit.evaluation.intrinsic_pairwise import generate_pairs, generate_k_mers, process_logits_k_mers
 from wtpsplit.extract import PyTorchWrapper, extract
 from wtpsplit.utils import Constants, sigmoid
 
@@ -164,7 +164,7 @@ def evaluate_sentence_pairwise(
     )
 
     # get logits for each pair
-    logits = process_logits_pairwise(
+    logits = process_logits_k_mers(
         pairs=sampled_pairs,
         model=PyTorchWrapper(model.backbone),
         lang_code=lang_code,
@@ -174,7 +174,6 @@ def evaluate_sentence_pairwise(
     )
 
     # simulate performance for WtP-U
-
     for i, (sentence1, sentence2) in enumerate(sampled_pairs):
         newline_probs = logits[i][:, positive_index]
 
@@ -197,6 +196,76 @@ def evaluate_sentence_pairwise(
             accuracy_list.append(False)
 
     # Compute and return the average metric
+    average_metric = np.mean(metrics_list)
+    avg_accuracy = np.mean(accuracy_list)
+    return average_metric, avg_accuracy
+
+def evaluate_sentence_kmers(
+    lang_code,
+    sentences,
+    model,
+    stride,
+    block_size,
+    batch_size,
+    k: int = 3,
+    sample_pct: float = 0.1,
+    max_n_samples: int = sys.maxsize,
+    use_pysbd=False,
+    positive_index=None,
+    do_lowercase=False,
+    do_remove_punct=False,
+    threshold: float = 0.1
+):
+    if positive_index is None:
+        positive_index = Constants.NEWLINE_INDEX
+
+    # Preprocess sentences
+    sentences = [sentence.lstrip("-").strip() for sentence in sentences]
+
+    separator = Constants.SEPARATORS[lang_code]
+    metrics_list = []
+    accuracy_list = []
+
+    # get pairs of sentences (non-overlapping)
+    sampled_k_mers = generate_k_mers(
+        sentences=sentences,
+        k=k,
+        do_lowercase=do_lowercase,
+        do_remove_punct=do_remove_punct,
+        sample_pct=sample_pct,
+        max_n_samples=max_n_samples,
+        min_k_mer_length=0,
+    )
+
+    # get logits for each pair
+    logits = process_logits_k_mers(  # TODO
+        pairs=sampled_k_mers,
+        model=PyTorchWrapper(model.backbone),
+        lang_code=lang_code,
+        block_size=block_size,
+        batch_size=batch_size,
+        verbose=False,
+    )
+
+    for i, k_mer in enumerate(sampled_k_mers):
+        newline_probs = logits[i][:, positive_index]
+
+        k_mer_text = separator.join(k_mer)
+        true_end_indices = np.cumsum(np.array([len(s) for s in k_mer])) + np.arange(len(k_mer)) * len(separator)
+        newline_labels = np.zeros(len(k_mer_text))
+        newline_labels[true_end_indices - 1] = 1
+
+        # Get metrics for the k-mer
+        k_mer_metrics, _ = get_metrics(newline_labels, newline_probs)
+        metrics_list.append(k_mer_metrics["pr_auc"])
+        predicted_labels = newline_probs > np.log(threshold / (1 - threshold))  # inverse sigmoid
+        # For accuracy, check if all the labels in between are correctly predicted (ignore the one at the end)
+        intermediate_newline_labels = newline_labels[:-len(separator)]  # Exclude the end
+        intermediate_predicted_labels = predicted_labels[:-len(separator)]  # Exclude the end
+        correct = np.array_equal(intermediate_newline_labels, intermediate_predicted_labels)
+        accuracy_list.append(correct)
+
+    # Compute and return the average metric and accuracy
     average_metric = np.mean(metrics_list)
     avg_accuracy = np.mean(accuracy_list)
     return average_metric, avg_accuracy
