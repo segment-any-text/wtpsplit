@@ -618,18 +618,18 @@ def main():
                         # else:
                         #     avg_metrics[f"k_{k}_average_whitespace_{dataset_name}_pr_auc"].append(score)
                         #     avg_metrics[f"k_{k}_average_whitespace_{dataset_name}_acc"].append(avg_acc)
-                    if k == 2:
-                        # keep keys for backwards compat in wandb
-                        metrics[f"pairwise_{lang_code}_{dataset_name}_pr_auc"] = score
-                        avg_metrics[f"pairwise_average_{dataset_name}_pr_auc"].append(score)
-                        metrics[f"pairwise_{lang_code}_{dataset_name}_acc"] = avg_acc
-                        avg_metrics[f"pairwise_average_{dataset_name}_acc"].append(avg_acc)
-                        # if lang_code in ["zh", "ja", "my", "km"]:
-                        #     avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
-                        #     avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_acc"].append(avg_acc)
-                        # else:
-                        #     avg_metrics[f"pairwise_average_whitespace_{dataset_name}_pr_auc"].append(score)
-                        #     avg_metrics[f"pairwise_average_whitespace_{dataset_name}_acc"].append(avg_acc)
+                        if k == 2:
+                            # keep keys for backwards compat in wandb
+                            metrics[f"pairwise_{lang_code}_{dataset_name}_pr_auc"] = score
+                            avg_metrics[f"pairwise_average_{dataset_name}_pr_auc"].append(score)
+                            metrics[f"pairwise_{lang_code}_{dataset_name}_acc"] = avg_acc
+                            avg_metrics[f"pairwise_average_{dataset_name}_acc"].append(avg_acc)
+                            # if lang_code in ["zh", "ja", "my", "km"]:
+                            #     avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
+                            #     avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_acc"].append(avg_acc)
+                            # else:
+                            #     avg_metrics[f"pairwise_average_whitespace_{dataset_name}_pr_auc"].append(score)
+                            #     avg_metrics[f"pairwise_average_whitespace_{dataset_name}_acc"].append(avg_acc)
 
         for name, values in avg_metrics.items():
             if len(values) > 1:
