@@ -597,7 +597,7 @@ def main():
                     # else:
                     #     avg_metrics[f"lower_rmp_average_whitespace_{dataset_name}_pr_auc"].append(score)
                     # k-mer based evaluation
-                    for k in [2, 3, 4]:
+                    for k in [2, 3, 4, 5, 6]:
                         score, avg_acc = evaluate_sentence_kmers(
                             lang_code,
                             dataset["data"],
