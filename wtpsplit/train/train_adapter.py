@@ -580,7 +580,7 @@ def main():
                             with_head=True,
                         )
                     else:
-                        save_model.save_pretrained(os.path.join(training_args.output_dir, dataset_name, lang))
+                        save_model.to("cpu").save_pretrained(os.path.join(training_args.output_dir, dataset_name, lang))
     if training_args.local_rank == 0:
         # eval here within 1 go
         cmd = ""
