@@ -129,7 +129,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
             for dataset_name, dataset in eval_data[lang_code]["sentence"].items():
                 # train on all mldb, eval on mldbW 
                 if "mldbW" in args.eval_data_path and (
-                    "mldbW" not in args.model_path or "mldbW" not in args.adapter_path
+                    "mldbW" not in args.model_path and "mldbW" not in args.adapter_path
                 ):
                     dataset_load_name = "unk"
                 else:

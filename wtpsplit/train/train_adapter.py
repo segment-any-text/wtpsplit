@@ -603,7 +603,9 @@ def main():
         else:
             eval_function = "intrinsic"
         if args.do_lowercase and args.do_remove_punct:
-            suffix = "--do_lowercase --do_remove_punct"  
+            suffix = "--do_lowercase --do_remove_punct" 
+        else:
+            suffix = "" 
         if "adapter" in training_args.output_dir:
             model_info = f"--model_path {args.model_name_or_path} --adapter_path {training_args.output_dir}"
         else:
