@@ -28,6 +28,7 @@ from wtpsplit.train.train import collate_fn, setup_logging
 from wtpsplit.train.utils import Model
 from wtpsplit.utils import Constants, LabelArgs, get_label_dict, get_subword_label_dict
 from tqdm import tqdm
+from typing import Union, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,7 @@ class Args:
     do_remove_punct: bool = False
     eval_pairwise: bool = False
     skip_eval_loss: bool = False
+    subsample: Optional[float] = None
 
 
 def main():
@@ -104,6 +106,7 @@ def main():
         split="train",
         do_lowercase=False,
         do_remove_punct=False,
+        subsample: Union[None, int, float] = None
     ):
         # maybe we use more than 1 lang later at once.
         with training_args.main_process_first():
@@ -154,6 +157,13 @@ def main():
 
         if shuffle:
             dataset = dataset.shuffle(seed=42)
+        if subsample:
+            old_length = len(dataset)
+            if isinstance(subsample, int):
+                dataset = dataset.select(range(subsample))
+            elif isinstance(subsample, float):
+                dataset = dataset.select(range(int(subsample * len(dataset)))) 
+            logger.warning(f"Subsampled {len(dataset)} examples from {old_length}.")      
 
         # very likely not relevant / used only for the compound part
         if args.ignore_non_hyphen:
@@ -443,6 +453,7 @@ def main():
                         split="train",
                         do_lowercase=args.do_lowercase,
                         do_remove_punct=args.do_remove_punct,
+                        subsample=args.subsample,
                     )
                     if train_dataset is None or valid_dataset is None:
                         logger.warning(f"Skipping {lang} {dataset_name} due to missing data.")
@@ -591,21 +602,17 @@ def main():
             eval_function = "intrinsic_list"
         else:
             eval_function = "intrinsic"
-            cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1"
-        if "lines" in args.text_path:
-            if args.do_lowercase and args.do_remove_punct:
-                cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_lines.pt --save_suffix lines --do_lowercase --do_remove_punct"
-            else:
-                cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_lines.pt --save_suffix lines"
-        elif "verses" in args.text_path:
-            if args.do_lowercase and args.do_remove_punct:
-                cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_verses_strip_n_single.pt --save_suffix verses --do_lowercase --do_remove_punct"
-            else:
-                cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --custom_language_list data/lyrics_langs.csv --eval_data_path data/lyrics_verses_strip_n.pt --save_suffix verses"
-        elif args.do_lowercase and args.do_remove_punct:
-            cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1 --do_lowercase --do_remove_punct"
+        if args.do_lowercase and args.do_remove_punct:
+            suffix = "--do_lowercase --do_remove_punct"  
+        if "adapter" in training_args.output_dir:
+            model_info = f"--model_path {args.model_name_or_path} --adapter_path {training_args.output_dir}"
         else:
-            cmd = f"python3 wtpsplit/evaluation/{eval_function}.py --model_path {args.model_name_or_path} --adapter_path {training_args.output_dir} --threshold 0.1"
+            model_info = f"--model_path {training_args.output_dir}"
+            
+        if "verses" in args.text_path or "lines" in args.text_path:
+            cmd = f"python3 wtpsplit/evaluation/{eval_function}.py {model_info} --threshold 0.1 --custom_language_list data/mldb_langs.csv --eval_data_path {args.text_path} {suffix}"
+        else:
+            cmd = f"python3 wtpsplit/evaluation/{eval_function}.py {model_info} --threshold 0.1  {suffix}"
         print(cmd)
         os.system(cmd)
 
