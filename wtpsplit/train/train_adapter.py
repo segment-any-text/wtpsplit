@@ -160,6 +160,8 @@ def main():
         if subsample:
             old_length = len(dataset)
             if isinstance(subsample, int):
+                # ensure that we don't try to select more than the dataset length
+                subsample = min(subsample, len(dataset))
                 dataset = dataset.select(range(subsample))
             elif isinstance(subsample, float):
                 dataset = dataset.select(range(int(subsample * len(dataset)))) 
