@@ -141,7 +141,7 @@ def evaluate_sentence_pairwise(
     positive_index=None,
     do_lowercase=False,
     do_remove_punct=False,
-    threshold: float = 0.1
+    threshold: float = 0.1,
 ):
     if positive_index is None:
         positive_index = Constants.NEWLINE_INDEX
@@ -200,6 +200,7 @@ def evaluate_sentence_pairwise(
     avg_accuracy = np.mean(accuracy_list)
     return average_metric, avg_accuracy
 
+
 def evaluate_sentence_kmers(
     lang_code,
     sentences,
@@ -214,7 +215,7 @@ def evaluate_sentence_kmers(
     positive_index=None,
     do_lowercase=False,
     do_remove_punct=False,
-    threshold: float = 0.1
+    threshold: float = 0.1,
 ):
     if positive_index is None:
         positive_index = Constants.NEWLINE_INDEX
@@ -225,6 +226,8 @@ def evaluate_sentence_kmers(
     separator = Constants.SEPARATORS[lang_code]
     metrics_list = []
     accuracy_list = []
+    accuracy_list_optimal = []
+    info_list = []
 
     # get pairs of sentences (non-overlapping)
     sampled_k_mers = generate_k_mers(
@@ -238,7 +241,7 @@ def evaluate_sentence_kmers(
     )
 
     # get logits for each pair
-    logits = process_logits_k_mers(  # TODO
+    logits = process_logits_k_mers(
         pairs=sampled_k_mers,
         model=PyTorchWrapper(model.backbone),
         lang_code=lang_code,
@@ -256,16 +259,31 @@ def evaluate_sentence_kmers(
         newline_labels[true_end_indices - 1] = 1
 
         # Get metrics for the k-mer
-        k_mer_metrics, _ = get_metrics(newline_labels, newline_probs)
+        k_mer_metrics, info = get_metrics(newline_labels, newline_probs)
         metrics_list.append(k_mer_metrics["pr_auc"])
+        info_list.append(info)
+
         predicted_labels = newline_probs > np.log(threshold / (1 - threshold))  # inverse sigmoid
+        predicted_labels_optimal = newline_probs > np.log(
+            info["threshold_best"] / (1 - info["threshold_best"])
+        )  # inverse sigmoid
         # For accuracy, check if all the labels in between are correctly predicted (ignore the one at the end)
-        intermediate_newline_labels = newline_labels[:-len(separator)]  # Exclude the end
-        intermediate_predicted_labels = predicted_labels[:-len(separator)]  # Exclude the end
+        intermediate_newline_labels = newline_labels[: -len(separator)]  # Exclude the end
+        intermediate_predicted_labels = predicted_labels[: -len(separator)]  # Exclude the end
+        intermediate_predicted_labels_opt = predicted_labels_optimal[: -len(separator)]  # Exclude the end
         correct = np.array_equal(intermediate_newline_labels, intermediate_predicted_labels)
+        correct_optimal = np.array_equal(intermediate_newline_labels, intermediate_predicted_labels_opt)
         accuracy_list.append(correct)
+        accuracy_list_optimal.append(correct_optimal)
 
     # Compute and return the average metric and accuracy
     average_metric = np.mean(metrics_list)
     avg_accuracy = np.mean(accuracy_list)
-    return average_metric, avg_accuracy
+    # get averages for info_list
+    avg_info = {
+        key: np.mean([info[key] for info in info_list])
+        for key in info_list[0].keys()
+        if isinstance(info_list[0][key], (int, float))
+    }
+    avg_info["accuracy_optimal"] = np.mean(accuracy_list_optimal)
+    return average_metric, avg_accuracy, avg_info

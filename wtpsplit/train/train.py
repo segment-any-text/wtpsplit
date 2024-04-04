@@ -566,7 +566,7 @@ def main():
             if trainer.args.process_index == 0 and args.do_sentence_training:
                 # with training_args.main_process_first():
                 for dataset_name, dataset in lang_data["sentence"].items():
-                    score, _ = evaluate_sentence(
+                    score, info = evaluate_sentence(
                         lang_code,
                         dataset["data"],
                         model,
@@ -575,7 +575,13 @@ def main():
                         batch_size=training_args.per_device_eval_batch_size,
                     )
                     metrics[f"{lang_code}_{dataset_name}_pr_auc"] = score
+                    metrics[f"{lang_code}_{dataset_name}_f1"] = info["f1"]
+                    metrics[f"{lang_code}_{dataset_name}_f1_best"] = info["f1_best"]
+                    metrics[f"{lang_code}_{dataset_name}_threshold_best"] = info["threshold_best"]
                     avg_metrics[f"average_{dataset_name}_pr_auc"].append(score)
+                    avg_metrics[f"average_{dataset_name}_f1"].append(info["f1"])
+                    avg_metrics[f"average_{dataset_name}_f1_best"].append(info["f1_best"])
+                    avg_metrics[f"average_{dataset_name}_threshold_best"].append(info["threshold_best"])
                     # if lang_code in ["zh", "ja", "my", "km"]:
                     #     avg_metrics[f"average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
                     # else:
@@ -598,7 +604,7 @@ def main():
                     #     avg_metrics[f"lower_rmp_average_whitespace_{dataset_name}_pr_auc"].append(score)
                     # k-mer based evaluation
                     for k in [2, 3, 4, 5, 6]:
-                        score, avg_acc = evaluate_sentence_kmers(
+                        score, avg_acc, info = evaluate_sentence_kmers(
                             lang_code,
                             dataset["data"],
                             model,
@@ -612,6 +618,13 @@ def main():
                         avg_metrics[f"k_{k}_average_{dataset_name}_pr_auc"].append(score)
                         metrics[f"k_{k}_{lang_code}_{dataset_name}_acc"] = avg_acc
                         avg_metrics[f"k_{k}_average_{dataset_name}_acc"].append(avg_acc)
+                        metrics[f"k_{k}_{lang_code}_{dataset_name}_f1"] = info["f1"]
+                        metrics[f"k_{k}_{lang_code}_{dataset_name}_f1_best"] = info["f1_best"]
+                        metrics[f"k_{k}_{lang_code}_{dataset_name}_threshold_best"] = info["threshold_best"]
+                        avg_metrics[f"k_{k}_average_{dataset_name}_f1"].append(info["f1"])
+                        avg_metrics[f"k_{k}_average_{dataset_name}_f1_best"].append(info["f1_best"])
+                        avg_metrics[f"k_{k}_average_{dataset_name}_threshold_best"].append(info["threshold_best"])
+
                         # if lang_code in ["zh", "ja", "my", "km"]:
                         #     avg_metrics[f"k_{k}_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
                         #     avg_metrics[f"k_{k}_average_nonwhitespace_{dataset_name}_acc"].append(avg_acc)
@@ -624,6 +637,12 @@ def main():
                             avg_metrics[f"pairwise_average_{dataset_name}_pr_auc"].append(score)
                             metrics[f"pairwise_{lang_code}_{dataset_name}_acc"] = avg_acc
                             avg_metrics[f"pairwise_average_{dataset_name}_acc"].append(avg_acc)
+                            metrics[f"pairwise_{lang_code}_{dataset_name}_f1"] = info["f1"]
+                            metrics[f"pairwise_{lang_code}_{dataset_name}_f1_best"] = info["f1_best"]
+                            metrics[f"pairwise_{lang_code}_{dataset_name}_threshold_best"] = info["threshold_best"]
+                            avg_metrics[f"pairwise_average_{dataset_name}_f1"].append(info["f1"])
+                            avg_metrics[f"pairwise_average_{dataset_name}_f1_best"].append(info["f1_best"])
+                            avg_metrics[f"pairwise_average_{dataset_name}_threshold_best"].append(info["threshold_best"])
                             # if lang_code in ["zh", "ja", "my", "km"]:
                             #     avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
                             #     avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_acc"].append(avg_acc)
@@ -676,6 +695,7 @@ def main():
             label_args=label_args,
             label_dict=label_dict,
             tokenizer=tokenizer if args.use_subwords else None,
+            add_lang_ids=not args.use_subwords,
         ),
     )
 
