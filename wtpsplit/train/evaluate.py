@@ -268,9 +268,9 @@ def evaluate_sentence_kmers(
             info["threshold_best"] / (1 - info["threshold_best"])
         )  # inverse sigmoid
         # For accuracy, check if all the labels in between are correctly predicted (ignore the one at the end)
-        intermediate_newline_labels = newline_labels[: -len(separator)]  # Exclude the end
-        intermediate_predicted_labels = predicted_labels[: -len(separator)]  # Exclude the end
-        intermediate_predicted_labels_opt = predicted_labels_optimal[: -len(separator)]  # Exclude the end
+        intermediate_newline_labels = newline_labels[:-1]  # Exclude the end
+        intermediate_predicted_labels = predicted_labels[:-1]
+        intermediate_predicted_labels_opt = predicted_labels_optimal[:-1]
         correct = np.array_equal(intermediate_newline_labels, intermediate_predicted_labels)
         correct_optimal = np.array_equal(intermediate_newline_labels, intermediate_predicted_labels_opt)
         accuracy_list.append(correct)

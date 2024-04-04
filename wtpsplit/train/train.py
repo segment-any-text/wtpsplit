@@ -570,8 +570,8 @@ def main():
                         lang_code,
                         dataset["data"],
                         model,
-                        stride=args.eval_stride,
-                        block_size=args.block_size,
+                        stride=128,
+                        block_size=512,
                         batch_size=training_args.per_device_eval_batch_size,
                     )
                     metrics[f"{lang_code}_{dataset_name}_pr_auc"] = score
@@ -608,8 +608,8 @@ def main():
                             lang_code,
                             dataset["data"],
                             model,
-                            stride=args.eval_stride,
-                            block_size=args.block_size,
+                            stride=128,
+                            block_size=512,
                             batch_size=training_args.per_device_eval_batch_size,
                             k=k,
                             # sample_pct=0.1,
