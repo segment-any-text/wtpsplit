@@ -27,6 +27,7 @@ from wtpsplit.evaluation.intrinsic import compute_statistics, corrupt
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+
 @dataclass
 class Args:
     model_path: str
@@ -55,14 +56,66 @@ class Args:
     save_suffix: str = ""
     do_lowercase: bool = False
     do_remove_punct: bool = False
+    skip_adaptation: bool = False
     # pairwise-specific args
     max_n_pairs: int = sys.maxsize
-    pair_sample_pct: float = 1
+    pair_sample_pct: float = 0.5
     min_pair_length: int = 0
+    adjust_threshold: bool = False
+    threshold_increase_type: str = "linear"
+    threshold_min_length: int = 0
+    threshold_max_length: int = 256
+    threshold_max: float = 0.1
+
+
+def calculate_threshold(
+    sequence_length, max_length, min_length, max_threshold, increase_type="linear", default_threshold=0.01
+):
+    """
+    Calculates the threshold based on the sequence length with various increase types
+    ('linear', 'logarithmic', 'quadratic', 'exponential', 'sigmoidal') from default_threshold
+    to max_threshold as sequence length decreases from max_length to min_length.
+
+    :param sequence_length: The current sequence length
+    :param max_length: The sequence length at which the default_threshold is applied
+    :param min_length: The sequence length at which the max_threshold is applied
+    :param max_threshold: The maximum threshold value
+    :param increase_type: Type of increase
+    :param default_threshold: The default threshold value (minimum threshold)
+    :return: The calculated threshold for the given sequence length
+    """
+
+    # Normalize sequence length to a range [0, 1]
+    normalized_length = (sequence_length - max_length) / (min_length - max_length)
+
+    if increase_type == "linear":
+        threshold = normalized_length * (max_threshold - default_threshold) + default_threshold
+    elif increase_type == "logarithmic":
+        # Adjusted logarithmic calculation for a more distinctive curve
+        if normalized_length > 0:
+            threshold = (
+                np.log1p(normalized_length * (np.e - 1)) / np.log(np.e) * (max_threshold - default_threshold)
+                + default_threshold
+            )
+        else:
+            threshold = default_threshold
+    elif increase_type == "quadratic":
+        threshold = (normalized_length**2) * (max_threshold - default_threshold) + default_threshold
+    elif increase_type == "sigmoidal":
+        sigmoid_threshold = 1 / (1 + np.exp(-10 * (normalized_length - 0.5)))
+        threshold = sigmoid_threshold * (max_threshold - default_threshold) + default_threshold
+    else:
+        threshold = normalized_length * (max_threshold - default_threshold) + default_threshold
+
+    # Ensure the threshold does not exceed the bounds
+    threshold = min(max(threshold, default_threshold), max_threshold)
+
+    return threshold
 
 
 def process_logits_k_mers(pairs, model, lang_code, block_size, batch_size, verbose=True) -> List[np.ndarray]:
     logits_list = []
+    n_tokens_list = []
     # create batches of sentence pairs
     batched_k_mers = [pairs[i : i + batch_size] for i in range(0, len(pairs), batch_size)]
     for batch in tqdm(batched_k_mers, disable=not verbose):
@@ -83,6 +136,7 @@ def process_logits_k_mers(pairs, model, lang_code, block_size, batch_size, verbo
                 # padding is also removed here (via offset_mapping)
                 logits = token_to_char_probs(k_mer, tokens, logit, tokenizer, offset_mapping)
                 logits_list.append(logits)
+                n_tokens_list.append(len(tokens))
             else:
                 if len(logit) < offset_mapping:
                     # truncated input --> pad back
@@ -92,7 +146,7 @@ def process_logits_k_mers(pairs, model, lang_code, block_size, batch_size, verbo
                 # since we pad to equal length, we need to remove the padding
                 logits_list.append(logit[:offset_mapping])
 
-    return logits_list
+    return logits_list, n_tokens_list
 
 
 def generate_pairs(
@@ -143,6 +197,7 @@ def generate_pairs(
     ]
     return all_pairs
 
+
 def generate_k_mers(
     sentences: List[str],
     k: int,
@@ -174,25 +229,23 @@ def generate_k_mers(
     if sample_size < n_k_mers:
         sampled_indices = set(random.sample(range(n_k_mers), sample_size))
         all_k_mers = [
-            tuple(sentences[i*k+j] for j in range(k))
+            tuple(sentences[i * k + j] for j in range(k))
             for i in sampled_indices
-            if sum(len(sentences[i*k+j]) for j in range(k)) > min_k_mer_length
+            if sum(len(sentences[i * k + j]) for j in range(k)) > min_k_mer_length
         ]
     else:
         # Generate all k-mers that meet the min_k_mer_length criterion
         all_k_mers = [
-            tuple(sentences[i+j] for j in range(k))
+            tuple(sentences[i + j] for j in range(k))
             for i in range(0, len(sentences) - k + 1, k)
-            if sum(len(sentences[i+j]) for j in range(k)) > min_k_mer_length
+            if sum(len(sentences[i + j]) for j in range(k)) > min_k_mer_length
         ]
 
     # Apply corruption to k-mers
-    all_k_mers = [
-        tuple(corrupt(sentence, do_lowercase, do_remove_punct) for sentence in k_mer)
-        for k_mer in all_k_mers
-    ]
+    all_k_mers = [tuple(corrupt(sentence, do_lowercase, do_remove_punct) for sentence in k_mer) for k_mer in all_k_mers]
 
     return all_k_mers
+
 
 def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: str = None):
     logits_path = Constants.CACHE_DIR / "intrinsic_pairwise" / f"{save_str}.h5"
@@ -254,7 +307,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     )
 
                     start_time = time.time()  # Start timing for test logits processing
-                    test_logits = process_logits_k_mers(
+                    test_logits, test_n_logits = process_logits_k_mers(
                         all_pairs_test,
                         model,
                         lang_code,
@@ -287,6 +340,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     dset_group.create_dataset("test_logits", data=test_logits)
                     dset_group.create_dataset("test_labels", data=test_labels)
                     dset_group.create_dataset("test_logit_lengths", data=test_logit_lengths)
+                    dset_group.create_dataset("test_n_logits", data=test_n_logits)
 
                 train_sentences = dataset["meta"].get("train_data")
                 if train_sentences is not None and "train_logits" not in dset_group:
@@ -300,7 +354,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                         min_pair_length=args.min_pair_length,
                     )
 
-                    train_logits = process_logits_k_mers(
+                    train_logits, train_n_logits = process_logits_k_mers(
                         all_pairs_train, model, lang_code, args.block_size, args.batch_size
                     )
                     train_logits = np.concatenate(train_logits)
@@ -314,6 +368,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                     dset_group.create_dataset("train_logits", data=train_logits)
                     dset_group.create_dataset("train_labels", data=train_labels)
+                    dset_group.create_dataset("train_n_logits", data=train_n_logits)
 
     end_time = time.time()
     return h5py.File(logits_path, "r"), total_test_time / 60  # to minutes
@@ -323,14 +378,19 @@ def main(args):
     save_model_path = args.model_path
     if args.adapter_path:
         save_model_path = args.adapter_path
-    save_str = (
-        f"{save_model_path.replace('/','_')}_b{args.block_size}_u{args.threshold}{args.save_suffix}"
-    )    
+    save_str = f"{save_model_path.replace('/','_')}_b{args.block_size}_u{args.threshold}{args.save_suffix}"
+    if args.adjust_threshold:
+        save_str += (
+            f"_adj_{args.threshold_increase_type}_{args.threshold_min_length}_{args.threshold_max_length}"
+            f"_{args.threshold}_{args.threshold_max}"
+        )
+
     if args.do_lowercase:
         save_str += "_lc"
     if args.do_remove_punct:
         save_str += "_rmp"
 
+    print(save_str)
     eval_data = torch.load(args.eval_data_path)
     if args.valid_text_path is not None:
         valid_data = load_dataset("parquet", data_files=args.valid_text_path, split="train")
@@ -348,11 +408,8 @@ def main(args):
         model.model.config.model_type = model_type
         if "meta-clf" in args.adapter_path:
             clf = model.model.classifier
-            model.model.classifier = torch.nn.Sequential(
-                clf,
-                torch.nn.Linear(clf.out_features, 1)
-            )
-            
+            model.model.classifier = torch.nn.Sequential(clf, torch.nn.Linear(clf.out_features, 1))
+
     # first, logits for everything.
     f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data, save_str)
 
@@ -362,6 +419,7 @@ def main(args):
     # Initialize lists to store scores for each metric across all languages
     u_scores, t_scores, punct_scores = [], [], []
     u_accs, t_accs, punct_accs = [], [], []
+    thresholds_t, thresholds_adj = [], []
 
     for lang_code, dsets in tqdm(eval_data.items()):
         if args.include_langs is not None and lang_code not in args.include_langs:
@@ -374,7 +432,7 @@ def main(args):
         for dataset_name, dataset in dsets["sentence"].items():
             sentences = dataset["data"]
             sent_pairs = generate_pairs(
-                sentences, 
+                sentences,
                 do_lowercase=args.do_lowercase,
                 do_remove_punct=args.do_remove_punct,
                 pair_sample_pct=args.pair_sample_pct,
@@ -382,7 +440,7 @@ def main(args):
                 min_pair_length=args.min_pair_length,
             )
 
-            if "train_logits" in f[lang_code][dataset_name]:
+            if "train_logits" in f[lang_code][dataset_name] and not args.skip_adaptation:
                 feature_indices = None
                 # it is sufficient to feed in 1 long sequence of tokens here since we only use logits for LR
                 clf = train_mixture(
@@ -419,15 +477,33 @@ def main(args):
                 clfs[lang_code][dataset_name] = clf
 
                 clf = list(copy.deepcopy(clf))
+                threshold_t = float(clf[-1])
                 clf[-1] = args.threshold
             else:
+                threshold_t = 0
+                clf = [None, None, None, args.threshold]
                 score_t = score_punct = None
                 acc_t = acc_punct = None
 
             score_u = []
             acc_u = []
+            thresholds = []
             for i, pair in enumerate(sent_pairs):
                 start, end = f[lang_code][dataset_name]["test_logit_lengths"][i]
+                if args.adjust_threshold:
+                    seq_len = f[lang_code][dataset_name]["test_n_logits"][i]
+                    threshold_adjusted = calculate_threshold(
+                        sequence_length=seq_len,
+                        max_length=args.threshold_max_length,
+                        min_length=args.threshold_min_length,
+                        max_threshold=args.threshold_max,
+                        default_threshold=args.threshold,
+                        increase_type=args.threshold_increase_type,
+                    )
+                    clf[-1] = threshold_adjusted
+                    thresholds.append(threshold_adjusted)
+                else:
+                    thresholds.append(args.threshold)
                 single_score_u, _, info = evaluate_mixture(
                     lang_code,
                     f[lang_code][dataset_name]["test_logits"][:][start:end],
@@ -443,6 +519,7 @@ def main(args):
             acc_u = np.mean(acc_u)
             acc_t = np.mean(acc_t) if score_t else None
             acc_punct = np.mean(acc_punct) if score_punct else None
+            threshold = np.mean(thresholds)
 
             results[lang_code][dataset_name] = {
                 "u": score_u,
@@ -451,6 +528,8 @@ def main(args):
                 "u_acc": acc_u,
                 "t_acc": acc_t,
                 "punct_acc": acc_punct,
+                "threshold_t": threshold_t,
+                "threshold_adj": threshold,
             }
 
             # just for printing
@@ -465,9 +544,12 @@ def main(args):
             t_accs.append((acc_t, lang_code))
             punct_scores.append((score_punct, lang_code))
             punct_accs.append((acc_punct, lang_code))
+            thresholds_t.append((threshold_t, lang_code))
+            thresholds_adj.append((threshold, lang_code))
 
             print(f"{lang_code} {dataset_name} {score_u:.3f} {score_t:.3f} {score_punct:.3f}")
             print(f"ACC: {acc_u:.3f} {acc_t:.3f} {acc_punct:.3f}")
+            print(f"Threshold_t: {threshold_t:.3f} Threshold_adj: {threshold:.3f}")
 
     # Compute statistics for each metric across all languages
     results_avg = {
@@ -477,6 +559,8 @@ def main(args):
         "u_acc": compute_statistics(u_accs),
         "t_acc": compute_statistics(t_accs),
         "punct_acc": compute_statistics(punct_accs),
+        "threshold_t": compute_statistics(thresholds_t),
+        "threshold_adj": compute_statistics(thresholds_adj),
         "include_langs": args.include_langs,
     }
 
@@ -489,7 +573,6 @@ def main(args):
         indent=4,
     )
 
-    # Write results_avg to JSON
     json.dump(
         results_avg,
         open(
@@ -499,6 +582,9 @@ def main(args):
         indent=4,
     )
     os.remove(f.filename)
+
+    print(results_avg)
+    print(save_str)
     return results, results_avg, total_test_time
 
 
