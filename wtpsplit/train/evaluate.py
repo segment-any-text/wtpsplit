@@ -165,7 +165,7 @@ def evaluate_sentence_pairwise(
     )
 
     # get logits for each pair
-    logits = process_logits_k_mers(
+    logits, n_tokens_list = process_logits_k_mers(
         pairs=sampled_pairs,
         model=PyTorchWrapper(model.backbone),
         lang_code=lang_code,
@@ -242,7 +242,7 @@ def evaluate_sentence_kmers(
     )
 
     # get logits for each pair
-    logits = process_logits_k_mers(
+    logits, n_tokens_list = process_logits_k_mers(
         pairs=sampled_k_mers,
         model=PyTorchWrapper(model.backbone),
         lang_code=lang_code,
