@@ -54,7 +54,6 @@ class Args:
     save_suffix: str = ""
     do_lowercase: bool = False
     do_remove_punct: bool = False
-    do_strip: bool = False
 
 
 def process_logits(text, model, lang_code, args):
@@ -148,16 +147,10 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                             with_head=True,
                             load_as="text",
                         )
-                    if hasattr(model.model.config, "unfreeze_ln"):
-                        if model.model.config.unfreeze_ln:
-                            ln_dict = torch.load(
-                                args.adapter_path + "/" + dataset_name + "/" + lang_code + "/ln_dict.pth"
-                            )
-                            for n, p in model.backbone.named_parameters():
-                                if "LayerNorm" in n:
-                                    p.data = ln_dict[n].data
                     if not os.path.exists(os.path.join(args.model_path, "pytorch_model.bin")):
                         model_path = os.path.join(args.model_path, dataset_name, "en")
+                        if not os.path.exists(model_path):
+                            model_path = args.model_path
                         print(model_path)
                         model = PyTorchWrapper(AutoModelForTokenClassification.from_pretrained(model_path).to(args.device))
                 except Exception as e:
@@ -174,8 +167,6 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     # if list of lists: flatten
                     if isinstance(test_sentences[0], list):
                         test_sentences = [item for sublist in test_sentences for item in sublist]
-                    if args.do_strip:
-                        test_sentences = [sentence.lstrip("-").strip() for sentence in test_sentences]
                     test_sentences = [
                         corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
                         for sentence in test_sentences
@@ -196,8 +187,6 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                 if train_sentences is not None and "train_logits" not in dset_group:
                     if isinstance(train_sentences[0], list):
                         train_sentences = [item for sublist in train_sentences for item in sublist]
-                    if args.do_strip:
-                        train_sentences = [sentence.lstrip("-").strip() for sentence in train_sentences]
                     train_sentences = [
                         corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
                         for sentence in train_sentences
@@ -254,8 +243,10 @@ def main(args):
     print("Loading model...")
     # if model_path does not contain a model, take first subfolder
     if not os.path.exists(os.path.join(args.model_path, "pytorch_model.bin")):
-        model_path = os.path.join(args.model_path, os.listdir(args.model_path)[0], "en")
-        print("joined")
+        try:
+            model_path = os.path.join(args.model_path, os.listdir(args.model_path)[0], "en")
+        except:
+            model_path = args.model_path
         print(model_path)
     else:
         model_path = args.model_path
@@ -295,8 +286,6 @@ def main(args):
             sentences = dataset["data"]
             if isinstance(sentences[0], list):
                 sentences = [item for sublist in sentences for item in sublist]
-            if args.do_strip:
-                sentences = [sentence.lstrip("-").strip() for sentence in sentences]
             sentences = [
                 corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
                 for sentence in sentences
