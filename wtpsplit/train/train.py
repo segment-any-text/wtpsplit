@@ -101,6 +101,7 @@ class Args:
 
     # NEW PARAMS
     use_subwords: bool = False
+    threshold: float = 0.01
 
 
 def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: bool = False):
@@ -501,13 +502,13 @@ def main():
                 dataset = dataset.rename_column(args.text_column, "input_ids")
         logger.warning(f"Tokenized {split} dataset.")
 
-        # if split == "train" and args.use_subwords:
-        #     with training_args.main_process_first():
-        #         for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
-        #             for file in files:
-        #                 if file.startswith("m_c4-test-train"):
-        #                     logger.warning(f"Removing {os.path.join(root, file)}")
-        #                     os.remove(os.path.join(root, file))
+        if split == "train" and args.use_subwords:
+            with training_args.main_process_first():
+                for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
+                    for file in files:
+                        if file.startswith("m_c4-test-train"):
+                            logger.warning(f"Removing {os.path.join(root, file)}")
+                            os.remove(os.path.join(root, file))
 
         if not args.one_sample_per_line:
             with training_args.main_process_first():
@@ -573,6 +574,7 @@ def main():
                         stride=128,
                         block_size=512,
                         batch_size=training_args.per_device_eval_batch_size,
+                        threshold=args.threshold,
                     )
                     metrics[f"{lang_code}_{dataset_name}_pr_auc"] = score
                     metrics[f"{lang_code}_{dataset_name}_f1"] = info["f1"]
@@ -613,6 +615,7 @@ def main():
                             batch_size=training_args.per_device_eval_batch_size,
                             k=k,
                             # sample_pct=0.1,
+                            threshold=args.threshold,
                         )
                         metrics[f"k_{k}_{lang_code}_{dataset_name}_pr_auc"] = score
                         avg_metrics[f"k_{k}_average_{dataset_name}_pr_auc"].append(score)
@@ -675,13 +678,13 @@ def main():
     training_args.adapter_lr_multiplier = args.adapter_lr_multiplier
 
     # give .map in multiprocessing enough of time to finish, to be safe
-    # time.sleep(10)
-    # if training_args.local_rank == 0:
-    #     # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
-    #     # because that would remove the cache files of the other dataset!
-    #     cleanup_cache_files([train_dataset, valid_dataset])
-    #     logger.warning("Cleaned up cache files.")
-    # time.sleep(10)
+    time.sleep(10)
+    if training_args.local_rank == 0:
+        # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
+        # because that would remove the cache files of the other dataset!
+        cleanup_cache_files([train_dataset, valid_dataset])
+        logger.warning("Cleaned up cache files.")
+    time.sleep(10)
 
     trainer = Trainer(
         model,

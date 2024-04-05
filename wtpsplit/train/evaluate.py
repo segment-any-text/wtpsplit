@@ -37,7 +37,7 @@ def compute_f1(pred, true):
     )
 
 
-def get_metrics(labels, preds, threshold: float = 0.1):
+def get_metrics(labels, preds, threshold: float = 0.01):
     # Compute precision-recall curve and AUC
     precision, recall, thresholds = sklearn.metrics.precision_recall_curve(labels, preds)
     pr_auc = sklearn.metrics.auc(recall, precision)
@@ -80,6 +80,7 @@ def evaluate_sentence(
     positive_index=None,
     do_lowercase=False,
     do_remove_punct=False,
+    threshold: float = 0.01,
 ):
     if positive_index is None:
         positive_index = Constants.NEWLINE_INDEX
@@ -113,7 +114,7 @@ def evaluate_sentence(
     else:
         char_probs = logits
     newline_probs = char_probs[:, positive_index]
-    metrics, info = get_metrics(newline_labels, newline_probs)
+    metrics, info = get_metrics(newline_labels, newline_probs, threshold=threshold)
 
     info["newline_labels"] = newline_labels
 
@@ -141,7 +142,7 @@ def evaluate_sentence_pairwise(
     positive_index=None,
     do_lowercase=False,
     do_remove_punct=False,
-    threshold: float = 0.1,
+    threshold: float = 0.01,
 ):
     if positive_index is None:
         positive_index = Constants.NEWLINE_INDEX
@@ -185,7 +186,7 @@ def evaluate_sentence_pairwise(
         newline_labels[true_end_indices - 1] = 1
 
         # Get metrics for the pair
-        pair_metrics, _ = get_metrics(newline_labels, newline_probs)
+        pair_metrics, _ = get_metrics(newline_labels, newline_probs, threshold=threshold)
         metrics_list.append(pair_metrics["pr_auc"])
         predicted_labels = newline_probs > np.log(threshold / (1 - threshold))  # inverse sigmoid
         # for accuracy, check if the single label in between is correctly predicted (ignore the one at the end)
@@ -215,7 +216,7 @@ def evaluate_sentence_kmers(
     positive_index=None,
     do_lowercase=False,
     do_remove_punct=False,
-    threshold: float = 0.1,
+    threshold: float = 0.01,
 ):
     if positive_index is None:
         positive_index = Constants.NEWLINE_INDEX
@@ -259,7 +260,7 @@ def evaluate_sentence_kmers(
         newline_labels[true_end_indices - 1] = 1
 
         # Get metrics for the k-mer
-        k_mer_metrics, info = get_metrics(newline_labels, newline_probs)
+        k_mer_metrics, info = get_metrics(newline_labels, newline_probs, threshold=threshold)
         metrics_list.append(k_mer_metrics["pr_auc"])
         info_list.append(info)
 
