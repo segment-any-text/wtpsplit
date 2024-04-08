@@ -57,20 +57,22 @@ class Args:
     do_lowercase: bool = False
     do_remove_punct: bool = False
     skip_adaptation: bool = False
-    # pairwise-specific args
-    max_n_pairs: int = sys.maxsize
-    pair_sample_pct: float = 0.5
-    min_pair_length: int = 0
+    keep_logits: bool = False
+
+    # k_mer-specific args
+    k: int = 2
+    max_n_samples: int = sys.maxsize
+    sample_pct: float = 0.5
+    min_k_mer_length: int = 0
     adjust_threshold: bool = False
+    # threshold
     threshold_increase_type: str = "linear"
     threshold_min_length: int = 0
     threshold_max_length: int = 256
     threshold_max: float = 0.1
 
 
-def calculate_threshold(
-    sequence_length, max_length, min_length, max_threshold, increase_type="linear", default_threshold=0.01
-):
+def calculate_threshold(sequence_length, max_length, min_length, max_threshold, default_threshold=0.01):
     """
     Calculates the threshold based on the sequence length with various increase types
     ('linear', 'logarithmic', 'quadratic', 'exponential', 'sigmoidal') from default_threshold
@@ -86,26 +88,13 @@ def calculate_threshold(
     """
 
     # Normalize sequence length to a range [0, 1]
-    normalized_length = (sequence_length - max_length) / (min_length - max_length)
-
-    if increase_type == "linear":
-        threshold = normalized_length * (max_threshold - default_threshold) + default_threshold
-    elif increase_type == "logarithmic":
-        # Adjusted logarithmic calculation for a more distinctive curve
-        if normalized_length > 0:
-            threshold = (
-                np.log1p(normalized_length * (np.e - 1)) / np.log(np.e) * (max_threshold - default_threshold)
-                + default_threshold
-            )
-        else:
-            threshold = default_threshold
-    elif increase_type == "quadratic":
-        threshold = (normalized_length**2) * (max_threshold - default_threshold) + default_threshold
-    elif increase_type == "sigmoidal":
-        sigmoid_threshold = 1 / (1 + np.exp(-10 * (normalized_length - 0.5)))
-        threshold = sigmoid_threshold * (max_threshold - default_threshold) + default_threshold
+    if max_length == min_length:
+        # Ensure no division by zero
+        normalized_length = 0
     else:
-        threshold = normalized_length * (max_threshold - default_threshold) + default_threshold
+        normalized_length = (sequence_length - max_length) / (min_length - max_length)
+
+    threshold = normalized_length * (max_threshold - default_threshold) + default_threshold
 
     # Ensure the threshold does not exceed the bounds
     threshold = min(max(threshold, default_threshold), max_threshold)
@@ -153,17 +142,17 @@ def generate_pairs(
     sentences: List[str],
     do_lowercase: bool,
     do_remove_punct: bool,
-    pair_sample_pct: float = 1,
-    max_n_pairs: int = sys.maxsize,
-    min_pair_length: int = 0,
+    sample_pct: float = 1,
+    max_n_samples: int = sys.maxsize,
+    min_k_mer_length: int = 0,
 ) -> List[Tuple[str, str]]:
     """Generate sentence pairs from a list of sentences.
 
     Args:
         sentences (List[str]): Input list of sentences.
-        pair_sample_pct (float): Percentage of pairs to sample.
-        max_n_pairs (int): Maximum number of pairs to sample.
-        min_pair_length (int): Minimum length of a sentence pair.
+        sample_pct (float): Percentage of pairs to sample.
+        max_n_samples (int): Maximum number of pairs to sample.
+        min_k_mer_length (int): Minimum length of a sentence pair.
         do_lowercase (bool): Whether to lowercase the sentences.
         do_remove_punct (bool): Whether to remove punctuation from the sentences.
 
@@ -172,7 +161,7 @@ def generate_pairs(
     """
     random.seed(42)
     n_pairs = len(sentences) // 2
-    sample_size = min(round(n_pairs * pair_sample_pct), max_n_pairs)
+    sample_size = min(round(n_pairs * sample_pct), max_n_samples)
 
     # If we need to sample a subset of all possible pairs, do so efficiently
     if sample_size < n_pairs:
@@ -180,14 +169,14 @@ def generate_pairs(
         all_pairs = [
             (sentences[2 * i], sentences[2 * i + 1])
             for i in sampled_indices
-            if len(sentences[2 * i]) + len(sentences[2 * i + 1]) > min_pair_length
+            if len(sentences[2 * i]) + len(sentences[2 * i + 1]) > min_k_mer_length
         ]
     else:
-        # Generate all pairs that meet the min_pair_length criterion
+        # Generate all pairs that meet the min_k_mer_length criterion
         all_pairs = [
             (sentences[i], sentences[i + 1])
             for i in range(0, len(sentences) - 1, 2)
-            if len(sentences[i]) + len(sentences[i + 1]) > min_pair_length
+            if len(sentences[i]) + len(sentences[i + 1]) > min_k_mer_length
         ]
 
     # corrupt pairs
@@ -257,7 +246,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
     # FIXME: revert to "a"
     start_time = time.time()
-    with h5py.File(logits_path, "w") as f, torch.no_grad():
+    with h5py.File(logits_path, "a") as f, torch.no_grad():
         for lang_code in Constants.LANGINFO.index:
             if args.include_langs is not None and lang_code not in args.include_langs:
                 continue
@@ -297,13 +286,14 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"]
-                    all_pairs_test = generate_pairs(
+                    all_pairs_test = generate_k_mers(
                         test_sentences,
+                        k=args.k,
                         do_lowercase=args.do_lowercase,
                         do_remove_punct=args.do_remove_punct,
-                        pair_sample_pct=args.pair_sample_pct,
-                        max_n_pairs=args.max_n_pairs,
-                        min_pair_length=args.min_pair_length,
+                        sample_pct=args.sample_pct,
+                        max_n_samples=args.max_n_samples,
+                        min_k_mer_length=args.min_k_mer_length,
                     )
 
                     start_time = time.time()  # Start timing for test logits processing
@@ -329,8 +319,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     # get_labels returns 2nd label at end of seq, which we do not want.
                     # label is at position -2 --> remove and add back 0 to end of sequence
                     test_labels = [
-                        np.append(get_labels(lang_code, [pair[0], pair[1]], after_space=False)[:-2], 0)
-                        for pair in all_pairs_test
+                        np.append(get_labels(lang_code, pair, after_space=False)[:-2], 0) for pair in all_pairs_test
                     ]
 
                     # flatten; append 0 eos to account for later indexing/slicing
@@ -343,15 +332,16 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     dset_group.create_dataset("test_n_logits", data=test_n_logits)
 
                 train_sentences = dataset["meta"].get("train_data")
-                if train_sentences is not None and "train_logits" not in dset_group:
+                if train_sentences is not None and "train_logits" not in dset_group and not args.skip_adaptation:
                     train_sentences = train_sentences[: args.max_n_train_sentences]
-                    all_pairs_train = generate_pairs(
+                    all_pairs_train = generate_k_mers(
                         train_sentences,
+                        k=args.k,
                         do_lowercase=args.do_lowercase,
                         do_remove_punct=args.do_remove_punct,
-                        pair_sample_pct=args.pair_sample_pct,
-                        max_n_pairs=args.max_n_pairs,
-                        min_pair_length=args.min_pair_length,
+                        sample_pct=args.sample_pct,
+                        max_n_samples=args.max_n_samples,
+                        min_k_mer_length=args.min_k_mer_length,
                     )
 
                     train_logits, train_n_logits = process_logits_k_mers(
@@ -360,8 +350,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     train_logits = np.concatenate(train_logits)
 
                     train_labels = [
-                        np.append(get_labels(lang_code, [pair[0], pair[1]], after_space=False)[:-2], 0)
-                        for pair in all_pairs_train
+                        np.append(get_labels(lang_code, pair, after_space=False)[:-2], 0) for pair in all_pairs_train
                     ]
                     train_labels = np.append(np.concatenate(train_labels), 0)
                     assert len(train_labels) == len(train_logits) + 1
@@ -378,12 +367,7 @@ def main(args):
     save_model_path = args.model_path
     if args.adapter_path:
         save_model_path = args.adapter_path
-    save_str = f"{save_model_path.replace('/','_')}_b{args.block_size}_u{args.threshold}{args.save_suffix}"
-    if args.adjust_threshold:
-        save_str += (
-            f"_adj_{args.threshold_increase_type}_{args.threshold_min_length}_{args.threshold_max_length}"
-            f"_{args.threshold}_{args.threshold_max}"
-        )
+    save_str = f"{save_model_path.replace('/','_')}_b{args.block_size}_u{args.threshold}_k_{args.k}{args.save_suffix}"
 
     if args.do_lowercase:
         save_str += "_lc"
@@ -412,6 +396,11 @@ def main(args):
 
     # first, logits for everything.
     f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data, save_str)
+    if args.adjust_threshold:
+        save_str += (
+            f"_adj_{args.threshold_increase_type}_{args.threshold_min_length}_{args.threshold_max_length}"
+            f"_{args.threshold}_{args.threshold_max}"
+        )
 
     # now, compute the intrinsic scores.
     results = {}
@@ -431,13 +420,14 @@ def main(args):
 
         for dataset_name, dataset in dsets["sentence"].items():
             sentences = dataset["data"]
-            sent_pairs = generate_pairs(
+            sent_k_mers = generate_k_mers(
                 sentences,
+                k=args.k,
                 do_lowercase=args.do_lowercase,
                 do_remove_punct=args.do_remove_punct,
-                pair_sample_pct=args.pair_sample_pct,
-                max_n_pairs=args.max_n_pairs,
-                min_pair_length=args.min_pair_length,
+                sample_pct=args.sample_pct,
+                max_n_samples=args.max_n_samples,
+                min_k_mer_length=args.min_k_mer_length,
             )
 
             if "train_logits" in f[lang_code][dataset_name] and not args.skip_adaptation:
@@ -461,12 +451,12 @@ def main(args):
                 acc_punct = []
 
                 # evaluate each pair
-                for i, pair in enumerate(sent_pairs):
+                for i, k_mer in enumerate(sent_k_mers):
                     start, end = f[lang_code][dataset_name]["test_logit_lengths"][i]
                     single_score_t, single_score_punct, info = evaluate_mixture(
                         lang_code,
                         f[lang_code][dataset_name]["test_logits"][:][start:end],
-                        list(pair),
+                        list(k_mer),
                         *clf,
                     )
                     score_t.append(single_score_t)
@@ -488,7 +478,7 @@ def main(args):
             score_u = []
             acc_u = []
             thresholds = []
-            for i, pair in enumerate(sent_pairs):
+            for i, k_mer in enumerate(sent_k_mers):
                 start, end = f[lang_code][dataset_name]["test_logit_lengths"][i]
                 if args.adjust_threshold:
                     seq_len = f[lang_code][dataset_name]["test_n_logits"][i]
@@ -498,7 +488,6 @@ def main(args):
                         min_length=args.threshold_min_length,
                         max_threshold=args.threshold_max,
                         default_threshold=args.threshold,
-                        increase_type=args.threshold_increase_type,
                     )
                     clf[-1] = threshold_adjusted
                     thresholds.append(threshold_adjusted)
@@ -507,7 +496,7 @@ def main(args):
                 single_score_u, _, info = evaluate_mixture(
                     lang_code,
                     f[lang_code][dataset_name]["test_logits"][:][start:end],
-                    list(pair),
+                    list(k_mer),
                     *clf,
                 )
                 score_u.append(single_score_u)
@@ -581,7 +570,8 @@ def main(args):
         ),
         indent=4,
     )
-    os.remove(f.filename)
+    if not args.keep_logits:
+        os.remove(f.filename)
 
     print(results_avg)
     print(save_str)
