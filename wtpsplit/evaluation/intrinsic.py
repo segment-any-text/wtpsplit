@@ -54,6 +54,7 @@ class Args:
     save_suffix: str = ""
     do_lowercase: bool = False
     do_remove_punct: bool = False
+    keep_logits: bool = False
 
 
 def process_logits(text, model, lang_code, args):
@@ -372,7 +373,8 @@ def main(args):
         ),
         indent=4,
     )
-    os.remove(f.filename)
+    if not args.keep_logits:
+        os.remove(f.filename)
     return results, results_avg, total_test_time
 
 
