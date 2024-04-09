@@ -57,7 +57,7 @@ class Args:
     do_lowercase: bool = False
     do_remove_punct: bool = False
     skip_adaptation: bool = False
-    keep_logits: bool = False
+    keep_logits: bool = True
 
     # k_mer-specific args
     k: int = 2
@@ -244,7 +244,6 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
     total_test_time = 0  # Initialize total test processing time
 
-    # FIXME: revert to "a"
     start_time = time.time()
     with h5py.File(logits_path, "a") as f, torch.no_grad():
         for lang_code in Constants.LANGINFO.index:
@@ -367,7 +366,7 @@ def main(args):
     save_model_path = args.model_path
     if args.adapter_path:
         save_model_path = args.adapter_path
-    save_str = f"{save_model_path.replace('/','_')}_b{args.block_size}_u{args.threshold}_k_{args.k}{args.save_suffix}"
+    save_str = f"{save_model_path.replace('/','_')}_b{args.block_size}_k{args.k}{args.save_suffix}"
 
     if args.do_lowercase:
         save_str += "_lc"
@@ -396,6 +395,7 @@ def main(args):
 
     # first, logits for everything.
     f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data, save_str)
+    save_str += f"_u{args.threshold}"
     if args.adjust_threshold:
         save_str += (
             f"_adj_{args.threshold_increase_type}_{args.threshold_min_length}_{args.threshold_max_length}"
