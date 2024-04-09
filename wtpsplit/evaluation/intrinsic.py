@@ -109,7 +109,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
     total_test_time = 0  # Initialize total test processing time
 
     # TODO: revert to "a"
-    with h5py.File(logits_path, "w") as f, torch.no_grad():
+    with h5py.File(logits_path, "a") as f, torch.no_grad():
         for lang_code in use_langs:
             if args.include_langs is not None and lang_code not in args.include_langs:
                 continue
@@ -228,7 +228,7 @@ def main(args):
     if args.adapter_path:
         save_model_path = args.adapter_path
     save_str = (
-        f"{save_model_path.replace('/','_')}_b{args.block_size}_s{args.stride}_u{args.threshold}{args.save_suffix}"
+        f"{save_model_path.replace('/','_')}_b{args.block_size}_s{args.stride}"
     )
     if args.do_lowercase:
         save_str += "_lc"
@@ -268,6 +268,8 @@ def main(args):
 
     # first, logits for everything.
     f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data, save_str)
+    
+    save_str += f"_u{args.threshold}{args.save_suffix}"
 
     # now, compute the intrinsic scores.
     results = {}
