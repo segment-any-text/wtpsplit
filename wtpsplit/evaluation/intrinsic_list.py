@@ -18,6 +18,7 @@ import wtpsplit.models  # noqa: F401
 from wtpsplit.evaluation import evaluate_mixture, get_labels, token_to_char_probs, train_mixture
 from wtpsplit.extract import PyTorchWrapper, extract
 from wtpsplit.utils import Constants
+from collections import defaultdict
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -150,7 +151,9 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                             for n, p in model.backbone.named_parameters():
                                 if "LayerNorm" in n:
                                     p.data = ln_dict[n].data
-                    if not os.path.exists(os.path.join(args.model_path, "pytorch_model.bin")):
+                    if not os.path.exists(os.path.join(args.model_path, "pytorch_model.bin")) and not os.path.exists(
+                        os.path.join(args.model_path, "model.safetensors")
+                    ):
                         model_path = os.path.join(args.model_path, dataset_load_name, "en")
                         print(model_path)
                         model = PyTorchWrapper(
@@ -253,21 +256,34 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
 
 def compute_statistics(values):
-    if not values:  # Check for empty values list
-        return {"mean": None, "median": None, "std": None, "min": None, "min_lang": None, "max": None, "max_lang": None}
+    if not values:
+        return {}
 
-    scores, langs = zip(*values)  # Unpack scores and languages
-    min_index = np.argmin(scores)
-    max_index = np.argmax(scores)
-    return {
-        "mean": np.mean(scores),
-        "median": np.median(scores),
-        "std": np.std(scores),
-        "min": scores[min_index],
-        "min_lang": langs[min_index],
-        "max": scores[max_index],
-        "max_lang": langs[max_index],
-    }
+    # Extract all possible keys (metrics) from the first score dictionary, assuming all dicts have the same keys
+    all_metrics = values[0][0].keys()
+
+    # Prepare a dictionary to store statistics for each metric
+    stats_dict = {}
+
+    for metric in all_metrics:
+        scores = [score[metric] for score, lang in values]
+        langs = [lang for score, lang in values]
+        
+        # Calculate statistics for the current metric
+        min_index = np.argmin(scores)
+        max_index = np.argmax(scores)
+        
+        stats_dict[metric] = {
+            "mean": np.mean(scores),
+            "median": np.median(scores),
+            "std": np.std(scores),
+            "min": scores[min_index],
+            "min_lang": langs[min_index],
+            "max": scores[max_index],
+            "max_lang": langs[max_index],
+        }
+    
+    return stats_dict
 
 
 def main(args):
@@ -290,7 +306,9 @@ def main(args):
 
     print("Loading model...")
     # if model_path does not contain a model, take first subfolder
-    if not os.path.exists(os.path.join(args.model_path, "pytorch_model.bin")):
+    if not os.path.exists(os.path.join(args.model_path, "pytorch_model.bin")) and not os.path.exists(
+        os.path.join(args.model_path, "model.safetensors")
+    ):
         model_path = os.path.join(args.model_path, os.listdir(args.model_path)[0], "en")
         print("joined")
         print(model_path)
@@ -351,8 +369,8 @@ def main(args):
                 if clf[0] is not None:
                     print(clf)
 
-                score_t = []
-                score_punct = []
+                score_t = defaultdict(list)
+                score_punct = defaultdict(list)
                 for i, chunk in tqdm(enumerate(sentences), total=len(sentences), disable=args.tqdm):
                     start, end = f[lang_code][dataset_name]["test_logit_lengths"][i]
                     single_score_t, single_score_punct, info = evaluate_mixture(
@@ -361,9 +379,13 @@ def main(args):
                         list(chunk),
                         *clf,
                     )
-                    score_t.append(single_score_t)
-                    score_punct.append(single_score_punct)
-
+                    score_t["f1"].append(single_score_t)
+                    for key in ["precision", "recall", "correct_pairwise"]:
+                        score_t[key].append(info["info_newline"][key])
+                    score_punct["f1"].append(single_score_punct)
+                    for key in ["precision", "recall", "correct_pairwise"]:
+                        score_punct[key].append(info["info_transformed"][key])
+                    
                 clfs[lang_code][dataset_name] = clf
 
                 clf = list(copy.deepcopy(clf))
@@ -371,7 +393,7 @@ def main(args):
             else:
                 score_t = score_punct = None
 
-            score_u = []
+            score_u = defaultdict(list)
             for i, chunk in tqdm(enumerate(sentences), total=len(sentences), disable=args.tqdm):
                 start, end = f[lang_code][dataset_name]["test_logit_lengths"][i]
                 single_score_u, _, info = evaluate_mixture(
@@ -380,16 +402,28 @@ def main(args):
                     list(chunk),
                     *clf,
                 )
-                score_u.append(single_score_u)
-
-            score_u = np.mean(score_u)
-            score_t = np.mean(score_t) if score_t else None
-            score_punct = np.mean(score_punct) if score_punct else None
+                
+                score_u["f1"].append(single_score_u)
+                for key in ["precision", "recall", "correct_pairwise"]:
+                    score_u[key].append(info["info_newline"][key])
+                
+            score_u = {key: np.mean(value) for key, value in score_u.items()}
+            score_t = {key: np.mean(value) for key, value in score_t.items()} if score_t else None
+            score_punct = {key: np.mean(value) for key, value in score_punct.items()} if score_punct else None
 
             results[lang_code][dataset_name] = {
-                "u": score_u,
-                "t": score_t,
-                "punct": score_punct,
+                "u": score_u["f1"],
+                "t": score_t["f1"],
+                "punct": score_punct["f1"],
+                "u_precision": score_u["precision"],
+                "t_precision": score_t["precision"],
+                "punct_precision": score_punct["precision"],
+                "u_recall": score_u["recall"],
+                "t_recall": score_t["recall"],
+                "punct_recall": score_punct["recall"],
+                "u_acc": score_u["correct_pairwise"],
+                "t_acc": score_t["correct_pairwise"],
+                "punct_acc": score_punct["correct_pairwise"],
             }
 
             # just for printing
@@ -400,7 +434,7 @@ def main(args):
             t_scores.append((score_t, lang_code))
             punct_scores.append((score_punct, lang_code))
 
-            print(f"{lang_code} {dataset_name} {score_u:.3f} {score_t:.3f} {score_punct:.3f}")
+            print(f"{lang_code} {dataset_name} {score_u['f1']:.3f} {score_t['f1']:.3f} {score_punct['f1']:.3f}")
 
     # Compute statistics for each metric across all languages
     results_avg = {
