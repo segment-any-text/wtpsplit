@@ -560,15 +560,18 @@ def main():
                 # if args.one_sample_per_line:
                 # eval only 5x during the entire training
                 training_args.evaluation_strategy = "steps"
-                training_args.eval_steps = (
-                    len(train_dataset)
-                    // training_args.per_device_train_batch_size
-                    // training_args.gradient_accumulation_steps
-                    // args.eval_every
-                    * training_args.num_train_epochs
+                training_args.eval_steps = max(
+                    (
+                        len(train_dataset)
+                        // training_args.per_device_train_batch_size
+                        // training_args.gradient_accumulation_steps
+                        // args.eval_every
+                        * training_args.num_train_epochs
+                    ),
+                    args.eval_every,
                 )
                 # log more often than this
-                training_args.logging_steps = training_args.eval_steps // 4
+                training_args.logging_steps = training_args.eval_steps // 5
 
                 trainer_cls = AdapterTrainer if adapter_args.train_adapter else Trainer
                 # add logging_prefix and skip_eval_loss as args to trainer_cls if trainer_cls is AdapterTrainer only
