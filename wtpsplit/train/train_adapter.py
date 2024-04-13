@@ -40,7 +40,7 @@ class Args:
     model_name_or_path: str
     base_model: str = "xlm-roberta-base"
     shuffle: bool = True
-    text_path: str = "data/eval.pth"
+    text_path: str = "data/all_data.pth"
     include_languages: List[str] = None
     preprocessing_num_workers: int = 1
     block_size: int = 512
@@ -67,6 +67,7 @@ class Args:
     do_process: bool = False
     meta_clf: bool = False
     wandb_project: str = "sentence"
+    eval_every: int = 5
     # corruption
     do_lowercase: bool = False
     do_remove_punct: bool = False
@@ -92,6 +93,9 @@ def main():
         if (label_args.use_auxiliary or args.do_auxiliary_training or args.meta_clf)
         else 0
     )
+    if "multilingual" in args.model_name_or_path:
+        # Igor's models were not trained with aux. objective.
+        num_labels = 2
     config = SubwordXLMConfig.from_pretrained(
         args.model_name_or_path,
         num_labels=num_labels,
@@ -106,7 +110,7 @@ def main():
         split="train",
         do_lowercase=False,
         do_remove_punct=False,
-        subsample: Union[None, int, float] = None
+        subsample: Union[None, int, float] = None,
     ):
         # maybe we use more than 1 lang later at once.
         with training_args.main_process_first():
@@ -164,8 +168,8 @@ def main():
                 subsample = min(subsample, len(dataset))
                 dataset = dataset.select(range(subsample))
             elif isinstance(subsample, float):
-                dataset = dataset.select(range(int(subsample * len(dataset)))) 
-            logger.warning(f"Subsampled {len(dataset)} examples from {old_length}.")      
+                dataset = dataset.select(range(int(subsample * len(dataset))))
+            logger.warning(f"Subsampled {len(dataset)} examples from {old_length}.")
 
         # very likely not relevant / used only for the compound part
         if args.ignore_non_hyphen:
@@ -371,9 +375,9 @@ def main():
                 with training_args.main_process_first():
                     dataset = dataset.map(
                         lambda x: {
-                            "input_ids": [
-                                tokenizer.convert_tokens_to_ids(tokenizer.bos_token)
-                            ] + x["input_ids"] + [tokenizer.convert_tokens_to_ids(tokenizer.eos_token)]
+                            "input_ids": [tokenizer.convert_tokens_to_ids(tokenizer.bos_token)]
+                            + x["input_ids"]
+                            + [tokenizer.convert_tokens_to_ids(tokenizer.eos_token)]
                         },
                         batched=False,
                     )
@@ -516,7 +520,7 @@ def main():
                 label_dict = (
                     get_subword_label_dict(label_args, tokenizer) if args.use_subwords else get_label_dict(label_args)
                 )
-                
+
                 if adapter_args.train_adapter:
                     # init new adapter
                     model.backbone.add_adapter(
@@ -529,7 +533,7 @@ def main():
                     training_args.adapter_warmup_steps = args.adapter_warmup_steps
                     training_args.adapter_lr_multiplier = args.adapter_lr_multiplier
                     kwargs = {}
-                    
+
                 with training_args.main_process_first():
                     logger.warning(model.backbone.adapter_summary())
 
@@ -552,17 +556,23 @@ def main():
                         torch.nn.Linear(clf.out_features, 1),
                     )
                     model.backbone.config.num_labels = 1
-                    
-                if args.one_sample_per_line:
-                    # eval only 10x during the entire training
-                    training_args.evaluation_strategy = "steps"
-                    training_args.eval_steps = max(len(train_dataset) // training_args.per_device_train_batch_size, 5)    
-                    # log twice as often
-                    training_args.logging_steps = training_args.eval_steps // 2
 
-                trainer_cls = AdapterTrainer if adapter_args.train_adapter else Trainer 
+                # if args.one_sample_per_line:
+                # eval only 5x during the entire training
+                training_args.evaluation_strategy = "steps"
+                training_args.eval_steps = (
+                    len(train_dataset)
+                    // training_args.per_device_train_batch_size
+                    // training_args.gradient_accumulation_steps
+                    // args.eval_every
+                    * training_args.num_train_epochs
+                )
+                # log more often than this
+                training_args.logging_steps = training_args.eval_steps // 4
+
+                trainer_cls = AdapterTrainer if adapter_args.train_adapter else Trainer
                 # add logging_prefix and skip_eval_loss as args to trainer_cls if trainer_cls is AdapterTrainer only
-                    
+
                 trainer = trainer_cls(
                     model,
                     training_args,
@@ -605,14 +615,16 @@ def main():
         else:
             eval_function = "intrinsic"
         if args.do_lowercase and args.do_remove_punct:
-            suffix = "--do_lowercase --do_remove_punct" 
+            suffix = "--do_lowercase --do_remove_punct"
+        elif "multilingual" in trainings_args.model_name_or_path:
+            suffix = "--threshold 0.5"
         else:
-            suffix = "" 
+            suffix = ""
         if "adapter" in training_args.output_dir:
             model_info = f"--model_path {args.model_name_or_path} --adapter_path {training_args.output_dir}"
         else:
             model_info = f"--model_path {training_args.output_dir}"
-            
+
         if "verses" in args.text_path or "lines" in args.text_path:
             cmd = f"python3 wtpsplit/evaluation/{eval_function}.py {model_info} --threshold 0.1 --custom_language_list data/mldb_langs.csv --eval_data_path {args.text_path} {suffix}"
         else:
