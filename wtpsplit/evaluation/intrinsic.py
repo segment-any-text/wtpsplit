@@ -56,6 +56,7 @@ class Args:
     do_lowercase: bool = False
     do_remove_punct: bool = False
     keep_logits: bool = False
+    skip_adaptation: bool = False
 
 
 def process_logits(text, model, lang_code, args):
@@ -82,6 +83,11 @@ def process_logits(text, model, lang_code, args):
 
         logits = char_probs
 
+    if len(model.model.config.id2label) == 2:
+        # Igor's models: take winning logit
+        logits = np.expand_dims(logits.argmax(axis=1), axis=1)
+        # we apply sigmoid later; convert to fake logits
+        logits = np.log((logits + 1e-8) / (1 - logits + 1e-8))
     return logits
 
 
@@ -109,7 +115,6 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
     total_test_time = 0  # Initialize total test processing time
 
-    # TODO: revert to "a"
     with h5py.File(logits_path, "a") as f, torch.no_grad():
         for lang_code in use_langs:
             if args.include_langs is not None and lang_code not in args.include_langs:
@@ -190,7 +195,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     dset_group.create_dataset("test_labels", data=test_labels)
 
                 train_sentences = dataset["meta"].get("train_data")
-                if train_sentences is not None and "train_logits" not in dset_group:
+                if train_sentences is not None and "train_logits" not in dset_group and not args.skip_adaptation:
                     if isinstance(train_sentences[0], list):
                         train_sentences = [item for sublist in train_sentences for item in sublist]
                     train_sentences = [
@@ -272,9 +277,6 @@ def main(args):
     f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data, save_str)
 
     save_str += f"_u{args.threshold}{args.save_suffix}"
-    
-    if "multilingual" in model_path:
-        Constants.NEWLINE_INDEX += 1
 
     # now, compute the intrinsic scores.
     results = {}
@@ -302,7 +304,7 @@ def main(args):
             if lang_code not in f or dataset_name not in f[lang_code]:
                 continue
 
-            if "train_logits" in f[lang_code][dataset_name]:
+            if "train_logits" in f[lang_code][dataset_name] and not args.skip_adaptation:
                 feature_indices = None
                 clf = train_mixture(
                     [lang_code],
@@ -325,6 +327,8 @@ def main(args):
                 clf = list(copy.deepcopy(clf))
                 clf[-1] = args.threshold
             else:
+                score_t = score_punct = None
+                clf = [None, None, None, args.threshold]
                 score_t = score_punct = None
 
             score_u, _, _ = evaluate_mixture(lang_code, f[lang_code][dataset_name]["test_logits"][:], sentences, *clf)
