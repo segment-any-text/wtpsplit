@@ -93,9 +93,6 @@ def main():
         if (label_args.use_auxiliary or args.do_auxiliary_training or args.meta_clf)
         else 0
     )
-    if "multilingual" in args.model_name_or_path:
-        # Igor's models were not trained with aux. objective.
-        num_labels = 2
     config = SubwordXLMConfig.from_pretrained(
         args.model_name_or_path,
         num_labels=num_labels,
