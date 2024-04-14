@@ -58,6 +58,7 @@ class Args:
     do_strip: bool = False
     tqdm: bool = False
     skip_adaptation: bool = False
+    clf_from_scratch: bool = False
 
 
 def process_logits_list(text, model, lang_code, block_size, stride, batch_size, verbose=True) -> List[np.ndarray]:
@@ -143,6 +144,8 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     dataset_load_name = dataset_name
                 try:
                     if args.adapter_path:
+                        if args.clf_from_scratch:
+                            model.model.classifier = torch.nn.Linear(model.model.classifier.in_features, 1)
                         model.model.load_adapter(
                             args.adapter_path + "/" + dataset_load_name + "/" + lang_code,
                             set_active=True,
