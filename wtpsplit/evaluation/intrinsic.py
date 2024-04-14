@@ -329,7 +329,6 @@ def main(args):
             else:
                 score_t = score_punct = None
                 clf = [None, None, None, args.threshold]
-                score_t = score_punct = None
 
             score_u, _, _ = evaluate_mixture(lang_code, f[lang_code][dataset_name]["test_logits"][:], sentences, *clf)
 

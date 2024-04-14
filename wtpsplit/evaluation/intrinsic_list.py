@@ -57,6 +57,7 @@ class Args:
     do_remove_punct: bool = False
     do_strip: bool = False
     tqdm: bool = False
+    skip_adaptation: bool = False
 
 
 def process_logits_list(text, model, lang_code, block_size, stride, batch_size, verbose=True) -> List[np.ndarray]:
@@ -83,6 +84,11 @@ def process_logits_list(text, model, lang_code, block_size, stride, batch_size, 
 
             # padding is also removed here (via offset_mapping)
             logits = token_to_char_probs(merged_chunk, tokens, logits, tokenizer, offsets_mapping)
+            if len(model.model.config.id2label) == 2:
+                # Igor's models: take winning logit
+                logits = np.expand_dims(logits.argmax(axis=1), axis=1)
+                # we apply sigmoid later; convert to fake logits
+                logits = np.log((logits + 1e-8) / (1 - logits + 1e-8))
             logits_list.append(logits)
         else:
             raise NotImplementedError("Only XLM models are supported for now")
@@ -128,7 +134,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
             # eval data
             for dataset_name, dataset in eval_data[lang_code]["sentence"].items():
-                # train on all mldb, eval on mldbW 
+                # train on all mldb, eval on mldbW
                 if "mldbW" in args.eval_data_path and (
                     "mldbW" not in args.model_path and "mldbW" not in args.adapter_path
                 ):
@@ -212,7 +218,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     dset_group.create_dataset("test_logit_lengths", data=test_logit_lengths)
 
                 train_sentences = dataset["meta"].get("train_data")
-                if train_sentences is not None and "train_logits" not in dset_group:
+                if train_sentences is not None and "train_logits" not in dset_group and not args.skip_adaptation:
                     train_sentences = [
                         [
                             corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
@@ -268,11 +274,11 @@ def compute_statistics(values):
     for metric in all_metrics:
         scores = [score[metric] for score, lang in values]
         langs = [lang for score, lang in values]
-        
+
         # Calculate statistics for the current metric
         min_index = np.argmin(scores)
         max_index = np.argmax(scores)
-        
+
         stats_dict[metric] = {
             "mean": np.mean(scores),
             "median": np.median(scores),
@@ -282,7 +288,7 @@ def compute_statistics(values):
             "max": scores[max_index],
             "max_lang": langs[max_index],
         }
-    
+
     return stats_dict
 
 
@@ -358,7 +364,7 @@ def main(args):
             if lang_code not in f or dataset_name not in f[lang_code]:
                 continue
 
-            if "train_logits" in f[lang_code][dataset_name]:
+            if "train_logits" in f[lang_code][dataset_name] and not args.skip_adaptation:
                 feature_indices = None
                 clf = train_mixture(
                     [lang_code],
@@ -385,12 +391,13 @@ def main(args):
                     score_punct["f1"].append(single_score_punct)
                     for key in ["precision", "recall", "correct_pairwise"]:
                         score_punct[key].append(info["info_transformed"][key])
-                    
+
                 clfs[lang_code][dataset_name] = clf
 
                 clf = list(copy.deepcopy(clf))
                 clf[-1] = args.threshold
             else:
+                clf = [None, None, None, args.threshold]
                 score_t = score_punct = None
 
             score_u = defaultdict(list)
@@ -402,11 +409,11 @@ def main(args):
                     list(chunk),
                     *clf,
                 )
-                
+
                 score_u["f1"].append(single_score_u)
                 for key in ["precision", "recall", "correct_pairwise"]:
                     score_u[key].append(info["info_newline"][key])
-                
+
             score_u = {key: np.mean(value) for key, value in score_u.items()}
             score_t = {key: np.mean(value) for key, value in score_t.items()} if score_t else None
             score_punct = {key: np.mean(value) for key, value in score_punct.items()} if score_punct else None
