@@ -8,7 +8,10 @@ from torch import Tensor, nn
 from torch.nn import CrossEntropyLoss
 from torchinfo import summary
 from transformers import AutoModel, AutoModelForTokenClassification
-from transformers.modeling_outputs import BaseModelOutputWithPoolingAndCrossAttentions
+from transformers.modeling_outputs import (
+    BaseModelOutputWithPoolingAndCrossAttentions,
+    BaseModelOutputWithPastAndCrossAttentions,
+)
 from transformers.modeling_utils import ModuleUtilsMixin
 from transformers.models.bert.modeling_bert import BertEncoder, BertForTokenClassification, BertModel, BertPooler
 from transformers.models.canine.modeling_canine import (
@@ -39,6 +42,7 @@ from transformers.models.xlm_roberta.modeling_xlm_roberta import (
     XLMRobertaEmbeddings,
     XLMRobertaEncoder,
     XLMRobertaPooler,
+    XLMRobertaLayer,
 )
 
 from wtpsplit.configs import BertCharConfig, LACanineConfig, SubwordXLMConfig
@@ -1057,12 +1061,18 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
         self.config = config
 
         self.embeddings = XLMRobertaEmbeddings(config)
-        self.encoder = XLMRobertaEncoder(config)
-
+        self.encoder = SubwordXLMRobertaEncoder(config)
+        self.lookahead_split_layers = config.lookahead_split_layers
         self.pooler = XLMRobertaPooler(config) if add_pooling_layer else None
-        self.effective_lookahead = (
-            config.lookahead // config.num_hidden_layers if config.lookahead is not None else None
-        )
+        if config.lookahead is not None:
+            divide_value = (
+                self.lookahead_split_layers if self.lookahead_split_layers is not None else config.num_hidden_layers
+            )
+            if config.lookahead_split_layers is not None:
+                assert self.lookahead_split_layers <= config.num_hidden_layers
+            self.effective_lookahead = config.lookahead // divide_value
+        else:
+            self.effective_lookahead = None
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1143,8 +1153,8 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        extended_attention_mask: torch.Tensor = self.get_extended_attention_mask(
-            attention_mask, input_shape, self.effective_lookahead
+        extended_attention_mask: torch.Tensor = get_extended_attention_mask(
+            self.config, attention_mask, input_shape, self.effective_lookahead, device, self.dtype
         )
 
         # If a 2D or 3D attention mask is provided for the cross-attention
@@ -1183,6 +1193,8 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            init_attention_mask=attention_mask,
+            dtype=self.dtype,
         )
         sequence_output = encoder_outputs[0]
         pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
@@ -1199,74 +1211,179 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
             cross_attentions=encoder_outputs.cross_attentions,
         )
 
-    def get_extended_attention_mask(
-        self,
-        attention_mask: Tensor,
-        input_shape: Tuple[int],
-        lookahead: Optional[int] = None,
-        device: torch.device = None,
-        dtype: torch.float = None,
-    ) -> Tensor:
-        """
-        Makes broadcastable attention and causal masks so that future and masked tokens are ignored.
 
-        Arguments:
-            attention_mask (`torch.Tensor`):
-                Mask with ones indicating tokens to attend to, zeros for tokens to ignore.
-            input_shape (`Tuple[int]`):
-                The shape of the input to the model.
+def get_extended_attention_mask(
+    config,
+    attention_mask: Tensor,
+    input_shape: Tuple[int],
+    lookahead: Optional[int] = None,
+    device: torch.device = None,
+    dtype: torch.float = None,
+) -> Tensor:
+    """
+    Makes broadcastable attention and causal masks so that future and masked tokens are ignored.
 
-        Returns:
-            `torch.Tensor` The extended attention mask, with a the same dtype as `attention_mask.dtype`.
-        """
-        if dtype is None:
-            dtype = self.dtype
+    Arguments:
+        attention_mask (`torch.Tensor`):
+            Mask with ones indicating tokens to attend to, zeros for tokens to ignore.
+        input_shape (`Tuple[int]`):
+            The shape of the input to the model.
 
-        if not (attention_mask.dim() == 2 and self.config.is_decoder):
-            # show warning only if it won't be shown in `create_extended_attention_mask_for_decoder`
-            if device is not None:
-                warnings.warn(
-                    "The `device` argument is deprecated and will be removed in v5 of Transformers.", FutureWarning
-                )
-        # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
-        # ourselves in which case we just need to make it broadcastable to all heads.
-        if attention_mask.dim() == 3:
-            extended_attention_mask = attention_mask[:, None, :, :]
+    Returns:
+        `torch.Tensor` The extended attention mask, with a the same dtype as `attention_mask.dtype`.
+    """
 
-        elif attention_mask.dim() == 2:
-            # Provided a padding mask of dimensions [batch_size, seq_length]
-            # - if the model is a decoder, apply a causal mask in addition to the padding mask
-            # - if the model is an encoder, make the mask broadcastable to [batch_size, num_heads, seq_length, seq_length]
-            if self.config.is_decoder:
-                extended_attention_mask = ModuleUtilsMixin.create_extended_attention_mask_for_decoder(
-                    input_shape, attention_mask, device
-                )
-            if lookahead:
-                # lookahead mask of shape [batch_size, 1, seq_length, seq_length]
-                # the current token should attend to the next `lookahead` tokens
-                # the current token should not attend to the previous `lookahead` tokens
-                _, seq_length = attention_mask.shape
-                # Create a lookahead mask
-                lookahead_mask = torch.tril(torch.ones(seq_length, seq_length), diagonal=lookahead, out=None).to(
-                    attention_mask.device
-                )
-                # Combine the attention mask with the lookahead mask
-                extended_attention_mask = attention_mask[:, None, None, :] * lookahead_mask
-            else:
-                extended_attention_mask = attention_mask[:, None, None, :]
-        else:
-            raise ValueError(
-                f"Wrong shape for input_ids (shape {input_shape}) or attention_mask (shape {attention_mask.shape})"
+    # if not (attention_mask.dim() == 2 and config.is_decoder):
+        # show warning only if it won't be shown in `create_extended_attention_mask_for_decoder`
+        # if device is not None:
+        #     warnings.warn(
+        #         "The `device` argument is deprecated and will be removed in v5 of Transformers.", FutureWarning
+        #     )
+    # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
+    # ourselves in which case we just need to make it broadcastable to all heads.
+    if attention_mask.dim() == 3:
+        extended_attention_mask = attention_mask[:, None, :, :]
+
+    elif attention_mask.dim() == 2:
+        # Provided a padding mask of dimensions [batch_size, seq_length]
+        # - if the model is a decoder, apply a causal mask in addition to the padding mask
+        # - if the model is an encoder, make the mask broadcastable to [batch_size, num_heads, seq_length, seq_length]
+        if config.is_decoder:
+            extended_attention_mask = ModuleUtilsMixin.create_extended_attention_mask_for_decoder(
+                input_shape, attention_mask, device
             )
+        if lookahead is not None:
+            # lookahead mask of shape [batch_size, 1, seq_length, seq_length]
+            # the current token should attend to the next `lookahead` tokens
+            # the current token should not attend to the previous `lookahead` tokens
+            _, seq_length = attention_mask.shape
+            # Create a lookahead mask
+            lookahead_mask = torch.tril(torch.ones(seq_length, seq_length), diagonal=lookahead, out=None).to(
+                attention_mask.device
+            )
+            # Combine the attention mask with the lookahead mask
+            extended_attention_mask = attention_mask[:, None, None, :] * lookahead_mask
+        else:
+            extended_attention_mask = attention_mask[:, None, None, :]
+    else:
+        raise ValueError(
+            f"Wrong shape for input_ids (shape {input_shape}) or attention_mask (shape {attention_mask.shape})"
+        )
 
-        # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
-        # masked positions, this operation will create a tensor which is 0.0 for
-        # positions we want to attend and the dtype's smallest value for masked positions.
-        # Since we are adding it to the raw scores before the softmax, this is
-        # effectively the same as removing these entirely.
-        extended_attention_mask = extended_attention_mask.to(dtype=dtype)  # fp16 compatibility
-        extended_attention_mask = (1.0 - extended_attention_mask) * torch.finfo(dtype).min
-        return extended_attention_mask
+    # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
+    # masked positions, this operation will create a tensor which is 0.0 for
+    # positions we want to attend and the dtype's smallest value for masked positions.
+    # Since we are adding it to the raw scores before the softmax, this is
+    # effectively the same as removing these entirely.
+    extended_attention_mask = extended_attention_mask.to(dtype=dtype)  # fp16 compatibility
+    extended_attention_mask = (1.0 - extended_attention_mask) * torch.finfo(dtype).min
+    return extended_attention_mask
+
+
+# Copied from transformers.models.roberta.modeling_roberta.RobertaEncoder with Roberta->XLMRoberta
+class SubwordXLMRobertaEncoder(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+        self.layer = nn.ModuleList([XLMRobertaLayer(config) for _ in range(config.num_hidden_layers)])
+        self.gradient_checkpointing = False
+
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: Optional[torch.FloatTensor] = None,
+        head_mask: Optional[torch.FloatTensor] = None,
+        encoder_hidden_states: Optional[torch.FloatTensor] = None,
+        encoder_attention_mask: Optional[torch.FloatTensor] = None,
+        past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = False,
+        output_hidden_states: Optional[bool] = False,
+        return_dict: Optional[bool] = True,
+        init_attention_mask: Optional[torch.Tensor] = None,
+        dtype: torch.float = None,
+    ) -> Union[Tuple[torch.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
+        all_hidden_states = () if output_hidden_states else None
+        all_self_attentions = () if output_attentions else None
+        all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
+
+        if self.gradient_checkpointing and self.training:
+            if use_cache:
+                print("`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`...")
+                use_cache = False
+
+        next_decoder_cache = () if use_cache else None
+        for i, layer_module in enumerate(self.layer):
+            # MODIFIED: if lookahead_split_layers is given, use causal mask starting from that layer
+            if self.config.lookahead_split_layers is not None:
+                if i == self.config.lookahead_split_layers:
+                    attention_mask = get_extended_attention_mask(
+                        self.config, init_attention_mask, init_attention_mask.shape, 0, hidden_states.device, dtype
+                    )
+
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
+            layer_head_mask = head_mask[i] if head_mask is not None else None
+            past_key_value = past_key_values[i] if past_key_values is not None else None
+
+            if self.gradient_checkpointing and self.training:
+
+                def create_custom_forward(module):
+                    def custom_forward(*inputs):
+                        return module(*inputs, past_key_value, output_attentions)
+
+                    return custom_forward
+
+                layer_outputs = torch.utils.checkpoint.checkpoint(
+                    create_custom_forward(layer_module),
+                    hidden_states,
+                    attention_mask,
+                    layer_head_mask,
+                    encoder_hidden_states,
+                    encoder_attention_mask,
+                )
+            else:
+                layer_outputs = layer_module(
+                    hidden_states,
+                    attention_mask,
+                    layer_head_mask,
+                    encoder_hidden_states,
+                    encoder_attention_mask,
+                    past_key_value,
+                    output_attentions,
+                )
+
+            hidden_states = layer_outputs[0]
+            if use_cache:
+                next_decoder_cache += (layer_outputs[-1],)
+            if output_attentions:
+                all_self_attentions = all_self_attentions + (layer_outputs[1],)
+                if self.config.add_cross_attention:
+                    all_cross_attentions = all_cross_attentions + (layer_outputs[2],)
+
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states + (hidden_states,)
+
+        if not return_dict:
+            return tuple(
+                v
+                for v in [
+                    hidden_states,
+                    next_decoder_cache,
+                    all_hidden_states,
+                    all_self_attentions,
+                    all_cross_attentions,
+                ]
+                if v is not None
+            )
+        return BaseModelOutputWithPastAndCrossAttentions(
+            last_hidden_state=hidden_states,
+            past_key_values=next_decoder_cache,
+            hidden_states=all_hidden_states,
+            attentions=all_self_attentions,
+            cross_attentions=all_cross_attentions,
+        )
 
 
 AutoModel.register(LACanineConfig, LACanineModel)
@@ -1283,9 +1400,11 @@ if __name__ == "__main__":
     from transformers import AutoConfig, AutoTokenizer
 
     model_str = "xlm-roberta-base"
-    config = AutoConfig.from_pretrained(model_str)
+    config = SubwordXLMConfig.from_pretrained(model_str)
     config.num_labels = 4
-    config.num_hidden_layers = 1
+    config.num_hidden_layers = 12
+    config.lookahead = 48
+    config.lookahead_split_layers = 6
     backbone = SubwordXLMForTokenClassification.from_pretrained(model_str, config=config)
     print(summary(backbone, depth=4))
 

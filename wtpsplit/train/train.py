@@ -8,7 +8,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from functools import partial
 from glob import glob
-from typing import List
+from typing import List, Optional
 import shutil
 
 import datasets
@@ -102,6 +102,7 @@ class Args:
     # NEW PARAMS
     use_subwords: bool = False
     threshold: float = 0.01
+    lookahead_split_layers: Optional[int] = None
 
 
 def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: bool = False):
@@ -213,6 +214,7 @@ def main():
                 num_hidden_layers=args.num_hidden_layers,
                 num_labels=num_labels,
                 lookahead=args.lookahead,
+                lookahead_split_layers=args.lookahead_split_layers,
             )
             backbone = SubwordXLMForTokenClassification(config)
 
@@ -222,6 +224,7 @@ def main():
                 num_hidden_layers=args.num_hidden_layers,
                 num_labels=num_labels,
                 lookahead=args.lookahead,
+                lookahead_split_layers=args.lookahead_split_layers,
             )
             backbone = SubwordXLMForTokenClassification.from_pretrained(
                 args.model_name_or_path,

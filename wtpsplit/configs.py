@@ -52,11 +52,13 @@ class SubwordXLMConfig(XLMRobertaConfig):
     def __init__(
         self,
         lookahead=None,
+        lookahead_split_layers=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.mixture_name = "xlm-token"
         self.lookahead = lookahead
+        self.lookahead_split_layers = lookahead_split_layers
 
 
 AutoConfig.register("bert-char", BertCharConfig)
