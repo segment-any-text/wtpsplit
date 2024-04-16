@@ -122,7 +122,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
     total_test_time = 0  # Initialize total test processing time
 
     # TODO: revert to "a"
-    with h5py.File(logits_path, "w") as f, torch.no_grad():
+    with h5py.File(logits_path, "a") as f, torch.no_grad():
         for lang_code in use_langs:
             if args.include_langs is not None and lang_code not in args.include_langs:
                 continue
@@ -391,9 +391,13 @@ def main(args):
                     score_t["f1"].append(single_score_t)
                     for key in ["precision", "recall", "correct_pairwise"]:
                         score_t[key].append(info["info_newline"][key])
-                    score_punct["f1"].append(single_score_punct)
+                    score_punct["f1"].append(single_score_punct if single_score_punct is not None else 0.0)
                     for key in ["precision", "recall", "correct_pairwise"]:
-                        score_punct[key].append(info["info_transformed"][key])
+                        score_punct[key].append(
+                            info["info_transformed"][key]
+                            if single_score_punct is not None
+                            else info["info_newline"][key]
+                        )
 
                 clfs[lang_code][dataset_name] = clf
 
