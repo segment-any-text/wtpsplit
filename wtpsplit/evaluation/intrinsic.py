@@ -42,7 +42,7 @@ class Args:
     #    }
     # }
     # TODO: for songs/etc., maybe feed in each sample separately?
-    eval_data_path: str = "data/eval.pth"
+    eval_data_path: str = "data/all_data.pth"
     valid_text_path: str = None  # "data/sentence/valid.parquet"
     device: str = "cpu"
     block_size: int = 512
@@ -57,6 +57,7 @@ class Args:
     do_remove_punct: bool = False
     keep_logits: bool = False
     skip_adaptation: bool = False
+    clf_from_scratch: bool = False
 
 
 def process_logits(text, model, lang_code, args):
@@ -148,6 +149,8 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
             for dataset_name, dataset in eval_data[lang_code]["sentence"].items():
                 try:
                     if args.adapter_path:
+                        if args.clf_from_scratch:
+                            model.model.classifier = torch.nn.Linear(model.model.classifier.in_features, 1)
                         model.model.load_adapter(
                             args.adapter_path + "/" + dataset_name + "/" + lang_code,
                             set_active=True,
