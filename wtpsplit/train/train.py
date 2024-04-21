@@ -76,7 +76,7 @@ class Args:
     train_text_path: str = "data/train.parquet"
     valid_text_path: str = "data/valid.parquet"
     include_languages: List[str] = None
-    eval_data_path: str = "data/eval.pth"
+    eval_data_path: str = "data/all_data.pth"
     num_hidden_layers: int = 1
     preprocessing_num_workers: int = 6
     block_size: int = 512
@@ -138,7 +138,7 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: boo
             label_args,
             label_dict=label_dict,
             pack_samples=args.pack_samples,
-            min_length=args.block_size,
+            # min_length=args.block_size,
             tokenizer=tokenizer if args.use_subwords else None,
         )
 
@@ -608,7 +608,7 @@ def main():
                     # else:
                     #     avg_metrics[f"lower_rmp_average_whitespace_{dataset_name}_pr_auc"].append(score)
                     # k-mer based evaluation
-                    for k in [2, 3, 4, 5, 6]:
+                    for k in [2, 3, 4]:
                         score, avg_acc, info = evaluate_sentence_kmers(
                             lang_code,
                             dataset["data"],

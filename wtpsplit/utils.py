@@ -84,6 +84,7 @@ class LabelArgs:
     non_whitespace_remove_spaces: bool = True
     case_corruption_prob_after_newline: float = 0.0
     case_corruption_prob_after_punct: float = 0.0
+    corrupt_entire_chunk_prob: float = 0.0
 
     def __post_init__(self):
         if self.custom_punctuation_file:
@@ -208,6 +209,16 @@ def corrupt(
 ):
     input_ids = input_ids.copy()
     block_ids = block_ids.copy()
+    if random.random() < label_args.corrupt_entire_chunk_prob:
+        # lowercase all text
+        lowercased = tokenizer.decode(input_ids).lower()
+        input_ids = tokenizer.encode(lowercased, add_special_tokens=False)
+        block_ids = [0] * len(input_ids)
+        # remove ALL punct
+        auxiliary_remove_prob = 1.0
+    else:
+        auxiliary_remove_prob = label_args.auxiliary_remove_prob
+        
     labels = label(input_ids, label_dict)
 
     separator = Constants.SEPARATORS[lang]
@@ -292,7 +303,7 @@ def corrupt(
             if pack_samples:
                 raise NotImplementedError()
 
-            if random.random() < label_args.auxiliary_remove_prob:
+            if random.random() < auxiliary_remove_prob:
                 removed_aux_char = False
                 if label_args.retain_first_consecutive_punctuation:
                     # remove only if the next token is not a newline
