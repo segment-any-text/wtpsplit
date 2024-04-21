@@ -1,6 +1,6 @@
 {
     "model_name_or_path": "xlm-roberta-base",
-    "output_dir": "xlmr-3l-v3",
+    "output_dir": "xlmr-3l-v3_look48",
     "train_text_path": "data/sentence/train.parquet",
     "valid_text_path": "data/sentence/valid.parquet",
     "block_size": 256,
@@ -25,7 +25,7 @@
     "report_to": "wandb",
     "is_decoder": false,
     "remove_unused_columns": false,
-    "lookahead": null,
+    "lookahead": 48,
     "one_sample_per_line": false,
     "do_sentence_training": true,
     "do_auxiliary_training": true,
