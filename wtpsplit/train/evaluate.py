@@ -281,6 +281,7 @@ def evaluate_sentence_kmers(
     average_metric = np.mean(metrics_list)
     avg_accuracy = np.mean(accuracy_list)
     # get averages for info_list
+    # print(len(info_list), len(sampled_k_mers))
     if len(sampled_k_mers) > 0:
         avg_info = {
             key: np.mean([info[key] for info in info_list])
@@ -293,3 +294,4 @@ def evaluate_sentence_kmers(
         avg_info["f1"] = 0
         avg_info["f1_best"] = 0
         avg_info["threshold_best"] = 0
+    return average_metric, avg_accuracy, avg_info
