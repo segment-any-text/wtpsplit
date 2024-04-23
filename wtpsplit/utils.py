@@ -11,6 +11,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 from transformers import AutoTokenizer
+from mosestokenizer import MosesTokenizer
 
 # same as in CANINE
 PRIMES = [31, 43, 59, 61, 73, 97, 103, 113, 137, 149, 157, 173, 181, 193, 211, 223]
@@ -206,6 +207,24 @@ def corrupt(text: str, do_lowercase: bool, do_remove_punct: bool):
     return text
 
 
+def corrupt_asr(text: str, lang):
+    try:
+        tokenizer = MosesTokenizer(lang)
+    except:
+        tokenizer = MosesTokenizer("en")
+
+    sentences = text.split("\n")
+    tokenized_sentences = [tokenizer.tokenize(sentence) for sentence in sentences]
+    corrupted_tokenized_sentences = [
+        [token for token in tokens if token not in Constants.PUNCTUATION_CHARS] for tokens in tokenized_sentences
+    ]
+    corrupted_sentences = [
+        tokenizer.detokenize(corrupted_tokens).lower() for corrupted_tokens in corrupted_tokenized_sentences
+    ]
+
+    return corrupted_sentences
+
+
 # does the steps in Figure 2 of the paper
 def corrupt_training(
     input_ids,
@@ -234,6 +253,13 @@ def corrupt_training(
             corrupted = corrupt(input_text, do_lowercase=True, do_remove_punct=True)
             input_ids = tokenizer.encode(corrupted, add_special_tokens=False)
             auxiliary_remove_prob = 1.0  # just for safety/consistency
+        elif label_args.corrupt_entire_chunk_strategy == "asr":
+            if not tokenizer:
+                raise NotImplementedError()
+            corrupted_sentences = corrupt_asr(input_text, lang)
+            corrupted_text = "\n".join(corrupted_sentences)
+            input_ids = tokenizer.encode(corrupted_text, add_special_tokens=False)
+            auxiliary_remove_prob = 0.0
         block_ids = [0] * len(input_ids)
 
     else:
