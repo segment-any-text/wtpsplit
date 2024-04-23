@@ -34,7 +34,7 @@ from wtpsplit.models import (
 )
 from wtpsplit.train.evaluate import evaluate_sentence, evaluate_sentence_pairwise, evaluate_sentence_kmers
 from wtpsplit.train.trainer import Trainer
-from wtpsplit.utils import Constants, LabelArgs, corrupt, get_label_dict, get_subword_label_dict
+from wtpsplit.utils import Constants, LabelArgs, corrupt_training, get_label_dict, get_subword_label_dict
 from wtpsplit.train.utils import Model, cleanup_cache_files
 
 logger = logging.getLogger(__name__)
@@ -131,7 +131,7 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: boo
 
         block_ids = [0] * len(input_ids)
 
-        input_ids, _, labels = corrupt(
+        input_ids, _, labels = corrupt_training(
             input_ids,
             block_ids,
             lang,

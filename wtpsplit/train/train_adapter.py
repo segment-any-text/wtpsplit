@@ -19,14 +19,13 @@ from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments, set
 import adapters
 import wandb
 from adapters import AdapterArguments
-from wtpsplit.evaluation.intrinsic import corrupt
 from wtpsplit.models import SubwordXLMConfig, SubwordXLMForTokenClassification
 from wtpsplit.train.adaptertrainer import AdapterTrainer
 from wtpsplit.train.trainer import Trainer
 from wtpsplit.train.evaluate import evaluate_sentence, evaluate_sentence_pairwise
 from wtpsplit.train.train import collate_fn, setup_logging
 from wtpsplit.train.utils import Model
-from wtpsplit.utils import Constants, LabelArgs, get_label_dict, get_subword_label_dict
+from wtpsplit.utils import Constants, LabelArgs, get_label_dict, get_subword_label_dict, corrupt
 from tqdm import tqdm
 from typing import Union, Optional
 
@@ -116,6 +115,8 @@ def main():
                 if split == "train":
                     dataset = data[lang]["sentence"][dataset_name]["meta"]["train_data"]
                 elif split == "valid":
+                    dataset = data[lang]["sentence"][dataset_name]["data"]
+                if dataset_name == "opus100" and lang == "fr":
                     dataset = data[lang]["sentence"][dataset_name]["data"]
                 if dataset is None:
                     return None
@@ -403,6 +404,12 @@ def main():
     for lang in tqdm(data.keys(), desc="Language"):
         if lang in args.include_languages:
             for dataset_name in data[lang]["sentence"].keys():
+                if dataset_name != "ted2020":
+                    continue
+            # skip langs starting with a, b, ..., k
+                if lang[0] < "d":
+                    print(f"Skipping {lang} {dataset_name}")
+                    continue
                 # do model stuff here; otherwise, head params would be overwritten every time
                 backbone = SubwordXLMForTokenClassification.from_pretrained(
                     args.model_name_or_path, config=copy.deepcopy(config), ignore_mismatched_sizes=True
@@ -551,7 +558,7 @@ def main():
                     model.backbone.classifier = torch.nn.Sequential(
                         clf,  # original classifier - if frozen above, also frozen here
                         torch.nn.Linear(clf.out_features, 1),
-                    )
+                    ) 
                     model.backbone.config.num_labels = 1
 
                 # if args.one_sample_per_line:

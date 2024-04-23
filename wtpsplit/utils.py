@@ -85,6 +85,7 @@ class LabelArgs:
     case_corruption_prob_after_newline: float = 0.0
     case_corruption_prob_after_punct: float = 0.0
     corrupt_entire_chunk_prob: float = 0.0
+    corrupt_entire_chunk_strategy: str = "full"
 
     def __post_init__(self):
         if self.custom_punctuation_file:
@@ -133,7 +134,7 @@ def get_subword_label_dict(label_args, tokenizer):
     return label_dict
 
 
-# numerically more stable sigmoid taken from 
+# numerically more stable sigmoid taken from
 # https://stackoverflow.com/questions/51976461/optimal-way-of-defining-a-numerically-stable-sigmoid-function-for-a-list-in-pyth
 def _positive_sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -196,8 +197,17 @@ def lang_code_to_lang(lang_code):
         return languages.get(part3=lang_code).name
 
 
+def corrupt(text: str, do_lowercase: bool, do_remove_punct: bool):
+    if do_lowercase:
+        text = text.lower()
+    if do_remove_punct:
+        for punct in Constants.PUNCTUATION_CHARS:
+            text = text.replace(punct, "")
+    return text
+
+
 # does the steps in Figure 2 of the paper
-def corrupt(
+def corrupt_training(
     input_ids,
     block_ids,
     lang,
@@ -211,14 +221,24 @@ def corrupt(
     block_ids = block_ids.copy()
     if random.random() < label_args.corrupt_entire_chunk_prob:
         # lowercase all text
-        lowercased = tokenizer.decode(input_ids).lower()
-        input_ids = tokenizer.encode(lowercased, add_special_tokens=False)
+        input_text = tokenizer.decode(input_ids)
+        if label_args.corrupt_entire_chunk_strategy == "tokenizer":
+            if not tokenizer:
+                raise NotImplementedError()
+            corrupted = corrupt(input_text, do_lowercase=True, do_remove_punct=False)
+            input_ids = tokenizer.encode(corrupted, add_special_tokens=False)
+            # remove ALL punct *tokens*
+            auxiliary_remove_prob = 1.0
+        elif label_args.corrupt_entire_chunk_strategy == "full":
+            # remove all punct *characters*
+            corrupted = corrupt(input_text, do_lowercase=True, do_remove_punct=True)
+            input_ids = tokenizer.encode(corrupted, add_special_tokens=False)
+            auxiliary_remove_prob = 1.0  # just for safety/consistency
         block_ids = [0] * len(input_ids)
-        # remove ALL punct
-        auxiliary_remove_prob = 1.0
+
     else:
         auxiliary_remove_prob = label_args.auxiliary_remove_prob
-        
+
     labels = label(input_ids, label_dict)
 
     separator = Constants.SEPARATORS[lang]
@@ -459,7 +479,9 @@ if __name__ == "__main__":
     label_dict = get_subword_label_dict(label_args, tokenizer)
 
     # corrupt
-    input_ids, block_ids, labels = corrupt(input_ids, block_ids, "en", label_args, label_dict, tokenizer=tokenizer)
+    input_ids, block_ids, labels = corrupt_training(
+        input_ids, block_ids, "en", label_args, label_dict, tokenizer=tokenizer
+    )
     print(input_ids)
     print(labels)
     print(tokenizer.tokenize(text))

@@ -35,8 +35,7 @@ from wtpsplit.train.adaptertrainer import AdapterTrainer
 from wtpsplit.train.evaluate import evaluate_sentence, evaluate_sentence_pairwise
 from wtpsplit.train.train import collate_fn
 from wtpsplit.train.utils import Model
-from wtpsplit.utils import Constants, LabelArgs, get_label_dict, get_subword_label_dict
-from wtpsplit.evaluation.intrinsic import corrupt
+from wtpsplit.utils import Constants, LabelArgs, get_label_dict, get_subword_label_dict, corrupt
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 

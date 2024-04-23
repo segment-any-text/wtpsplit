@@ -18,7 +18,7 @@ import adapters
 import wtpsplit.models  # noqa: F401
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture, token_to_char_probs
 from wtpsplit.extract import PyTorchWrapper, extract
-from wtpsplit.utils import Constants
+from wtpsplit.utils import Constants, corrupt
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -42,7 +42,7 @@ class Args:
     #    }
     # }
     # TODO: for songs/etc., maybe feed in each sample separately?
-    eval_data_path: str = "data/all_data.pth"
+    eval_data_path: str = "data/all_data_21-04.pth"
     valid_text_path: str = None  # "data/sentence/valid.parquet"
     device: str = "cpu"
     block_size: int = 512
@@ -90,15 +90,6 @@ def process_logits(text, model, lang_code, args):
         # we apply sigmoid later; convert to fake logits
         logits = np.log((logits + 1e-8) / (1 - logits + 1e-8))
     return logits
-
-
-def corrupt(text: str, do_lowercase: bool, do_remove_punct: bool):
-    if do_lowercase:
-        text = text.lower()
-    if do_remove_punct:
-        for punct in Constants.PUNCTUATION_CHARS:
-            text = text.replace(punct, "")
-    return text
 
 
 def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: str = None):
