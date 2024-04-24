@@ -76,7 +76,7 @@ class Args:
     train_text_path: str = "data/train.parquet"
     valid_text_path: str = "data/valid.parquet"
     include_languages: List[str] = None
-    eval_data_path: str = "data/all_data_21-04.pth"
+    eval_data_path: str = "data/all_data_24-04.pth"
     num_hidden_layers: int = 1
     preprocessing_num_workers: int = 6
     block_size: int = 512
@@ -203,10 +203,10 @@ def main():
     if xm.xrt_world_size() == 4:
         # ensure same batch size on TPUv3 and TPUv4
         training_args.per_device_train_batch_size *= 2
-        logger.warning(f"Per device train batch size: {training_args.per_device_train_batch_size}")
-        logger.warning(
-            f"Total train batch size: {training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps* xm.xrt_world_size()}"
-        )
+    logger.warning(f"Per device train batch size: {training_args.per_device_train_batch_size}")
+    logger.warning(
+        f"Total train batch size: {training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps* xm.xrt_world_size()}"
+    )
 
     setup_logging(training_args)
     set_seed(training_args.seed)

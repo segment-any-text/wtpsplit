@@ -209,12 +209,29 @@ def corrupt(text: str, do_lowercase: bool, do_remove_punct: bool):
 
 
 def corrupt_asr(text: str, lang):
+    if text is None:
+        return None
+
+    separator = Constants.SEPARATORS.get(lang, " ")
+
+    sentences = text.split("\n")
+
+    if separator == "":
+        corrupted_sentences = [
+            "".join([char for char in sentence if char not in Constants.PUNCTUATION_CHARS]).lower()
+            for sentence in sentences
+        ]
+        return corrupted_sentences
+
     try:
         tokenizer = MosesTokenizer(lang)
     except:
-        tokenizer = MosesTokenizer("en")
+        corrupted_sentences = [
+            "".join([char for char in sentence if char not in Constants.PUNCTUATION_CHARS]).lower()
+            for sentence in sentences
+        ]
+        return corrupted_sentences
 
-    sentences = text.split("\n")
     tokenized_sentences = [tokenizer.tokenize(sentence) for sentence in sentences]
     corrupted_tokenized_sentences = [
         [token for token in tokens if token not in Constants.PUNCTUATION_CHARS] for tokens in tokenized_sentences
