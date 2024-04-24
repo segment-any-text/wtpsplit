@@ -76,7 +76,7 @@ class Args:
     train_text_path: str = "data/train.parquet"
     valid_text_path: str = "data/valid.parquet"
     include_languages: List[str] = None
-    eval_data_path: str = "data/all_data_24-04.pth"
+    eval_data_path: str = "data/all_data_24_04.pth"
     num_hidden_layers: int = 1
     preprocessing_num_workers: int = 6
     block_size: int = 512
