@@ -83,6 +83,7 @@ class LabelArgs:
     custom_punctuation_file: str = None
     retain_first_consecutive_punctuation: bool = True
     non_whitespace_remove_spaces: bool = True
+    non_whitespace_retokenize: bool = False
     case_corruption_prob_after_newline: float = 0.0
     case_corruption_prob_after_punct: float = 0.0
     corrupt_entire_chunk_prob: float = 0.0
@@ -225,20 +226,20 @@ def corrupt_asr(text: str, lang):
 
     try:
         tokenizer = MosesTokenizer(lang)
+
+        tokenized_sentences = [tokenizer.tokenize(sentence) for sentence in sentences]
+        corrupted_tokenized_sentences = [
+            [token for token in tokens if token not in Constants.PUNCTUATION_CHARS] for tokens in tokenized_sentences
+        ]
+        corrupted_sentences = [
+            tokenizer.detokenize(corrupted_tokens).lower() for corrupted_tokens in corrupted_tokenized_sentences
+        ]
     except:
         corrupted_sentences = [
             "".join([char for char in sentence if char not in Constants.PUNCTUATION_CHARS]).lower()
             for sentence in sentences
         ]
         return corrupted_sentences
-
-    tokenized_sentences = [tokenizer.tokenize(sentence) for sentence in sentences]
-    corrupted_tokenized_sentences = [
-        [token for token in tokens if token not in Constants.PUNCTUATION_CHARS] for tokens in tokenized_sentences
-    ]
-    corrupted_sentences = [
-        tokenizer.detokenize(corrupted_tokens).lower() for corrupted_tokens in corrupted_tokenized_sentences
-    ]
 
     return corrupted_sentences
 
@@ -328,43 +329,53 @@ def corrupt_training(
                         labels.insert(last_index_in_block, 0)
                     else:
                         del block_ids[i + 1]
-                    if (
-                        tokenizer
-                        and separator == ""
-                        and label_args.non_whitespace_remove_spaces
-                        and i + 1 < len(input_ids)
-                    ):
-                        # tokenizer.decode() retains the space that leaks the information
-                        # so we need to get the position within the tokenized text and then remove the space
-                        # (so there is no more space when fed into the tokenizer call)
-                        if input_ids[i + 1] == tokenizer.convert_tokens_to_ids("▁"):
-                            # remove artificial space
-                            del input_ids[i + 1]
-                            del labels[i + 1]
-                            del block_ids[i + 1]
-                        if i + 1 < len(input_ids):
-                            next_token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
-                            if next_token.startswith("▁"):
-                                # next token starts with _ --> remove the _ from the token and re-tokenize
-                                remove_next = False
-                                remaining_token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
-                                if len(remaining_token) > 1:
-                                    # ▁Test --> Test
-                                    remaining_token = remaining_token[1:]
-                                else:
-                                    # ▁ --> remove
-                                    remove_next = True
-                                remaining_id = tokenizer.convert_tokens_to_ids(remaining_token)
-                                # replace the token with the remaining token
-                                if remaining_id != tokenizer.unk_token_id:
-                                    input_ids[i + 1] = remaining_id
-                                else:
-                                    # UNK token, remove it
-                                    remove_next = True
-                                if remove_next:
-                                    del input_ids[i + 1]
-                                    del labels[i + 1]
-                                    del block_ids[i + 1]
+                    if tokenizer and separator == "":
+                        if label_args.non_whitespace_remove_spaces and i + 1 < len(input_ids):
+                            # tokenizer.decode() retains the space that leaks the information
+                            # so we need to get the position within the tokenized text and then remove the space
+                            # (so there is no more space when fed into the tokenizer call)
+                            if input_ids[i + 1] == tokenizer.convert_tokens_to_ids("▁"):
+                                # remove artificial space
+                                del input_ids[i + 1]
+                                del labels[i + 1]
+                                del block_ids[i + 1]
+                            if i + 1 < len(input_ids):
+                                next_token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
+                                if next_token.startswith("▁"):
+                                    # next token starts with _ --> remove the _ from the token and re-tokenize
+                                    remove_next = False
+                                    remaining_token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
+                                    if len(remaining_token) > 1:
+                                        # ▁Test --> Test
+                                        remaining_token = remaining_token[1:]
+                                    else:
+                                        # ▁ --> remove
+                                        remove_next = True
+                                    remaining_id = tokenizer.convert_tokens_to_ids(remaining_token)
+                                    # replace the token with the remaining token
+                                    if remaining_id != tokenizer.unk_token_id:
+                                        input_ids[i + 1] = remaining_id
+                                    else:
+                                        # UNK token, remove it
+                                        remove_next = True
+                                    if remove_next:
+                                        del input_ids[i + 1]
+                                        del labels[i + 1]
+                                        del block_ids[i + 1]
+                        elif label_args.non_whitespace_retokenize:
+                            # re-tokenize full span
+                            # this is a bit more expensive, but it is the only way to ensure that the space is removed
+                            # and the token is re-tokenized correctly
+                            # but: only tokenize from current position onwards to keep re-usage labels
+                            input_ids = input_ids[: i + 1] + tokenizer.encode(
+                                tokenizer.decode(input_ids[i + 1 :]), add_special_tokens=False
+                            )
+                            # if new_input_ids != input_ids:
+                            #     print("new_input_ids", tokenizer.decode(new_input_ids))
+                            #     print("input_ids", tokenizer.decode(input_ids))
+                            # input_ids = new_input_ids
+                            labels = labels[: i + 1] + label(input_ids[i + 1 :], label_dict)
+
                 if random.random() < label_args.case_corruption_prob_after_newline and i + 1 < len(input_ids):
                     input_ids, labels, block_ids = _corrupt_case(tokenizer, input_ids, labels, block_ids, i)
 
