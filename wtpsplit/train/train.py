@@ -654,12 +654,16 @@ def main():
                     #         avg_metrics[f"pairwise_average_{dataset_name}_f1"].append(info["f1"])
                     #         avg_metrics[f"pairwise_average_{dataset_name}_f1_best"].append(info["f1_best"])
                     #         avg_metrics[f"pairwise_average_{dataset_name}_threshold_best"].append(info["threshold_best"])
-                    # if lang_code in ["zh", "ja", "my", "km"]:
-                    #     avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
-                    #     avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_acc"].append(avg_acc)
-                    # else:
-                    #     avg_metrics[f"pairwise_average_whitespace_{dataset_name}_pr_auc"].append(score)
-                    #     avg_metrics[f"pairwise_average_whitespace_{dataset_name}_acc"].append(avg_acc)
+                    if lang_code in ["zh", "ja", "my", "km"]:
+                        avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
+                        avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_f1"].append(info["f1"])
+                        avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_f1_best"].append(info["f1_best"])
+                        avg_metrics[f"pairwise_average_nonwhitespace_{dataset_name}_threshold_best"].append(info["threshold_best"])
+                    else:
+                        avg_metrics[f"pairwise_average_whitespace_{dataset_name}_pr_auc"].append(score)
+                        avg_metrics[f"pairwise_average_whitespace_{dataset_name}_f1"].append(info["f1"])
+                        avg_metrics[f"pairwise_average_whitespace_{dataset_name}_f1_best"].append(info["f1_best"])
+                        avg_metrics[f"pairwise_average_whitespace_{dataset_name}_threshold_best"].append(info["threshold_best"])
 
         for name, values in avg_metrics.items():
             if len(values) > 1:
@@ -677,6 +681,8 @@ def main():
 
         for file in glob(os.path.join(os.path.dirname(__file__), "*.py")):
             wandb.save(os.path.abspath(file), policy="now")
+            # also 1 dir above
+            wandb.save(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", file)), policy="now")
 
     label_dict = get_subword_label_dict(label_args, tokenizer) if args.use_subwords else get_label_dict(label_args)
     logger.info(f"Label dict has {len(label_dict)} entries.")
