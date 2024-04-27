@@ -5,6 +5,8 @@ from typing import List
 import os
 import time
 import logging
+import sys
+import re
 
 import h5py
 import skops.io as sio
@@ -42,7 +44,7 @@ class Args:
     #    }
     # }
     # TODO: for songs/etc., maybe feed in each sample separately?
-    eval_data_path: str = "data/all_data_21-04.pth"
+    eval_data_path: str = "data/all_data_24_04.pth"
     valid_text_path: str = None  # "data/sentence/valid.parquet"
     device: str = "cpu"
     block_size: int = 512
@@ -51,13 +53,46 @@ class Args:
     include_langs: List[str] = None
     custom_language_list: str = None
     threshold: float = 0.01
-    max_n_train_sentences: int = 10_000
+    max_n_train_sentences: int = 1_000
+    max_n_test_sentences: int = sys.maxsize
     save_suffix: str = ""
     do_lowercase: bool = False
     do_remove_punct: bool = False
     keep_logits: bool = False
     skip_adaptation: bool = False
+    skip_corrupted: bool = False
+    zh_window: int = 10
     clf_from_scratch: bool = False
+
+
+ZH_CHAR_PATTERN = re.compile(
+    "[\u4e00-\u9fff\u3400-\u4dbf]"  # Basic Multilingual Plane and Extension A
+)
+
+
+def preprocess_zh_sentence(text, n=10):
+    result = []
+    length = len(text)
+    i = 0
+
+    while i < length:
+        # Determine the end of the current window
+        end = min(i + n, length)
+        window = text[i:end]
+
+        # Use the compiled regex to check for the presence of Chinese characters
+        if ZH_CHAR_PATTERN.search(window):
+            # Remove all spaces from the window if it contains a Chinese character
+            modified_window = window.replace(" ", "")
+        else:
+            # Keep the window as is if no Chinese characters are found
+            modified_window = window
+
+        result.append(modified_window)
+        # Increment the index by N to process non-overlapping windows
+        i += n
+
+    return "".join(result)
 
 
 def process_logits(text, model, lang_code, args):
@@ -138,6 +173,8 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
             # eval data
             for dataset_name, dataset in eval_data[lang_code]["sentence"].items():
+                if args.skip_corrupted and "corrupted" in dataset_name:
+                    continue
                 try:
                     if args.adapter_path:
                         if args.clf_from_scratch:
@@ -168,7 +205,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     dset_group = lang_group[dataset_name]
 
                 if "test_logits" not in dset_group:
-                    test_sentences = dataset["data"]
+                    test_sentences = dataset["data"][: args.max_n_test_sentences]
                     # if list of lists: flatten
                     if isinstance(test_sentences[0], list):
                         test_sentences = [item for sublist in test_sentences for item in sublist]
@@ -176,6 +213,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                         corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
                         for sentence in test_sentences
                     ]
+                    test_sentences = [preprocess_zh_sentence(sentence, args.zh_window) for sentence in test_sentences]
                     test_text = Constants.SEPARATORS[lang_code].join(test_sentences)
 
                     start_time = time.time()  # Start timing for test logits processing
@@ -196,6 +234,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                         corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
                         for sentence in train_sentences
                     ]
+                    train_sentences = [preprocess_zh_sentence(sentence, args.zh_window) for sentence in train_sentences]
                     train_sentences = train_sentences[: args.max_n_train_sentences]
                     train_text = Constants.SEPARATORS[lang_code].join(train_sentences)
 
@@ -267,10 +306,14 @@ def main(args):
             clf = model.model.classifier
             model.model.classifier = torch.nn.Sequential(clf, torch.nn.Linear(clf.out_features, 1))
 
+    save_str += f"{args.save_suffix}"
+    if args.max_n_test_sentences < sys.maxsize:
+        save_str += f"_n{args.max_n_test_sentences}"
+
     # first, logits for everything.
     f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data, save_str)
 
-    save_str += f"_u{args.threshold}{args.save_suffix}"
+    save_str += f"_u{args.threshold}"
 
     # now, compute the intrinsic scores.
     results = {}
@@ -287,13 +330,14 @@ def main(args):
         clfs[lang_code] = {}
 
         for dataset_name, dataset in dsets["sentence"].items():
-            sentences = dataset["data"]
+            sentences = dataset["data"][: args.max_n_test_sentences]
             if isinstance(sentences[0], list):
                 sentences = [item for sublist in sentences for item in sublist]
             sentences = [
                 corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
                 for sentence in sentences
             ]
+            sentences = [preprocess_zh_sentence(sentence, args.zh_window) for sentence in sentences]
             # check if f[lang_code][dataset_name] exists
             if lang_code not in f or dataset_name not in f[lang_code]:
                 continue
