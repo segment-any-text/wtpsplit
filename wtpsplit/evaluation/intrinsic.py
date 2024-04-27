@@ -61,7 +61,7 @@ class Args:
     keep_logits: bool = False
     skip_adaptation: bool = False
     skip_corrupted: bool = False
-    zh_window: int = 10
+    zh_window: int = 0
     clf_from_scratch: bool = False
 
 
@@ -71,6 +71,8 @@ ZH_CHAR_PATTERN = re.compile(
 
 
 def preprocess_zh_sentence(text, n=10):
+    if n == 0:
+        return text
     result = []
     length = len(text)
     i = 0
@@ -309,6 +311,8 @@ def main(args):
     save_str += f"{args.save_suffix}"
     if args.max_n_test_sentences < sys.maxsize:
         save_str += f"_n{args.max_n_test_sentences}"
+    if args.zh_window > 0:
+        save_str += f"_zh{args.zh_window}"
 
     # first, logits for everything.
     f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data, save_str)
