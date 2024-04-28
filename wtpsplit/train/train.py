@@ -575,8 +575,8 @@ def main():
             if trainer.args.process_index == 0 and args.do_sentence_training:
                 # with training_args.main_process_first():
                 for dataset_name, dataset in lang_data["sentence"].items():
-                    if "corrupt" in dataset_name:
-                        continue
+                    # if "corrupt" in dataset_name:
+                    #     continue
                     score, info = evaluate_sentence(
                         lang_code,
                         dataset["data"],
