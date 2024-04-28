@@ -3,82 +3,33 @@ import plotly.graph_objects as go
 import json
 
 FILES = [
-    # "xlm-normal-p-v2_auxp0.3_n0.9_b512_s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-9l-v2_L_b512+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.0_b512_s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2-aux0.0001_b512+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2-aux0.1_b512+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2-auxp0.1_b128+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2-auxp0.1_b256+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2-auxp0.1_b32+s16_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.1_b512+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2-auxp0.1_b64+s32_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2-bs256_b8+s4_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2-bs256_b16+s8_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2-bs256_b32+s16_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2-bs256_b64+s32_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2-bs256_b128+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2-bs256_b256+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2-bs256_b512+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_0.1auxp0.2_bs256_b8+s4_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_0.1auxp0.2_bs256_b16+s8_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_0.1auxp0.2_bs256_b32+s16_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_0.1auxp0.2_bs256_b64+s32_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_0.1auxp0.2_bs256_b128+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_0.1auxp0.2_bs256_b256+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_0.1auxp0.2_bs256_b512+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_b8+s4_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_b16+s8_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_b32+s16_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_b64+s32_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_b128+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_b256+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_b512+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_b512+s128_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_bs256_b8+s4_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_bs256_b16+6_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_bs256_b32+16_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_bs256_b64+32_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_bs256_b128+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_bs256_b256+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.2_bs256_b512+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.3_n0.9_b128_s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.3_n0.9_b16_s8_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.3_n0.9_b256_s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.3_n0.9_b32+s16_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.3_n0.9_b64_s32_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.3_n0.9_b8_s4_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.4_b128+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.4_b256+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.4_b32+s16_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.4_b512+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_auxp0.4_b64+s32_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.3_b512+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.5_b256+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.7_b16+s8_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.7_b32+s16_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.7_b64+s32_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.7_b128+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.7_b256+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.7_b512+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.9_b8+s4_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.9_b16+s8_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.9_b32+s16_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.9_b64+s32_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.9_b128+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.9_b256+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-p-v2_n0.9_b512+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-v2_b128+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-v2_b256+s64_intrinsic_results_u0.01.json",
-    # "xlmr-normal-v2_b512+s64_intrinsic_results_u0.01.json",
-    "xlmr-normal-noaux_b16+s8_intrinsic_results_u0.01.json",
-    "xlmr-normal-noaux_b32+s16_intrinsic_results_u0.01.json",
-    "xlmr-normal-noaux_b64+s32_intrinsic_results_u0.01.json",
-    "xlmr-normal-noaux_b128+s64_intrinsic_results_u0.01.json",
-    "xlmr-normal-noaux_b256+s64_intrinsic_results_u0.01.json",
-    "xlmr-normal-noaux_b512+s64_intrinsic_results_u0.01.json",
-    # "evaluation/evaluation_results/wtp-canine-s-3l-no-adapters_intrinsic_results.json",
-    # "evaluation/evaluation_results/wtp-canine-s-3l_intrinsic_results.json"
+    # CS
+    # "intrinsic/xlmr-normal-p-v3_b512_s64_u0.01_extra-langs.json",
+    # "intrinsic/xlmr-normal-6l-p-v3_b512_s64_u0.01_extra-langs.json",
+    # "intrinsic/xlmr-12l-v3_b512_s64_u0.01_extra-langs.json",
+    # "intrinsic/xlmr-3l-v3_adapter_rf32_ep30_v2_np_b512_s64_u0.1_extra-langs.json",
+    # "intrinsic/xlmr-6l-v3_adapter_rf32_ep30_v2_np_b512_s64_u0.1_extra-langs.json",
+    # "intrinsic/xlmr-12l-v3_adapter_rf32_ep30_v2_np_b512_s64_u0.1_extra-langs.json",
+    # "intrinsic/xlmr-multilingual-sentence-segmentation-09-04-3L-256BS-UD-OPUS-TED_b512_s64_u0.01_extra-langs_fix.json",
+    # "intrinsic/xlmr-multilingual-sentence-segmentation-09-04-6L-256BS-UD-OPUS-TED_b512_s64_u0.01_extra-langs_fix.json",
+    # "intrinsic/xlmr-multilingual-sentence-segmentation-09-04-12L-256BS-UD-OPUS-TED_b512_s64_u0.01_extra-langs_fix.json",
+    # TED
+    # "intrinsic/xlmr-normal-p-v3_b512_s64_u0.01_ted.json",
+    # "intrinsic/xlmr-normal-6l-p-v3_b512_s64_u0.01_ted.json",
+    # "intrinsic/xlmr-12l-v3_look60_b512_s64_u0.01_ted.json",
+    "intrinsic/xlmr-normal-p-v3_b512_s64_u0.01.json",
+    "intrinsic/xlmr-normal-6l-p-v3_b512+s64_intrinsic_results_u0.01.json",
+    "intrinsic/xlmr-12l-v3_b512_s64_u0.01.json",
+    "intrinsic/xlmr-3l-v3_adapter_rf32_ep30_v2_np_b512_s64_u0.1.json",
+    "intrinsic/xlmr-6l-v3_adapter_rf32_ep20_v2_100-1k-10k_b512_s64_u0.1.json",
+    "intrinsic/xlmr-multilingual-sentence-segmentation-09-04-3L-256BS-UD-OPUS-TED_b512_s64_u0.01_fix.json",
+    "intrinsic/xlmr-multilingual-sentence-segmentation-09-04-6L-256BS-UD-OPUS-TED_b512_s64_u0.01_fix.json",
+    "intrinsic/xlmr-multilingual-sentence-segmentation-09-04-12L-256BS-UD-OPUS-TED_b512_s64_u0.01_fix.json",
+    "intrinsic/xlmr-3l-v3-igor-mixture_adapter_rf32_ep30_v2_b512_s64_u0.1.json",
+    "intrinsic/xlmr-6l-v3-igor-mixture_adapter_rf32_ep30_v2_b512_s64_u0.1.json",
+    # shared task subset
+    # "intrinsic/xlmr-12l-v3_adapter_rf32_ep30_v2_np_CORRUPT_b512_s64_u0.1_TED.json",
+    # "intrinsic/xlmr-12l-v3-igor-mixture_adapter_rf32_ep30_v2_np_CORRUPT_b512_s64_u0.1_TED.json",
 ]
 NAME = "test"
 
@@ -121,7 +72,11 @@ def plot_violin_from_json(files, name):
             for lang, scores in content.items():
                 for dataset, values in scores.items():
                     for metric in ["u", "t", "punct"]:
-                        data["score"].append(values[metric])
+                        # if not (lang in ["en", "de", "fr", "it"] and dataset == "ted2020"):
+                        #     continue
+                        if dataset != "ersatz":
+                            continue
+                        data["score"].append(values[metric] if values[metric] is not None else 0.0)
                         data["metric"].append(metric)
                         data["file"].append(file.split("/")[-1])  # Use file base name without extension for legend
                         data["x"].append(x_positions[metric][file])  # Use computed x position
