@@ -374,7 +374,7 @@ def main():
         num_workers=args.preprocessing_num_workers,
         include_languages=args.include_languages,
         shuffle=args.shuffle,
-        split="valid",
+        split="train",
     )
     logger.warning(f"Train dataset has {len(train_dataset)} examples.")
 
@@ -389,8 +389,9 @@ def main():
             logger.warning(tokenizer.decode(sample["input_ids"]))
         count += 1
 
-    eval_data = None
-
+    eval_data = torch.load(
+        args.eval_data_path,
+    )
     def compute_metrics(trainer):
         metrics = {}
         avg_metrics = defaultdict(lambda: [])
