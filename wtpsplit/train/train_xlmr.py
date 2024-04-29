@@ -119,14 +119,14 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: boo
             input_ids = [ord(c) for c in sample["input_ids"]]
         lang = sample["lang"]
 
-        newline_labels = sample["labels"]
+        newline_label_indices = sample["labels"]
+        newline_labels = [1 if i in newline_label_indices else 0 for i in range(len(input_ids))]
 
         while len(input_ids) < args.block_size + args.overflow_size:
             input_ids.append(tokenizer.pad_token_id)
             newline_labels.append(0)
 
         block_ids = [0] * len(input_ids)
-
 
         input_ids, _, labels = corrupt_training(
             input_ids,
@@ -177,7 +177,6 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: boo
         all_attention_masks.append(attention_mask)
         all_position_ids.append(position_ids)
 
-    try:
         out = {
             "input_ids": torch.stack(all_input_ids, 0),
             "attention_mask": torch.stack(all_attention_masks, 0),
@@ -186,8 +185,6 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: boo
             "label_weights": torch.stack(all_label_weights, 0),
             "labels": torch.stack(all_labels, 0),
         }
-    except:
-        pass
 
     return out
 
@@ -335,13 +332,13 @@ def main():
         if args.pack_samples:
             assert not args.one_sample_per_line
 
-        # if split == "train" and args.use_subwords:
-        #     with training_args.main_process_first():
-        #         for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
-        #             for file in files:
-        #                 if file.startswith("m_c4-test-train"):
-        #                     logger.warning(f"Removing {os.path.join(root, file)}")
-        #                     os.remove(os.path.join(root, file))
+        if split == "train" and args.use_subwords:
+            with training_args.main_process_first():
+                for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
+                    for file in files:
+                        if file.startswith("m_c4-test-train"):
+                            logger.warning(f"Removing {os.path.join(root, file)}")
+                            os.remove(os.path.join(root, file))
 
         if not args.one_sample_per_line:
             with training_args.main_process_first():
@@ -392,6 +389,7 @@ def main():
     eval_data = torch.load(
         args.eval_data_path,
     )
+
     def compute_metrics(trainer):
         metrics = {}
         avg_metrics = defaultdict(lambda: [])
@@ -526,13 +524,13 @@ def main():
     training_args.adapter_lr_multiplier = args.adapter_lr_multiplier
 
     # give .map in multiprocessing enough of time to finish, to be safe
-    # time.sleep(10)
-    # if training_args.local_rank == 0:
-    #     # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
-    #     # because that would remove the cache files of the other dataset!
-    #     cleanup_cache_files([train_dataset, valid_dataset])
-    #     logger.warning("Cleaned up cache files.")
-    # time.sleep(10)
+    time.sleep(10)
+    if training_args.local_rank == 0:
+        # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
+        # because that would remove the cache files of the other dataset!
+        cleanup_cache_files([train_dataset, valid_dataset])
+        logger.warning("Cleaned up cache files.")
+    time.sleep(10)
 
     trainer = Trainer(
         model,

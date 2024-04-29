@@ -89,6 +89,9 @@ def pack_sentences(examples, block_size, tokenizer, overflow_size=0):
             all_label_blocks.append(labels)
             all_langs.append(current_lang)
 
+    # only return label indices, ie == 1
+    all_label_blocks = [[i for i, label in enumerate(labels) if label == 1] for labels in all_label_blocks]
+
     return {
         "input_ids": all_input_blocks,
         "labels": all_label_blocks,
