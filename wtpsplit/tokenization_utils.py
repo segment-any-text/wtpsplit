@@ -4,14 +4,13 @@ from wtpsplit.utils import Constants
 
 
 def tokenize_and_get_labels(sentences, tokenizer, separator):
-    # Join sentences and prepare single string for tokenization
     joined_sentence = separator.join(sentences)
     sentence_lengths = [len(sentence) for sentence in sentences]
 
-    # Calculate where each sentence ends in the joined string
+    # calculate where each sentence ends
     sentence_end_positions = [sum(sentence_lengths[: i + 1]) + i * len(separator) - 1 for i in range(len(sentences))]
 
-    # Tokenize the whole text at once
+    # tokenize whole text at once
     tokenized_input = tokenizer(
         joined_sentence,
         return_offsets_mapping=True,
@@ -49,7 +48,7 @@ def pack_sentences(examples, block_size, tokenizer, overflow_size=0):
     all_label_blocks = []
     all_langs = []
 
-    # Group by languages first
+    # group by langs first
     lang_grouped_examples = {lang: [] for lang in set(examples["lang"])}
     for sentence, lang in zip(examples["text"], examples["lang"]):
         lang_grouped_examples[lang].append(sentence.strip("\n"))
@@ -58,7 +57,7 @@ def pack_sentences(examples, block_size, tokenizer, overflow_size=0):
         separator = Constants.SEPARATORS.get(current_lang, " ")
         token_count, one_block_sentences = 0, []
 
-        # Batch tokenize sentences
+        # batch tokenize sentences
         tokenized_sentences = tokenizer(sentences, add_special_tokens=False, verbose=False, padding=False)
         input_ids_list = tokenized_sentences["input_ids"]
 
@@ -69,27 +68,27 @@ def pack_sentences(examples, block_size, tokenizer, overflow_size=0):
 
             # Allow exceeding block size slightly to avoid underfilling blocks
             if token_count + num_sentence_tokens > block_size + overflow_size:
-                # Once the limit is exceeded, process the current block before adding the sentence
+                # limit exceeded, process the current block
                 if one_block_sentences:
                     input_ids, labels = tokenize_and_get_labels(one_block_sentences, tokenizer, separator)
                     all_input_blocks.append(input_ids)
                     all_label_blocks.append(labels)
                     all_langs.append(current_lang)
-                # Reset and start new block
+                # reset
                 token_count, one_block_sentences = 0, []
 
-            # Append sentence to the current or new block after processing the previous block
+            # add sentence to block
             one_block_sentences.append(sentence)
             token_count += num_sentence_tokens
 
-        # Ensure the last batch of sentences is processed
+        # ensure last batch of sentences is processed
         if one_block_sentences:
             input_ids, labels = tokenize_and_get_labels(one_block_sentences, tokenizer, separator)
             all_input_blocks.append(input_ids)
             all_label_blocks.append(labels)
             all_langs.append(current_lang)
 
-    # only return label indices, ie == 1
+    # only return label indices, ie == 1 --> save memory
     all_label_blocks = [[i for i, label in enumerate(labels) if label == 1] for labels in all_label_blocks]
 
     return {
