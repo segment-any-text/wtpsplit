@@ -194,8 +194,14 @@ def hash_encode(encoding, num_hashes=8, num_buckets=8192):
     return hash_ids
 
 
-def label(input_ids, label_dict):
-    return [label_dict.get(input_id, 0) for input_id in input_ids[1:]] + [0]
+# def label(input_ids, label_dict):
+#     return [label_dict.get(input_id, 0) for input_id in input_ids[1:]] + [0]
+
+
+def label(input_ids, newline_labels, label_dict):
+    return [
+        label_dict.get(input_id, newline_label) for input_id, newline_label in zip(input_ids[1:], newline_labels[1:])
+    ] + [0]
 
 
 def lang_code_to_lang(lang_code):
@@ -262,6 +268,7 @@ def corrupt_asr(text: str, lang):
 def corrupt_training(
     input_ids,
     block_ids,
+    newline_labels,
     lang,
     label_args,
     label_dict,
@@ -303,7 +310,7 @@ def corrupt_training(
     else:
         auxiliary_remove_prob = label_args.auxiliary_remove_prob
 
-    labels = label(input_ids, label_dict)
+    labels = label(input_ids, newline_labels, label_dict)
 
     separator = Constants.SEPARATORS[lang]
 
@@ -316,74 +323,7 @@ def corrupt_training(
         # account for CLS and SEP token, added later
         min_length = min_length - 2 if min_length is not None else None
     while min_length is None or len(input_ids) > min_length:
-        if labels[i] == Constants.NEWLINE_INDEX + 1:
-            if random.random() < label_args.newline_remove_prob:
-                if separator == " " and random.random() < label_args.newline_whitespace_prob:
-                    if tokenizer:
-                        # inserting " " leaks \n information
-                        # the token is never there naturally, so it is a 1:1 proxy for \n
-                        del input_ids[i + 1]
-                        del labels[i + 1]
-                        del block_ids[i + 1]
-                    else:
-                        input_ids[i + 1] = ord(" ")
-                else:
-                    del input_ids[i + 1]
-                    del labels[i + 1]
-
-                    if pack_samples:
-                        last_index_in_block = i
-                        while (
-                            last_index_in_block + 1 == len(block_ids)
-                            or last_index_in_block < len(block_ids)
-                            and block_ids[last_index_in_block + 1] == block_ids[last_index_in_block]
-                        ):
-                            last_index_in_block += 1
-                        input_ids.insert(last_index_in_block, 0)
-                        labels.insert(last_index_in_block, 0)
-                    else:
-                        del block_ids[i + 1]
-                    if (
-                        tokenizer
-                        and separator == ""
-                        and label_args.non_whitespace_remove_spaces
-                        and i + 1 < len(input_ids)
-                    ):
-                        # tokenizer.decode() retains the space that leaks the information
-                        # so we need to get the position within the tokenized text and then remove the space
-                        # (so there is no more space when fed into the tokenizer call)
-                        if input_ids[i + 1] == tokenizer.convert_tokens_to_ids("▁"):
-                            # remove artificial space
-                            del input_ids[i + 1]
-                            del labels[i + 1]
-                            del block_ids[i + 1]
-                        if i + 1 < len(input_ids):
-                            next_token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
-                            if next_token.startswith("▁"):
-                                # next token starts with _ --> remove the _ from the token and re-tokenize
-                                remove_next = False
-                                remaining_token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
-                                if len(remaining_token) > 1:
-                                    # ▁Test --> Test
-                                    remaining_token = remaining_token[1:]
-                                else:
-                                    # ▁ --> remove
-                                    remove_next = True
-                                remaining_id = tokenizer.convert_tokens_to_ids(remaining_token)
-                                # replace the token with the remaining token
-                                if remaining_id != tokenizer.unk_token_id:
-                                    input_ids[i + 1] = remaining_id
-                                else:
-                                    # UNK token, remove it
-                                    remove_next = True
-                                if remove_next:
-                                    del input_ids[i + 1]
-                                    del labels[i + 1]
-                                    del block_ids[i + 1]
-                if random.random() < label_args.case_corruption_prob_after_newline and i + 1 < len(input_ids):
-                    input_ids, labels, block_ids = _corrupt_case(tokenizer, input_ids, labels, block_ids, i)
-
-        elif label_args.use_auxiliary and labels[i] > Constants.AUX_OFFSET:  # auxiliary
+        if label_args.use_auxiliary and labels[i] > Constants.AUX_OFFSET:  # auxiliary
             if pack_samples:
                 raise NotImplementedError()
 
@@ -411,7 +351,6 @@ def corrupt_training(
                     and i + 1 < len(input_ids)
                 ):
                     input_ids, labels, block_ids = _corrupt_case(tokenizer, input_ids, labels, block_ids, i)
-
         try:
             i = i + 1 + next(index for index, label in enumerate(labels[i + 1 :]) if label != 0)
         except StopIteration:
