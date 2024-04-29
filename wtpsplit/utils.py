@@ -198,10 +198,22 @@ def hash_encode(encoding, num_hashes=8, num_buckets=8192):
 #     return [label_dict.get(input_id, 0) for input_id in input_ids[1:]] + [0]
 
 
+# def label(input_ids, newline_labels, label_dict):
+#     return [
+#         label_dict.get(input_id, newline_label) for input_id, newline_label in zip(input_ids[1:], newline_labels[1:])
+#     ] + [0]
+
+# def label(input_ids, newline_labels, label_dict):
+#     return [0] + [
+#         label_dict.get(input_id, newline_label) for input_id, newline_label in zip(input_ids, newline_labels)
+#     ]
+
 def label(input_ids, newline_labels, label_dict):
-    return [
-        label_dict.get(input_id, newline_label) for input_id, newline_label in zip(input_ids[1:], newline_labels[1:])
-    ] + [0]
+    labels = [label_dict.get(input_id, 0) for input_id in input_ids[1:]] + [0]
+    for i, newline_label in enumerate(newline_labels):
+        if newline_label == 1 and i+1 < len(labels):
+            labels[i + 1] = 1
+    return labels
 
 
 def lang_code_to_lang(lang_code):
@@ -311,6 +323,10 @@ def corrupt_training(
         auxiliary_remove_prob = label_args.auxiliary_remove_prob
 
     labels = label(input_ids, newline_labels, label_dict)
+    # for i, (newline_label, punct_label) in enumerate(zip(newline_labels, labels)):
+    #     if newline_label == 1:
+    #         labels[i + 1] = 1
+    
 
     separator = Constants.SEPARATORS[lang]
 
