@@ -329,14 +329,6 @@ def main():
         if args.pack_samples:
             assert not args.one_sample_per_line
 
-        # if split == "train" and args.use_subwords:
-        #     with training_args.main_process_first():
-        #         for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
-        #             for file in files:
-        #                 if file.startswith("m_c4-test-train"):
-        #                     logger.warning(f"Removing {os.path.join(root, file)}")
-        #                     os.remove(os.path.join(root, file))
-
         if not args.one_sample_per_line:
             with training_args.main_process_first():
                 dataset = dataset.map(
@@ -347,12 +339,21 @@ def main():
                         "block_size": args.block_size,
                         "tokenizer": tokenizer,
                         "underflow_size": args.underflow_size,
-                        "min_sentence_length": args.min_sentence_length
+                        "min_sentence_length": args.min_sentence_length,
                     },
                     # a bit hacky but oh well, only drop if sentence
                     remove_columns=["ends_with_punctuation", "text"],
                     # load_from_cache_file=False
                 )
+
+        if split == "train" and args.use_subwords:
+            with training_args.main_process_first():
+                for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
+                    for file in files:
+                        if file.startswith("m_c4-test-train"):
+                            logger.warning(f"Removing {os.path.join(root, file)}")
+                            os.remove(os.path.join(root, file))
+
         logger.warning(f"Grouped {split} dataset.")
 
         return dataset
