@@ -21,6 +21,8 @@ def tokenize_and_get_labels(sentences, tokenizer, separator, lang_code):
         return_offsets_mapping=True,
         add_special_tokens=False,
         truncation=False,
+        verbose=False,
+        padding=False,
     )
 
     tokens = tokenized_input.tokens()
@@ -57,6 +59,8 @@ def pack_sentences(examples, block_size, tokenizer, underflow_size=0, min_senten
         # tokenization mapping gets problematic in such instances
         sentences = [sentence.replace("\ufffd", "").strip() for sentence in sentences]
         sentences = [sentence for sentence in sentences if len(sentence) > min_sentence_length]
+        if not sentences:
+            continue
 
         # batch tokenize sentences
         tokenized_sentences = tokenizer(sentences, add_special_tokens=False, verbose=False, padding=False)
