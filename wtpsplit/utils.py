@@ -208,12 +208,12 @@ def hash_encode(encoding, num_hashes=8, num_buckets=8192):
 #         label_dict.get(input_id, newline_label) for input_id, newline_label in zip(input_ids, newline_labels)
 #     ]
 
-def label(input_ids, newline_labels, label_dict):
-    labels = [label_dict.get(input_id, 0) for input_id in input_ids[1:]] + [0]
-    for i, newline_label in enumerate(newline_labels):
-        if newline_label == 1 and i+1 < len(labels):
-            labels[i + 1] = 1
-    return labels
+# def label(input_ids, newline_labels, label_dict):
+#     labels = [label_dict.get(input_id, 0) for input_id in input_ids[1:]] + [0]
+#     # for i, newline_label in enumerate(newline_labels):
+#     #     if newline_label == 1 and i+1 < len(labels):
+#     #         labels[i + 1] = 1
+#     return labels
 
 
 def lang_code_to_lang(lang_code):
@@ -322,13 +322,15 @@ def corrupt_training(
     else:
         auxiliary_remove_prob = label_args.auxiliary_remove_prob
 
-    labels = label(input_ids, newline_labels, label_dict)
-    # for i, (newline_label, punct_label) in enumerate(zip(newline_labels, labels)):
-    #     if newline_label == 1:
-    #         labels[i + 1] = 1
-    
-
     separator = Constants.SEPARATORS[lang]
+
+    labels = newline_labels.copy()
+
+    for i, input_id in enumerate(input_ids):
+        if input_id in label_dict:
+            if labels[i - 1] == 0:
+                labels[i - 1] = label_dict[input_id]
+                # TODO: configurable overwrite instead of nothing?
 
     try:
         i = next(index for index, label in enumerate(labels) if label != 0)

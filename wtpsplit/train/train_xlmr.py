@@ -76,7 +76,7 @@ class Args:
     num_hidden_layers: int = 1
     preprocessing_num_workers: int = 6
     block_size: int = 512
-    overflow_size: int = 16
+    underflow_size: int = 16
     eval_stride: int = 256
     lookahead: int = None
     loss_margin: float = 0.5
@@ -99,6 +99,7 @@ class Args:
     use_subwords: bool = False
     threshold: float = 0.01
     lookahead_split_layers: Optional[int] = None
+    min_sentence_length: int = 10
 
 
 def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: bool = False):
@@ -121,10 +122,6 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: boo
 
         newline_label_indices = sample["labels"]
         newline_labels = [1 if i in newline_label_indices else 0 for i in range(len(input_ids))]
-
-        while len(input_ids) < args.block_size + args.overflow_size:
-            input_ids.append(tokenizer.pad_token_id)
-            newline_labels.append(0)
 
         block_ids = [0] * len(input_ids)
 
@@ -154,7 +151,7 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: boo
 
         if tokenizer:
             input_ids = [tokenizer.cls_token_id] + input_ids[:actual_block_size] + [tokenizer.sep_token_id]
-            # labels for CLS and SEP tokens are 0 (none)
+            # labels for CLS and SEP tokens are 0 (negative)
             labels = [0] + labels[:actual_block_size] + [0]
         else:
             input_ids = input_ids[:actual_block_size]
@@ -349,7 +346,8 @@ def main():
                     fn_kwargs={
                         "block_size": args.block_size,
                         "tokenizer": tokenizer,
-                        "overflow_size": args.overflow_size,
+                        "underflow_size": args.underflow_size,
+                        "min_sentence_length": args.min_sentence_length
                     },
                     # a bit hacky but oh well, only drop if sentence
                     remove_columns=["ends_with_punctuation", "text"],
