@@ -86,7 +86,7 @@ def extract(
     if "xlm" in model.config.model_type:
         use_subwords = True
         tokenizer = AutoTokenizer.from_pretrained(model.config.base_model)
-        # tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
+        tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
         tokens = tokenizer(batch_of_texts, return_offsets_mapping=True, verbose=False)
         # remove CLS and SEP tokens, they are added later anyhow
         batch_of_texts = [text[1:-1] for text in tokens["input_ids"]]
