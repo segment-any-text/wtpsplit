@@ -103,7 +103,7 @@ class Args:
     use_subwords: bool = False
     threshold: float = 0.01
     lookahead_split_layers: Optional[int] = None
-
+    sample_non_whitespace: int = 1
 
 def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: bool = False):
     all_input_ids = []
@@ -484,6 +484,14 @@ def main():
                 all_input_block_lengths.extend([list(Counter(ids).values()) for ids in block_ids])
                 all_langs.extend(block_langs)
 
+                if args.sample_non_whitespace > 1:
+                    separator = Constants.SEPARATORS.get(current_lang, " ")
+                    if separator == "":
+                        for i in range(args.sample_non_whitespace - 1):
+                            all_input_blocks.extend(blocks)
+                            all_input_block_lengths.extend([list(Counter(ids).values()) for ids in block_ids])
+                            all_langs.extend(block_langs)
+
             return {
                 "input_ids": all_input_blocks,
                 "block_lengths": all_input_block_lengths,
@@ -660,7 +668,9 @@ def main():
                         avg_metrics[f"average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
                         avg_metrics[f"average_nonwhitespace_{dataset_name}_f1"].append(info["f1"])
                         avg_metrics[f"average_nonwhitespace_{dataset_name}_f1_best"].append(info["f1_best"])
-                        avg_metrics[f"average_nonwhitespace_{dataset_name}_threshold_best"].append(info["threshold_best"])
+                        avg_metrics[f"average_nonwhitespace_{dataset_name}_threshold_best"].append(
+                            info["threshold_best"]
+                        )
                     else:
                         avg_metrics[f"average_whitespace_{dataset_name}_pr_auc"].append(score)
                         avg_metrics[f"average_whitespace_{dataset_name}_f1"].append(info["f1"])
