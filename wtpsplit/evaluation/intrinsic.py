@@ -63,6 +63,8 @@ class Args:
     skip_corrupted: bool = False
     zh_window: int = 0
     clf_from_scratch: bool = False
+    return_indices: bool = False
+    skip_punct: bool = True
 
 
 ZH_CHAR_PATTERN = re.compile(
@@ -70,7 +72,7 @@ ZH_CHAR_PATTERN = re.compile(
 )
 
 
-def preprocess_zh_sentence(text, n=10):
+def preprocess_zh_sentence(text, n=0):
     if n == 0:
         return text
     result = []
@@ -322,6 +324,8 @@ def main(args):
     # now, compute the intrinsic scores.
     results = {}
     clfs = {}
+    if args.return_indices:
+        indices = {}
     # Initialize lists to store scores for each metric across all languages
     u_scores, t_scores, punct_scores = [], [], []
 
@@ -332,6 +336,8 @@ def main(args):
         print(f"Predicting {lang_code}...")
         results[lang_code] = {}
         clfs[lang_code] = {}
+        if args.return_indices:
+            indices[lang_code] = {}
 
         for dataset_name, dataset in dsets["sentence"].items():
             sentences = dataset["data"][: args.max_n_test_sentences]
@@ -353,14 +359,16 @@ def main(args):
                     f[lang_code][dataset_name]["train_logits"][:],
                     f[lang_code][dataset_name]["train_labels"][:],
                     features=feature_indices,
+                    skip_punct=args.skip_punct,
                 )
                 if clf[0] is not None:
                     print(clf)
 
-                score_t, score_punct, _ = evaluate_mixture(
+                score_t, score_punct, _, t_indices, punct_indices = evaluate_mixture(
                     lang_code,
                     f[lang_code][dataset_name]["test_logits"][:],
                     sentences,
+                    args.return_indices,
                     *clf,
                 )
 
@@ -371,14 +379,26 @@ def main(args):
             else:
                 score_t = score_punct = None
                 clf = [None, None, None, args.threshold]
+                t_indices, punct_indices = None, None
 
-            score_u, _, _ = evaluate_mixture(lang_code, f[lang_code][dataset_name]["test_logits"][:], sentences, *clf)
+            score_u, _, _, u_indices, _ = evaluate_mixture(
+                lang_code, f[lang_code][dataset_name]["test_logits"][:], sentences, args.return_indices, *clf
+            )
 
             results[lang_code][dataset_name] = {
                 "u": score_u,
                 "t": score_t,
                 "punct": score_punct,
             }
+
+            if args.return_indices:
+                indices[lang_code][dataset_name] = {
+                    "u": u_indices["pred_indices"],
+                    "t": t_indices["pred_indices"] if t_indices is not None else None,
+                    "punct": punct_indices["pred_indices"] if punct_indices is not None else None,
+                    "true_indices": u_indices["true_indices"],
+                    "length": u_indices["length"],
+                }
 
             if score_u is not None:
                 u_scores.append((score_u, lang_code))
@@ -415,6 +435,7 @@ def main(args):
         ),
         indent=4,
     )
+    print(Constants.CACHE_DIR / "intrinsic" / f"{save_str}.json")
 
     # Write results_avg to JSON
     json.dump(
@@ -425,6 +446,18 @@ def main(args):
         ),
         indent=4,
     )
+    if args.return_indices:
+        json.dump(
+            indices,
+            open(
+                Constants.CACHE_DIR / "intrinsic" / f"{save_str}_IDX.json",
+                "w",
+            ),
+            # indent=4,
+        )
+        print(Constants.CACHE_DIR / "intrinsic" / f"{save_str}_IDX.json")
+        print("Indices saved to file.")
+
     if not args.keep_logits:
         os.remove(f.filename)
     return results, results_avg, total_test_time

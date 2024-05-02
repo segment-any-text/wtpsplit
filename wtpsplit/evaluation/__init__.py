@@ -39,7 +39,7 @@ def get_labels(lang_code, sentences, after_space=True):
     return labels
 
 
-def evaluate_sentences(lang_code, sentences, predicted_sentences):
+def evaluate_sentences(lang_code, sentences, predicted_sentences, return_indices: bool = False):
     separator = Constants.SEPARATORS[lang_code]
 
     text = separator.join(sentences)
@@ -59,15 +59,18 @@ def evaluate_sentences(lang_code, sentences, predicted_sentences):
         # only correct if we correctly predict the single newline in between the sentence pair
         # --> no false positives, no false negatives allowed!
         "correct_pairwise": np.all(labels[:-1] == predictions[:-1]),
+        "true_indices": np.where(labels)[0].tolist() if return_indices else None,
+        "predicted_indices": np.where(predictions)[0].tolist() if return_indices else None,
+        "length": len(labels),
     }
 
 
-def train_mixture(lang_code, original_train_x, train_y, n_subsample=None, features=None):
+def train_mixture(lang_code, original_train_x, train_y, n_subsample=None, features=None, skip_punct: bool = False):
     original_train_x = torch.from_numpy(original_train_x).float()
 
     train_y = train_y[:-1]
 
-    if original_train_x.shape[1] > Constants.AUX_OFFSET:
+    if original_train_x.shape[1] > Constants.AUX_OFFSET and not skip_punct:
         if features is not None:
             train_x = original_train_x[:, features]
         else:
@@ -89,6 +92,7 @@ def train_mixture(lang_code, original_train_x, train_y, n_subsample=None, featur
     p, r, t = precision_recall_curve(train_y, torch.sigmoid(original_train_x[:, Constants.NEWLINE_INDEX]))
     f1 = 2 * p * r / (p + r + 1e-6)
     best_threshold_newline = t[f1.argmax()]
+    print(best_threshold_transformed, best_threshold_newline)
 
     return clf, features, best_threshold_transformed, best_threshold_newline
 
@@ -97,6 +101,7 @@ def evaluate_mixture(
     lang_code,
     test_x,
     true_sentences,
+    return_indices,
     clf,
     features,
     threshold_transformed,
@@ -124,20 +129,35 @@ def evaluate_mixture(
         lang_code,
         true_sentences,
         reconstruct_sentences(text, indices_to_sentences(text, predicted_indices_newline)),
+        return_indices,
     )
+
+    indices_newline_info = {
+        "true_indices": info_newline.pop("true_indices"),
+        "pred_indices": info_newline.pop("predicted_indices"),
+        "length": info_newline.pop("length"),
+    }
 
     if predicted_indices_transformed is None:
         return (
             score_newline,
             None,
             {"info_newline": info_newline, "info_transformed": None},
+            indices_newline_info,
+            None,
         )
 
     score_transformed, info_transformed = evaluate_sentences(
         lang_code,
         true_sentences,
         reconstruct_sentences(text, indices_to_sentences(text, predicted_indices_transformed)),
+        return_indices,
     )
+    indices_transformed_info = {
+        "true_indices": info_transformed.pop("true_indices"),
+        "pred_indices": info_transformed.pop("predicted_indices"),
+        "length": info_transformed.pop("length"),
+    }
 
     return (
         score_newline,
@@ -146,6 +166,8 @@ def evaluate_mixture(
             "info_newline": info_newline,
             "info_transformed": info_transformed,
         },
+        indices_newline_info,
+        indices_transformed_info,
     )
 
 
