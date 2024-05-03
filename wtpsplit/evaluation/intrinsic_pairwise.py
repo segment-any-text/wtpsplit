@@ -45,19 +45,22 @@ class Args:
     #        }
     #    }
     # }
-    eval_data_path: str = "data/eval.pth"
+    eval_data_path: str = "data/all_data_24_04.pth"
     valid_text_path: str = None  # "data/sentence/valid.parquet"
     device: str = "cpu"
     block_size: int = 512
     batch_size: int = 128
     include_langs: List[str] = None
     threshold: float = 0.01
-    max_n_train_sentences: int = 10_000
+    max_n_train_sentences: int = 1_000
+    max_n_test_sentences: int = sys.maxsize
     save_suffix: str = ""
     do_lowercase: bool = False
     do_remove_punct: bool = False
     skip_adaptation: bool = False
     keep_logits: bool = True
+    skip_corrupted: bool = True
+    skip_punct: bool = True
 
     # k_mer-specific args
     k: int = 2
@@ -258,6 +261,8 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
             # eval data
             for dataset_name, dataset in eval_data[lang_code]["sentence"].items():
+                if args.skip_corrupted and "corrupted" in dataset_name:
+                    continue
                 try:
                     if args.adapter_path:
                         model.model.load_adapter(
@@ -284,7 +289,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     dset_group = lang_group[dataset_name]
 
                 if "test_logits" not in dset_group:
-                    test_sentences = dataset["data"]
+                    test_sentences = dataset["data"][: args.max_n_test_sentences]
                     all_pairs_test = generate_k_mers(
                         test_sentences,
                         k=args.k,
@@ -419,7 +424,7 @@ def main(args):
         clfs[lang_code] = {}
 
         for dataset_name, dataset in dsets["sentence"].items():
-            sentences = dataset["data"]
+            sentences = dataset["data"][: args.max_n_test_sentences]
             sent_k_mers = generate_k_mers(
                 sentences,
                 k=args.k,
@@ -429,7 +434,9 @@ def main(args):
                 max_n_samples=args.max_n_samples,
                 min_k_mer_length=args.min_k_mer_length,
             )
-
+            if lang_code not in f or dataset_name not in f[lang_code]:
+                continue
+            
             if "train_logits" in f[lang_code][dataset_name] and not args.skip_adaptation:
                 feature_indices = None
                 # it is sufficient to feed in 1 long sequence of tokens here since we only use logits for LR
@@ -438,6 +445,7 @@ def main(args):
                     f[lang_code][dataset_name]["train_logits"][:],
                     f[lang_code][dataset_name]["train_labels"][:],
                     features=feature_indices,
+                    skip_punct=args.skip_punct,
                 )
                 # XXX: clf thresholds are still fitted on max. F1 score, not accuracy!
                 # (but still without a positive label at the end)
