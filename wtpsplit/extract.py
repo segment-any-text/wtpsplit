@@ -69,7 +69,7 @@ def extract(
     batch_of_texts,
     model,
     stride,
-    block_size,
+    max_block_size,
     batch_size,
     lang_code=None,
     pad_last_batch=False,
@@ -100,7 +100,7 @@ def extract(
 
     text_lengths = [len(text) for text in batch_of_texts]
     # reduce block size if possible
-    block_size = min(block_size, max(text_lengths))
+    block_size = min(max_block_size, max(text_lengths))
 
     # make sure block_size is a multiple of downsampling rate
     downsampling_rate = getattr(model.config, "downsampling_rate", 1)
@@ -109,7 +109,7 @@ def extract(
 
     # total number of forward passes
     num_chunks = sum(math.ceil(max(length - actual_block_size, 0) / stride) + 1 for length in text_lengths)
-    if text_lengths[0] <= block_size:
+    if text_lengths[0] <= max_block_size - 2:
         # if the input is smaller than the block size, we only need one forward pass
         num_chunks = 1
         if use_subwords:

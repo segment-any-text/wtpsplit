@@ -96,7 +96,7 @@ def evaluate_sentence(
         PyTorchWrapper(model.backbone),
         lang_code=lang_code,
         stride=stride,
-        block_size=block_size,
+        max_block_size=block_size,
         batch_size=batch_size,
     )
     logits = logits[0]

@@ -221,7 +221,7 @@ class WtP:
                 self.model,
                 lang_code=lang_code,
                 stride=stride,
-                block_size=block_size,
+                max_block_size=block_size,
                 batch_size=batch_size,
                 pad_last_batch=pad_last_batch,
                 verbose=verbose,

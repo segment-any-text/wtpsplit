@@ -189,7 +189,7 @@ def our_sentencize(
         sentence_model,
         lang_code=lang_code,
         stride=stride,
-        block_size=block_size,
+        max_block_size=block_size,
         batch_size=batch_size,
         pad_last_batch=False,
         use_hidden_states=False,
