@@ -45,7 +45,7 @@ class Args:
     #        }
     #    }
     # }
-    eval_data_path: str = "data/all_data_24_04.pth"
+    eval_data_path: str = "data/all_data_04_05.pth"
     valid_text_path: str = None  # "data/sentence/valid.parquet"
     device: str = "cpu"
     block_size: int = 512
@@ -291,6 +291,8 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"][: args.max_n_test_sentences]
+                    if isinstance(test_sentences[0], list):
+                        continue
                     all_pairs_test = generate_k_mers(
                         test_sentences,
                         k=args.k,
@@ -426,6 +428,8 @@ def main(args):
 
         for dataset_name, dataset in dsets["sentence"].items():
             sentences = dataset["data"][: args.max_n_test_sentences]
+            if isinstance(sentences[0], list):
+                continue
             sent_k_mers = generate_k_mers(
                 sentences,
                 k=args.k,
