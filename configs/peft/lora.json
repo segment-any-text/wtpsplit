@@ -1,6 +1,6 @@
 {
-    "model_name_or_path": "xlmr-normal-p-v3",
-    "output_dir": "xlmr-3l-v3_lora_r8_ep20_v2_100-1k-10k",
+    "model_name_or_path": "xlmr-3l-v3_look48_lc0.1-mix2",
+    "output_dir": "xlmr-3l-v4_LL_lora_r8_a16_ep30",
     "block_size": 256,
     "eval_stride": 128,
     "do_train": true,
@@ -13,9 +13,10 @@
     "preprocessing_num_workers": 1,
     "learning_rate": 3e-4,
     "fp16": false,
-    "num_train_epochs": 20,
+    "num_train_epochs": 30,
     "logging_steps": 50,
     "report_to": "wandb",
+    "wandb_project": "sentence-peft-v2",
     "save_steps": 100000000,
     "remove_unused_columns": false,
     "one_sample_per_line": false,
@@ -29,9 +30,7 @@
     "use_subwords": true,
     "custom_punctuation_file": "punctuation_xlmr_unk.txt",
     "log_level": "warning",
-    "adapter_config": "lora[r=8]",
+    "adapter_config": "lora[r=8,alpha=16]",
     "weight_decay": 0.0,
-    "auxiliary_remove_prob": 0.0,
-    "do_process": false,
-    "n_train_steps": [100, 1000, 10000]
+    "auxiliary_remove_prob": 0.0
 }

@@ -39,7 +39,7 @@ class Args:
     model_name_or_path: str
     base_model: str = "xlm-roberta-base"
     shuffle: bool = True
-    text_path: str = "data/all_data.pth"
+    text_path: str = "data/all_data_04_05.pth"
     include_languages: List[str] = None
     preprocessing_num_workers: int = 1
     block_size: int = 512
@@ -50,7 +50,7 @@ class Args:
     one_sample_per_line: bool = False
     use_loss_weights: bool = False
     do_sentence_training: bool = True
-    do_auxiliary_training: bool = True
+    do_auxiliary_training: bool = False
     aux_training_weight: float = 1.0
     ignore_non_hyphen: bool = False
     non_punctuation_sample_ratio: float = None
@@ -68,8 +68,6 @@ class Args:
     wandb_project: str = "sentence"
     eval_every: int = 5
     # corruption
-    do_lowercase: bool = False
-    do_remove_punct: bool = False
     eval_pairwise: bool = False
     skip_eval_loss: bool = False
     subsample: Optional[float] = None
@@ -104,11 +102,8 @@ def main():
         dataset_name="ud",
         shuffle=False,
         split="train",
-        do_lowercase=False,
-        do_remove_punct=False,
         subsample: Union[None, int, float] = None,
     ):
-        # maybe we use more than 1 lang later at once.
         with training_args.main_process_first():
             # maybe we use more than 1 lang later at once.
             for lang in include_languages:
@@ -116,12 +111,10 @@ def main():
                     dataset = data[lang]["sentence"][dataset_name]["meta"]["train_data"]
                 elif split == "valid":
                     dataset = data[lang]["sentence"][dataset_name]["data"]
-                if dataset_name == "opus100" and lang == "fr":
-                    dataset = data[lang]["sentence"][dataset_name]["data"]
                 if dataset is None:
                     return None
 
-                if args.one_sample_per_line:
+                if args.one_sample_per_line or isinstance(dataset[0], list):
                     processed_dataset = []
                     for chunk in dataset:
                         processed_chunk = {}
@@ -132,22 +125,18 @@ def main():
                         # join all chunks
                         processed_chunk[args.text_column] = "\n".join(chunk)
                         # corrupt
-                        processed_chunk[args.text_column] = corrupt(
-                            processed_chunk[args.text_column], do_lowercase, do_remove_punct
-                        )
+                        # TODO: corrupt for lyrics.
+                        # processed_chunk[args.text_column] = corrupt(
+                        #     processed_chunk[args.text_column], do_lowercase, do_remove_punct
+                        # )
                         processed_dataset.append(processed_chunk)
                     dataset = datasets.Dataset.from_list(processed_dataset)
 
                 else:
-                    if isinstance(dataset[0], list):
-                        # flatten
-                        dataset = [item for sublist in dataset for item in sublist]
                     dataset = datasets.Dataset.from_list(
                         [
                             {
-                                args.text_column: corrupt(sample, do_lowercase, do_remove_punct) + "\n"
-                                if sample and sample[-1] != "\n"
-                                else corrupt(sample, do_lowercase, do_remove_punct),
+                                args.text_column: sample + "\n" if sample and sample[-1] != "\n" else sample,  # TODO
                                 "lang": lang,
                                 "ends_with_punctuation": sample.endswith(tuple(Constants.PUNCTUATION_CHARS)),
                             }
@@ -352,6 +341,7 @@ def main():
                     batched=True,
                     num_proc=num_workers,
                     remove_columns=[args.text_column],
+                    desc="Tokenizing",
                 )
         else:
             # this is no longer used and would cause an error otherwise
@@ -366,6 +356,7 @@ def main():
                     num_proc=num_workers,
                     # a bit hacky but oh well, only drop if sentence
                     remove_columns=["ends_with_punctuation"] if args.text_column == "text" else [],
+                    desc="Grouping",
                 )
         else:
             if args.use_subwords:
@@ -404,12 +395,12 @@ def main():
     for lang in tqdm(data.keys(), desc="Language"):
         if lang in args.include_languages:
             for dataset_name in data[lang]["sentence"].keys():
-                if dataset_name != "ted2020":
-                    continue
-            # skip langs starting with a, b, ..., k
-                if lang[0] < "d":
-                    print(f"Skipping {lang} {dataset_name}")
-                    continue
+                # if dataset_name != "ted2020":
+                #     continue
+                # skip langs starting with a, b, ..., k
+                # if lang[0] < "d":
+                #     print(f"Skipping {lang} {dataset_name}")
+                #     continue
                 # do model stuff here; otherwise, head params would be overwritten every time
                 backbone = SubwordXLMForTokenClassification.from_pretrained(
                     args.model_name_or_path, config=copy.deepcopy(config), ignore_mismatched_sizes=True
@@ -449,8 +440,6 @@ def main():
                         dataset_name=dataset_name,
                         shuffle=False,
                         split="valid",
-                        do_lowercase=args.do_lowercase,
-                        do_remove_punct=args.do_remove_punct,
                     )
                     logger.warning(f"Valid ds for {lang} {dataset_name} has {len(valid_dataset)} examples.")
 
@@ -461,8 +450,6 @@ def main():
                         dataset_name=dataset_name,
                         shuffle=args.shuffle,
                         split="train",
-                        do_lowercase=args.do_lowercase,
-                        do_remove_punct=args.do_remove_punct,
                         subsample=args.subsample,
                     )
                     if train_dataset is None or valid_dataset is None:
@@ -472,7 +459,7 @@ def main():
 
                 # print some samples from the dataset
                 count = 0
-                while count < 1:
+                while count < 3:
                     index = random.choice(range(len(train_dataset)))
                     sample = train_dataset[index]
 
@@ -488,6 +475,8 @@ def main():
                     model = trainer._wrap_model(trainer.model, training=False)
 
                     with training_args.main_process_first():
+                        # XXX: feeding in single samples is too slow --> feed in as one long text
+                        # also for lyrics, tweets, ...
                         if args.one_sample_per_line:
                             eval_data = [item for sublist in eval_data for item in sublist]
                         elif isinstance(eval_data[0], list):
@@ -496,11 +485,9 @@ def main():
                             lang,
                             eval_data,
                             model,
-                            stride=64,
+                            stride=128,
                             block_size=512,
                             batch_size=training_args.per_device_eval_batch_size,
-                            do_lowercase=args.do_lowercase,
-                            do_remove_punct=args.do_remove_punct,
                         )
                         metrics[f"{dataset_name}/{lang}/pr_auc"] = score
                         metrics[f"{dataset_name}/{lang}/f1"] = info["f1"]
@@ -558,7 +545,7 @@ def main():
                     model.backbone.classifier = torch.nn.Sequential(
                         clf,  # original classifier - if frozen above, also frozen here
                         torch.nn.Linear(clf.out_features, 1),
-                    ) 
+                    )
                     model.backbone.config.num_labels = 1
 
                 # if args.one_sample_per_line:
@@ -574,8 +561,6 @@ def main():
                     ),
                     args.eval_every,
                 )
-                # log more often than this
-                training_args.logging_steps = training_args.eval_steps // 5
 
                 trainer_cls = AdapterTrainer if adapter_args.train_adapter else Trainer
                 # add logging_prefix and skip_eval_loss as args to trainer_cls if trainer_cls is AdapterTrainer only
@@ -611,33 +596,34 @@ def main():
                         )
                     else:
                         save_model.to("cpu").save_pretrained(os.path.join(training_args.output_dir, dataset_name, lang))
-    if training_args.local_rank == 0:
-        # eval here within 1 go
-        cmd = ""
+    # TODO
+    # if training_args.local_rank == 0:
+    #     # eval here within 1 go
+    #     cmd = ""
 
-        if args.eval_pairwise:
-            eval_function = "intrinsic_pairwise"
-        elif args.one_sample_per_line:
-            eval_function = "intrinsic_list"
-        else:
-            eval_function = "intrinsic"
-        if args.do_lowercase and args.do_remove_punct:
-            suffix = "--do_lowercase --do_remove_punct"
-        elif "multilingual" in trainings_args.model_name_or_path:
-            suffix = "--threshold 0.5"
-        else:
-            suffix = ""
-        if "adapter" in training_args.output_dir:
-            model_info = f"--model_path {args.model_name_or_path} --adapter_path {training_args.output_dir}"
-        else:
-            model_info = f"--model_path {training_args.output_dir}"
+    #     if args.eval_pairwise:
+    #         eval_function = "intrinsic_pairwise"
+    #     elif args.one_sample_per_line:
+    #         eval_function = "intrinsic_list"
+    #     else:
+    #         eval_function = "intrinsic"
+    #     if args.do_lowercase and args.do_remove_punct:
+    #         suffix = "--do_lowercase --do_remove_punct"
+    #     elif "multilingual" in trainings_args.model_name_or_path:
+    #         suffix = "--threshold 0.5"
+    #     else:
+    #         suffix = ""
+    #     if "adapter" in training_args.output_dir:
+    #         model_info = f"--model_path {args.model_name_or_path} --adapter_path {training_args.output_dir}"
+    #     else:
+    #         model_info = f"--model_path {training_args.output_dir}"
 
-        if "verses" in args.text_path or "lines" in args.text_path:
-            cmd = f"python3 wtpsplit/evaluation/{eval_function}.py {model_info} --threshold 0.1 --custom_language_list data/mldb_langs.csv --eval_data_path {args.text_path} {suffix}"
-        else:
-            cmd = f"python3 wtpsplit/evaluation/{eval_function}.py {model_info} --threshold 0.1  {suffix}"
-        print(cmd)
-        os.system(cmd)
+    #     if "verses" in args.text_path or "lines" in args.text_path:
+    #         cmd = f"python3 wtpsplit/evaluation/{eval_function}.py {model_info} --threshold 0.1 --custom_language_list data/mldb_langs.csv --eval_data_path {args.text_path} {suffix}"
+    #     else:
+    #         cmd = f"python3 wtpsplit/evaluation/{eval_function}.py {model_info} --threshold 0.1  {suffix}"
+    #     print(cmd)
+    #     os.system(cmd)
 
 
 def _mp_fn(index):
@@ -648,8 +634,4 @@ def _mp_fn(index):
 if __name__ == "__main__":
     # try:
     main()
-    # except Exception:
-    #     # extype, value, tb = sys.exc_info()
-    #     # tb.print_exc()
-    #     # pdb.post_mortem(tb)
-    #     pass
+
