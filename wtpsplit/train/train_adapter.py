@@ -301,10 +301,10 @@ def main():
                     total_length = len(concatenated_texts)
 
                     best_length = math.ceil(total_length / args.block_size) * args.block_size + args.overflow_size
-                    if best_length < args.block_size:
-                        best_length = args.block_size
                     while best_length > total_length:
                         best_length -= args.block_size
+                    if best_length < args.block_size:
+                        best_length = args.block_size + 1
 
                     if best_length < 0:
                         continue
