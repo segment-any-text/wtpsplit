@@ -301,6 +301,8 @@ def main():
                     total_length = len(concatenated_texts)
 
                     best_length = math.ceil(total_length / args.block_size) * args.block_size + args.overflow_size
+                    if best_length < args.block_size:
+                        best_length = args.block_size
                     while best_length > total_length:
                         best_length -= args.block_size
 
@@ -395,7 +397,7 @@ def main():
     for lang in tqdm(data.keys(), desc="Language"):
         if lang in args.include_languages:
             for dataset_name in data[lang]["sentence"].keys():
-                # if dataset_name != "ted2020":
+                # if dataset_name != "ted2020-corrupted" or lang != "la":
                 #     continue
                 # skip langs starting with a, b, ..., k
                 # if lang[0] < "d":
