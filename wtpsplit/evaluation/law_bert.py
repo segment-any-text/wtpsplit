@@ -5,6 +5,7 @@ import sys
 import time
 from dataclasses import dataclass
 from typing import List
+import warnings
 
 import h5py
 import numpy as np
@@ -13,10 +14,48 @@ from tqdm.auto import tqdm
 from transformers import AutoModelForTokenClassification, AutoTokenizer, HfArgumentParser, pipeline
 
 from wtpsplit.evaluation import evaluate_mixture
-from wtpsplit.utils import Constants
+from wtpsplit.utils import Constants, corrupt_asr
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+warnings.filterwarnings("ignore", category=UserWarning)
+
+
+def corrupt_document(document, lang):
+    """Corrupt sentences in a document for ASR simulation."""
+    return [corrupt_asr(sentence, lang=lang)[0] for sentence in document]
+
+
+def process_documents(documents, lang):
+    """Process each document and return a list of corrupted documents."""
+    return [corrupt_document(document, lang) for document in documents]
+
+
+def handle_legal_data(eval_data, lang_code):
+    """Process legal data for a specific language, corrupting the sentences."""
+    sections = ["test", "train"]
+    corrupted_sentences = {}
+
+    for section in sections:
+        key = "data" if section == "test" else "meta"
+        if key in eval_data[lang_code]["sentence"]["legal-data"].keys():
+            original_data = eval_data[lang_code]["sentence"]["legal-data"][key]
+            documents = original_data if section == "test" else original_data["train_data"]
+            if not documents:
+                corrupted_sentences[section] = None
+                continue
+            corrupted_docs = process_documents(documents, lang=lang_code.split("_")[0])
+            corrupted_sentences[section] = corrupted_docs
+
+    if corrupted_sentences:
+        eval_data[lang_code]["sentence"][f"legal-data-corrupted"] = {
+            "data": corrupted_sentences.get("test", []),
+            "meta": {
+                "train_data": corrupted_sentences.get("train", []),
+            },
+        }
+        print(f"Created corrupted legal data for {lang_code}")
 
 
 @dataclass
@@ -25,10 +64,12 @@ class Args:
     device: str = "cpu"
     include_langs: List[str] = None
     max_n_test_sentences: int = sys.maxsize
+    stride: int = 32
     save_suffix: str = ""
     return_indices: bool = False
     type: str = "both"  # laws, judgements, both, specific
     lang_support: str = "multi"  # mono, multi
+    corrupt_legal: bool = False  # FIXME
 
 
 def get_law_preds(texts, model, model_name, args) -> List[List[int]]:
@@ -40,6 +81,7 @@ def get_law_preds(texts, model, model_name, args) -> List[List[int]]:
         tokenizer=tokenizer,
         device=args.device,
         aggregation_strategy="simple",
+        stride=args.stride,
     )
     sentences = pipe(texts)
     sent_end_preds_all = []
@@ -60,11 +102,18 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
 
     use_langs = eval_data.keys()
     # law eval data is only one with _
-    use_langs = [lang_code for lang_code in use_langs if "_" in lang_code]
+    use_langs = [lang_code for lang_code in use_langs if "laws" in lang_code or "judgements" in lang_code]
+
+    # create corrupted versions of legal data (unlike others, not contained in eval_data)
+    if args.corrupt_legal:
+        for lang_code in use_langs:
+            if "laws" in lang_code or "judgements" in lang_code:
+                handle_legal_data(eval_data, lang_code)
+        torch.save(eval_data, args.eval_data_path)
 
     total_test_time = 0  # Initialize total test processing time
 
-    with h5py.File(logits_path, "a") as f, torch.no_grad():
+    with h5py.File(logits_path, "w") as f, torch.no_grad():
         for lang_code in tqdm(use_langs, desc="Languages"):
             current_name = base_name
             if args.lang_support == "multi":
@@ -72,7 +121,7 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
             elif args.lang_support == "mono":
                 if lang_code.split("_")[0] == "pt":
                     current_name += "-fr-es-it-en-de"
-                else:               
+                else:
                     current_name += f"-{lang_code.split('_')[0]}"
                 if lang_code.split("_")[0] == "en":
                     current_name += "-judgements-laws"
@@ -111,6 +160,10 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
 
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"][: args.max_n_test_sentences]
+                    if args.corrupt_legal:
+                        test_sentences = [
+                            corrupt_asr(sentence, lang=lang_code.split("_")[0]) for sentence in test_sentences
+                        ]
                     if isinstance(test_sentences[0], list):
                         # short-seq eval: list of lists
                         test_text = [
@@ -162,10 +215,13 @@ def compute_statistics(values):
 
 
 def main(args):
-    save_model_path = f"rcds/distilbert-SBD-{args.lang_support}-{args.type}"
+    save_model_path = f"rcds/distilbert-SBD-{args.lang_support}-{args.type}_s{args.stride}"
     save_str = f"{save_model_path.replace('/','_')}"
 
     eval_data = torch.load(args.eval_data_path)
+
+    if args.corrupt_legal:
+        save_str += "_corrupt"
 
     save_str += f"{args.save_suffix}"
 

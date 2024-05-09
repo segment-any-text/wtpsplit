@@ -379,6 +379,8 @@ def main():
         data = torch.load(
             args.text_path,
         )
+        # sort alphabetically by key to enable alphabetical filtering w/o losses
+        data = dict(sorted(data.items()))
 
     if not args.include_languages:
         args.include_languages = list(data.keys())  # use all
@@ -400,7 +402,7 @@ def main():
                 # if dataset_name != "ted2020-corrupted" or lang != "la":
                 #     continue
                 # skip langs starting with a, b, ..., k
-                # if lang[0] < "d":
+                # if not lang.startswith(tuple("k")) and not "en-de" in lang:
                 #     print(f"Skipping {lang} {dataset_name}")
                 #     continue
                 # do model stuff here; otherwise, head params would be overwritten every time

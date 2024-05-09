@@ -178,9 +178,13 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     if args.adapter_path:
                         if args.clf_from_scratch:
                             model.model.classifier = torch.nn.Linear(model.model.classifier.in_features, 1)
-                        if any(code in dataset_name for code in ["ceb", "jv", "mn", "yo"]):
+                        if (
+                            any(code in lang_code for code in ["ceb", "jv", "mn", "yo"])
+                            and "ted2020" not in dataset_name
+                        ):
+                            # no ersatz for these either.
                             dataset_load_name = "nllb"
-                            if "corrupted" in dataset_load_name: 
+                            if "corrupted" in dataset_load_name:
                                 dataset_load_name += "-corrupted"
                         else:
                             dataset_load_name = dataset_name
