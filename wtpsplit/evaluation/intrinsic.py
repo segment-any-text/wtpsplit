@@ -23,7 +23,7 @@ from wtpsplit.extract import PyTorchWrapper, extract
 from wtpsplit.utils import Constants, corrupt
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
 
 @dataclass
@@ -62,42 +62,9 @@ class Args:
     keep_logits: bool = False
     skip_adaptation: bool = False
     skip_corrupted: bool = False
-    zh_window: int = 0
     clf_from_scratch: bool = False
     return_indices: bool = False
     skip_punct: bool = True
-
-
-ZH_CHAR_PATTERN = re.compile(
-    "[\u4e00-\u9fff\u3400-\u4dbf]"  # Basic Multilingual Plane and Extension A
-)
-
-
-def preprocess_zh_sentence(text, n=0):
-    if n == 0:
-        return text
-    result = []
-    length = len(text)
-    i = 0
-
-    while i < length:
-        # Determine the end of the current window
-        end = min(i + n, length)
-        window = text[i:end]
-
-        # Use the compiled regex to check for the presence of Chinese characters
-        if ZH_CHAR_PATTERN.search(window):
-            # Remove all spaces from the window if it contains a Chinese character
-            modified_window = window.replace(" ", "")
-        else:
-            # Keep the window as is if no Chinese characters are found
-            modified_window = window
-
-        result.append(modified_window)
-        # Increment the index by N to process non-overlapping windows
-        i += n
-
-    return "".join(result)
 
 
 def process_logits(text, model, lang_code, args):
@@ -211,8 +178,14 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     if args.adapter_path:
                         if args.clf_from_scratch:
                             model.model.classifier = torch.nn.Linear(model.model.classifier.in_features, 1)
+                        if any(code in dataset_name for code in ["ceb", "jv", "mn", "yo"]):
+                            dataset_load_name = "nllb"
+                            if "corrupted" in dataset_load_name: 
+                                dataset_load_name += "-corrupted"
+                        else:
+                            dataset_load_name = dataset_name
                         model.model.load_adapter(
-                            args.adapter_path + "/" + dataset_name + "/" + lang_code,
+                            args.adapter_path + "/" + dataset_load_name + "/" + lang_code,
                             set_active=True,
                             with_head=True,
                             load_as="text",
@@ -245,7 +218,6 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     #     corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
                     #     for sentence in test_sentences
                     # ]
-                    # test_sentences = [preprocess_zh_sentence(sentence, args.zh_window) for sentence in test_sentences]
                     if isinstance(test_sentences[0], list):
                         # short-seq eval: list of lists
                         test_text = [
@@ -292,7 +264,6 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     #     corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
                     #     for sentence in train_sentences
                     # ]
-                    # train_sentences = [preprocess_zh_sentence(sentence, args.zh_window) for sentence in train_sentences]
                     train_sentences = train_sentences[: args.max_n_train_sentences]
                     if isinstance(train_sentences[0], list):
                         # short-seq eval: list of lists
@@ -383,8 +354,6 @@ def main(args):
     save_str += f"{args.save_suffix}"
     if args.max_n_test_sentences < sys.maxsize:
         save_str += f"_n{args.max_n_test_sentences}"
-    if args.zh_window > 0:
-        save_str += f"_zh{args.zh_window}"
 
     # first, logits for everything.
     f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data, save_str)
@@ -417,7 +386,6 @@ def main(args):
             #     corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
             #     for sentence in sentences
             # ]
-            # sentences = [preprocess_zh_sentence(sentence, args.zh_window) for sentence in sentences]
             # check if f[lang_code][dataset_name] exists
             if lang_code not in f or dataset_name not in f[lang_code]:
                 continue
