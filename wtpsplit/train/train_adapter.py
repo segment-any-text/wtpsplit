@@ -132,6 +132,9 @@ def main():
                         # )
                         processed_dataset.append(processed_chunk)
                     dataset = datasets.Dataset.from_list(processed_dataset)
+                    if subsample:
+                        # 10k sentences -> 1k documents.
+                        subsample *= 0.1
 
                 else:
                     dataset = datasets.Dataset.from_list(
