@@ -360,18 +360,6 @@ def main():
                     remove_columns=["ends_with_punctuation"] if args.text_column == "text" else [],
                     desc="Grouping",
                 )
-        else:
-            if args.use_subwords:
-                # add back the special tokens for every sample
-                with training_args.main_process_first():
-                    dataset = dataset.map(
-                        lambda x: {
-                            "input_ids": [tokenizer.convert_tokens_to_ids(tokenizer.bos_token)]
-                            + x["input_ids"]
-                            + [tokenizer.convert_tokens_to_ids(tokenizer.eos_token)]
-                        },
-                        batched=False,
-                    )
 
         return dataset
 
@@ -463,7 +451,7 @@ def main():
 
                 # print some samples from the dataset
                 count = 0
-                while count < 3:
+                while count < 1:
                     index = random.choice(range(len(train_dataset)))
                     sample = train_dataset[index]
 

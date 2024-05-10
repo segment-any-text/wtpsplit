@@ -121,8 +121,8 @@ def get_subword_label_dict(label_args, tokenizer):
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.AUX_OFFSET + i
         logger.info(
-            f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded: {tokenizer.decode([token_id])}"
-        )
+        #     f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded: {tokenizer.decode([token_id])}"
+        # )
         if token_id == tokenizer.unk_token_id:
             n_unks += 1
         if label_args.use_all_labels:
@@ -135,9 +135,9 @@ def get_subword_label_dict(label_args, tokenizer):
                     and not any(i.isdigit() for i in token)
                 ):
                     label_dict[token_idx] = 1 + Constants.AUX_OFFSET + i
-                    logger.warning(
-                        f"Special auxiliary character {c} has token ID {token_idx} and label {label_dict[token_idx]}, decoded: {tokenizer.decode([token_idx])}"
-                    )
+                    # logger.warning(
+                    #     f"Special auxiliary character {c} has token ID {token_idx} and label {label_dict[token_idx]}, decoded: {tokenizer.decode([token_idx])}"
+                    # )
 
     logger.info(f"found {n_unks} UNK tokens in auxiliary characters")
 
