@@ -103,6 +103,7 @@ def main():
         shuffle=False,
         split="train",
         subsample: Union[None, int, float] = None,
+        one_sample_per_line: bool = False
     ):
         with training_args.main_process_first():
             # maybe we use more than 1 lang later at once.
@@ -114,7 +115,7 @@ def main():
                 if dataset is None:
                     return None
 
-                if args.one_sample_per_line or isinstance(dataset[0], list):
+                if one_sample_per_line or isinstance(dataset[0], list):
                     processed_dataset = []
                     for chunk in dataset:
                         processed_chunk = {}
@@ -334,7 +335,7 @@ def main():
             }
 
         if args.pack_samples:
-            assert not args.one_sample_per_line
+            assert not one_sample_per_line
 
         if args.use_subwords:
             with training_args.main_process_first():
@@ -350,7 +351,7 @@ def main():
             with training_args.main_process_first():
                 dataset = dataset.rename_column(args.text_column, "input_ids")
 
-        if not args.one_sample_per_line:
+        if not one_sample_per_line:
             with training_args.main_process_first():
                 dataset = dataset.map(
                     group_texts,
@@ -414,6 +415,11 @@ def main():
                 # used later to filter out special tokens
                 special_tokens_ids = set(tokenizer.all_special_ids)
                 special_tokens_ids.discard(custom_token_id)
+                
+                if "short" in dataset_name:
+                    one_sample_per_line = True
+                else:
+                    one_sample_per_line = args.one_sample_per_line
 
                 model = Model(
                     backbone,
@@ -432,6 +438,7 @@ def main():
                         dataset_name=dataset_name,
                         shuffle=False,
                         split="valid",
+                        one_sample_per_line=one_sample_per_line,
                     )
                     logger.warning(f"Valid ds for {lang} {dataset_name} has {len(valid_dataset)} examples.")
 
@@ -442,7 +449,8 @@ def main():
                         dataset_name=dataset_name,
                         shuffle=args.shuffle,
                         split="train",
-                        subsample=args.subsample,
+                        subsample=args.subsample,      
+                        one_sample_per_line=one_sample_per_line,
                     )
                     if train_dataset is None or valid_dataset is None:
                         logger.warning(f"Skipping {lang} {dataset_name} due to missing data.")
