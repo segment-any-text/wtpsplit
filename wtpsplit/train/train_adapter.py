@@ -125,16 +125,11 @@ def main():
                         )
                         # join all chunks
                         processed_chunk[args.text_column] = "\n".join(chunk)
-                        # corrupt
-                        # TODO: corrupt for lyrics.
-                        # processed_chunk[args.text_column] = corrupt(
-                        #     processed_chunk[args.text_column], do_lowercase, do_remove_punct
-                        # )
                         processed_dataset.append(processed_chunk)
                     dataset = datasets.Dataset.from_list(processed_dataset)
                     if subsample:
                         # 10k sentences -> 1k documents.
-                        subsample *= 0.1
+                        subsample = subsample // 10
 
                 else:
                     dataset = datasets.Dataset.from_list(
