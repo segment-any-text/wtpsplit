@@ -146,8 +146,6 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
             # eval data
             for dataset_name, dataset in tqdm(eval_data[lang_code]["sentence"].items(), desc=lang_code):
-                if lang_code != "de" or "surprise" not in dataset_name:  # FIXME
-                    continue
                 if dataset_name not in splits:
                     continue
                 try:

@@ -27,7 +27,7 @@ def evaluate_subtask1(splits, langs, prediction_dir: str, supervisions, include_
                 ]
 
                 for i, gt_tsv_file in enumerate(gt_tsv_files, 0):
-                    print(i, gt_tsv_file)
+                    # print(i, gt_tsv_file)
                     basename = os.path.basename(gt_tsv_file)
 
                     with open(gt_tsv_file, encoding="utf-8") as f:
@@ -58,7 +58,7 @@ def evaluate_subtask1(splits, langs, prediction_dir: str, supervisions, include_
     json.dump(
         results,
         open(
-            Constants.CACHE_DIR / "ted2020" / f"{prediction_dir}.json",
+            Constants.CACHE_DIR / "ted2020" / f"{prediction_dir}_TED.json",
             "w",
         ),
         indent=4,
