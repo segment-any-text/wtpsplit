@@ -1,6 +1,6 @@
 {
     "model_name_or_path": "xlmr-3l-v3_look48_lc0.1-mix2",
-    "output_dir": "xlmr-3l-v4_LL_lora_r8_a16_ep30_s1000",
+    "output_dir": "xlmr-3l-v4_LL_lora-v2_ep30_s10k",
     "block_size": 256,
     "eval_stride": 128,
     "do_train": true,
@@ -30,9 +30,9 @@
     "use_subwords": true,
     "custom_punctuation_file": "punctuation_xlmr_unk.txt",
     "log_level": "warning",
-    "adapter_config": "lora[r=8,alpha=16]",
+    "adapter_config": "lora[r=16,alpha=32,intermediate_lora=True]",
     "weight_decay": 0.0,
     "auxiliary_remove_prob": 0.0,
     "train_adapter": true,
-    "subsample": 1000
+    "subsample": 10000
 }

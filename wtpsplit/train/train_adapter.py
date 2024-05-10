@@ -39,7 +39,7 @@ class Args:
     model_name_or_path: str
     base_model: str = "xlm-roberta-base"
     shuffle: bool = True
-    text_path: str = "data/all_data_04_05.pth"
+    text_path: str = "data/all_data_11_05-all.pth"
     include_languages: List[str] = None
     preprocessing_num_workers: int = 1
     block_size: int = 512
@@ -103,7 +103,7 @@ def main():
         shuffle=False,
         split="train",
         subsample: Union[None, int, float] = None,
-        one_sample_per_line: bool = False
+        one_sample_per_line: bool = False,
     ):
         with training_args.main_process_first():
             # maybe we use more than 1 lang later at once.
@@ -386,8 +386,13 @@ def main():
     for lang in tqdm(data.keys(), desc="Language"):
         if lang in args.include_languages:
             for dataset_name in data[lang]["sentence"].keys():
-                # if dataset_name != "ted2020-corrupted" or lang != "la":
-                #     continue
+                if "corrupted" in dataset_name and dataset_name != "ted2020-corrupted-asr":
+                    print("SKIP: ", lang, dataset_name)
+                    continue
+                if "legal" in dataset_name and not ("laws" in dataset_name or "judgements" in dataset_name):
+                    print("SKIP: ", lang, dataset_name)
+                    continue
+                print("RUNNING:", dataset_name, lang)
                 # skip langs starting with a, b, ..., k
                 # if not lang.startswith(tuple("k")) and not "en-de" in lang:
                 #     print(f"Skipping {lang} {dataset_name}")
@@ -413,7 +418,7 @@ def main():
                 # used later to filter out special tokens
                 special_tokens_ids = set(tokenizer.all_special_ids)
                 special_tokens_ids.discard(custom_token_id)
-                
+
                 if "short" in dataset_name:
                     one_sample_per_line = True
                 else:
@@ -447,7 +452,7 @@ def main():
                         dataset_name=dataset_name,
                         shuffle=args.shuffle,
                         split="train",
-                        subsample=args.subsample,      
+                        subsample=args.subsample,
                         one_sample_per_line=one_sample_per_line,
                     )
                     if train_dataset is None or valid_dataset is None:
@@ -632,4 +637,3 @@ def _mp_fn(index):
 if __name__ == "__main__":
     # try:
     main()
-
