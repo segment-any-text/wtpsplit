@@ -153,7 +153,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                         if args.clf_from_scratch:
                             model.model.classifier = torch.nn.Linear(model.model.classifier.in_features, 1)
                         model.model.load_adapter(
-                            args.adapter_path + "/" + dataset_name + "/" + lang_code,
+                            args.adapter_path + "/" + "surprise_test" + "/" + lang_code,
                             set_active=True,
                             with_head=True,
                             load_as="text",
