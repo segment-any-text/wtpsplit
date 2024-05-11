@@ -44,7 +44,7 @@ class Args:
     #    }
     # }
     # TODO: for songs/etc., maybe feed in each sample separately?
-    eval_data_path: str = "data/all_data_04_05.pth"
+    eval_data_path: str = "data/all_data_11_05-all.pth"
     valid_text_path: str = None  # "data/sentence/valid.parquet"
     device: str = "cpu"
     block_size: int = 512
@@ -57,8 +57,6 @@ class Args:
     max_n_test_sentences: int = sys.maxsize
     save_suffix: str = ""
     # XXX: these are not used in the current implementation! done within data.pth already.
-    do_lowercase: bool = False
-    do_remove_punct: bool = False
     keep_logits: bool = False
     skip_adaptation: bool = False
     skip_corrupted: bool = False
@@ -92,7 +90,6 @@ def process_logits(text, model, lang_code, args):
                 char_probs = token_to_char_probs(short_seq, tokens, current_logits, tokenizer, current_offsets_mapping)
 
                 current_logits = char_probs
-                # TODO: extra treatment for Canine necessary?
 
             logits.append(current_logits)
     else:
@@ -119,7 +116,7 @@ def process_logits(text, model, lang_code, args):
             logits = char_probs
 
         if len(model.model.config.id2label) == 2:
-            # Igor's models: take winning logit
+            # Igor's old models: take winning logit
             logits = np.expand_dims(logits.argmax(axis=1), axis=1)
             # we apply sigmoid later; convert to fake logits
             logits = np.log((logits + 1e-8) / (1 - logits + 1e-8))
@@ -159,10 +156,6 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                 valid_sentences = [sample["text"].strip() for sample in valid_data if sample["lang"] == lang_code]
                 assert len(valid_sentences) > 0
 
-                # valid_sentences = [
-                #     corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
-                #     for sentence in valid_sentences
-                # ]
                 separator = Constants.SEPARATORS.get(lang_code, " ")
                 valid_text = separator.join(valid_sentences)
 
@@ -173,6 +166,8 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
             # eval data
             for dataset_name, dataset in tqdm(eval_data[lang_code]["sentence"].items(), desc=lang_code):
                 if args.skip_corrupted and "corrupted" in dataset_name:
+                    continue
+                elif "nllb" in dataset_name:
                     continue
                 try:
                     if args.adapter_path:
@@ -200,14 +195,12 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                         model_path = os.path.join(args.model_path, dataset_name, "en")
                         if not os.path.exists(model_path):
                             model_path = args.model_path
-                        # print(model_path)
                         model = PyTorchWrapper(
                             AutoModelForTokenClassification.from_pretrained(model_path).to(args.device)
                         )
                 except Exception as e:
                     print(f"Error loading adapter for {dataset_name} in {lang_code}: {e}")
                     continue
-                # print(dataset_name)
                 if dataset_name not in lang_group:
                     dset_group = lang_group.create_group(dataset_name)
                 else:
@@ -215,13 +208,6 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"][: args.max_n_test_sentences]
-                    # if list of lists: flatten
-                    # if isinstance(test_sentences[0], list):
-                    #     test_sentences = [item for sublist in test_sentences for item in sublist]
-                    # test_sentences = [
-                    #     corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
-                    #     for sentence in test_sentences
-                    # ]
                     if isinstance(test_sentences[0], list):
                         # short-seq eval: list of lists
                         test_text = [
@@ -262,12 +248,6 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                 train_sentences = dataset["meta"].get("train_data")
                 if train_sentences is not None and "train_logits" not in dset_group and not args.skip_adaptation:
-                    # if isinstance(train_sentences[0], list):
-                    #     train_sentences = [item for sublist in train_sentences for item in sublist]
-                    # train_sentences = [
-                    #     corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
-                    #     for sentence in train_sentences
-                    # ]
                     train_sentences = train_sentences[: args.max_n_train_sentences]
                     if isinstance(train_sentences[0], list):
                         # short-seq eval: list of lists
@@ -320,10 +300,6 @@ def main(args):
     if args.adapter_path:
         save_model_path = args.adapter_path
     save_str = f"{save_model_path.replace('/','_')}_b{args.block_size}_s{args.stride}"
-    if args.do_lowercase:
-        save_str += "_lc"
-    if args.do_remove_punct:
-        save_str += "_rmp"
 
     eval_data = torch.load(args.eval_data_path)
     if args.valid_text_path is not None:
@@ -384,13 +360,6 @@ def main(args):
 
         for dataset_name, dataset in dsets["sentence"].items():
             sentences = dataset["data"][: args.max_n_test_sentences]
-            # if isinstance(sentences[0], list):
-            #     sentences = [item for sublist in sentences for item in sublist]
-            # sentences = [
-            #     corrupt(sentence, do_lowercase=args.do_lowercase, do_remove_punct=args.do_remove_punct)
-            #     for sentence in sentences
-            # ]
-            # check if f[lang_code][dataset_name] exists
             if lang_code not in f or dataset_name not in f[lang_code]:
                 continue
 
