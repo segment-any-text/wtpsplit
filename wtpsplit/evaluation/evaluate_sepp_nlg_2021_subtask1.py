@@ -63,7 +63,7 @@ def evaluate_subtask1(splits, langs, prediction_dir: str, supervisions, include_
         ),
         indent=4,
     )
-    print(Constants.CACHE_DIR / "ted2020" / f"{prediction_dir}.json")
+    print(Constants.CACHE_DIR / "ted2020" / f"{prediction_dir}_TED.json")
     return results
 
 

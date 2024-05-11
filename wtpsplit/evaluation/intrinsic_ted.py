@@ -337,7 +337,7 @@ def main(args):
                 # 1 clf for each lang: train data is same for both.
                 clfs[lang_code] = clf
 
-            gt_dir = Constants.ROOT_DIR.parent / "data" / "sepp_nlg_2021_data" / lang_code / "surprise_test"
+            gt_dir = Constants.ROOT_DIR.parent / "data" / "sepp_nlg_2021_data" / lang_code / dataset_name
             test_files = sorted([f for f in gt_dir.glob("*.tsv") if f.is_file()])
 
             if isinstance(sentences[0], list):
