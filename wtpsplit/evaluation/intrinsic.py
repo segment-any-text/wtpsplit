@@ -139,7 +139,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
     total_test_time = 0  # Initialize total test processing time
 
-    with h5py.File(logits_path, "w") as f, torch.no_grad():  # FIXME
+    with h5py.File(logits_path, "a") as f, torch.no_grad():
         for lang_code in tqdm(use_langs, desc="Languages"):
             if args.include_langs is not None and lang_code not in args.include_langs:
                 continue
@@ -168,18 +168,12 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
             for dataset_name, dataset in tqdm(eval_data[lang_code]["sentence"].items(), desc=lang_code):
                 if args.skip_corrupted and "corrupted" in dataset_name:
                     continue
-                if "Alternative" not in dataset_name:
-                    continue
                 elif "nllb" in dataset_name:
                     continue
                 if "corrupted" in dataset_name and dataset_name != "ted2020-corrupted-asr":
                     print("SKIP: ", lang_code, dataset_name)
                     continue
                 if "legal" in dataset_name and not ("laws" in dataset_name or "judgements" in dataset_name):
-                    print("SKIP: ", lang_code, dataset_name)
-                    continue
-                if lang_code == "en" and dataset_name == "legal-all-laws":
-                    # not available.
                     print("SKIP: ", lang_code, dataset_name)
                     continue
                 try:
@@ -193,7 +187,6 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                                 1,  # FIXME: hardcoded?
                             )
                             model.model.__class__.__name__ = 'SubwordXLMForTokenClassification'
-
                         if (
                             any(code in lang_code for code in ["ceb", "jv", "mn", "yo"])
                             and "ted2020" not in dataset_name
@@ -210,6 +203,15 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                             with_head=True,
                             load_as="text",
                         )
+                    if not os.path.exists(os.path.join(args.model_path, "pytorch_model.bin")) and not os.path.exists(
+                        os.path.join(args.model_path, "model.safetensors")
+                    ):
+                        model_path = os.path.join(args.model_path, dataset_name, "en")
+                        if not os.path.exists(model_path):
+                            model_path = args.model_path
+                        model = PyTorchWrapper(
+                            AutoModelForTokenClassification.from_pretrained(model_path).to(args.device)
+                        )
                 except Exception as e:
                     print(f"Error loading adapter for {dataset_name} in {lang_code}: {e}")
                     continue
@@ -219,7 +221,14 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     dset_group = lang_group[dataset_name]
 
                 if "test_logits" not in dset_group:
-                    test_sentences = dataset["data"][: args.max_n_test_sentences]
+                    test_sentences = dataset["data"]
+                    if not test_sentences:
+                        continue
+                    if isinstance(test_sentences[0], list):
+                        max_n_test_sentences = args.max_n_test_sentences // 10
+                    else:
+                        max_n_test_sentences = args.max_n_test_sentences
+                    test_sentences = test_sentences[:max_n_test_sentences]
                     if isinstance(test_sentences[0], list):
                         # short-seq eval: list of lists
                         test_text = [
@@ -373,7 +382,15 @@ def main(args):
             indices[lang_code] = {}
 
         for dataset_name, dataset in dsets["sentence"].items():
-            sentences = dataset["data"][: args.max_n_test_sentences]
+            sentences = dataset["data"]
+            if not sentences:
+                continue
+            if isinstance(sentences[0], list):
+                # documents: only 10% of documents. 1000 sentences --> 100 docs
+                max_n_sentences = args.max_n_test_sentences // 10
+            else:
+                max_n_sentences = args.max_n_test_sentences
+            sentences = sentences[:max_n_sentences]
             if len(sentences) == 0:
                 continue
             if lang_code not in f or dataset_name not in f[lang_code]:
