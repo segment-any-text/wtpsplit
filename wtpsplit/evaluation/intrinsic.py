@@ -385,9 +385,12 @@ def main(args):
             sentences = dataset["data"]
             if not sentences:
                 continue
-            if isinstance(sentences[0], list):
+            if isinstance(sentences[0], list) and "lyrics" not in dataset_name and "short" not in dataset_name:
                 # documents: only 10% of documents. 1000 sentences --> 100 docs
                 max_n_sentences = args.max_n_test_sentences // 10
+                # shuffle sentences
+                np.random.seed(42)
+                sentences = np.random.permutation(sentences).tolist()
             else:
                 max_n_sentences = args.max_n_test_sentences
             sentences = sentences[:max_n_sentences]
