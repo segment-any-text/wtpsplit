@@ -374,7 +374,8 @@ def main():
 
     # 1 wandb run for all language-dataset combinations
     if "wandb" in training_args.report_to and training_args.process_index == 0:
-        wandb.init(name=wandb_name, project=args.wandb_project, group=wandb_name)
+        # TODO: don't hardcode entity
+        wandb.init(name=wandb_name, project=args.wandb_project, group=wandb_name, entity="markus_583")
         wandb.config.update(args)
         wandb.config.update(training_args)
         wandb.config.update(label_args)
