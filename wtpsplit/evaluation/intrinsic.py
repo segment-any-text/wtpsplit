@@ -186,7 +186,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                                 model.model.classifier.in_features,
                                 1,  # FIXME: hardcoded?
                             )
-                            model.model.__class__.__name__ = 'SubwordXLMForTokenClassification'
+                            model.model.__class__.__name__ = "SubwordXLMForTokenClassification"
                         if (
                             any(code in lang_code for code in ["ceb", "jv", "mn", "yo"])
                             and "ted2020" not in dataset_name
@@ -224,11 +224,19 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     test_sentences = dataset["data"]
                     if not test_sentences:
                         continue
-                    if isinstance(test_sentences[0], list):
-                        max_n_test_sentences = args.max_n_test_sentences // 10
+                    if (
+                        isinstance(test_sentences[0], list)
+                        and "lyrics" not in dataset_name
+                        and "short" not in dataset_name
+                    ):
+                        # documents: only 10% of documents. 1000 sentences --> 100 docs
+                        max_n_sentences = args.max_n_test_sentences // 10
+                        # shuffle sentences
+                        np.random.seed(42)
+                        test_sentences = np.random.permutation(test_sentences).tolist()
                     else:
-                        max_n_test_sentences = args.max_n_test_sentences
-                    test_sentences = test_sentences[:max_n_test_sentences]
+                        max_n_sentences = args.max_n_test_sentences
+                    test_sentences = test_sentences[:max_n_sentences]
                     if isinstance(test_sentences[0], list):
                         # short-seq eval: list of lists
                         test_text = [
