@@ -85,7 +85,9 @@ def extract(
     """
     if "xlm" in model.config.model_type:
         use_subwords = True
-        tokenizer = AutoTokenizer.from_pretrained(model.config.base_model)
+        tokenizer = AutoTokenizer.from_pretrained(
+            model.config.base_model if hasattr(model.config, "base_model") else model.config._name_or_path
+        )
         tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
         tokens = tokenizer(batch_of_texts, return_offsets_mapping=True, verbose=False)
         # remove CLS and SEP tokens, they are added later anyhow
@@ -172,10 +174,7 @@ def extract(
     # containers for the final logits
     all_logits = [
         np.zeros(
-            (
-                length,
-                model.config.num_labels
-            ),
+            (length, model.config.num_labels),
             dtype=np.float16,
         )
         for length in text_lengths
@@ -220,12 +219,23 @@ def extract(
 
         kwargs = {"language_ids": language_ids[: len(batch_attention_mask)]} if uses_lang_adapters else {}
 
-        logits = model(
-            input_ids=batch_input_ids if use_subwords else None,
-            hashed_ids=None if use_subwords else batch_input_hashes,
-            attention_mask=batch_attention_mask,
-            **kwargs,
-        )["logits"]
+        if use_subwords and model.config.model_type == "xlm-roberta":
+            # TODO: generalize
+            import torch
+            with torch.no_grad():
+                logits = model.model(
+                    input_ids=torch.from_numpy(batch_input_ids).to(model.model.device),
+                    attention_mask=torch.from_numpy(batch_attention_mask).to(model.model.device),
+                    **kwargs,
+                )["logits"].cpu().numpy()
+        else:
+            logits = model(
+                input_ids=batch_input_ids if use_subwords else None,
+                hashed_ids=None if use_subwords else batch_input_hashes,
+                attention_mask=batch_attention_mask,
+                **kwargs,
+            )["logits"]
+
         if use_subwords:
             logits = logits[:, 1:-1, :]  # remove CLS and SEP tokens
 

@@ -39,7 +39,9 @@ def get_labels(lang_code, sentences, after_space=True):
     return labels
 
 
-def evaluate_sentences(lang_code, sentences, predicted_sentences, return_indices: bool = False):
+def evaluate_sentences(
+    lang_code, sentences, predicted_sentences, return_indices: bool = False, exclude_every_k: int = 0
+):
     separator = Constants.SEPARATORS[lang_code]
 
     text = separator.join(sentences)
@@ -47,10 +49,28 @@ def evaluate_sentences(lang_code, sentences, predicted_sentences, return_indices
     assert len(text) == len("".join(predicted_sentences))
 
     labels = get_labels(lang_code, sentences)
-
+    
     predicted_end_indices = np.cumsum(np.array([len(s) for s in predicted_sentences]))
     predictions = np.zeros_like(labels)
     predictions[predicted_end_indices] = 1
+    
+    assert len(labels) == len(predictions)
+    
+    if exclude_every_k > 0:
+        true_end_indices = np.where(labels == 1)[0]
+        # every k-th from those where labels are 1
+        indices_to_remove = true_end_indices[exclude_every_k-1::exclude_every_k]
+
+        # mask for indices to keep
+        mask = np.ones_like(labels, dtype=bool)
+        mask[indices_to_remove] = False
+        mask[-1] = False  # last is always excluded
+
+        # remove indices
+        labels = labels[mask]
+        predictions = predictions[mask]
+        
+        assert len(labels) == len(predictions)
 
     return f1_score(labels, predictions), {
         "recall": recall_score(labels, predictions),
@@ -102,6 +122,7 @@ def evaluate_mixture(
     test_x,
     true_sentences,
     return_indices,
+    exclude_every_k,
     clf,
     features,
     threshold_transformed,
@@ -130,6 +151,7 @@ def evaluate_mixture(
         true_sentences,
         reconstruct_sentences(text, indices_to_sentences(text, predicted_indices_newline)),
         return_indices,
+        exclude_every_k,
     )
 
     indices_newline_info = {
@@ -152,6 +174,7 @@ def evaluate_mixture(
         true_sentences,
         reconstruct_sentences(text, indices_to_sentences(text, predicted_indices_transformed)),
         return_indices,
+        exclude_every_k,
     )
     indices_transformed_info = {
         "true_indices": info_transformed.pop("true_indices"),

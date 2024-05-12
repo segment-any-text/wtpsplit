@@ -392,13 +392,15 @@ def main():
                 if "legal" in dataset_name and not ("laws" in dataset_name or "judgements" in dataset_name):
                     print("SKIP: ", lang, dataset_name)
                     continue
+                if "media" in dataset_name:
+                    continue
                 if lang == "en" and dataset_name == "legal-all-laws":
                     # not available.
                     print("SKIP: ", lang, dataset_name)
                     continue
                 print("RUNNING:", dataset_name, lang)
                 # skip langs starting with a, b, ..., k
-                # if lang.startswith(tuple("abcd")):
+                # if not lang.startswith(tuple("k")) and not "en-de" in lang:
                 #     print(f"Skipping {lang} {dataset_name}")
                 #     continue
                 # do model stuff here; otherwise, head params would be overwritten every time

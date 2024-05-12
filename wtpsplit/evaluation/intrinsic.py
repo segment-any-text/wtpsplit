@@ -63,6 +63,7 @@ class Args:
     clf_from_scratch: bool = False
     return_indices: bool = False
     skip_punct: bool = True
+    exclude_every_k: int = 0
 
 
 def process_logits(text, model, lang_code, args):
@@ -138,7 +139,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
     total_test_time = 0  # Initialize total test processing time
 
-    with h5py.File(logits_path, "a") as f, torch.no_grad():
+    with h5py.File(logits_path, "w") as f, torch.no_grad():  # FIXME
         for lang_code in tqdm(use_langs, desc="Languages"):
             if args.include_langs is not None and lang_code not in args.include_langs:
                 continue
@@ -167,12 +168,32 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
             for dataset_name, dataset in tqdm(eval_data[lang_code]["sentence"].items(), desc=lang_code):
                 if args.skip_corrupted and "corrupted" in dataset_name:
                     continue
+                if "Alternative" not in dataset_name:
+                    continue
                 elif "nllb" in dataset_name:
+                    continue
+                if "corrupted" in dataset_name and dataset_name != "ted2020-corrupted-asr":
+                    print("SKIP: ", lang_code, dataset_name)
+                    continue
+                if "legal" in dataset_name and not ("laws" in dataset_name or "judgements" in dataset_name):
+                    print("SKIP: ", lang_code, dataset_name)
+                    continue
+                if lang_code == "en" and dataset_name == "legal-all-laws":
+                    # not available.
+                    print("SKIP: ", lang_code, dataset_name)
                     continue
                 try:
                     if args.adapter_path:
                         if args.clf_from_scratch:
                             model.model.classifier = torch.nn.Linear(model.model.classifier.in_features, 1)
+                        elif model.model.classifier.out_features == 2:
+                            # we train XLM-R using our wrapper, needs to be adapted for adapters to be loaded
+                            model.model.classifier = torch.nn.Linear(
+                                model.model.classifier.in_features,
+                                1,  # FIXME: hardcoded?
+                            )
+                            model.model.__class__.__name__ = 'SubwordXLMForTokenClassification'
+
                         if (
                             any(code in lang_code for code in ["ceb", "jv", "mn", "yo"])
                             and "ted2020" not in dataset_name
@@ -188,15 +209,6 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                             set_active=True,
                             with_head=True,
                             load_as="text",
-                        )
-                    if not os.path.exists(os.path.join(args.model_path, "pytorch_model.bin")) and not os.path.exists(
-                        os.path.join(args.model_path, "model.safetensors")
-                    ):
-                        model_path = os.path.join(args.model_path, dataset_name, "en")
-                        if not os.path.exists(model_path):
-                            model_path = args.model_path
-                        model = PyTorchWrapper(
-                            AutoModelForTokenClassification.from_pretrained(model_path).to(args.device)
                         )
                 except Exception as e:
                     print(f"Error loading adapter for {dataset_name} in {lang_code}: {e}")
@@ -339,6 +351,8 @@ def main(args):
     f, total_test_time = load_or_compute_logits(args, model, eval_data, valid_data, save_str)
 
     save_str += f"_u{args.threshold}"
+    if args.exclude_every_k > 0:
+        save_str += f"_k{args.exclude_every_k}"
 
     # now, compute the intrinsic scores.
     results = {}
@@ -360,8 +374,15 @@ def main(args):
 
         for dataset_name, dataset in dsets["sentence"].items():
             sentences = dataset["data"][: args.max_n_test_sentences]
+            if len(sentences) == 0:
+                continue
             if lang_code not in f or dataset_name not in f[lang_code]:
                 continue
+
+            if "lyrics" in dataset_name or "short" in dataset_name:
+                exclude_every_k = 0
+            else:
+                exclude_every_k = args.exclude_every_k
 
             if "train_logits" in f[lang_code][dataset_name] and not args.skip_adaptation:
                 feature_indices = None
@@ -386,6 +407,7 @@ def main(args):
                             f[lang_code][dataset_name]["test_logits"][:][start:end],
                             list(short_seq),
                             args.return_indices,
+                            exclude_every_k,
                             *clf,
                         )
                         score_t.append(single_score_t)
@@ -395,13 +417,11 @@ def main(args):
                             info["info_transformed"]["correct_pairwise"] if info["info_transformed"] else None
                         )
                         # indices: accumulate from start
-                        t_indices.extend(
-                            [idx + start for idx in cur_t_indices["pred_indices"]]
-                            if cur_t_indices and cur_t_indices["pred_indices"]
-                            else []
+                        t_indices.append(
+                            cur_t_indices["pred_indices"] if cur_t_indices and cur_t_indices["pred_indices"] else []
                         )
-                        punct_indices.extend(
-                            [idx + start for idx in cur_punct_indices["pred_indices"]]
+                        punct_indices.append(
+                            cur_punct_indices["pred_indices"]
                             if cur_punct_indices and cur_punct_indices["pred_indices"]
                             else []
                         )
@@ -412,6 +432,7 @@ def main(args):
                         f[lang_code][dataset_name]["test_logits"][:],
                         sentences,
                         args.return_indices,
+                        exclude_every_k,
                         *clf,
                     )
 
@@ -428,7 +449,7 @@ def main(args):
                 acc_u = []
                 score_u = []
                 u_indices, true_indices = [], []
-                length = 0
+                length = []
                 for i, short_seq in enumerate(sentences):
                     start, end = f[lang_code][dataset_name]["test_logit_lengths"][i]
                     single_score_u, _, info, cur_u_indices, _ = evaluate_mixture(
@@ -436,22 +457,24 @@ def main(args):
                         f[lang_code][dataset_name]["test_logits"][:][start:end],
                         list(short_seq),
                         args.return_indices,
+                        exclude_every_k,
                         *clf,
                     )
                     score_u.append(single_score_u)
                     acc_u.append(info["info_newline"]["correct_pairwise"])
                     # indices: accumulate from start
-                    u_indices.extend(
-                        [idx + start for idx in cur_u_indices["pred_indices"]] if cur_u_indices["pred_indices"] else []
-                    )
-                    true_indices.extend(
-                        [idx + start for idx in cur_u_indices["true_indices"]] if cur_u_indices["true_indices"] else []
-                    )
-                    length += cur_u_indices["length"] - 1
+                    u_indices.append(cur_u_indices["pred_indices"] if cur_u_indices["pred_indices"] else [])
+                    true_indices.append(cur_u_indices["true_indices"] if cur_u_indices["true_indices"] else [])
+                    length.append(cur_u_indices["length"])
 
             else:
                 score_u, _, _, u_indices, _ = evaluate_mixture(
-                    lang_code, f[lang_code][dataset_name]["test_logits"][:], sentences, args.return_indices, *clf
+                    lang_code,
+                    f[lang_code][dataset_name]["test_logits"][:],
+                    sentences,
+                    args.return_indices,
+                    exclude_every_k,
+                    *clf,
                 )
 
             if isinstance(sentences[0], list):
@@ -551,7 +574,7 @@ def main(args):
                 "w",
             ),
             default=int,
-            # indent=4,
+            indent=4,
         )
         print(Constants.CACHE_DIR / "intrinsic" / f"{save_str}_IDX.json")
         print("Indices saved to file.")
