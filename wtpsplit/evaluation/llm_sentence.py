@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import List
 import re
+import sys
 
 import numpy as np
 import h5py
@@ -19,6 +20,7 @@ import replicate
 
 from wtpsplit.evaluation import get_labels, evaluate_sentences_llm
 from wtpsplit.utils import Constants
+import time
 
 pandarallel.initialize(progress_bar=True, nb_workers=32)
 
@@ -52,12 +54,12 @@ class Args:
     label_delimiter: str = "|"  # NOT \n or \n\n
     gap_char = "@"
     # model: str = "mistralai/mixtral-8x7b-instruct-v0.1"
-    # model: str = "meta/meta-llama-3-70b-instruct"
+    # model: str = "meta/meta-llama-3-8b-instruct"
     model: str = "command-r"
-    save_suffix: str = "Pv2-TEST2"
+    save_suffix: str = "Pv2"
     include_langs: List[str] = None
     custom_language_list: str = None
-    max_n_test_sentences: int = 100
+    max_n_test_sentences: int = sys.maxsize
     k: int = 10
     n_shots: int = 0
 
@@ -66,27 +68,50 @@ def replicate_provider(text, train_data, lang_code, args):
     api = replicate.Client(api_token=os.environ["REPLICATE_API_TOKEN"])
     llm_prompt = prompt_factory(text, train_data, lang_code, args)
     # print(llm_prompt)
-    llm_input = {
-        "system_prompt": "",
-        "prompt": llm_prompt,
-        # "max_new_tokens": 50_000,
-        "max_tokens": 50_000,
-    }
-    llm_output = api.run(args.model, llm_input)
-    llm_output = "".join(llm_output)
-    # print(llm_output)
-    return llm_output
+    n_tries = 0
+    while n_tries < 100:
+        try:
+            llm_input = {
+                "system_prompt": "",
+                "prompt": llm_prompt,
+                # "max_new_tokens": 50_000,
+                "max_tokens": 50_000,
+            }
+            llm_output = api.run(args.model, llm_input)
+            llm_output = "".join(llm_output)
+            # print(llm_output)
+            return llm_output
+        except Exception as e:
+            n_tries += 1
+            print(e)
+            time.sleep(10)
+            continue
+    return ""
 
 
 def cohere_provider(text, train_data, lang_code, args):
     api = cohere.Client(os.environ["COHERE_API_TOKEN"])
     llm_prompt = prompt_factory(text, train_data, lang_code, args)
-    # print(llm_prompt)
-    llm_output = api.chat(model=args.model, preamble="", message=llm_prompt, max_tokens=4000, seed=42).text.replace(
-        "\\n", "\n"
-    )
-    # print(llm_output)
-    return llm_output
+    n_tries = 0
+    while True:
+        try:
+            llm_output = api.chat(
+                model=args.model, preamble="", message=llm_prompt, max_tokens=4000, seed=42
+            ).text.replace("\\n", "\n")
+            return llm_output
+        except Exception as e:
+            status_code = getattr(e, "status_code", None)
+            if status_code and str(e.status_code)[0] == "4":
+                print("API refusal.")
+                llm_output = ""
+                return llm_output
+            elif status_code and str(e.status_code)[0] == "5":
+                # Cohere API issue: retry
+                n_tries += 1
+                time.sleep(10)
+                continue
+            else:
+                raise e
 
 
 def cohere_tokenize(text, args):
@@ -301,11 +326,7 @@ def get_llm_preds(
         raise ValueError(f"Unknown LLM provider: {args.llm_provider}")
     output = []
     for test_chunk in tqdm(test_texts, disable=not verbose):
-        try:
-            output.append(llm_provider(test_chunk, train_data, lang_code, args))
-        except Exception as e:
-            print(f"API Error: {e}")
-            output.append("")
+        output.append(llm_provider(test_chunk, train_data, lang_code, args))
     return output
 
 
@@ -600,15 +621,19 @@ def main(args):
                 for i, row in rows.iterrows():
                     # apply processing before label calculation
                     labels, preds = process_alignment(row, args)
-                    doc_metrics = evaluate_sentences_llm(
-                        labels, preds, return_indices=True, exclude_every_k=exclude_every_k
+                    doc_metrics = {}
+                    doc_metrics["refused"] = [
+                        int(len(set(row["alignment_out"])) == 1 and args.gap_char in set(row["alignment_out"]))
+                    ]
+                    if doc_metrics["refused"][0]:
+                        preds[-1] = 0
+                    doc_metrics.update(
+                        evaluate_sentences_llm(labels, preds, return_indices=True, exclude_every_k=exclude_every_k)
                     )
                     doc_metrics["length"] = [doc_metrics["length"]]
                     doc_metrics["hallucination_rate"] = row["hallucination_rate"]
                     doc_metrics["deletion_rate"] = row["deletion_rate"]
-                    doc_metrics["refused"] = [
-                        int(len(set(row["alignment_out"])) == 1 and args.gap_char in set(row["alignment_out"]))
-                    ]
+
                     metrics.append(doc_metrics)
                 # Initialization and collection of data
                 avg_results = {}
@@ -652,8 +677,6 @@ def main(args):
                 labels, preds = process_alignment(row, args)
                 # metrics!
                 metrics = evaluate_sentences_llm(labels, preds, return_indices=True, exclude_every_k=exclude_every_k)
-                if lang_code == "am":
-                    print(metrics)
                 metrics["hallucination_rate"] = row["hallucination_rate"]
                 metrics["deletion_rate"] = row["deletion_rate"]
                 indices[lang_code][dataset_name]["true_indices"] = metrics.pop("true_indices")
