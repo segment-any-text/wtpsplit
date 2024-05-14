@@ -291,6 +291,8 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"][: args.max_n_test_sentences]
+                    if not test_sentences:
+                        continue
                     if isinstance(test_sentences[0], list):
                         continue
                     all_pairs_test = generate_k_mers(
@@ -428,6 +430,8 @@ def main(args):
 
         for dataset_name, dataset in dsets["sentence"].items():
             sentences = dataset["data"][: args.max_n_test_sentences]
+            if not sentences:
+                continue
             if isinstance(sentences[0], list):
                 continue
             sent_k_mers = generate_k_mers(

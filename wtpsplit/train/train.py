@@ -105,6 +105,7 @@ class Args:
     lookahead_split_layers: Optional[int] = None
     sample_non_whitespace: int = 1
 
+
 def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: bool = False):
     all_input_ids = []
     all_labels = []
@@ -585,6 +586,11 @@ def main():
                 for dataset_name, dataset in lang_data["sentence"].items():
                     # if "corrupt" in dataset_name:
                     #     continue
+                    if not dataset["data"][0]:
+                        continue
+
+                    if isinstance(dataset["data"][0], list):
+                        continue
                     score, info = evaluate_sentence(
                         lang_code,
                         dataset["data"],
