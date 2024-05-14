@@ -12,17 +12,15 @@ import pandas as pd
 import torch
 from genalog.text import alignment
 from pandarallel import pandarallel
-from sklearn.metrics import f1_score, precision_score, recall_score
 from tqdm import tqdm
 from transformers import HfArgumentParser
 import cohere
 import replicate
 
-from wtpsplit.evaluation import get_labels
-from wtpsplit.evaluation.intrinsic import corrupt
+from wtpsplit.evaluation import get_labels, evaluate_sentences_llm
 from wtpsplit.utils import Constants
 
-pandarallel.initialize(progress_bar=False, nb_workers=32)
+pandarallel.initialize(progress_bar=True, nb_workers=32)
 
 logging.getLogger().setLevel(logging.WARNING)
 
@@ -201,9 +199,9 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
                     ):
                         # documents: only 10% of documents. 1000 sentences --> 100 docs
                         max_n_sentences = args.max_n_test_sentences // 10
-                        # shuffle sentences
+                        # shuffle docs
                         np.random.seed(42)
-                        test_sentences = np.random.permutation(test_sentences).tolist()               
+                        test_sentences = np.random.permutation(test_sentences).tolist()
                     else:
                         max_n_sentences = args.max_n_test_sentences
                     test_sentences = test_sentences[:max_n_sentences]
@@ -346,10 +344,8 @@ def create_few_shot_prompt(train_data, lang_code, args):
     return samples_prompt
 
 
-def postprocess_llm_output(llm_output):
-    """
-    Cleans the LLM output by removing specified characters and cleaning up lines.
-    """
+def postprocess_llm_output(llm_output, lang):
+    """Clean LLM output by removing specified characters and cleaning up lines."""
     if llm_output == "":
         # API refusal
         return ""
@@ -375,9 +371,7 @@ def postprocess_llm_output(llm_output):
 
 
 def align_llm_output(row):
-    """
-    Attempts to align input and output, including formatting.
-    """
+    """Align input and output, including formatting."""
     try:
         aligned_in, aligned_llm = alignment.align(
             row["test_chunks"],
@@ -398,73 +392,69 @@ def align_llm_output(row):
     )
 
 
-def get_llm_metrics(row):
+def process_alignment(row, args):
     gt = row["alignment_in"]
     preds = row["alignment_out"]
+    old_label_count = preds.count("|")
 
-    # find gap_char idcs
-    gap_indices = [m.start() for m in re.finditer(args.gap_char, gt)]
-    # remove gap_char indices from gt and preds --> same len as original!
-    gt = "".join([char for i, char in enumerate(gt) if i not in gap_indices])
-    preds = "".join([char for i, char in enumerate(preds) if i not in gap_indices])
+    # we need the following to ensure that no label is overwritten.
+    processed_gt = []
+    processed_preds = []
 
-    assert (
-        args.label_delimiter.join([chunk.replace(args.label_delimiter, "") for chunk in row.test_chunks]).count(
-            args.label_delimiter
-        )
-        if isinstance(row.test_chunks, list)
-        else row.test_chunks.count(args.label_delimiter) == len(gt.split(args.label_delimiter)) - 1
-    )
+    pred_index = 0  # separate index for preds to handle skipped characters in gt
+
+    for gt_char in gt:
+        if gt_char == args.gap_char:
+            # check if the corresponding preds char is a label delimiter and needs to be shifted
+            if pred_index < len(preds) and preds[pred_index] == args.label_delimiter:
+                # only shift if there's room and it's safe to shift back
+                if processed_preds:
+                    processed_preds[-1] = args.label_delimiter
+            # do not add the gap character from gt to processed_gt
+        else:
+            processed_gt.append(gt_char)
+            # only add characters from preds if not out of bounds
+            if pred_index < len(preds):
+                processed_preds.append(preds[pred_index])
+
+        # Increment regardless of whether it's a gap to keep alignment
+        pred_index += 1
+
+    gt = "".join(processed_gt)
+    preds = "".join(processed_preds)
+    # re-check
+    new_label_count = preds.count(args.label_delimiter)
+    if old_label_count != new_label_count:
+        # happens in some garbage LLM predictions, which can be easily picked up, so it is fine (favors LLM; less FPs)
+        print("Gap char not removed correctly or labels shifted improperly: ", row.name, row.lang, row.dataset_name)
+    assert len(gt) == len(preds), f"Length mismatch: {len(gt)} vs {len(preds)}"
+
+    if Constants.SEPARATORS.get(row["lang"], " ") == "":
+        # ensure that, after label calculation, both seqs are of same lengths & labels at proper positions.
+        missing_indices = [
+            i for i, char in enumerate(gt) if char == args.label_delimiter and preds[i] != args.label_delimiter
+        ]
+        extra_indices = [
+            i for i, char in enumerate(preds) if char == args.label_delimiter and gt[i] != args.label_delimiter
+        ]
+        preds = "".join([char for i, char in enumerate(preds) if i not in missing_indices])
+        for i in extra_indices:
+            preds = preds[:i] + " " + preds[i:]
+
     # GT
     sentences = gt.split(args.label_delimiter)
     labels = get_labels(row.lang, sentences)
-    if not ("lyrics" in row.dataset_name or "short" in row.dataset_name):
-        # XXX: must be logically aligned with evaluate_sentences in wtpsplit/evaluation/__init__.py
-        # label at end is excluded! As used for main tables --> comparable.
-        labels = labels[:-1]
-
-    chunk_len = len(labels)
-    true_indices = np.where(labels)[0].tolist()
-
-    if len(gt) == len(preds):
-        # alignment is good.
-        predicted_sentences = preds.split(args.label_delimiter)
-    else:
-        # alignment not found, bad LLM prediction.
-        return (0.0, 0.0, 0.0, true_indices, [], chunk_len)
-    if row["test_preds"] == "":
-        # API refusal
-        return (0.0, 0.0, 0.0, true_indices, [], chunk_len)
-    predictions = get_labels(row.lang, predicted_sentences)
-    if not ("lyrics" in row.dataset_name or "short" in row.dataset_name):
-        predictions = predictions[:-1]
-    assert len(labels) == len(predictions)
-
-    f1, precision, recall = (
-        f1_score(labels, predictions, zero_division=0),
-        precision_score(labels, predictions, zero_division=0),
-        recall_score(labels, predictions, zero_division=0),
-    )
-
-    if len(row["test_chunks"].split(args.label_delimiter)) != args.k and (
-        row["doc_id"] == -1 or row["is_last_and_truncated"]
-    ):
-        # re-scale to original
-        # XXX: hacky, but we later take mean over lang-dataset combination w/o this, final chunk is overrepresented
-        f1 = f1 * len(row["test_chunks"].split(args.label_delimiter)) / args.k
-        precision = precision * len(row["test_chunks"].split(args.label_delimiter)) / args.k
-        recall = recall * len(row["test_chunks"].split(args.label_delimiter)) / args.k
-
-    # Compute F1 score
-    pred_indices = np.where(predictions)[0].tolist()
-    return f1, precision, recall, true_indices, pred_indices, chunk_len
+    # PREDS
+    pred_sentences = preds.split(args.label_delimiter)
+    predictions = get_labels(row.lang, pred_sentences)
+    return labels, predictions
 
 
 def calc_hallucination_deletion_rate(row):
     gt = row["alignment_in"]
     preds = row["alignment_out"]
     if all([char == args.gap_char for char in preds]):
-        # all @
+        # all @: alignment failure, just garbage output
         return 0.0, 0.0
 
     hallucination_count = 0
@@ -479,6 +469,31 @@ def calc_hallucination_deletion_rate(row):
     deletion_rate = deletion_count / len(gt)
     hallucination_rate = hallucination_count / len(gt)
     return hallucination_rate, deletion_rate
+
+
+def calculate_global_metric_averages(results):
+    """dict of results[lang_code][dataset_name] -> dict of metrics -> float"""
+    metric_totals = {}
+    metric_counts = {}
+
+    for lang_datasets in results.values():
+        for metrics in lang_datasets.values():
+            # aggregate
+            for metric_key, metric_value in metrics.items():
+                if isinstance(metric_value, (int, float)):
+                    if metric_key not in metric_totals:
+                        metric_totals[metric_key] = 0
+                        metric_counts[metric_key] = 0
+
+                    metric_totals[metric_key] += metric_value
+                    metric_counts[metric_key] += 1
+
+    # global average
+    global_metric_averages = {
+        metric: metric_totals[metric] / metric_counts[metric] for metric in metric_totals if metric_counts[metric] > 0
+    }
+
+    return global_metric_averages
 
 
 def main(args):
@@ -517,39 +532,44 @@ def main(args):
     # create df based on test_chunks and test_logits
     df = load_h5_to_dataframe(outputs.filename, args)
     print("Loaded df.")
+    # df = df[df["lang"].isin(["ja", "en"])]  # DEBUG
 
     # postprocess
-    df["test_preds"] = df.apply(lambda row: postprocess_llm_output(row["test_preds"]), axis=1)
+    df["test_preds"] = df.apply(lambda row: postprocess_llm_output(row["test_preds"], row["lang"]), axis=1)
 
     # remove empty strings (just needed for h5py storage)
     df["test_chunks"] = df["test_chunks"].apply(lambda x: [item for item in x if item != ""])
     # replace \n
     # NOTE: length and labels remain the same, crucially!
-    df["test_chunks"] = df["test_chunks"].apply(
-        lambda x: args.label_delimiter.join(
-            chunk.replace(args.label_delimiter, " ").replace(args.gap_char, " ") for chunk in x
-        )
+    df["test_chunks"] = df.apply(
+        lambda row: args.label_delimiter.join(
+            chunk.replace(args.label_delimiter, " ").replace(args.gap_char, " ") for chunk in row["test_chunks"]
+        ),
+        axis=1,
     )
     print("Processed df.")
-
-    # needed to later down-scale F1 score contributions for last chunk
-    df["is_last"] = df["doc_id"] != df["doc_id"].shift(-1)
-    dataset_condition = ~df["dataset_name"].str.contains("lyrics|short")
-    df["is_last_and_truncated"] = df["is_last"] & dataset_condition
 
     # align with Needleman Wunsch algorithm
     alignment = df.parallel_apply(align_llm_output, axis=1)
     df = df.join(alignment)
     print("Aligned df.")
 
-    (
-        df["f1"],
-        df["precision"],
-        df["recall"],
-        df["true_indices"],
-        df["pred_indices"],
-        df["chunk_len"],
-    ) = zip(*df.apply(get_llm_metrics, axis=1))
+    def concatenate_texts(group):
+        # refusal: @@@@ --> taken into account with success_METRIC
+        # alignment failure: "     " --> garbage output, no pos. labels
+        return pd.Series(
+            {
+                "test_preds": args.label_delimiter.join(group["test_preds"]),
+                "test_chunks": args.label_delimiter.join(group["test_chunks"]),
+                "alignment": args.label_delimiter.join(group["alignment"]),
+                "alignment_in": args.label_delimiter.join(group["alignment_in"]),
+                "alignment_out": args.label_delimiter.join(group["alignment_out"]),
+            }
+        )
+
+    # concat chunks
+    # old_df = df.copy()
+    df = df.groupby(["lang", "dataset_name", "doc_id"]).apply(concatenate_texts).reset_index()
 
     df["hallucination_rate"], df["deletion_rate"] = zip(
         *df.apply(
@@ -557,62 +577,92 @@ def main(args):
             axis=1,
         )
     )
-    # get stats
-    doc_level_metrics = df.groupby(["lang", "dataset_name", "doc_id"]).agg(
-        {
-            "f1": ["mean"],
-            "precision": ["mean"],
-            "recall": ["mean"],
-        }
-    )
-    # mean of mean --> macro F1 (for list of lists)
-    metrics = doc_level_metrics.groupby(["lang", "dataset_name"]).mean().reset_index()
 
-    # metrics without API complaints
-    doc_level_metrics_success = (
-        df[df.test_preds != ""]
-        .groupby(["lang", "dataset_name", "doc_id"])
-        .agg(
-            {
-                "f1": ["mean"],
-                "precision": ["mean"],
-                "recall": ["mean"],
-            }
-        )
-    )
-    metrics_success = doc_level_metrics_success.groupby(["lang", "dataset_name"]).mean().reset_index()
-    df["cumulative_chunk_len"] = df.groupby(["lang", "dataset_name", "doc_id"])["chunk_len"].cumsum() - df["chunk_len"]
-    # group by chunk len and get max. --> same for all rows of a doc belonging to a lang-dataset combination
+    results = {}
+    indices = {}
+    for lang_code in df["lang"].unique():
+        results[lang_code] = {}
+        indices[lang_code] = {}
+        for dataset_name in df["dataset_name"].unique():
+            if "lyrics" in dataset_name or "short" in dataset_name:
+                exclude_every_k = 0
+            else:
+                exclude_every_k = args.k
+            n_docs = len(df[(df["lang"] == lang_code) & (df["dataset_name"] == dataset_name)])
+            if n_docs == 0:
+                # combination non-existing
+                continue
+            indices[lang_code][dataset_name] = {}
+            if n_docs > 1:
+                # list of lists, TODO
+                rows = df[(df["lang"] == lang_code) & (df["dataset_name"] == dataset_name)]
+                metrics = []
+                for i, row in rows.iterrows():
+                    # apply processing before label calculation
+                    labels, preds = process_alignment(row, args)
+                    doc_metrics = evaluate_sentences_llm(
+                        labels, preds, return_indices=True, exclude_every_k=exclude_every_k
+                    )
+                    doc_metrics["length"] = [doc_metrics["length"]]
+                    doc_metrics["hallucination_rate"] = row["hallucination_rate"]
+                    doc_metrics["deletion_rate"] = row["deletion_rate"]
+                    doc_metrics["refused"] = [
+                        int(len(set(row["alignment_out"])) == 1 and args.gap_char in set(row["alignment_out"]))
+                    ]
+                    metrics.append(doc_metrics)
+                # Initialization and collection of data
+                avg_results = {}
+                concat_indices = {}
+                for doc in metrics:
+                    for key, value in doc.items():
+                        if isinstance(value, (float, int)):
+                            # Store all numeric results
+                            if key not in avg_results:
+                                avg_results[key] = []
+                                avg_results[key + "_success"] = []  # Initialize success list
 
-    # adjust indices by adding cumulative chunk length
-    def adjust_indices(indices, cumulative_len):
-        return [index + cumulative_len for index in indices]
+                            # Append to the general results
+                            avg_results[key].append(value)
 
-    # adjust indices in each row
-    df["true_indices_adj"] = df.apply(
-        lambda row: adjust_indices(row["true_indices"], row["cumulative_chunk_len"]), axis=1
-    )
-    df["pred_indices_adj"] = df.apply(
-        lambda row: adjust_indices(row["pred_indices"], row["cumulative_chunk_len"]), axis=1
-    )
+                            # Append to success results if not refused
+                            if not doc["refused"][0]:
+                                avg_results[key + "_success"].append(value)
+                        elif isinstance(value, list):
+                            # Concatenate list values, handle 'refused' by only adding the first item of the list
+                            if key not in concat_indices:
+                                concat_indices[key] = []
+                            if key == "refused" or key == "length":
+                                concat_indices[key].append(value[0])  # Only the first item for 'refused'
+                            else:
+                                concat_indices[key].append(value)  # Extend with the full list otherwise
+
+                # Calculate the average for numeric values and success metrics
+                for key in list(avg_results):  # Use list to include newly added success keys safely during iteration
+                    if avg_results[key]:  # Ensure there's data to calculate average
+                        avg_results[key] = sum(avg_results[key]) / len(avg_results[key])
+
+                # Store the results and indices
+                results[lang_code][dataset_name] = avg_results
+                indices[lang_code][dataset_name] = concat_indices
+            else:
+                # one long string
+                row = df[(df["lang"] == lang_code) & (df["dataset_name"] == dataset_name)].iloc[0]
+
+                # apply processing before label calculation
+                labels, preds = process_alignment(row, args)
+                # metrics!
+                metrics = evaluate_sentences_llm(labels, preds, return_indices=True, exclude_every_k=exclude_every_k)
+                if lang_code == "am":
+                    print(metrics)
+                metrics["hallucination_rate"] = row["hallucination_rate"]
+                metrics["deletion_rate"] = row["deletion_rate"]
+                indices[lang_code][dataset_name]["true_indices"] = metrics.pop("true_indices")
+                indices[lang_code][dataset_name]["predicted_indices"] = metrics.pop("predicted_indices")
+                indices[lang_code][dataset_name]["length"] = metrics.pop("length")
+                results[lang_code][dataset_name] = metrics
 
     out_dict = {
-        "metrics": {
-            "f1": metrics["f1"]["mean"].mean(),
-            "success_f1": metrics_success["f1"]["mean"].mean(),
-            "precision": metrics["precision"]["mean"].mean(),
-            "success_precision": metrics_success["precision"]["mean"].mean(),
-            "recall": metrics["recall"]["mean"].mean(),
-            "success_recall": metrics_success["recall"]["mean"].mean(),
-            "median": df["f1"].median(),
-            "std": df["f1"].std(),
-            "min": df["f1"].min(),
-            "min_lang": df.loc[df["f1"].idxmin()]["lang"],
-            "max": df["f1"].max(),
-            "max_lang": df.loc[df["f1"].idxmax()]["lang"],
-            "hallucination_rate": df["hallucination_rate"].mean(),
-            "deletion_rate": df["deletion_rate"].mean(),
-        },
+        "metrics": calculate_global_metric_averages(results),
         "include_langs": args.include_langs,
         "max_n_test_sentences": args.max_n_test_sentences,
         "k": args.k,
@@ -622,60 +672,6 @@ def main(args):
         "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "system_prompt": SYSTEM_PROMPT if args.type == "all" else LYRICS_PROMPT,
     }
-
-    fine_grained_dict = {}
-    fine_grained_indices = {}
-    for lang in df["lang"].unique():
-        fine_grained_dict[lang] = {}
-        fine_grained_indices[lang] = {}
-        for dataset in df["dataset_name"].unique():
-            local_df = df[(df["lang"] == lang) & (df["dataset_name"] == dataset)]
-            if len(local_df) == 0:
-                continue
-            results = {
-                "f1": local_df["f1"].mean(),
-                "precision": local_df["precision"].mean(),
-                "recall": local_df["recall"].mean(),
-                "success_f1": local_df[local_df["test_preds"] != ""]["f1"].mean(),
-                "success_precision": local_df[local_df["test_preds"] != ""]["precision"].mean(),
-                "success_recall": local_df[local_df["test_preds"] != ""]["recall"].mean(),
-                "success_rate": len(local_df[local_df["test_preds"] != ""]) / len(local_df) if len(local_df) else 0,
-                "hallucination_rate": local_df["hallucination_rate"].mean(),
-                "deletion_rate": local_df["deletion_rate"].mean(),
-            }
-            # indices: concat all lists
-            if any(local_df["doc_id"] > -1):
-                # group by doc id first
-                fine_grained_indices[lang][dataset] = {}
-                fine_grained_indices[lang][dataset]["true_indices"] = []
-                fine_grained_indices[lang][dataset]["pred_indices"] = []
-                fine_grained_indices[lang][dataset]["length"] = []
-                for doc_id in local_df["doc_id"].unique():
-                    fine_grained_indices[lang][dataset]["true_indices"].append(
-                        [
-                            item
-                            for sublist in local_df[local_df["doc_id"] == doc_id]["true_indices_adj"].tolist()
-                            for item in sublist
-                        ]
-                    )
-                    fine_grained_indices[lang][dataset]["pred_indices"].append(
-                        [
-                            item
-                            for sublist in local_df[local_df["doc_id"] == doc_id]["pred_indices_adj"].tolist()
-                            for item in sublist
-                        ]
-                    )
-                    fine_grained_indices[lang][dataset]["length"].append(
-                        local_df[local_df["doc_id"] == doc_id]["chunk_len"].sum()
-                    )
-            else:
-                fine_grained_indices[lang][dataset] = {
-                    "true_indices": [item for sublist in local_df["true_indices_adj"].tolist() for item in sublist],
-                    "pred_indices": [item for sublist in local_df["pred_indices_adj"].tolist() for item in sublist],
-                    "length": local_df["chunk_len"].sum(),
-                }
-
-            fine_grained_dict[lang][dataset] = results
 
     json.dump(
         out_dict,
@@ -687,7 +683,7 @@ def main(args):
         indent=4,
     )
     json.dump(
-        fine_grained_dict,
+        results,
         open(
             default_dir / f"{save_str}.json",
             "w",
@@ -696,7 +692,7 @@ def main(args):
         indent=4,
     )
     json.dump(
-        fine_grained_indices,
+        indices,
         open(
             alignment_dir / f"{save_str}_IDX.json",
             "w",
@@ -713,7 +709,6 @@ def main(args):
 
     print(avg_dir / f"{save_str}.json")
     print(default_dir / f"{save_str}.json")
-    # TODO: count how many left outs/hallucinations are from LLM.
 
 
 if __name__ == "__main__":
