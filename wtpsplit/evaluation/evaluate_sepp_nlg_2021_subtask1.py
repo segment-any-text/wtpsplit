@@ -10,6 +10,9 @@ from wtpsplit.utils import Constants
 
 def evaluate_subtask1(splits, langs, prediction_dir: str, supervisions, include_n_documents) -> None:
     results = {}
+    avg_holder = {}
+    for supervision in supervisions:
+        avg_holder[supervision] = 0
     for lang_code in langs:
         results[lang_code] = {}
         for split in splits:
@@ -53,8 +56,15 @@ def evaluate_subtask1(splits, langs, prediction_dir: str, supervisions, include_
                     all_predicted_labels.extend(pred_labels)
 
                 eval_result = classification_report(all_gt_labels, all_predicted_labels, output_dict=True)
-                pprint(eval_result, indent=4)
+                # pprint(eval_result, indent=4)
+                print(eval_result["1"]["f1-score"])
+                avg_holder[supervision] += eval_result["1"]["f1-score"]
                 results[lang_code][split][supervision] = eval_result
+    results["avg"] = {}
+    for supervision in supervisions:
+        avg_holder[supervision] /= len(langs)
+        results["avg"][supervision] = avg_holder[supervision]
+    print(avg_holder)
     json.dump(
         results,
         open(
