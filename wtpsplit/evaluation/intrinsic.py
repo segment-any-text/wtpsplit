@@ -54,7 +54,7 @@ class Args:
     custom_language_list: str = None
     threshold: float = 0.01
     max_n_train_sentences: int = 1000
-    max_n_test_sentences: int = 1000
+    max_n_test_sentences: int = sys.maxsize
     save_suffix: str = ""
     # XXX: these are not used in the current implementation! done within data.pth already.
     keep_logits: bool = False
