@@ -127,7 +127,7 @@ def main():
                         processed_chunk[args.text_column] = "\n".join(chunk)
                         processed_dataset.append(processed_chunk)
                     dataset = datasets.Dataset.from_list(processed_dataset)
-                    if subsample:
+                    if subsample and "legal" in dataset_name:
                         # 10k sentences -> 1k documents.
                         subsample = subsample // 10
 
