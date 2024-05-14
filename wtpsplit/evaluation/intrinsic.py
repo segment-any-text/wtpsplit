@@ -54,7 +54,7 @@ class Args:
     custom_language_list: str = None
     threshold: float = 0.01
     max_n_train_sentences: int = 1000
-    max_n_test_sentences: int = sys.maxsize
+    max_n_test_sentences: int = -1
     save_suffix: str = ""
     # XXX: these are not used in the current implementation! done within data.pth already.
     keep_logits: bool = False
@@ -343,7 +343,7 @@ def main(args):
             model.model.classifier = torch.nn.Sequential(clf, torch.nn.Linear(clf.out_features, 1))
 
     save_str += f"{args.save_suffix}"
-    if args.max_n_test_sentences < sys.maxsize or args.max_n_test_sentences != -1:
+    if args.max_n_test_sentences < sys.maxsize and args.max_n_test_sentences != -1:
         save_str += f"_n{args.max_n_test_sentences}"
     if args.max_n_test_sentences == -1:
         args.max_n_test_sentences = sys.maxsize
