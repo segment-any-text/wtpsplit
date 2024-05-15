@@ -506,6 +506,7 @@ def calculate_global_metric_averages(results):
     for lang_datasets in results.values():
         for metrics in lang_datasets.values():
             # aggregate
+            metrics = metrics[args.model]
             for metric_key, metric_value in metrics.items():
                 if isinstance(metric_value, (int, float)):
                     if metric_key not in metric_totals:
@@ -614,9 +615,11 @@ def main(args):
     results = {}
     indices = {}
     for lang_code in df["lang"].unique():
-        results[lang_code][dataset_name] = {args.model: {}}
-        indices[lang_code][dataset_name] = {args.model: {}}
+        results[lang_code] = {}
+        indices[lang_code] = {}
         for dataset_name in df["dataset_name"].unique():
+            results[lang_code][dataset_name] = {args.model: {}}  # Initialize nested dict with model
+            indices[lang_code][dataset_name] = {args.model: {}}
             if "lyrics" in dataset_name or "short" in dataset_name:
                 exclude_every_k = 0
             else:
