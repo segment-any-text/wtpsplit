@@ -170,6 +170,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     and "short" not in dataset_name
                     and "code" not in dataset_name
                     and "ted" not in dataset_name
+                    and "legal" not in dataset_name
                 ):
                     print("SKIP: ", lang_code, dataset_name)
                     continue
