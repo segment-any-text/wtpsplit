@@ -59,7 +59,7 @@ class Args:
     save_suffix: str = "Pv2"
     include_langs: List[str] = None
     custom_language_list: str = None
-    max_n_test_sentences: int = sys.maxsize
+    max_n_test_sentences: int = -1
     k: int = 10
     n_shots: int = 0
 
@@ -199,8 +199,12 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
             else:
                 lang_group = f[lang_code]
             for dataset_name, dataset in tqdm(eval_data[lang_code]["sentence"].items(), desc=lang_code):
-                if "corrupted" in dataset_name and (
-                    dataset_name != "ted2020-corrupted-asr" and not ("lyrics" in dataset_name and "asr" in dataset_name)
+                if "corrupted-asr" in dataset_name and (
+                    "lyrics" not in dataset_name
+                    and "short" not in dataset_name
+                    and "code" not in dataset_name
+                    and "ted" not in dataset_name
+                    and "legal" not in dataset_name
                 ):
                     print("SKIP: ", lang_code, dataset_name)
                     continue
@@ -208,6 +212,8 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
                     print("SKIP: ", lang_code, dataset_name)
                     continue
                 if "social-media" in dataset_name:
+                    continue
+                if "nllb" in dataset_name:
                     continue
                 if dataset_name not in lang_group:
                     dset_group = lang_group.create_group(dataset_name)
@@ -542,8 +548,14 @@ def main(args):
     eval_data = torch.load(eval_data_path)
 
     save_str = (
-        f"{args.model.split('/')[-1]}_k{args.k}_n{args.max_n_test_sentences}_s{args.n_shots}{args.save_suffix}"
+        f"{args.model.split('/')[-1]}_k{args.k}_s{args.n_shots}"
     ).replace("/", "_")
+    
+    if args.max_n_test_sentences < sys.maxsize and args.max_n_test_sentences != -1:
+        save_str += f"_n{args.max_n_test_sentences}"
+    if args.max_n_test_sentences == -1:
+        args.max_n_test_sentences = sys.maxsize
+    save_str += f"{args.save_suffix}"
     save_str += f"-{args.type}"
 
     print(save_str)
@@ -602,8 +614,8 @@ def main(args):
     results = {}
     indices = {}
     for lang_code in df["lang"].unique():
-        results[lang_code] = {}
-        indices[lang_code] = {}
+        results[lang_code][dataset_name] = {args.model: {}}
+        indices[lang_code][dataset_name] = {args.model: {}}
         for dataset_name in df["dataset_name"].unique():
             if "lyrics" in dataset_name or "short" in dataset_name:
                 exclude_every_k = 0
@@ -613,7 +625,7 @@ def main(args):
             if n_docs == 0:
                 # combination non-existing
                 continue
-            indices[lang_code][dataset_name] = {}
+            indices[lang_code][dataset_name][args.model] = {}
             if n_docs > 1:
                 # list of lists, TODO
                 rows = df[(df["lang"] == lang_code) & (df["dataset_name"] == dataset_name)]
@@ -667,8 +679,8 @@ def main(args):
                         avg_results[key] = sum(avg_results[key]) / len(avg_results[key])
 
                 # Store the results and indices
-                results[lang_code][dataset_name] = avg_results
-                indices[lang_code][dataset_name] = concat_indices
+                results[lang_code][dataset_name][args.model] = avg_results
+                indices[lang_code][dataset_name][args.model] = concat_indices
             else:
                 # one long string
                 row = df[(df["lang"] == lang_code) & (df["dataset_name"] == dataset_name)].iloc[0]
@@ -679,10 +691,10 @@ def main(args):
                 metrics = evaluate_sentences_llm(labels, preds, return_indices=True, exclude_every_k=exclude_every_k)
                 metrics["hallucination_rate"] = row["hallucination_rate"]
                 metrics["deletion_rate"] = row["deletion_rate"]
-                indices[lang_code][dataset_name]["true_indices"] = metrics.pop("true_indices")
-                indices[lang_code][dataset_name]["predicted_indices"] = metrics.pop("predicted_indices")
-                indices[lang_code][dataset_name]["length"] = metrics.pop("length")
-                results[lang_code][dataset_name] = metrics
+                indices[lang_code][dataset_name][args.model]["true_indices"] = [metrics.pop("true_indices")]
+                indices[lang_code][dataset_name][args.model]["predicted_indices"] = [metrics.pop("predicted_indices")]
+                indices[lang_code][dataset_name][args.model]["length"] = [metrics.pop("length")]
+                results[lang_code][dataset_name][args.model] = metrics
 
     out_dict = {
         "metrics": calculate_global_metric_averages(results),
