@@ -269,12 +269,10 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     else:
                         test_labels = get_labels(lang_code, test_sentences, after_space=False)
                     if args.skip_punct:
-                        print(test_logits[:, 0].shape)
                         # remove punct logits
                         test_logits = test_logits[:, 0]
                         # back to [N, 1]
                         test_logits = np.expand_dims(test_logits, axis=1)
-                        print(test_logits.shape)
                     dset_group.create_dataset("test_logits", data=test_logits)
                     dset_group.create_dataset("test_labels", data=test_labels)
 
