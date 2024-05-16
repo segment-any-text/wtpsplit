@@ -475,6 +475,7 @@ def main(args):
                         f[lang_code][dataset_name]["test_logits"][:][start:end],
                         list(k_mer),
                         args.return_indices,
+                        0,
                         *clf,
                     )
                     score_t.append(single_score_t)
@@ -516,6 +517,7 @@ def main(args):
                     f[lang_code][dataset_name]["test_logits"][:][start:end],
                     list(k_mer),
                     args.return_indices,
+                    0,
                     *clf,
                 )
                 score_u.append(single_score_u)

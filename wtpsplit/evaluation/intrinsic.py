@@ -6,10 +6,8 @@ import os
 import time
 import logging
 import sys
-import re
 
 import h5py
-import skops.io as sio
 import torch
 from datasets import load_dataset
 from tqdm.auto import tqdm
@@ -19,8 +17,9 @@ import adapters
 
 import wtpsplit.models  # noqa: F401
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture, token_to_char_probs
+from wtpsplit.evaluation.intrinsic_baselines import split_language_data
 from wtpsplit.extract import PyTorchWrapper, extract
-from wtpsplit.utils import Constants, corrupt
+from wtpsplit.utils import Constants
 
 logger = logging.getLogger()
 logger.setLevel(logging.WARNING)
@@ -53,17 +52,16 @@ class Args:
     include_langs: List[str] = None
     custom_language_list: str = None
     threshold: float = 0.01
-    max_n_train_sentences: int = 1000
-    max_n_test_sentences: int = 1000
-    save_suffix: str = ""
-    # XXX: these are not used in the current implementation! done within data.pth already.
+    max_n_train_sentences: int = 10000
+    max_n_test_sentences: int = -1
     keep_logits: bool = False
     skip_adaptation: bool = False
-    skip_corrupted: bool = False
-    clf_from_scratch: bool = False
-    return_indices: bool = True
     skip_punct: bool = True
+    skip_corrupted: bool = False
+    clf_from_scratch: bool = False  # for FT + LoRA
+    return_indices: bool = True
     exclude_every_k: int = 10
+    save_suffix: str = ""
 
 
 def process_logits(text, model, lang_code, args):
@@ -168,14 +166,25 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
             for dataset_name, dataset in tqdm(eval_data[lang_code]["sentence"].items(), desc=lang_code):
                 if args.skip_corrupted and "corrupted" in dataset_name:
                     continue
-                elif "nllb" in dataset_name:
-                    continue
-                if "corrupted" in dataset_name and dataset_name != "ted2020-corrupted-asr":
+                if "corrupted-asr" in dataset_name and (
+                    "lyrics" not in dataset_name
+                    and "short" not in dataset_name
+                    and "code" not in dataset_name
+                    and "ted" not in dataset_name
+                    and "legal" not in dataset_name
+                ):
                     print("SKIP: ", lang_code, dataset_name)
                     continue
                 if "legal" in dataset_name and not ("laws" in dataset_name or "judgements" in dataset_name):
                     print("SKIP: ", lang_code, dataset_name)
                     continue
+                if "social-media" in dataset_name:
+                    continue
+                if "nllb" in dataset_name:
+                    continue
+                if "-" in lang_code and "canine" in args.model_path and not "no-adapters" in args.model_path:
+                    # code-switched data: eval 2x
+                    lang_code = lang_code.split("_")[1].lower()
                 try:
                     if args.adapter_path:
                         if args.clf_from_scratch:
@@ -263,7 +272,11 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                         dset_group.create_dataset("test_logit_lengths", data=test_logit_lengths)
                     else:
                         test_labels = get_labels(lang_code, test_sentences, after_space=False)
-
+                    if args.skip_punct:
+                        # remove punct logits
+                        test_logits = test_logits[:, 0]
+                        # back to [N, 1]
+                        test_logits = np.expand_dims(test_logits, axis=1)
                     dset_group.create_dataset("test_logits", data=test_logits)
                     dset_group.create_dataset("test_labels", data=test_labels)
 
@@ -291,6 +304,11 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     else:
                         train_labels = get_labels(lang_code, train_sentences, after_space=False)
 
+                    if args.skip_punct:
+                        # remove punct logits
+                        train_logits = train_logits[:, 0]
+                        # back to [N, 1]
+                        train_logits = np.expand_dims(train_logits, axis=1)
                     dset_group.create_dataset("train_logits", data=train_logits)
                     dset_group.create_dataset("train_labels", data=train_labels)
 
@@ -323,6 +341,8 @@ def main(args):
     save_str = f"{save_model_path.replace('/','_')}_b{args.block_size}_s{args.stride}"
 
     eval_data = torch.load(args.eval_data_path)
+    if "canine" in args.model_path and not "no-adapters" in args.model_path:
+        eval_data = split_language_data(eval_data)
     if args.valid_text_path is not None:
         valid_data = load_dataset("parquet", data_files=args.valid_text_path, split="train")
     else:
@@ -343,7 +363,7 @@ def main(args):
             model.model.classifier = torch.nn.Sequential(clf, torch.nn.Linear(clf.out_features, 1))
 
     save_str += f"{args.save_suffix}"
-    if args.max_n_test_sentences < sys.maxsize or args.max_n_test_sentences != -1:
+    if args.max_n_test_sentences < sys.maxsize and args.max_n_test_sentences != -1:
         save_str += f"_n{args.max_n_test_sentences}"
     if args.max_n_test_sentences == -1:
         args.max_n_test_sentences = sys.maxsize
@@ -517,19 +537,35 @@ def main(args):
             if args.return_indices:
                 if isinstance(sentences[0], list):
                     indices[lang_code][dataset_name] = {
-                        "u": u_indices,
-                        "t": t_indices,
-                        "punct": punct_indices,
-                        "true_indices": true_indices,
-                        "length": length,
+                        "u": {"predicted_indices": u_indices, "true_indices": true_indices, "length": length},
+                        "t": {"predicted_indices": t_indices, "true_indices": t_indices, "length": length}
+                        if t_indices
+                        else None,
+                        "punct": {"predicted_indices": punct_indices, "true_indices": t_indices, "length": length}
+                        if punct_indices
+                        else None,
                     }
                 else:
                     indices[lang_code][dataset_name] = {
-                        "u": u_indices["pred_indices"],
-                        "t": t_indices["pred_indices"] if t_indices is not None else None,
-                        "punct": punct_indices["pred_indices"] if punct_indices is not None else None,
-                        "true_indices": u_indices["true_indices"],
-                        "length": u_indices["length"],
+                        "u": {
+                            "predicted_indices": [u_indices["pred_indices"]],
+                            "true_indices": [u_indices["true_indices"]],
+                            "length": [u_indices["length"]],
+                        },
+                        "t": {
+                            "predicted_indices": [t_indices["pred_indices"]],
+                            "true_indices": [t_indices["true_indices"]],
+                            "length": [t_indices["length"]],
+                        }
+                        if t_indices is not None
+                        else None,
+                        "punct": {
+                            "predicted_indices": [punct_indices["pred_indices"]],
+                            "true_indices": [punct_indices["true_indices"]],
+                            "length": [punct_indices["length"]],
+                        }
+                        if punct_indices is not None
+                        else None,
                     }
 
             if score_u is not None:
