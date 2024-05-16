@@ -17,6 +17,7 @@ import adapters
 
 import wtpsplit.models  # noqa: F401
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture, token_to_char_probs
+from wtpsplit.evaluation.intrinsic_baselines import split_language_data
 from wtpsplit.extract import PyTorchWrapper, extract
 from wtpsplit.utils import Constants
 
@@ -181,6 +182,9 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     continue
                 if "nllb" in dataset_name:
                     continue
+                if "-" in lang_code and "canine" in args.model_path and not "no-adapters" in args.model_path:
+                    # code-switched data: eval 2x
+                    lang_code = lang_code.split("_")[1].lower()
                 try:
                     if args.adapter_path:
                         if args.clf_from_scratch:
@@ -337,6 +341,8 @@ def main(args):
     save_str = f"{save_model_path.replace('/','_')}_b{args.block_size}_s{args.stride}"
 
     eval_data = torch.load(args.eval_data_path)
+    if "canine" in args.model_path and not "no-adapters" in args.model_path:
+        eval_data = split_language_data(eval_data)
     if args.valid_text_path is not None:
         valid_data = load_dataset("parquet", data_files=args.valid_text_path, split="train")
     else:
