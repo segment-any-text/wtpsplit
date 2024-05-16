@@ -127,9 +127,6 @@ def main():
                         processed_chunk[args.text_column] = "\n".join(chunk)
                         processed_dataset.append(processed_chunk)
                     dataset = datasets.Dataset.from_list(processed_dataset)
-                    if subsample and "legal" in dataset_name:
-                        # 10k sentences -> 1k documents.
-                        subsample = subsample // 10
 
                 else:
                     dataset = datasets.Dataset.from_list(
@@ -146,7 +143,7 @@ def main():
                 logger.warning(f"Loaded {len(dataset)} examples for {lang} {dataset_name} {split} dataset.")
 
         if shuffle:
-            dataset = dataset.shuffle(seed=42)
+            dataset = dataset.shuffle(seed=training_args.seed)
         if subsample:
             old_length = len(dataset)
             if isinstance(subsample, int):
@@ -387,13 +384,21 @@ def main():
     for lang in tqdm(data.keys(), desc="Language"):
         if lang in args.include_languages:
             for dataset_name in data[lang]["sentence"].keys():
-                if "corrupted" in dataset_name and dataset_name != "ted2020-corrupted-asr":
+                if "corrupted-asr" in dataset_name and (
+                    "lyrics" not in dataset_name
+                    and "short" not in dataset_name
+                    and "code" not in dataset_name
+                    and "ted" not in dataset_name
+                    and "legal" not in dataset_name
+                ):
                     print("SKIP: ", lang, dataset_name)
                     continue
                 if "legal" in dataset_name and not ("laws" in dataset_name or "judgements" in dataset_name):
                     print("SKIP: ", lang, dataset_name)
                     continue
-                if "media" in dataset_name:
+                if "social-media" in dataset_name:
+                    continue
+                if "nllb" in dataset_name:
                     continue
                 if lang == "en" and dataset_name == "legal-all-laws":
                     # not available.
