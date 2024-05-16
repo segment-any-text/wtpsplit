@@ -22,7 +22,7 @@ from adapters import AdapterArguments
 from wtpsplit.models import SubwordXLMConfig, SubwordXLMForTokenClassification
 from wtpsplit.train.adaptertrainer import AdapterTrainer
 from wtpsplit.train.trainer import Trainer
-from wtpsplit.train.evaluate import evaluate_sentence, evaluate_sentence_pairwise
+from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.train import collate_fn, setup_logging
 from wtpsplit.train.utils import Model
 from wtpsplit.utils import Constants, LabelArgs, get_label_dict, get_subword_label_dict, corrupt
@@ -400,13 +400,13 @@ def main():
                     continue
                 if "nllb" in dataset_name:
                     continue
-                if lang == "en" and dataset_name == "legal-all-laws":
+                if lang == "en" and "legal-all-laws" in dataset_name:
                     # not available.
                     print("SKIP: ", lang, dataset_name)
                     continue
                 print("RUNNING:", dataset_name, lang)
                 # skip langs starting with a, b, ..., k
-                # if not lang.startswith(tuple("k")) and not "en-de" in lang:
+                # if not lang.startswith(tuple("abcd")):
                 #     print(f"Skipping {lang} {dataset_name}")
                 #     continue
                 # do model stuff here; otherwise, head params would be overwritten every time

@@ -22,7 +22,7 @@ from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture, tok
 from wtpsplit.extract import PyTorchWrapper
 from wtpsplit.extract_batched import extract_batched
 from wtpsplit.utils import Constants
-from wtpsplit.evaluation.intrinsic import compute_statistics, corrupt
+from wtpsplit.evaluation.intrinsic import compute_statistics
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -183,11 +183,6 @@ def generate_pairs(
             if len(sentences[i]) + len(sentences[i + 1]) > min_k_mer_length
         ]
 
-    # corrupt pairs
-    all_pairs = [
-        (corrupt(pair[0], do_lowercase, do_remove_punct), corrupt(pair[1], do_lowercase, do_remove_punct))
-        for pair in all_pairs
-    ]
     return all_pairs
 
 
@@ -233,9 +228,6 @@ def generate_k_mers(
             for i in range(0, len(sentences) - k + 1, k)
             if sum(len(sentences[i + j]) for j in range(k)) > min_k_mer_length
         ]
-
-    # Apply corruption to k-mers
-    all_k_mers = [tuple(corrupt(sentence, do_lowercase, do_remove_punct) for sentence in k_mer) for k_mer in all_k_mers]
 
     return all_k_mers
 
