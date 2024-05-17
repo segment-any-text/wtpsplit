@@ -388,7 +388,7 @@ def main():
                     "lyrics" not in dataset_name
                     and "short" not in dataset_name
                     and "code" not in dataset_name
-                    and "ted" not in dataset_name
+                    and "ted2020" not in dataset_name
                     and "legal" not in dataset_name
                 ):
                     print("SKIP: ", lang, dataset_name)
@@ -406,7 +406,7 @@ def main():
                     continue
                 print("RUNNING:", dataset_name, lang)
                 # skip langs starting with a, b, ..., k
-                # if not lang.startswith(tuple("abcd")):
+                # if lang.startswith(tuple("abcd")):
                 #     print(f"Skipping {lang} {dataset_name}")
                 #     continue
                 # do model stuff here; otherwise, head params would be overwritten every time
