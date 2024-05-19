@@ -78,11 +78,8 @@ if __name__ == "__main__":
                 lang_code = lang
 
             for f, name in [
-                (punkt_sentencize, "punkt"),
-                # (spacy_dp_sentencize, "spacy_dp"),
-                # (spacy_sent_sentencize, "spacy_sent"),
-                # (pysbd_sentencize, "pysbd"),
-                # (ersatz_sentencize, "ersatz"),
+                (spacy_dp_sentencize, "spacy_dp"),
+                (spacy_sent_sentencize, "spacy_sent"),
             ]:
                 print(f"Running {name} on {dataset_name} in {lang_code}...")
                 indices[lang][dataset_name][name] = {}
@@ -98,7 +95,7 @@ if __name__ == "__main__":
                             text = Constants.SEPARATORS[lang_code].join(sentences)
                             doc_metrics = {}
                             doc_metrics = evaluate_sentences(
-                                lang_code, sentences, f(lang_code, text), return_indices=True, exclude_every_k=exclude_every_k
+                                lang_code, sentences, f("xx", text), return_indices=True, exclude_every_k=exclude_every_k
                             )
                             f1 = doc_metrics[0]
                             doc_metrics = doc_metrics[1]
@@ -139,7 +136,7 @@ if __name__ == "__main__":
                         metrics = evaluate_sentences(
                             lang_code,
                             sentences,
-                            f(lang_code, text),
+                            f("xx", text),
                             return_indices=True,
                             exclude_every_k=exclude_every_k,
                         )
@@ -151,11 +148,10 @@ if __name__ == "__main__":
                         indices[lang][dataset_name][name]["predicted_indices"] =[ metrics.pop("predicted_indices")]
                         indices[lang][dataset_name][name]["length"] = [metrics.pop("length")]
                         results[lang][dataset_name][name] = metrics
-                except LanguageError as e:
-                    # print("Language not supported for", name)
-                    # print(e)
+                except LanguageError as l:
+                    print("Language not supported for", name, l)
                     results[lang][dataset_name][name] = None
 
-    json.dump(results, open(Constants.CACHE_DIR / "intrinsic_baselines_punkt.json", "w"), indent=4, default=int)
-    json.dump(indices, open(Constants.CACHE_DIR / "intrinsic_baselines_punkt_IDX.json", "w"), indent=4, default=int)
+    json.dump(results, open(Constants.CACHE_DIR / "intrinsic_baselines_multi.json", "w"), indent=4, default=int)
+    json.dump(indices, open(Constants.CACHE_DIR / "intrinsic_baselines_multi_IDX.json", "w"), indent=4, default=int)
     print(Constants.CACHE_DIR / "intrinsic_baselines.json")

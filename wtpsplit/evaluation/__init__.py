@@ -365,6 +365,7 @@ SPACY_LANG_TO_DP_MODEL = {
     "es": "es_core_news_sm",
     "sv": "sv_core_news_sm",
     "uk": "uk_core_news_sm",
+    "xx": "xx_sent_ud_sm",
 }
 
 
@@ -374,6 +375,7 @@ def spacy_sent_sentencize(lang_code, text):
     try:
         nlp = spacy.blank(lang_code)
         nlp.add_pipe("sentencizer")
+        nlp.max_length = 1_000_000_000
 
         if lang_code == "ja":
             # spacy uses SudachiPy for japanese, which has a length limit:
@@ -397,6 +399,7 @@ def spacy_dp_sentencize(lang_code, text):
 
     try:
         nlp = spacy.load(SPACY_LANG_TO_DP_MODEL[lang_code], disable=["ner"])
+        nlp.max_length = 1_000_000_000
 
         if lang_code == "ja":
             # spacy uses SudachiPy for japanese, which has a length limit:
