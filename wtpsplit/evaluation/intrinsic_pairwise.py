@@ -530,9 +530,7 @@ def main(args):
             acc_t = np.mean(acc_t) if score_t else None
             acc_punct = np.mean(acc_punct) if score_punct else None
             threshold = np.mean(thresholds)
-            u_indices.append(cur_u_indices["pred_indices"] if cur_u_indices["pred_indices"] else [])
-            true_indices.append(cur_u_indices["true_indices"] if cur_u_indices["true_indices"] else [])
-            length.append(cur_u_indices["length"])
+
 
             results[lang_code][dataset_name] = {
                 "u": score_u,
