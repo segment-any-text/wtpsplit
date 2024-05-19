@@ -193,16 +193,16 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                                 1,  # FIXME: hardcoded?
                             )
                             model.model.__class__.__name__ = "SubwordXLMForTokenClassification"
-                        if (
-                            any(code in lang_code for code in ["ceb", "jv", "mn", "yo"])
-                            and "ted2020" not in dataset_name
-                        ):
-                            # no ersatz for these either.
-                            dataset_load_name = "nllb"
-                            if "corrupted" in dataset_load_name:
-                                dataset_load_name += "-corrupted"
-                        else:
-                            dataset_load_name = dataset_name
+                        # if (
+                        #     any(code in lang_code for code in ["ceb", "jv", "mn", "yo"])
+                        #     and "ted2020" not in dataset_name
+                        # ):
+                        #     # no ersatz for these either.
+                        #     dataset_load_name = "nllb"
+                        #     if "corrupted" in dataset_load_name:
+                        #         dataset_load_name += "-corrupted"
+                        # else:
+                        dataset_load_name = dataset_name
                         model.model.load_adapter(
                             args.adapter_path + "/" + dataset_load_name + "/" + lang_code,
                             set_active=True,
@@ -222,18 +222,18 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     test_sentences = dataset["data"]
                     if not test_sentences:
                         continue
-                    if (
-                        isinstance(test_sentences[0], list)
-                        and "lyrics" not in dataset_name
-                        and "short" not in dataset_name
-                    ):
-                        # documents: only 10% of documents. 1000 sentences --> 100 docs
-                        max_n_sentences = args.max_n_test_sentences // 10
-                        # shuffle sentences
-                        np.random.seed(42)
-                        test_sentences = np.random.permutation(test_sentences).tolist()
-                    else:
-                        max_n_sentences = args.max_n_test_sentences
+                    # if (
+                    #     isinstance(test_sentences[0], list)
+                    #     and "lyrics" not in dataset_name
+                    #     and "short" not in dataset_name
+                    # ):
+                    #     # documents: only 10% of documents. 1000 sentences --> 100 docs
+                    #     max_n_sentences = args.max_n_test_sentences // 10
+                    #     # shuffle sentences
+                    #     np.random.seed(42)
+                    #     test_sentences = np.random.permutation(test_sentences).tolist()
+                    # else:
+                    max_n_sentences = args.max_n_test_sentences
                     test_sentences = test_sentences[:max_n_sentences]
                     if isinstance(test_sentences[0], list):
                         # short-seq eval: list of lists
@@ -394,14 +394,14 @@ def main(args):
             sentences = dataset["data"]
             if not sentences:
                 continue
-            if isinstance(sentences[0], list) and "lyrics" not in dataset_name and "short" not in dataset_name:
-                # documents: only 10% of documents. 1000 sentences --> 100 docs
-                max_n_sentences = args.max_n_test_sentences // 10
-                # shuffle sentences
-                np.random.seed(42)
-                sentences = np.random.permutation(sentences).tolist()
-            else:
-                max_n_sentences = args.max_n_test_sentences
+            # if isinstance(sentences[0], list) and "lyrics" not in dataset_name and "short" not in dataset_name:
+            #     # documents: only 10% of documents. 1000 sentences --> 100 docs
+            #     max_n_sentences = args.max_n_test_sentences // 10
+            #     # shuffle sentences
+            #     np.random.seed(42)
+            #     sentences = np.random.permutation(sentences).tolist()
+            # else:
+            max_n_sentences = args.max_n_test_sentences
             sentences = sentences[:max_n_sentences]
             if len(sentences) == 0:
                 continue
