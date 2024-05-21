@@ -57,6 +57,7 @@ class Args:
     adapter_warmup_steps: int = 0
     adapter_lr_multiplier: float = 1.0
     text_column: str = "text"
+    num_hidden_layers = None
 
     # NEW PARAMS
     use_subwords: bool = False
@@ -90,10 +91,15 @@ def main():
         if (label_args.use_auxiliary or args.do_auxiliary_training or args.meta_clf)
         else 0
     )
-    config = SubwordXLMConfig.from_pretrained(
-        args.model_name_or_path,
-        num_labels=num_labels,
-    )
+
+    if args.num_hidden_layers:
+        config = SubwordXLMConfig.from_pretrained(
+            args.model_name_or_path,
+            num_labels=num_labels,
+            num_hidden_layers=args.num_hidden_layers,
+        )
+    else:
+        config = SubwordXLMConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
 
     def prepare_dataset(
         data,
