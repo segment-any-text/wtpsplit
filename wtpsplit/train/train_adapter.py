@@ -57,7 +57,7 @@ class Args:
     adapter_warmup_steps: int = 0
     adapter_lr_multiplier: float = 1.0
     text_column: str = "text"
-    num_hidden_layers = None
+    num_hidden_layers: int = 0
 
     # NEW PARAMS
     use_subwords: bool = False
