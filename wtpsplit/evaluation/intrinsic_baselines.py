@@ -79,10 +79,10 @@ if __name__ == "__main__":
 
             for f, name in [
                 (punkt_sentencize, "punkt"),
-                # (spacy_dp_sentencize, "spacy_dp"),
-                # (spacy_sent_sentencize, "spacy_sent"),
-                # (pysbd_sentencize, "pysbd"),
-                # (ersatz_sentencize, "ersatz"),
+                (spacy_dp_sentencize, "spacy_dp"),
+                (spacy_sent_sentencize, "spacy_sent"),
+                (pysbd_sentencize, "pysbd"),
+                (ersatz_sentencize, "ersatz"),
             ]:
                 print(f"Running {name} on {dataset_name} in {lang_code}...")
                 indices[lang][dataset_name][name] = {}
@@ -109,7 +109,7 @@ if __name__ == "__main__":
                         concat_indices = {}
                         for doc in metrics:
                             for key, value in doc.items():
-                                if isinstance(value, (float, int)):
+                                if not isinstance(value, list):
                                     # numeric
                                     if key not in avg_results:
                                         avg_results[key] = []
@@ -156,6 +156,6 @@ if __name__ == "__main__":
                     # print(e)
                     results[lang][dataset_name][name] = None
 
-    json.dump(results, open(Constants.CACHE_DIR / "intrinsic_baselines_punkt.json", "w"), indent=4, default=int)
-    json.dump(indices, open(Constants.CACHE_DIR / "intrinsic_baselines_punkt_IDX.json", "w"), indent=4, default=int)
+    json.dump(results, open(Constants.CACHE_DIR / "intrinsic_baselines.json", "w"), indent=4, default=int)
+    json.dump(indices, open(Constants.CACHE_DIR / "intrinsic_baselines_IDX.json", "w"), indent=4, default=int)
     print(Constants.CACHE_DIR / "intrinsic_baselines.json")

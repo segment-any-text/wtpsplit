@@ -106,7 +106,7 @@ if __name__ == "__main__":
                         concat_indices = {}
                         for doc in metrics:
                             for key, value in doc.items():
-                                if isinstance(value, (float, int)):
+                                if not isinstance(value, list):
                                     # numeric
                                     if key not in avg_results:
                                         avg_results[key] = []
