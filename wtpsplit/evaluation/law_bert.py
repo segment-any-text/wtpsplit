@@ -22,54 +22,17 @@ logger.setLevel(logging.INFO)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-def corrupt_document(document, lang):
-    """Corrupt sentences in a document for ASR simulation."""
-    return [corrupt_asr(sentence, lang=lang)[0] for sentence in document]
-
-
-def process_documents(documents, lang):
-    """Process each document and return a list of corrupted documents."""
-    return [corrupt_document(document, lang) for document in documents]
-
-
-def handle_legal_data(eval_data, lang_code):
-    """Process legal data for a specific language, corrupting the sentences."""
-    sections = ["test", "train"]
-    corrupted_sentences = {}
-
-    for section in sections:
-        key = "data" if section == "test" else "meta"
-        if key in eval_data[lang_code]["sentence"]["legal-data"].keys():
-            original_data = eval_data[lang_code]["sentence"]["legal-data"][key]
-            documents = original_data if section == "test" else original_data["train_data"]
-            if not documents:
-                corrupted_sentences[section] = None
-                continue
-            corrupted_docs = process_documents(documents, lang=lang_code.split("_")[0])
-            corrupted_sentences[section] = corrupted_docs
-
-    if corrupted_sentences:
-        eval_data[lang_code]["sentence"][f"legal-data-corrupted"] = {
-            "data": corrupted_sentences.get("test", []),
-            "meta": {
-                "train_data": corrupted_sentences.get("train", []),
-            },
-        }
-        print(f"Created corrupted legal data for {lang_code}")
-
-
 @dataclass
 class Args:
-    eval_data_path: str = "data/all_data_04_05.pth"
+    eval_data_path: str = "data/all_data_11_05-all.pth"
     device: str = "cpu"
     include_langs: List[str] = None
     max_n_test_sentences: int = sys.maxsize
-    stride: int = 32
+    stride: int = 64
     save_suffix: str = ""
     return_indices: bool = False
     type: str = "both"  # laws, judgements, both, specific
     lang_support: str = "multi"  # mono, multi
-    corrupt_legal: bool = False  # FIXME
 
 
 def get_law_preds(texts, model, model_name, args) -> List[List[int]]:
@@ -103,13 +66,6 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
     use_langs = eval_data.keys()
     # law eval data is only one with _
     use_langs = [lang_code for lang_code in use_langs if "laws" in lang_code or "judgements" in lang_code]
-
-    # create corrupted versions of legal data (unlike others, not contained in eval_data)
-    if args.corrupt_legal:
-        for lang_code in use_langs:
-            if "laws" in lang_code or "judgements" in lang_code:
-                handle_legal_data(eval_data, lang_code)
-        torch.save(eval_data, args.eval_data_path)
 
     total_test_time = 0  # Initialize total test processing time
 
