@@ -14,7 +14,7 @@ from tqdm.auto import tqdm
 from transformers import AutoModelForTokenClassification, AutoTokenizer, HfArgumentParser, pipeline
 
 from wtpsplit.evaluation import evaluate_mixture
-from wtpsplit.utils import Constants, corrupt_asr
+from wtpsplit.utils import Constants
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -63,45 +63,15 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
     if not os.path.exists(Constants.CACHE_DIR / "law_bert"):
         os.makedirs(Constants.CACHE_DIR / "law_bert")
 
-    use_langs = eval_data.keys()
+    use_langs = ["fr", "es", "it", "en", "de", "pt"]
     # law eval data is only one with _
-    use_langs = [lang_code for lang_code in use_langs if "laws" in lang_code or "judgements" in lang_code]
 
     total_test_time = 0  # Initialize total test processing time
 
-    with h5py.File(logits_path, "w") as f, torch.no_grad():
+    with h5py.File(logits_path, "a") as f, torch.no_grad():
         for lang_code in tqdm(use_langs, desc="Languages"):
-            current_name = base_name
-            if args.lang_support == "multi":
-                current_name += "-fr-es-it-en-de"
-            elif args.lang_support == "mono":
-                if lang_code.split("_")[0] == "pt":
-                    current_name += "-fr-es-it-en-de"
-                else:
-                    current_name += f"-{lang_code.split('_')[0]}"
-                if lang_code.split("_")[0] == "en":
-                    current_name += "-judgements-laws"
-            else:
-                raise NotImplementedError
-            if lang_code.split("_")[0] == "en" and args.lang_support == "mono":
-                pass
-            elif args.type == "laws":
-                current_name += "-laws"
-            elif args.type == "judgements":
-                current_name += "-judgements"
-            elif args.type == "both":
-                current_name += "-judgements-laws"
-            elif args.type == "specific":
-                current_name += f"-{lang_code.split('_')[1]}"
-            else:
-                raise NotImplementedError
-
-            model = AutoModelForTokenClassification.from_pretrained(current_name).to(args.device)
-
             if args.include_langs is not None and lang_code not in args.include_langs:
                 continue
-
-            print(f"{lang_code}, model: {current_name}")
             if lang_code not in f:
                 lang_group = f.create_group(lang_code)
             else:
@@ -109,6 +79,39 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
 
             # eval data
             for dataset_name, dataset in tqdm(eval_data[lang_code]["sentence"].items(), desc=lang_code):
+                if not "legal" in dataset_name:
+                    continue
+                if "legal" in dataset_name and not ("laws" in dataset_name or "judgements" in dataset_name):
+                    continue
+                if "social-media" in dataset_name:
+                    continue
+                current_name = base_name
+                if args.lang_support == "multi":
+                    current_name += "-fr-es-it-en-de"
+                elif args.lang_support == "mono":
+                    if lang_code.split("_")[0] == "pt":
+                        current_name += "-fr-es-it-en-de"
+                    else:
+                        current_name += f"-{lang_code.split('_')[0]}"
+                    if lang_code.split("_")[0] == "en":
+                        current_name += "-judgements-laws"
+                else:
+                    raise NotImplementedError
+                if lang_code.split("_")[0] == "en" and args.lang_support == "mono":
+                    pass
+                elif args.type == "laws":
+                    current_name += "-laws"
+                elif args.type == "judgements":
+                    current_name += "-judgements"
+                elif args.type == "both":
+                    current_name += "-judgements-laws"
+                elif args.type == "specific":
+                    current_name += f"-{dataset_name.split('-')[-1]}"
+                else:
+                    raise NotImplementedError
+
+                model = AutoModelForTokenClassification.from_pretrained(current_name).to(args.device)
+                logger.info(f"RUN {lang_code} {dataset_name} {current_name}")
                 if dataset_name not in lang_group:
                     dset_group = lang_group.create_group(dataset_name)
                 else:
@@ -116,10 +119,8 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
 
                 if "test_logits" not in dset_group:
                     test_sentences = dataset["data"][: args.max_n_test_sentences]
-                    if args.corrupt_legal:
-                        test_sentences = [
-                            corrupt_asr(sentence, lang=lang_code.split("_")[0]) for sentence in test_sentences
-                        ]
+                    if not test_sentences:
+                        continue
                     if isinstance(test_sentences[0], list):
                         # short-seq eval: list of lists
                         test_text = [
@@ -176,9 +177,6 @@ def main(args):
 
     eval_data = torch.load(args.eval_data_path)
 
-    if args.corrupt_legal:
-        save_str += "_corrupt"
-
     save_str += f"{args.save_suffix}"
 
     # first, logits for everything.
@@ -204,6 +202,8 @@ def main(args):
 
         for dataset_name, dataset in dsets["sentence"].items():
             sentences = dataset["data"][: args.max_n_test_sentences]
+            if not sentences:
+                continue
             # check if f[lang_code][dataset_name] exists
             if lang_code not in f or dataset_name not in f[lang_code]:
                 continue
@@ -222,15 +222,16 @@ def main(args):
                         f[lang_code][dataset_name]["test_logits"][:][start:end],
                         list(short_seq),
                         args.return_indices,
+                        0,
                         *clf,
                     )
                     score_u.append(single_score_u)
                     acc_u.append(info["info_newline"]["correct_pairwise"])
                     # indices: accumulate from start
-                    u_indices.extend(
+                    u_indices.append(
                         [idx + start for idx in cur_u_indices["pred_indices"]] if cur_u_indices["pred_indices"] else []
                     )
-                    true_indices.extend(
+                    true_indices.append(
                         [idx + start for idx in cur_u_indices["true_indices"]] if cur_u_indices["true_indices"] else []
                     )
                     length += cur_u_indices["length"] - 1
