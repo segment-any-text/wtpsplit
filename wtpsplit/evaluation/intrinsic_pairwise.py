@@ -63,6 +63,7 @@ class Args:
     skip_corrupted: bool = True
     skip_punct: bool = True
     return_indices: bool = True
+    clf_from_scratch: bool = False
 
     # k_mer-specific args
     k: int = 2
@@ -261,8 +262,28 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     lang_code = lang_code.split("_")[1].lower()
                 try:
                     if args.adapter_path:
+                        if args.clf_from_scratch:
+                            model.model.classifier = torch.nn.Linear(model.model.classifier.in_features, 1)
+                        # elif model.model.classifier.out_features == 2:
+                        elif args.model_path == "xlm-roberta-base" or args.model_path == "xlm-roberta-large":
+                            # we train XLM-R using our wrapper, needs to be adapted for adapters to be loaded
+                            model.model.classifier = torch.nn.Linear(
+                                model.model.classifier.in_features,
+                                1,  # FIXME: hardcoded?
+                            )
+                            model.model.__class__.__name__ = "SubwordXLMForTokenClassification"
+                        # if (
+                        #     any(code in lang_code for code in ["ceb", "jv", "mn", "yo"])
+                        #     and "ted2020" not in dataset_name
+                        # ):
+                        #     # no ersatz for these either.
+                        #     dataset_load_name = "nllb"
+                        #     if "corrupted" in dataset_load_name:
+                        #         dataset_load_name += "-corrupted"
+                        # else:
+                        dataset_load_name = dataset_name
                         model.model.load_adapter(
-                            args.adapter_path + "/" + dataset_name + "/" + lang_code,
+                            args.adapter_path + "/" + dataset_load_name + "/" + lang_code,
                             set_active=True,
                             with_head=True,
                             load_as="text",

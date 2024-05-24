@@ -28,7 +28,7 @@ def extract_batched(
     """
     if "xlm" in model.config.model_type:
         use_subwords = True
-        tokenizer = AutoTokenizer.from_pretrained(model.config.base_model)
+        tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
         tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
         tokens = tokenizer(
             batch_of_texts,
@@ -108,12 +108,22 @@ def extract_batched(
 
     kwargs = {"language_ids": language_ids} if uses_lang_adapters else {}
 
-    logits = model(
-        input_ids=input_ids if use_subwords else None,
-        hashed_ids=None if use_subwords else hashed_ids,
-        attention_mask=attention_mask,
-        **kwargs,
-    )["logits"]
+    if use_subwords and model.config.model_type == "xlm-roberta":
+        # TODO: generalize
+        import torch
+        with torch.no_grad():
+            logits = model.model(
+                input_ids=torch.from_numpy(input_ids).to(model.model.device),
+                attention_mask=torch.from_numpy(attention_mask).to(model.model.device),
+                **kwargs,
+            )["logits"].cpu().numpy()
+    else:
+        logits = model(
+            input_ids=input_ids if use_subwords else None,
+            hashed_ids=None if use_subwords else hashed_ids,
+            attention_mask=attention_mask,
+            **kwargs,
+        )["logits"]
     if use_subwords:
         logits = logits[:, 1:-1, :]  # remove CLS and SEP tokens
 
