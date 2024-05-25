@@ -1,7 +1,7 @@
 import copy
 import json
 from dataclasses import dataclass
-from typing import List
+from typing import List, Union
 import os
 import time
 import logging
@@ -16,6 +16,7 @@ import numpy as np
 import adapters
 
 import wtpsplit.models  # noqa: F401
+from wtpsplit.models import SubwordXLMConfig, SubwordXLMForTokenClassification
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture, token_to_char_probs
 from wtpsplit.evaluation.intrinsic_baselines import split_language_data
 from wtpsplit.extract import PyTorchWrapper, extract
@@ -62,6 +63,7 @@ class Args:
     return_indices: bool = True
     exclude_every_k: int = 10
     save_suffix: str = ""
+    num_hidden_layers: Union[int, None] = None
 
 
 def process_logits(text, model, lang_code, args):
@@ -178,21 +180,13 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     continue
                 if "nllb" in dataset_name:
                     continue
-                if "-" in lang_code and "canine" in args.model_path and not "no-adapters" in args.model_path:
+                if "-" in lang_code and "canine" in args.model_path and "no-adapters" not in args.model_path:
                     # code-switched data: eval 2x
                     lang_code = lang_code.split("_")[1].lower()
                 try:
                     if args.adapter_path:
                         if args.clf_from_scratch:
                             model.model.classifier = torch.nn.Linear(model.model.classifier.in_features, 1)
-                        # elif model.model.classifier.out_features == 2:
-                        elif args.model_path == "xlm-roberta-base" or args.model_path == "xlm-roberta-large":
-                            # we train XLM-R using our wrapper, needs to be adapted for adapters to be loaded
-                            model.model.classifier = torch.nn.Linear(
-                                model.model.classifier.in_features,
-                                1,  # FIXME: hardcoded?
-                            )
-                            model.model.__class__.__name__ = "SubwordXLMForTokenClassification"
                         # if (
                         #     any(code in lang_code for code in ["ceb", "jv", "mn", "yo"])
                         #     and "ted2020" not in dataset_name
@@ -338,7 +332,7 @@ def main(args):
     save_str = f"{save_model_path.replace('/','_')}_b{args.block_size}_s{args.stride}"
 
     eval_data = torch.load(args.eval_data_path)
-    if "canine" in args.model_path and not "no-adapters" in args.model_path:
+    if "canine" in args.model_path and "no-adapters" not in args.model_path:
         eval_data = split_language_data(eval_data)
     if args.valid_text_path is not None:
         valid_data = load_dataset("parquet", data_files=args.valid_text_path, split="train")
@@ -347,7 +341,17 @@ def main(args):
 
     logger.warning("Loading model...")
     model_path = args.model_path
-    model = PyTorchWrapper(AutoModelForTokenClassification.from_pretrained(model_path).to(args.device))
+    if args.model_path == "xlm-roberta-base" or args.model_path == "xlm-roberta-large":
+        config = SubwordXLMConfig.from_pretrained(
+            args.model_path,
+            num_hidden_layers=args.num_hidden_layers,
+            num_labels=1,
+        )
+        model = PyTorchWrapper(
+            SubwordXLMForTokenClassification.from_pretrained(model_path, config=config).to(args.device)
+        )
+    else:
+        model = PyTorchWrapper(AutoModelForTokenClassification.from_pretrained(model_path).to(args.device))
     if args.adapter_path:
         model_type = model.model.config.model_type
         # adapters need xlm-roberta as model type.

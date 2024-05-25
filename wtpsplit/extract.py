@@ -219,22 +219,12 @@ def extract(
 
         kwargs = {"language_ids": language_ids[: len(batch_attention_mask)]} if uses_lang_adapters else {}
 
-        if use_subwords and model.config.model_type == "xlm-roberta":
-            # TODO: generalize
-            import torch
-            with torch.no_grad():
-                logits = model.model(
-                    input_ids=torch.from_numpy(batch_input_ids).to(model.model.device),
-                    attention_mask=torch.from_numpy(batch_attention_mask).to(model.model.device),
-                    **kwargs,
-                )["logits"].cpu().numpy()
-        else:
-            logits = model(
-                input_ids=batch_input_ids if use_subwords else None,
-                hashed_ids=None if use_subwords else batch_input_hashes,
-                attention_mask=batch_attention_mask,
-                **kwargs,
-            )["logits"]
+        logits = model(
+            input_ids=batch_input_ids if use_subwords else None,
+            hashed_ids=None if use_subwords else batch_input_hashes,
+            attention_mask=batch_attention_mask,
+            **kwargs,
+        )["logits"]
 
         if use_subwords:
             logits = logits[:, 1:-1, :]  # remove CLS and SEP tokens
