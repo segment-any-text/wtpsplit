@@ -18,21 +18,22 @@ from wtpsplit.evaluation import (
 )
 from wtpsplit.utils import Constants
 
+
 def split_language_data(eval_data):
     new_eval_data = {}
-    
+
     for lang_code, lang_data in eval_data.items():
-        if '-' in lang_code:
-            lang1, lang2 = lang_code.split('-')
+        if "-" in lang_code:
+            lang1, lang2 = lang_code.split("-")
             new_lang1 = f"{lang_code}_{lang1.upper()}"
             new_lang2 = f"{lang_code}_{lang2.upper()}"
-            
+
             # Adding the same content for both new language keys
             new_eval_data[new_lang1] = lang_data
             new_eval_data[new_lang2] = lang_data
         else:
             new_eval_data[lang_code] = lang_data
-    
+
     return new_eval_data
 
 
@@ -67,12 +68,25 @@ if __name__ == "__main__":
             # if "legal" in dataset_name and not ("laws" in dataset_name or "judgements" in dataset_name):
             #     print("SKIP: ", lang, dataset_name)
             #     continue
+            # if "ted2020-corrupted-asr" not in dataset_name:
+            #     continue
             if not dataset["data"]:
                 continue
             results[lang][dataset_name] = {}
             indices[lang][dataset_name] = {}
+            if "asr" in dataset_name and not any(
+                x in dataset_name for x in ["lyrics", "short", "code", "ted2020", "legal"]
+            ):
+                continue
+            if "legal" in dataset_name and not ("laws" in dataset_name or "judgements" in dataset_name):
+                continue
+            if "social-media" in dataset_name:
+                continue
+            if "nllb" in dataset_name:
+                continue
+
             if "-" in lang:
-            # code-switched data: eval 2x
+                # code-switched data: eval 2x
                 lang_code = lang.split("_")[1].lower()
             else:
                 lang_code = lang
@@ -92,13 +106,18 @@ if __name__ == "__main__":
                     exclude_every_k = args.exclude_every_k
                 try:
                     if isinstance(dataset["data"][0], list):
-                        all_sentences = [[preprocess_sentence(s) for s in doc] for doc in dataset["data"]]
+                        # all_sentences = [[preprocess_sentence(s) for s in doc] for doc in dataset["data"]]
+                        all_sentences = dataset["data"]
                         metrics = []
                         for i, sentences in enumerate(all_sentences):
                             text = Constants.SEPARATORS[lang_code].join(sentences)
                             doc_metrics = {}
                             doc_metrics = evaluate_sentences(
-                                lang_code, sentences, f(lang_code, text), return_indices=True, exclude_every_k=exclude_every_k
+                                lang_code,
+                                sentences,
+                                f(lang_code, text),
+                                return_indices=True,
+                                exclude_every_k=exclude_every_k,
                             )
                             f1 = doc_metrics[0]
                             doc_metrics = doc_metrics[1]
@@ -133,7 +152,8 @@ if __name__ == "__main__":
                         results[lang][dataset_name][name] = avg_results
                         indices[lang][dataset_name][name] = concat_indices
                     else:
-                        sentences = [preprocess_sentence(s) for s in dataset["data"]]
+                        # sentences = [preprocess_sentence(s) for s in dataset["data"]]
+                        sentences = dataset["data"]
                         text = Constants.SEPARATORS[lang_code].join(sentences)
 
                         metrics = evaluate_sentences(
@@ -148,7 +168,7 @@ if __name__ == "__main__":
                         metrics["f1"] = f1
                         print(f1)
                         indices[lang][dataset_name][name]["true_indices"] = [metrics.pop("true_indices")]
-                        indices[lang][dataset_name][name]["predicted_indices"] =[ metrics.pop("predicted_indices")]
+                        indices[lang][dataset_name][name]["predicted_indices"] = [metrics.pop("predicted_indices")]
                         indices[lang][dataset_name][name]["length"] = [metrics.pop("length")]
                         results[lang][dataset_name][name] = metrics
                 except LanguageError as e:
