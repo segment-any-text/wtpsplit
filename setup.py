@@ -10,7 +10,7 @@ setup(
     install_requires=[
         "onnxruntime>=1.13.1",
         "transformers>=4.22.2",
-        "numpy>=1.0,<=2.0",
+        "numpy>=1.0,<2.0",
         "scikit-learn>=1",
         "tqdm",
         "skops",
