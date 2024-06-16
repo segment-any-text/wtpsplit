@@ -1,12 +1,12 @@
 from setuptools import setup
 
 setup(
-    name="wtpsplit",
-    version="1.2.4",
+    name="segment-any-text",
+    version="1.0.0",
     packages=["wtpsplit"],
-    description="Robust, adaptible sentence segmentation for 85 languages",
-    author="Benjamin Minixhofer",
-    author_email="bminixhofer@gmail.com",
+    description="Universal Robust, Efficient and Adaptable Sentence Segmentation",
+    author="Markus Frohmann, Igor Sterner, Benjamin Minixhofer",
+    author_email="markus.frohmann@gmail.com",
     install_requires=[
         "onnxruntime>=1.13.1",
         "transformers>=4.22.2",
