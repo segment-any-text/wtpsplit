@@ -17,7 +17,7 @@ setup(
         "pandas>=1",
         "cached_property",  # for Py37
         "torchinfo",
-        "fast-mosestokenizer"
+        "mosestokenizer"
     ],
     url="https://github.com/bminixhofer/wtpsplit",
     package_data={"wtpsplit": ["data/*"]},
