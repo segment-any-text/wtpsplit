@@ -49,17 +49,18 @@ def evaluate_sentences(
     assert len(text) == len("".join(predicted_sentences))
 
     labels = get_labels(lang_code, sentences)
-    
+
     predicted_end_indices = np.cumsum(np.array([len(s) for s in predicted_sentences]))
     predictions = np.zeros_like(labels)
     predictions[predicted_end_indices] = 1
-    
+
     assert len(labels) == len(predictions)
-    
+
+    # we exclude labels for metrics calculation to enable a fair comparison with LLMs.
     if exclude_every_k > 0:
         true_end_indices = np.where(labels == 1)[0]
         # every k-th from those where labels are 1
-        indices_to_remove = true_end_indices[exclude_every_k-1::exclude_every_k]
+        indices_to_remove = true_end_indices[exclude_every_k - 1 :: exclude_every_k]
 
         # mask for indices to keep
         mask = np.ones_like(labels, dtype=bool)
@@ -69,7 +70,7 @@ def evaluate_sentences(
         # remove indices
         labels = labels[mask]
         predictions = predictions[mask]
-        
+
         assert len(labels) == len(predictions)
 
     return f1_score(labels, predictions, zero_division=0), {
@@ -84,16 +85,14 @@ def evaluate_sentences(
         "length": len(labels),
     }
 
-def evaluate_sentences_llm(
-    labels, predictions, return_indices: bool = False, exclude_every_k: int = 0
-):
-    
+
+def evaluate_sentences_llm(labels, predictions, return_indices: bool = False, exclude_every_k: int = 0):
     assert len(labels) == len(predictions)
-    
+
     if exclude_every_k > 0:
         true_end_indices = np.where(labels == 1)[0]
         # every k-th from those where labels are 1
-        indices_to_remove = true_end_indices[exclude_every_k-1::exclude_every_k]
+        indices_to_remove = true_end_indices[exclude_every_k - 1 :: exclude_every_k]
 
         # mask for indices to keep
         mask = np.ones_like(labels, dtype=bool)
@@ -103,7 +102,7 @@ def evaluate_sentences_llm(
         # remove indices
         labels = labels[mask]
         predictions = predictions[mask]
-        
+
         assert len(labels) == len(predictions)
 
     return {
@@ -118,6 +117,7 @@ def evaluate_sentences_llm(
         "predicted_indices": np.where(predictions)[0].tolist() if return_indices else None,
         "length": len(labels),
     }
+
 
 def train_mixture(lang_code, original_train_x, train_y, n_subsample=None, features=None, skip_punct: bool = False):
     original_train_x = torch.from_numpy(original_train_x).float()
@@ -273,7 +273,9 @@ def our_sentencize(
         return reconstruct_sentences(text, indices_to_sentences(text, predicted_indices_transformed))
 
 
-# baselines
+###########
+# BASELINES
+###########
 
 ERSATZ_LANGUAGES = {
     "ar",
@@ -442,6 +444,7 @@ def get_token_spans(tokenizer, offsets_mapping, tokens):
 
 
 def token_to_char_probs(text, tokens, token_logits, tokenizer, offsets_mapping):
+    """Map from token probabalities to character probabilities"""
     char_probs = np.full((len(text), token_logits.shape[1]), np.min(token_logits))  # Initialize with very low numbers
 
     valid_indices, valid_offsets = get_token_spans(tokenizer, offsets_mapping, tokens)

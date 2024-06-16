@@ -1,7 +1,7 @@
+import contextlib
 import math
 import os
 from pathlib import Path
-import contextlib
 
 # avoid the "None of PyTorch, TensorFlow, etc. have been found" warning.
 with contextlib.redirect_stderr(open(os.devnull, "w")):
@@ -9,13 +9,16 @@ with contextlib.redirect_stderr(open(os.devnull, "w")):
 
 import numpy as np
 import skops.io as sio
+from huggingface_hub import hf_hub_download
 from transformers import AutoConfig, AutoModelForTokenClassification
 from transformers.utils.hub import cached_file
 
+import adapters
+from wtpsplit.evaluation import token_to_char_probs
 from wtpsplit.extract import ORTWrapper, PyTorchWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid
 
-__version__ = "1.2.4"
+__version__ = "1.0.0"
 
 
 class WtP:
@@ -199,7 +202,7 @@ class WtP:
             input_texts = []
             space_positions = []
 
-            for text in input_texts:
+            for text in outer_batch_texts:
                 if remove_whitespace_before_inference:
                     text_space_positions = []
                     input_text = ""
@@ -217,7 +220,7 @@ class WtP:
                 input_texts.append(input_text)
 
             outer_batch_logits = extract(
-                outer_batch_texts,
+                input_texts,
                 self.model,
                 lang_code=lang_code,
                 stride=stride,
@@ -225,7 +228,7 @@ class WtP:
                 batch_size=batch_size,
                 pad_last_batch=pad_last_batch,
                 verbose=verbose,
-            )
+            )[0]
 
             def newline_probability_fn(logits):
                 return sigmoid(logits[:, Constants.NEWLINE_INDEX])
@@ -238,14 +241,14 @@ class WtP:
                     sentence_probs = newline_probs = newline_probability_fn(logits)
 
                 if remove_whitespace_before_inference:
-                    newline_probs, sentence_probs = list(newline_probs), list(sentence_probs)
+                    full_newline_probs, full_sentence_probs = list(newline_probs), list(sentence_probs)
 
-                    for i in space_positions:
-                        newline_probs.insert(i, np.zeros_like(newline_probs[0]))
-                        sentence_probs.insert(i, np.zeros_like(sentence_probs[0]))
+                    for j in space_positions[i]:
+                        full_newline_probs.insert(j, np.zeros_like(newline_probs[0]))
+                        full_sentence_probs.insert(j, np.zeros_like(sentence_probs[0]))
 
-                    newline_probs = np.array(newline_probs)
-                    sentence_probs = np.array(sentence_probs)
+                    newline_probs = np.array(full_newline_probs)
+                    sentence_probs = np.array(full_sentence_probs)
 
                 if return_paragraph_probabilities:
                     yield sentence_probs, newline_probs
@@ -397,3 +400,319 @@ class WtP:
                     text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
                 )
                 yield sentences
+
+
+class SaT:
+    def __init__(
+        self,
+        model_name_or_model,
+        from_pretrained_kwargs=None,
+        ort_providers=None,
+        ort_kwargs=None,
+        style_or_domain: str = None,
+        language: str = None,
+        lora_path: str = None,  # local
+        hub_prefix="segment-any-text",
+    ):
+        self.model_name_or_model = model_name_or_model
+        self.ort_providers = ort_providers
+        self.ort_kwargs = ort_kwargs
+
+        self.use_lora = False
+
+        if isinstance(model_name_or_model, (str, Path)):
+            model_name = str(model_name_or_model)
+            is_local = os.path.isdir(model_name)
+
+            if not is_local and hub_prefix is not None:
+                model_name_to_fetch = f"{hub_prefix}/{model_name}"
+            else:
+                model_name_to_fetch = model_name
+
+            if is_local:
+                model_path = Path(model_name)
+                onnx_path = model_path / "model.onnx"
+                if not onnx_path.exists():
+                    onnx_path = None
+            else:
+                # no need to load if no ort_providers set
+                if ort_providers is not None:
+                    onnx_path = cached_file(model_name_to_fetch, "model.onnx", **(from_pretrained_kwargs or {}))
+                else:
+                    onnx_path = None
+
+            if ort_providers is not None:
+                if onnx_path is None:
+                    raise ValueError(
+                        "Could not find an ONNX model in the model directory. Try `use_ort=False` to run with PyTorch."
+                    )
+
+                try:
+                    import onnxruntime as ort  # noqa
+                except ModuleNotFoundError:
+                    raise ValueError("Please install `onnxruntime` to use WtP with an ONNX model.")
+
+                # to register models for AutoConfig
+                import wtpsplit.configs  # noqa
+
+                # TODO: ONNX integration
+                self.model = ORTWrapper(
+                    AutoConfig.from_pretrained(model_name_to_fetch, **(from_pretrained_kwargs or {})),
+                    ort.InferenceSession(str(onnx_path), providers=ort_providers, **(ort_kwargs or {})),
+                )
+            else:
+                # to register models for AutoConfig
+                try:
+                    import torch  # noqa
+                except ModuleNotFoundError:
+                    raise ValueError("Please install `torch` to use WtP with a PyTorch model.")
+
+                import wtpsplit.models  # noqa
+
+                self.model = PyTorchWrapper(
+                    AutoModelForTokenClassification.from_pretrained(
+                        model_name_to_fetch, **(from_pretrained_kwargs or {})
+                    )
+                )
+            # LoRA LOADING
+            # TODO: LoRA + ONNX ?
+            if (style_or_domain and not language) or (language and not style_or_domain):
+                raise ValueError("Please specify both language and style_or_domain!")
+            if style_or_domain and language:
+                model_type = self.model.model.config.model_type
+                # adapters need xlm-roberta as model type.
+                self.model.model.config.model_type = "xlm-roberta"
+                adapters.init(self.model.model)
+                # reset model type (used later)
+                self.model.model.config.model_type = model_type
+                try:
+                    if not lora_path:
+                        for file in [
+                            "adapter_config.json",
+                            "head_config.json",
+                            "pytorch_adapter.bin",
+                            "pytorch_model_head.bin",
+                        ]:
+                            hf_hub_download(
+                                repo_id=model_name_to_fetch,
+                                subfolder=f"loras/{style_or_domain}/{language}",
+                                filename=file,
+                                local_dir=Constants.CACHE_DIR,
+                            )
+                        lora_load_path = str(Constants.CACHE_DIR / "loras" / style_or_domain / language)
+                    else:
+                        lora_load_path = lora_path
+
+                    self.model.model.load_adapter(
+                        lora_load_path,
+                        set_active=True,
+                        with_head=True,
+                        load_as="sat-lora",
+                    )
+                    # merge lora weights into transformer for 0 efficiency overhead
+                    self.model.model.merge_adapter("sat-lora")
+                    self.use_lora = True
+                except:
+                    if lora_path:
+                        print(f"LoRA at {lora_path} not found, using base model...")
+                    else:
+                        print(f"LoRA {style_or_domain}/{language} not found, using base model...")
+        else:
+            if ort_providers is not None:
+                raise ValueError("You can only use onnxruntime with a model directory, not a model object.")
+
+            self.model = model_name_or_model
+
+    def __getattr__(self, name):
+        assert hasattr(self, "model")
+        return getattr(self.model, name)
+
+    def predict_proba(
+        self,
+        text_or_texts,
+        stride=256,
+        block_size: int = 512,
+        batch_size=32,
+        pad_last_batch: bool = False,
+        return_paragraph_probabilities=False,
+        verbose: bool = False,
+    ):
+        if isinstance(text_or_texts, str):
+            return next(
+                self._predict_proba(
+                    [text_or_texts],
+                    stride=stride,
+                    block_size=block_size,
+                    batch_size=batch_size,
+                    pad_last_batch=pad_last_batch,
+                    return_paragraph_probabilities=return_paragraph_probabilities,
+                    verbose=verbose,
+                )
+            )
+        else:
+            return self._predict_proba(
+                text_or_texts,
+                stride=stride,
+                block_size=block_size,
+                batch_size=batch_size,
+                pad_last_batch=pad_last_batch,
+                return_paragraph_probabilities=return_paragraph_probabilities,
+                verbose=verbose,
+            )
+
+    def _predict_proba(
+        self,
+        texts,
+        stride: int,
+        block_size: int,
+        batch_size: int,
+        pad_last_batch: bool,
+        return_paragraph_probabilities: bool,
+        verbose: bool,
+    ):
+        def newline_probability_fn(logits):
+            return sigmoid(logits[:, Constants.NEWLINE_INDEX])
+
+        for text in texts:
+            outer_batch_logits, offsets_mapping, tokenizer = extract(
+                [text],
+                self.model,
+                stride=stride,
+                max_block_size=block_size,
+                batch_size=batch_size,
+                pad_last_batch=pad_last_batch,
+                verbose=verbose,
+            )
+
+            logits = outer_batch_logits[0]
+            if offsets_mapping is not None:
+                offsets_mapping = offsets_mapping[0]
+            tokens = tokenizer.tokenize(text, verbose=False)
+
+            # convert token probabilities to character probabilities for the entire array
+            logits = token_to_char_probs(text, tokens, logits, tokenizer, offsets_mapping)
+            sentence_probs = newline_probs = newline_probability_fn(logits)
+
+            if return_paragraph_probabilities:
+                yield sentence_probs, newline_probs
+            else:
+                yield sentence_probs
+
+    def split(
+        self,
+        text_or_texts,
+        threshold: float = None,
+        stride=64,
+        block_size: int = 512,
+        batch_size=32,
+        pad_last_batch: bool = False,
+        paragraph_threshold: float = 0.5,
+        strip_whitespace: bool = False,
+        do_paragraph_segmentation=False,
+        verbose: bool = False,
+    ):
+        if isinstance(text_or_texts, str):
+            return next(
+                self._split(
+                    [text_or_texts],
+                    threshold=threshold,
+                    stride=stride,
+                    block_size=block_size,
+                    batch_size=batch_size,
+                    pad_last_batch=pad_last_batch,
+                    paragraph_threshold=paragraph_threshold,
+                    strip_whitespace=strip_whitespace,
+                    do_paragraph_segmentation=do_paragraph_segmentation,
+                    verbose=verbose,
+                )
+            )
+        else:
+            return self._split(
+                text_or_texts,
+                threshold=threshold,
+                stride=stride,
+                block_size=block_size,
+                batch_size=batch_size,
+                pad_last_batch=pad_last_batch,
+                paragraph_threshold=paragraph_threshold,
+                strip_whitespace=strip_whitespace,
+                do_paragraph_segmentation=do_paragraph_segmentation,
+                verbose=verbose,
+            )
+
+    def _split(
+        self,
+        texts,
+        threshold: float,
+        stride: int,
+        block_size: int,
+        batch_size: int,
+        pad_last_batch: bool,
+        paragraph_threshold: float,
+        do_paragraph_segmentation: bool,
+        strip_whitespace: bool,
+        verbose: bool,
+    ):
+        def get_default_threshold(model_str: str):
+            if "sm" in model_str:
+                return 0.25
+            if self.use_lora:
+                return 0.5
+            if "no-limited-lookahead" in model_str and "sm" not in model_str:
+                return 0.01
+            return 0.025
+
+        default_threshold = get_default_threshold(self.model_name_or_model)
+        sentence_threshold = threshold if threshold is not None else default_threshold
+
+        for text, probs in zip(
+            texts,
+            self.predict_proba(
+                texts,
+                stride=stride,
+                block_size=block_size,
+                batch_size=batch_size,
+                pad_last_batch=pad_last_batch,
+                return_paragraph_probabilities=do_paragraph_segmentation,
+                verbose=verbose,
+            ),
+        ):
+            if do_paragraph_segmentation:
+                sentence_probs, newline_probs = probs
+
+                offset = 0
+                paragraphs = []
+
+                for paragraph in indices_to_sentences(text, np.where(newline_probs > paragraph_threshold)[0]):
+                    sentences = []
+
+                    for sentence in indices_to_sentences(
+                        paragraph,
+                        np.where(
+                            sentence_probs[offset : offset + len(paragraph)] > sentence_threshold,
+                        )[0],
+                        strip_whitespace=strip_whitespace,
+                    ):
+                        sentences.append(sentence)
+
+                    paragraphs.append(sentences)
+                    offset += len(paragraph)
+
+                yield paragraphs
+            else:
+                sentences = indices_to_sentences(
+                    text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
+                )
+                yield sentences
+
+
+if __name__ == "__main__":
+    sat_lora = SaT("sat-3l", style_or_domain="ud", language="en")
+    out = sat_lora.split(
+        "Hello this is a test But this is different now Now the next one starts looool",
+        do_paragraph_segmentation=False,
+        strip_whitespace=True,
+    )
+    print(out)
+    splits = list(sat_lora.split(["Paragraph-A Paragraph-B", "Paragraph-C100 Paragraph-D"]))
+    print(splits)

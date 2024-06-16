@@ -83,13 +83,9 @@ class LabelArgs:
     custom_punctuation_file: str = None
     retain_first_consecutive_punctuation: bool = True
     non_whitespace_remove_spaces: bool = True
-    case_corruption_prob_after_newline: float = 0.0
-    case_corruption_prob_after_punct: float = 0.0
     corrupt_entire_chunk_prob: float = 0.0
     corrupt_entire_chunk_strategy: str = "mix"
     corrupt_entire_chunk_prob_full: float = 0.5
-    use_all_labels: bool = False
-    use_all_labels_max_length: int = 3
 
     def __post_init__(self):
         if self.custom_punctuation_file:
@@ -120,24 +116,9 @@ def get_subword_label_dict(label_args, tokenizer):
     for i, c in enumerate(Constants.PUNCTUATION_CHARS):
         token_id = tokenizer.convert_tokens_to_ids(c)
         label_dict[token_id] = 1 + Constants.AUX_OFFSET + i
-        # logger.info(
-        #     f"auxiliary character {c} has token ID {token_id} and label {label_dict[token_id]}, decoded: {tokenizer.decode([token_id])}"
-        # )
+
         if token_id == tokenizer.unk_token_id:
             n_unks += 1
-        if label_args.use_all_labels:
-            # check where c is in tokenizer.vocab keys
-            for i_t, (token, token_idx) in enumerate(tokenizer.vocab.items()):
-                if (
-                    c in token
-                    and token_idx not in label_dict
-                    and len(token) < label_args.use_all_labels_max_length
-                    and not any(i.isdigit() for i in token)
-                ):
-                    label_dict[token_idx] = 1 + Constants.AUX_OFFSET + i
-                    # logger.warning(
-                    #     f"Special auxiliary character {c} has token ID {token_idx} and label {label_dict[token_idx]}, decoded: {tokenizer.decode([token_idx])}"
-                    # )
 
     logger.info(f"found {n_unks} UNK tokens in auxiliary characters")
 
@@ -258,7 +239,6 @@ def corrupt_asr(text: str, lang):
     return corrupted_sentences
 
 
-# does the steps in Figure 2 of the paper
 def corrupt_training(
     input_ids,
     block_ids,
@@ -274,7 +254,7 @@ def corrupt_training(
     if random.random() < label_args.corrupt_entire_chunk_prob:
         # choose corruption strategy
         if label_args.corrupt_entire_chunk_strategy == "mix":
-            corrupt_strategy = "full" if random.random() < label_args.corrupt_entire_chunk_prob_full else "asr"
+            corrupt_strategy = "full"  # if random.random() < label_args.corrupt_entire_chunk_prob_full else "asr"
         else:
             corrupt_strategy = label_args.corrupt_entire_chunk_strategy
 
@@ -380,15 +360,12 @@ def corrupt_training(
                                     del input_ids[i + 1]
                                     del labels[i + 1]
                                     del block_ids[i + 1]
-                if random.random() < label_args.case_corruption_prob_after_newline and i + 1 < len(input_ids):
-                    input_ids, labels, block_ids = _corrupt_case(tokenizer, input_ids, labels, block_ids, i)
 
         elif label_args.use_auxiliary and labels[i] > Constants.AUX_OFFSET:  # auxiliary
             if pack_samples:
                 raise NotImplementedError()
 
             if random.random() < auxiliary_remove_prob:
-                removed_aux_char = False
                 if label_args.retain_first_consecutive_punctuation:
                     # remove only if the next token is not a newline
                     # this retains the current auxiliary character, even though we decided to remove it
@@ -397,20 +374,12 @@ def corrupt_training(
                         del input_ids[i + 1]
                         del labels[i + 1]
                         del block_ids[i + 1]
-                        removed_aux_char = True
                 else:
                     # in case of something like ".\n", this removes the "." and the \n label (=1)
                     # so the newline in the text is kept, but the label is removed!
                     del input_ids[i + 1]
                     del labels[i + 1]
                     del block_ids[i + 1]
-                    removed_aux_char = True
-                if (
-                    random.random() < label_args.case_corruption_prob_after_punct
-                    and removed_aux_char
-                    and i + 1 < len(input_ids)
-                ):
-                    input_ids, labels, block_ids = _corrupt_case(tokenizer, input_ids, labels, block_ids, i)
 
         try:
             i = i + 1 + next(index for index, label in enumerate(labels[i + 1 :]) if label != 0)
@@ -418,42 +387,6 @@ def corrupt_training(
             break
 
     return input_ids, block_ids, labels
-
-
-def _corrupt_case(tokenizer: AutoTokenizer, input_ids: List[int], labels: List[int], block_ids: List[int], i: int):
-    if not tokenizer:
-        raise NotImplementedError()
-
-    token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
-    insert_ = token.startswith("▁")
-    if insert_:
-        token = token[1:]
-
-    do_exchange = token.istitle()
-    if do_exchange:
-        token = token.lower()
-
-        # Re-tokenize
-        token_ids = tokenizer.encode(token if not insert_ else "▁" + token, add_special_tokens=False)
-        if len(token_ids) == 0 or input_ids[i + 1] == tokenizer.unk_token_id:
-            # UNK or whitespace token, remove it
-            del input_ids[i + 1]
-            del labels[i + 1]
-            del block_ids[i + 1]
-        else:
-            if token_ids[0] == tokenizer.convert_tokens_to_ids("▁"):
-                token_ids = token_ids[1:]
-            elif len(token_ids) > 1:
-                # Replace the token with the remaining token
-                input_ids[i + 1] = token_ids[0]
-                for token_id in token_ids[1:]:
-                    input_ids.insert(i + 2, token_id)
-                    labels.insert(i + 2, 0)
-                    block_ids.insert(i + 2, block_ids[i + 1])
-            elif len(token_ids) == 1:
-                input_ids[i + 1] = token_ids[0]
-
-    return input_ids, labels, block_ids
 
 
 def indices_to_sentences(text, indices, strip_whitespace=False):
@@ -537,9 +470,6 @@ if __name__ == "__main__":
         use_auxiliary=True,
         auxiliary_remove_prob=1.0,
         newline_whitespace_prob=1.0,
-        case_corruption_prob_after_punct=1.0,
-        case_corruption_prob_after_newline=1.0,
-        use_all_labels=True,
     )
     label_dict = get_subword_label_dict(label_args, tokenizer)
     print(len(label_dict))
@@ -551,26 +481,7 @@ if __name__ == "__main__":
     input_ids, block_ids, labels = corrupt_training(
         input_ids, block_ids, "en", label_args, label_dict, tokenizer=tokenizer
     )
-    # print(input_ids)
-    # print(labels)
-    # print(tokenizer.tokenize(text))
-    # print([(tokenizer.decode([input_id]), label) for input_id, label in zip(input_ids, labels)])
-    # print("newline labels in text:")
-    # print(np.where(np.array(labels) == 1))
-    # print("newline ids in output text:")
-    # print(np.where(np.array(input_ids) == tokenizer.all_special_ids[-1]))
-    # print(tokenizer.decode(input_ids))
-    # print(tokenizer.decode(input_ids))
-
-    # ords = [ord(c) for c in text]
-    # block_ords = [0] * len(ords)
-    # label_args = LabelArgs(use_auxiliary=True, auxiliary_remove_prob=1.0)
-    # label_dict = get_label_dict(label_args)
-
-    # ords, block_ords, labels = corrupt(ords, block_ords, "en", label_args, label_dict)
-    # print("ords", ords)
-    # print("labels", labels)
-    # print("newline labels in text:")
-    # print(np.where(np.array(labels) == 1))
-    # print("newline ids in output text:")
-    # print(np.where(np.array([ord("\n")]) == ords))
+    print(input_ids)
+    print(labels)
+    print(tokenizer.tokenize(text))
+    print([(tokenizer.decode([input_id]), label) for input_id, label in zip(input_ids, labels)])

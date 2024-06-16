@@ -10,7 +10,6 @@ from wtpsplit.evaluation import (
     LanguageError,
     ersatz_sentencize,
     evaluate_sentences,
-    preprocess_sentence,
     punkt_sentencize,
     pysbd_sentencize,
     spacy_dp_sentencize,
@@ -20,6 +19,7 @@ from wtpsplit.utils import Constants
 
 
 def split_language_data(eval_data):
+    # used if 2 language codes given (i.e., code-switching)
     new_eval_data = {}
 
     for lang_code, lang_data in eval_data.items():
@@ -28,7 +28,6 @@ def split_language_data(eval_data):
             new_lang1 = f"{lang_code}_{lang1.upper()}"
             new_lang2 = f"{lang_code}_{lang2.upper()}"
 
-            # Adding the same content for both new language keys
             new_eval_data[new_lang1] = lang_data
             new_eval_data[new_lang2] = lang_data
         else:
@@ -39,7 +38,7 @@ def split_language_data(eval_data):
 
 @dataclass
 class Args:
-    eval_data_path: str = "data/all_data_11_05-all.pth"
+    eval_data_path: str = "data/all_data.pth"
     include_langs: List[str] = None
     exclude_every_k: int = 10
 
@@ -62,28 +61,10 @@ if __name__ == "__main__":
         for dataset_name, dataset in lang_data["sentence"].items():
             if "nllb" in dataset_name:
                 continue
-            # if "corrupted" in dataset_name and dataset_name != "ted2020-corrupted-asr":
-            #     print("SKIP: ", lang, dataset_name)
-            #     continue
-            # if "legal" in dataset_name and not ("laws" in dataset_name or "judgements" in dataset_name):
-            #     print("SKIP: ", lang, dataset_name)
-            #     continue
-            # if "ted2020-corrupted-asr" not in dataset_name:
-            #     continue
             if not dataset["data"]:
                 continue
             results[lang][dataset_name] = {}
             indices[lang][dataset_name] = {}
-            if "asr" in dataset_name and not any(
-                x in dataset_name for x in ["lyrics", "short", "code", "ted2020", "legal"]
-            ):
-                continue
-            if "legal" in dataset_name and not ("laws" in dataset_name or "judgements" in dataset_name):
-                continue
-            if "social-media" in dataset_name:
-                continue
-            if "nllb" in dataset_name:
-                continue
 
             if "-" in lang:
                 # code-switched data: eval 2x
@@ -106,7 +87,6 @@ if __name__ == "__main__":
                     exclude_every_k = args.exclude_every_k
                 try:
                     if isinstance(dataset["data"][0], list):
-                        # all_sentences = [[preprocess_sentence(s) for s in doc] for doc in dataset["data"]]
                         all_sentences = dataset["data"]
                         metrics = []
                         for i, sentences in enumerate(all_sentences):
@@ -172,8 +152,7 @@ if __name__ == "__main__":
                         indices[lang][dataset_name][name]["length"] = [metrics.pop("length")]
                         results[lang][dataset_name][name] = metrics
                 except LanguageError as e:
-                    # print("Language not supported for", name)
-                    # print(e)
+                    print("Language not supported for", name)
                     results[lang][dataset_name][name] = None
 
     json.dump(results, open(Constants.CACHE_DIR / "intrinsic_baselines.json", "w"), indent=4, default=int)

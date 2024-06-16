@@ -1,15 +1,14 @@
-import re
-from collections import Counter
-from transformers import HfArgumentParser, XLMRobertaTokenizer
-from dataclasses import dataclass
-from datasets import load_dataset
-import unicodedata
 import json
-import pickle
-import pandas as pd
 import os
+import re
+import unicodedata
+from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 
+import pandas as pd
+from datasets import load_dataset
+from transformers import HfArgumentParser, XLMRobertaTokenizer
 
 ROOT_DIR = Path(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 LANGINFO = pd.read_csv(os.path.join(ROOT_DIR, "data", "language_info.csv"), index_col=0)
@@ -26,15 +25,14 @@ class Args:
 
 tokenizer = XLMRobertaTokenizer.from_pretrained("xlm-roberta-base")
 
-# Regex for checking tokens that start with an underscore followed by punctuation
 punctuation_pattern = re.compile(r"^▁+[^\w\s]+?$")
 
 
 def is_punctuation(token, include_whitespace=False):
-    # Check if token matches the regular expression
+    # check if token matches the regular expression
     if punctuation_pattern.match(token):
         return include_whitespace
-    # Fallback to check if all characters in the token are punctuation
+    # fallback
     return all("P" in unicodedata.category(ch) for ch in token) or all("S" in unicodedata.category(ch) for ch in token)
 
 

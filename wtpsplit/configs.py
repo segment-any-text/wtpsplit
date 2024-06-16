@@ -40,7 +40,7 @@ class BertCharConfig(BertConfig):
 
 
 class SubwordXLMConfig(XLMRobertaConfig):
-    """Config for XLM-R and XLM-V models. Used for token-level training.
+    """Config for XLM-R. Used for token-level training, i.e., SaT models.
 
     Args:
         XLMRobertaConfig: Base class.

@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-from pprint import pprint
 
 from sklearn.metrics import classification_report
 
@@ -9,6 +8,11 @@ from wtpsplit.utils import Constants
 
 
 def evaluate_subtask1(splits, langs, prediction_dir: str, supervisions, include_n_documents) -> None:
+    """
+    Mirrors the original SEPP-NLG 2021 Shared Task evaluation function
+    https://sites.google.com/view/sentence-segmentation
+    """
+    
     results = {}
     avg_holder = {}
     for supervision in supervisions:
@@ -29,8 +33,7 @@ def evaluate_subtask1(splits, langs, prediction_dir: str, supervisions, include_
                     if str(fname).startswith(str(relevant_dir)) and str(fname).endswith(".tsv")
                 ]
 
-                for i, gt_tsv_file in enumerate(gt_tsv_files, 0):
-                    # print(i, gt_tsv_file)
+                for _, gt_tsv_file in enumerate(gt_tsv_files, 0):
                     basename = os.path.basename(gt_tsv_file)
 
                     with open(gt_tsv_file, encoding="utf-8") as f:
@@ -56,7 +59,6 @@ def evaluate_subtask1(splits, langs, prediction_dir: str, supervisions, include_
                     all_predicted_labels.extend(pred_labels)
 
                 eval_result = classification_report(all_gt_labels, all_predicted_labels, output_dict=True)
-                # pprint(eval_result, indent=4)
                 print(eval_result["1"]["f1-score"])
                 avg_holder[supervision] += eval_result["1"]["f1-score"]
                 results[lang_code][split][supervision] = eval_result

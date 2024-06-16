@@ -58,15 +58,14 @@ def get_law_preds(texts, model, model_name, args) -> List[List[int]]:
 
 def load_or_compute_logits(args, eval_data, save_str: str = None):
     logits_path = Constants.CACHE_DIR / "law_bert" / f"{save_str}.h5"
-    base_name = "rcds/distilbert-SBD"
+    base_name = "rcds/distilbert-SBD"  # take from HF hub
 
     if not os.path.exists(Constants.CACHE_DIR / "law_bert"):
         os.makedirs(Constants.CACHE_DIR / "law_bert")
 
     use_langs = ["fr", "es", "it", "en", "de", "pt"]
-    # law eval data is only one with _
 
-    total_test_time = 0  # Initialize total test processing time
+    total_test_time = 0
 
     with h5py.File(logits_path, "a") as f, torch.no_grad():
         for lang_code in tqdm(use_langs, desc="Languages"):
@@ -79,13 +78,14 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
 
             # eval data
             for dataset_name, dataset in tqdm(eval_data[lang_code]["sentence"].items(), desc=lang_code):
-                if not "legal" in dataset_name:
+                if "legal" not in dataset_name:
                     continue
                 if "legal" in dataset_name and not ("laws" in dataset_name or "judgements" in dataset_name):
                     continue
                 if "social-media" in dataset_name:
                     continue
                 current_name = base_name
+                # map to correct model
                 if args.lang_support == "multi":
                     current_name += "-fr-es-it-en-de"
                 elif args.lang_support == "mono":
@@ -129,10 +129,10 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
                     else:
                         raise NotImplementedError
 
-                    start_time = time.time()  # Start timing for test logits processing
+                    start_time = time.time()
                     test_logits = get_law_preds(test_text, model, current_name, args)
-                    end_time = time.time()  # End timing for test logits processing
-                    total_test_time += end_time - start_time  # Accumulate test processing time
+                    end_time = time.time() 
+                    total_test_time += end_time - start_time
                     if isinstance(test_sentences[0], list):
                         test_logit_lengths = []
                         # store start and end indices for each pair, used later to slice the logits
@@ -182,12 +182,12 @@ def main(args):
     # first, logits for everything.
     f, total_test_time = load_or_compute_logits(args, eval_data, save_str)
 
-    # now, compute the law_bert scores.
+    # now, compute scores.
     results = {}
     clfs = {}
     if args.return_indices:
         indices = {}
-    # Initialize lists to store scores for each metric across all languages
+
     u_scores = []
 
     for lang_code, dsets in tqdm(eval_data.items()):

@@ -1,25 +1,26 @@
 import copy
 import json
+import logging
+import os
+import sys
+import time
 from dataclasses import dataclass
 from typing import List, Union
-import os
-import time
-import logging
-import sys
 
 import h5py
+import numpy as np
+import skops.io as sio
 import torch
 from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForTokenClassification, HfArgumentParser
-import numpy as np
-import adapters
 
+import adapters
 import wtpsplit.models  # noqa: F401
-from wtpsplit.models import SubwordXLMConfig, SubwordXLMForTokenClassification
-from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture, token_to_char_probs
+from wtpsplit.evaluation import evaluate_mixture, get_labels, token_to_char_probs, train_mixture
 from wtpsplit.evaluation.intrinsic_baselines import split_language_data
 from wtpsplit.extract import PyTorchWrapper, extract
+from wtpsplit.models import SubwordXLMConfig, SubwordXLMForTokenClassification
 from wtpsplit.utils import Constants
 
 logger = logging.getLogger()
@@ -43,8 +44,7 @@ class Args:
     #        }
     #    }
     # }
-    # TODO: for songs/etc., maybe feed in each sample separately?
-    eval_data_path: str = "data/all_data_11_05-all.pth"
+    eval_data_path: str = "data/all_data.pth"
     valid_text_path: str = None  # "data/sentence/valid.parquet"
     device: str = "cpu"
     block_size: int = 512
@@ -54,7 +54,7 @@ class Args:
     custom_language_list: str = None
     threshold: float = 0.01
     max_n_train_sentences: int = 10000
-    max_n_test_sentences: int = -1
+    max_n_test_sentences: int = -1  # -1 is all
     keep_logits: bool = False
     skip_adaptation: bool = False
     skip_punct: bool = True
@@ -63,14 +63,14 @@ class Args:
     return_indices: bool = True
     exclude_every_k: int = 10
     save_suffix: str = ""
-    num_hidden_layers: Union[int, None] = None
+    num_hidden_layers: Union[int, None] = None  # for original XLM-R
 
 
 def process_logits(text, model, lang_code, args):
     # Extract necessary data
     if isinstance(text, list):
         logits = []
-        for short_seq in tqdm(text, desc="Short sequences", disable=False):
+        for short_seq in tqdm(text, desc="Listwise", disable=False):
             current_logits, current_offsets_mapping, tokenizer = extract(
                 [short_seq],
                 model,
@@ -111,16 +111,11 @@ def process_logits(text, model, lang_code, args):
         if "xlm" in model.config.model_type:
             tokens = tokenizer.tokenize(text, verbose=False)
 
-            # Use the vectorized function to convert token probabilities to character probabilities for the entire array
+            # convert token probabilities to character probabilities for the entire array
             char_probs = token_to_char_probs(text, tokens, logits, tokenizer, offsets_mapping)
 
             logits = char_probs
 
-        if len(model.model.config.id2label) == 2:
-            # Igor's old models: take winning logit
-            logits = np.expand_dims(logits.argmax(axis=1), axis=1)
-            # we apply sigmoid later; convert to fake logits
-            logits = np.log((logits + 1e-8) / (1 - logits + 1e-8))
     return logits
 
 
@@ -137,7 +132,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
     else:
         use_langs = eval_data.keys()
 
-    total_test_time = 0  # Initialize total test processing time
+    total_test_time = 0
 
     with h5py.File(logits_path, "a") as f, torch.no_grad():
         for lang_code in tqdm(use_langs, desc="Languages"):
@@ -187,15 +182,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     if args.adapter_path:
                         if args.clf_from_scratch:
                             model.model.classifier = torch.nn.Linear(model.model.classifier.in_features, 1)
-                        # if (
-                        #     any(code in lang_code for code in ["ceb", "jv", "mn", "yo"])
-                        #     and "ted2020" not in dataset_name
-                        # ):
-                        #     # no ersatz for these either.
-                        #     dataset_load_name = "nllb"
-                        #     if "corrupted" in dataset_load_name:
-                        #         dataset_load_name += "-corrupted"
-                        # else:
+                            
                         dataset_load_name = dataset_name
                         model.model.load_adapter(
                             args.adapter_path + "/" + dataset_load_name + "/" + lang_code,
@@ -212,21 +199,9 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     dset_group = lang_group[dataset_name]
 
                 if "test_logits" not in dset_group:
-                    # logger.warning(f"RUN: {lang_code} {dataset_name}")
                     test_sentences = dataset["data"]
                     if not test_sentences:
                         continue
-                    # if (
-                    #     isinstance(test_sentences[0], list)
-                    #     and "lyrics" not in dataset_name
-                    #     and "short" not in dataset_name
-                    # ):
-                    #     # documents: only 10% of documents. 1000 sentences --> 100 docs
-                    #     max_n_sentences = args.max_n_test_sentences // 10
-                    #     # shuffle sentences
-                    #     np.random.seed(42)
-                    #     test_sentences = np.random.permutation(test_sentences).tolist()
-                    # else:
                     max_n_sentences = args.max_n_test_sentences
                     test_sentences = test_sentences[:max_n_sentences]
                     if isinstance(test_sentences[0], list):
@@ -237,10 +212,10 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     else:
                         test_text = Constants.SEPARATORS.get(lang_code, " ").join(test_sentences)
 
-                    start_time = time.time()  # Start timing for test logits processing
+                    start_time = time.time()
                     test_logits = process_logits(test_text, model, lang_code, args)
-                    end_time = time.time()  # End timing for test logits processing
-                    total_test_time += end_time - start_time  # Accumulate test processing time
+                    end_time = time.time()
+                    total_test_time += end_time - start_time
                     if isinstance(test_sentences[0], list):
                         test_logit_lengths = []
                         # store start and end indices for each pair, used later to slice the logits
@@ -252,7 +227,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                         test_logits = np.concatenate(test_logits)
                         # NOTE: handled differently than in intrinsic_pairwise.py
                         # here, we keep the label at the end
-                        # in intrinsic_pairwise.py, we only consider the labels in the middle.
+                        # in intrinsic_pairwise.py, we only consider non-ending labels.
                         test_labels = [
                             get_labels(lang_code, short_seq, after_space=False)[:-1] for short_seq in test_sentences
                         ]
@@ -311,7 +286,7 @@ def compute_statistics(values):
     if not values:  # Check for empty values list
         return {"mean": None, "median": None, "std": None, "min": None, "min_lang": None, "max": None, "max_lang": None}
 
-    scores, langs = zip(*values)  # Unpack scores and languages
+    scores, langs = zip(*values)
     min_index = np.argmin(scores)
     max_index = np.argmax(scores)
     return {
@@ -342,6 +317,7 @@ def main(args):
     logger.warning("Loading model...")
     model_path = args.model_path
     if args.model_path == "xlm-roberta-base" or args.model_path == "xlm-roberta-large":
+        # init models here
         config = SubwordXLMConfig.from_pretrained(
             args.model_path,
             num_hidden_layers=args.num_hidden_layers,
@@ -359,9 +335,6 @@ def main(args):
         adapters.init(model.model)
         # reset model type (used later)
         model.model.config.model_type = model_type
-        if "meta-clf" in args.adapter_path:
-            clf = model.model.classifier
-            model.model.classifier = torch.nn.Sequential(clf, torch.nn.Linear(clf.out_features, 1))
 
     save_str += f"{args.save_suffix}"
     if args.max_n_test_sentences < sys.maxsize and args.max_n_test_sentences != -1:
@@ -381,7 +354,7 @@ def main(args):
     clfs = {}
     if args.return_indices:
         indices = {}
-    # Initialize lists to store scores for each metric across all languages
+    
     u_scores, t_scores, punct_scores = [], [], []
 
     for lang_code, dsets in tqdm(eval_data.items()):
@@ -398,13 +371,6 @@ def main(args):
             sentences = dataset["data"]
             if not sentences:
                 continue
-            # if isinstance(sentences[0], list) and "lyrics" not in dataset_name and "short" not in dataset_name:
-            #     # documents: only 10% of documents. 1000 sentences --> 100 docs
-            #     max_n_sentences = args.max_n_test_sentences // 10
-            #     # shuffle sentences
-            #     np.random.seed(42)
-            #     sentences = np.random.permutation(sentences).tolist()
-            # else:
             max_n_sentences = args.max_n_test_sentences
             sentences = sentences[:max_n_sentences]
             if len(sentences) == 0:
@@ -412,6 +378,7 @@ def main(args):
             if lang_code not in f or dataset_name not in f[lang_code]:
                 continue
 
+            # to be in line w/ LLM eval; for fair comparison
             if "lyrics" in dataset_name or "short" in dataset_name:
                 exclude_every_k = 0
             else:
@@ -589,13 +556,14 @@ def main(args):
         "include_langs": args.include_langs,
     }
 
-    # sio.dump(
-    #     clfs,
-    #     open(
-    #         Constants.CACHE_DIR / "intrinsic" / f"{save_str}.skops",
-    #         "wb",
-    #     ),
-    # )
+    if not args.skip_adaptation:
+        sio.dump(
+            clfs,
+            open(
+                Constants.CACHE_DIR / "intrinsic" / f"{save_str}.skops",
+                "wb",
+            ),
+        )
     json.dump(
         results,
         open(
@@ -606,7 +574,6 @@ def main(args):
     )
     print(Constants.CACHE_DIR / "intrinsic" / f"{save_str}.json")
 
-    # Write results_avg to JSON
     json.dump(
         results_avg,
         open(

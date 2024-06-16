@@ -60,6 +60,8 @@ def build_data_dictionary(root_dir):
     return data_dict
 
 
+# this must be downloaded first from the linked drive here
+# https://sites.google.com/view/sentence-segmentation
 root_dir = Constants.ROOT_DIR.parent / "data/sepp_nlg_2021_data"
 data = build_data_dictionary(root_dir)
 

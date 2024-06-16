@@ -8,6 +8,7 @@ from typing import List
 
 import h5py
 import numpy as np
+import spacy_alignments as tokenizations
 import torch
 from datasets import load_dataset
 from tqdm.auto import tqdm
@@ -16,15 +17,13 @@ from transformers import AutoModelForTokenClassification, AutoTokenizer, HfArgum
 import adapters
 import wtpsplit.models  # noqa: F401
 from wtpsplit.evaluation import get_labels, train_mixture
-from wtpsplit.evaluation.evaluate_sepp_nlg_2021_subtask1 import evaluate_subtask1
+from wtpsplit.evaluation.evaluate_sepp_nlg_subtask1 import evaluate_subtask1
 from wtpsplit.evaluation.intrinsic import process_logits
 from wtpsplit.extract import PyTorchWrapper, extract
 from wtpsplit.utils import Constants, sigmoid
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-import spacy_alignments as tokenizations
 
 
 def get_token_labels(a, b, a_labels):
@@ -75,7 +74,6 @@ class Args:
     batch_size: int = 32
     include_langs: List[str] = None
     include_splits: List[str] = None
-    custom_language_list: str = None
     threshold: float = 0.025
     max_n_train_sentences: int = 100
     max_n_test_sentences: int = sys.maxsize
@@ -86,11 +84,11 @@ class Args:
 
 
 def process_logits_and_tokens(text, model, lang_code, args):
-    # variation of process_logits for word-based evals, returning tokens as well.
+    # variation of process_logits used in intrinsic.py for word-based evals, returning tokens as well.
     if isinstance(text, list):
         logits = []
         tokens = []
-        for short_seq in tqdm(text, desc="Short sequences", disable=False):
+        for short_seq in tqdm(text, desc="Evaluating...", disable=False):
             current_logits, current_offsets_mapping, tokenizer = extract(
                 [short_seq],
                 model,
@@ -120,12 +118,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
     if not os.path.exists(Constants.CACHE_DIR / "ted2020"):
         os.makedirs(Constants.CACHE_DIR / "ted2020")
 
-    if args.custom_language_list is not None:
-        with open(args.custom_language_list, "r") as f:
-            # file is a csv: l1,l2,...
-            use_langs = f.read().strip().split(",")
-    else:
-        use_langs = eval_data.keys()
+    use_langs = eval_data.keys()
 
     total_test_time = 0  # Initialize total test processing time
 
@@ -138,7 +131,6 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
             if args.include_langs is not None and lang_code not in args.include_langs:
                 continue
 
-            # print(f"Processing {lang_code}...")
             if lang_code not in f:
                 lang_group = f.create_group(lang_code)
             else:
@@ -152,6 +144,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     if args.adapter_path:
                         if args.clf_from_scratch:
                             model.model.classifier = torch.nn.Linear(model.model.classifier.in_features, 1)
+                        # we trained adapters on "train" split but uniformly save as "surprise_test"
                         model.model.load_adapter(
                             args.adapter_path + "/" + "surprise_test" + "/" + lang_code,
                             set_active=True,
@@ -164,14 +157,12 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                         model_path = os.path.join(args.model_path, dataset_name, "en")
                         if not os.path.exists(model_path):
                             model_path = args.model_path
-                        # print(model_path)
                         model = PyTorchWrapper(
                             AutoModelForTokenClassification.from_pretrained(model_path).to(args.device)
                         )
                 except Exception as e:
                     print(f"Error loading adapter for {dataset_name} in {lang_code}: {e}")
                     continue
-                # print(dataset_name)
                 if dataset_name not in lang_group:
                     dset_group = lang_group.create_group(dataset_name)
                 else:
@@ -187,10 +178,10 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     else:
                         raise NotImplementedError
 
-                    start_time = time.time()  # Start timing for test logits processing
+                    start_time = time.time()
                     test_logits, test_tokens = process_logits_and_tokens(test_text, model, lang_code, args)
-                    end_time = time.time()  # End timing for test logits processing
-                    total_test_time += end_time - start_time  # Accumulate test processing time
+                    end_time = time.time()
+                    total_test_time += end_time - start_time
                     if isinstance(test_sentences[0], list):
                         test_logit_lengths = []
                         # store start and end indices for each pair, used later to slice the logits
@@ -237,7 +228,7 @@ def compute_statistics(values):
     if not values:  # Check for empty values list
         return {"mean": None, "median": None, "std": None, "min": None, "min_lang": None, "max": None, "max_lang": None}
 
-    scores, langs = zip(*values)  # Unpack scores and languages
+    scores, langs = zip(*values)
     min_index = np.argmin(scores)
     max_index = np.argmax(scores)
     return {
@@ -283,9 +274,6 @@ def main(args):
         adapters.init(model.model)
         # reset model type (used later)
         model.model.config.model_type = model_type
-        if "meta-clf" in args.adapter_path:
-            clf = model.model.classifier
-            model.model.classifier = torch.nn.Sequential(clf, torch.nn.Linear(clf.out_features, 1))
 
     save_str += f"{args.save_suffix}"
     if args.max_n_test_sentences < sys.maxsize:
@@ -362,12 +350,12 @@ def main(args):
                     else:
                         t_preds = None
                     if not args.skip_adaptation and not args.skip_punct:
-                        # TODO: punct, T on tokens, too?
                         punct_preds = clfs[lang_code][0].predict_proba(current_logits)[:, 1] > clf[2]
                     else:
                         punct_preds = None
 
                     # write to tsv as per the challenge reqs
+                    # can then be evaluated via evaluate_sepp_nlg_subtask1.py
                     for supervision, preds in zip(["u", "t", "punct"], [u_preds, t_preds, punct_preds]):
                         if preds is None:
                             continue

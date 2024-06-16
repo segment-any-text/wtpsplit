@@ -32,15 +32,12 @@ from wtpsplit.models import (
     SubwordXLMConfig,
     SubwordXLMForTokenClassification,
 )
-from wtpsplit.train.evaluate import evaluate_sentence, evaluate_sentence_kmers, evaluate_sentence_pairwise
+from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.trainer import Trainer
 from wtpsplit.train.utils import Model, cleanup_cache_files
 from wtpsplit.utils import Constants, LabelArgs, corrupt_training, get_label_dict, get_subword_label_dict
 
 logger = logging.getLogger(__name__)
-
-
-# os.environ["PJRT_DEVICE"] = "None"
 
 
 def setup_logging(training_args: transformers.TrainingArguments) -> None:
@@ -62,7 +59,6 @@ def setup_logging(training_args: transformers.TrainingArguments) -> None:
             + f"distributed training: {training_args.local_rank != -1}, 16-bits training: {training_args.fp16}"
         )
     )
-    # logger.info(f"Training/evaluation parameters {training_args}")
 
 
 @dataclass
@@ -72,20 +68,16 @@ class Args:
     use_logits: bool = False
     is_decoder: bool = False
     use_bert: bool = False
-    # TODO: adapt to HF Hub
     train_text_path: str = "data/train.parquet"
     valid_text_path: str = "data/valid.parquet"
     include_languages: List[str] = None
-    eval_data_path: str = "data/all_data_24_04.pth"
-    num_hidden_layers: int = 1
+    eval_data_path: str = "data/all_data.pth"
+    num_hidden_layers: int = 3
     preprocessing_num_workers: int = 6
     block_size: int = 512
     overflow_size: int = 16
     eval_stride: int = 256
-    lookahead: int = None
     loss_margin: float = 0.5
-    ngram_order: int = 1
-    language_adapter: str = "on"
     from_scratch: bool = False
     pack_samples: bool = False
     one_sample_per_line: bool = False
@@ -95,13 +87,16 @@ class Args:
     aux_training_weight: float = 1.0
     ignore_non_hyphen: bool = False
     non_punctuation_sample_ratio: float = None
+    text_column: str = "text"
+    threshold: float = 0.01  # just for eval
+    # WtP-related args
+    ngram_order: int = 1
+    language_adapter: str = "on"
     adapter_warmup_steps: int = 0
     adapter_lr_multiplier: float = 1.0
-    text_column: str = "text"
-
-    # NEW PARAMS
-    use_subwords: bool = False
-    threshold: float = 0.01
+    # SaT-related args
+    use_subwords: bool = False  # uses XLM-R
+    lookahead: int = None
     lookahead_split_layers: Optional[int] = None
     sample_non_whitespace: int = 1
 
@@ -118,6 +113,7 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: boo
     for sample in batch:
         # subword-level
         if args.use_subwords:
+            # already tokenized!
             input_ids = sample["input_ids"]
         # char-level
         else:
@@ -151,7 +147,6 @@ def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: boo
             labels = labels[start : start + actual_block_size]
         elif len(input_ids) < actual_block_size:
             padding = actual_block_size - len(input_ids)
-            # print(padding, lang)
             input_ids += [tokenizer.pad_token_id] * padding if tokenizer else [0] * padding
             labels += [0] * padding
 
@@ -202,7 +197,7 @@ def main():
         (args, training_args, label_args) = parser.parse_args_into_dataclasses()
         wandb_name = None
     if xm.xrt_world_size() == 4:
-        # ensure same batch size on TPUv3 and TPUv4
+        # ensure same batch size on TPUv3 and TPUv4 using same config.json
         training_args.per_device_train_batch_size *= 2
     logger.warning(f"Per device train batch size: {training_args.per_device_train_batch_size}")
     logger.warning(
@@ -216,6 +211,7 @@ def main():
 
     num_labels = Constants.AUX_OFFSET + ((1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0)
     if args.use_subwords:
+        # SaT models
         if args.from_scratch:
             config = SubwordXLMConfig(
                 args.model_name_or_path,
@@ -248,9 +244,11 @@ def main():
         special_tokens_ids = set(tokenizer.all_special_ids)
         special_tokens_ids.discard(custom_token_id)
         if args.lookahead:
+            # we split lookahead evenly into N layers
             assert args.lookahead % args.num_hidden_layers == 0
 
     else:
+        # WtP models (char-based)
         tokenizer = None
         config = LACanineConfig.from_pretrained(
             args.model_name_or_path,
@@ -290,7 +288,6 @@ def main():
 
     if training_args.local_rank == 0:
         logger.warning(summary(model, depth=4))
-        # backbone.push_to_hub("markus583/xlm-token-untrained", private=True)
 
     def prepare_dataset(
         num_workers=1,
@@ -299,8 +296,10 @@ def main():
         split="train",
     ):
         with training_args.main_process_first():
-            dlconf = DownloadConfig(cache_dir="/home/Markus/.cache/huggingface/datasets")
-            dataset = load_dataset("markus583/mC4-TEST", split=split, download_config=dlconf)
+            # this can be used if space issues arise
+            # dlconf = DownloadConfig(cache_dir="/home/Markus/.cache/huggingface/datasets")
+            # dataset = load_dataset("markus583/mC4-TEST", split=split, download_config=dlconf)
+            dataset = load_dataset("markus583/mC4-TEST", split=split)
         logger.warning(f"Loaded {split} dataset.")
         # optional: delete downloaded dataset, it is stored in cache_dir now (but we delete it later)
         # ~40GB on disk
@@ -319,7 +318,7 @@ def main():
             dataset = dataset.shuffle(seed=42)
             logger.warning("Shuffled dataset.")
 
-        # very likely not relevant / used only for the compound part
+        # not used for sentence segmentation, ignore.
         if args.ignore_non_hyphen:
             with training_args.main_process_first():
                 dataset = dataset.filter(
@@ -328,7 +327,7 @@ def main():
                 )
                 logger.info(f"Filtered to {len(dataset)} examples.")
 
-        # "punctuation-specific sampling" in the paper
+        # "punctuation-specific sampling" in the WtP paper
         if args.non_punctuation_sample_ratio is not None:
             languages_without_punctuation = {
                 lang_code
@@ -514,18 +513,19 @@ def main():
                     remove_columns=[args.text_column],
                 )
         else:
-            # this is no longer used and would cause an error otherwise
+            # this column is no longer used and would cause an error otherwise
             with training_args.main_process_first():
                 dataset = dataset.rename_column(args.text_column, "input_ids")
         logger.warning(f"Tokenized {split} dataset.")
 
-        if split == "train" and args.use_subwords:
-            with training_args.main_process_first():
-                for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
-                    for file in files:
-                        if file.startswith("m_c4-test-train"):
-                            logger.warning(f"Removing {os.path.join(root, file)}")
-                            os.remove(os.path.join(root, file))
+        # uncomment if space issues arise (e.g., on TPU VMs):
+        # if split == "train" and args.use_subwords:
+        #     with training_args.main_process_first():
+        #         for root, dirs, files in os.walk(os.environ.get("HF_DATASETS_CACHE")):
+        #             for file in files:
+        #                 if file.startswith("m_c4-test-train"):
+        #                     logger.warning(f"Removing {os.path.join(root, file)}")
+        #                     os.remove(os.path.join(root, file))
 
         if not args.one_sample_per_line:
             with training_args.main_process_first():
@@ -582,21 +582,19 @@ def main():
                 continue
 
             if trainer.args.process_index == 0 and args.do_sentence_training:
-                # with training_args.main_process_first():
                 for dataset_name, dataset in lang_data["sentence"].items():
-                    # if "corrupt" in dataset_name:
-                    #     continue
                     if not dataset["data"][0]:
                         continue
 
                     if isinstance(dataset["data"][0], list):
+                        # too slow here
                         continue
                     score, info = evaluate_sentence(
                         lang_code,
                         dataset["data"],
                         model,
-                        stride=128,
-                        block_size=512,
+                        stride=args.eval_stride,
+                        block_size=args.block_size,
                         batch_size=training_args.per_device_eval_batch_size,
                         threshold=args.threshold,
                     )
@@ -608,68 +606,7 @@ def main():
                     avg_metrics[f"average_{dataset_name}_f1"].append(info["f1"])
                     avg_metrics[f"average_{dataset_name}_f1_best"].append(info["f1_best"])
                     avg_metrics[f"average_{dataset_name}_threshold_best"].append(info["threshold_best"])
-                    # if lang_code in ["zh", "ja", "my", "km"]:
-                    #     avg_metrics[f"average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
-                    # else:
-                    #     avg_metrics[f"average_whitespace_{dataset_name}_pr_auc"].append(score)
-                    # score, _ = evaluate_sentence(
-                    #     lang_code,
-                    #     dataset["data"],
-                    #     model,
-                    #     stride=args.eval_stride,
-                    #     block_size=args.block_size,
-                    #     batch_size=training_args.per_device_eval_batch_size,
-                    #     do_lowercase=True,
-                    #     do_remove_punct=True,
-                    # )
-                    # metrics[f"lower_rmp_{lang_code}_{dataset_name}_pr_auc"] = score
-                    # avg_metrics[f"lower_rmp_average_{dataset_name}_pr_auc"].append(score)
-                    # if lang_code in ["zh", "ja", "my", "km"]:
-                    #     avg_metrics[f"lower_rmp_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
-                    # else:
-                    #     avg_metrics[f"lower_rmp_average_whitespace_{dataset_name}_pr_auc"].append(score)
-                    # k-mer based evaluation
-                    # for k in [2, 3, 4]:
-                    #     score, avg_acc, info = evaluate_sentence_kmers(
-                    #         lang_code,
-                    #         dataset["data"],
-                    #         model,
-                    #         stride=128,
-                    #         block_size=512,
-                    #         batch_size=training_args.per_device_eval_batch_size,
-                    #         k=k,
-                    #         # sample_pct=0.1,
-                    #         threshold=args.threshold,
-                    #     )
-                    #     metrics[f"k_{k}_{lang_code}_{dataset_name}_pr_auc"] = score
-                    #     avg_metrics[f"k_{k}_average_{dataset_name}_pr_auc"].append(score)
-                    #     metrics[f"k_{k}_{lang_code}_{dataset_name}_acc"] = avg_acc
-                    #     avg_metrics[f"k_{k}_average_{dataset_name}_acc"].append(avg_acc)
-                    #     metrics[f"k_{k}_{lang_code}_{dataset_name}_f1"] = info["f1"]
-                    #     metrics[f"k_{k}_{lang_code}_{dataset_name}_f1_best"] = info["f1_best"]
-                    #     metrics[f"k_{k}_{lang_code}_{dataset_name}_threshold_best"] = info["threshold_best"]
-                    #     avg_metrics[f"k_{k}_average_{dataset_name}_f1"].append(info["f1"])
-                    #     avg_metrics[f"k_{k}_average_{dataset_name}_f1_best"].append(info["f1_best"])
-                    #     avg_metrics[f"k_{k}_average_{dataset_name}_threshold_best"].append(info["threshold_best"])
 
-                    #     # if lang_code in ["zh", "ja", "my", "km"]:
-                    #     #     avg_metrics[f"k_{k}_average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
-                    #     #     avg_metrics[f"k_{k}_average_nonwhitespace_{dataset_name}_acc"].append(avg_acc)
-                    #     # else:
-                    #     #     avg_metrics[f"k_{k}_average_whitespace_{dataset_name}_pr_auc"].append(score)
-                    #     #     avg_metrics[f"k_{k}_average_whitespace_{dataset_name}_acc"].append(avg_acc)
-                    #     if k == 2:
-                    #         # keep keys for backwards compat in wandb
-                    #         metrics[f"pairwise_{lang_code}_{dataset_name}_pr_auc"] = score
-                    #         avg_metrics[f"pairwise_average_{dataset_name}_pr_auc"].append(score)
-                    #         metrics[f"pairwise_{lang_code}_{dataset_name}_acc"] = avg_acc
-                    #         avg_metrics[f"pairwise_average_{dataset_name}_acc"].append(avg_acc)
-                    #         metrics[f"pairwise_{lang_code}_{dataset_name}_f1"] = info["f1"]
-                    #         metrics[f"pairwise_{lang_code}_{dataset_name}_f1_best"] = info["f1_best"]
-                    #         metrics[f"pairwise_{lang_code}_{dataset_name}_threshold_best"] = info["threshold_best"]
-                    #         avg_metrics[f"pairwise_average_{dataset_name}_f1"].append(info["f1"])
-                    #         avg_metrics[f"pairwise_average_{dataset_name}_f1_best"].append(info["f1_best"])
-                    #         avg_metrics[f"pairwise_average_{dataset_name}_threshold_best"].append(info["threshold_best"])
                     if lang_code in ["zh", "ja", "my", "km"]:
                         avg_metrics[f"average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
                         avg_metrics[f"average_nonwhitespace_{dataset_name}_f1"].append(info["f1"])
@@ -690,7 +627,7 @@ def main():
         return metrics
 
     if "wandb" in training_args.report_to and training_args.process_index == 0:
-        wandb.init(name=wandb_name, project="sentence", entity="markus_583")
+        wandb.init(name=wandb_name, project="sentence")
         wandb.config.update(args)
         wandb.config.update(training_args)
         wandb.config.update(label_args)
@@ -709,14 +646,15 @@ def main():
     training_args.adapter_warmup_steps = args.adapter_warmup_steps
     training_args.adapter_lr_multiplier = args.adapter_lr_multiplier
 
+    # again: uncomment this if space issues arise.
     # give .map in multiprocessing enough of time to finish, to be safe
-    time.sleep(10)
-    if training_args.local_rank == 0:
-        # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
-        # because that would remove the cache files of the other dataset!
-        cleanup_cache_files([train_dataset, valid_dataset])
-        logger.warning("Cleaned up cache files.")
-    time.sleep(10)
+    # time.sleep(10)
+    # if training_args.local_rank == 0:
+    #     # since both share the *same* cache_dir, we cannot simply call dataset.cleanup_cache_files()
+    #     # because that would remove the cache files of the other dataset!
+    #     cleanup_cache_files([train_dataset, valid_dataset])
+    #     logger.warning("Cleaned up cache files.")
+    # time.sleep(10)
 
     trainer = Trainer(
         model,
@@ -737,10 +675,10 @@ def main():
     trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
     trainer.save_model()
     trainer.save_state()
-    # Pattern for checkpoint directories
+
+    # remove old checkpoints to save space
     checkpoint_pattern = os.path.join(training_args.output_dir, "checkpoint-*")
 
-    # Use glob.glob to find all directories matching the pattern
     for checkpoint_dir in glob(checkpoint_pattern):
         if os.path.isdir(checkpoint_dir):
             shutil.rmtree(checkpoint_dir)
@@ -752,10 +690,4 @@ def _mp_fn(index):
 
 
 if __name__ == "__main__":
-    # try:
     main()
-    # except Exception:
-    #     # extype, value, tb = sys.exc_info()
-    #     # tb.print_exc()
-    #     # pdb.post_mortem(tb)
-    #     pass

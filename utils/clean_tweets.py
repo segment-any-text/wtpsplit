@@ -45,8 +45,6 @@ def transform_data(data):
 
     transformed_data = {}
     for lang_code, lang_data in data.items():
-        if lang_code == "en-de":
-            continue
         transformed_data[lang_code] = {}
         for content_type, datasets in lang_data.items():
             if content_type != "sentence":
@@ -64,7 +62,7 @@ def transform_data(data):
     return transformed_data
 
 
-data = torch.load("data/all_data_11_05-all.pth")
+data = torch.load("data/all_tweets.pth")
 
 transformed_data = transform_data(data)
-torch.save(transformed_data, "data/all_data_11_05-short_proc_SM.pth")
+torch.save(transformed_data, "data/all_data_tweets_cleaned.pth")

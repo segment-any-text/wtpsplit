@@ -8,12 +8,13 @@ from collections import Counter
 from dataclasses import dataclass
 from functools import partial
 from glob import glob
-from typing import List
+from typing import List, Optional, Union
 
 import datasets
 import numpy as np
 import torch
 from tokenizers import AddedToken
+from tqdm import tqdm
 from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments, set_seed
 
 import adapters
@@ -21,13 +22,11 @@ import wandb
 from adapters import AdapterArguments
 from wtpsplit.models import SubwordXLMConfig, SubwordXLMForTokenClassification
 from wtpsplit.train.adaptertrainer import AdapterTrainer
-from wtpsplit.train.trainer import Trainer
 from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.train import collate_fn, setup_logging
+from wtpsplit.train.trainer import Trainer
 from wtpsplit.train.utils import Model
-from wtpsplit.utils import Constants, LabelArgs, get_label_dict, get_subword_label_dict, corrupt
-from tqdm import tqdm
-from typing import Union, Optional
+from wtpsplit.utils import Constants, LabelArgs, get_label_dict, get_subword_label_dict
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +38,7 @@ class Args:
     model_name_or_path: str
     base_model: str = "xlm-roberta-base"
     shuffle: bool = True
-    text_path: str = "data/all_data_11_05-all.pth"
+    text_path: str = "data/all_data.pth"
     include_languages: List[str] = None
     preprocessing_num_workers: int = 1
     block_size: int = 512
@@ -69,7 +68,6 @@ class Args:
     wandb_project: str = "sentence"
     eval_every: int = 5
     # corruption
-    eval_pairwise: bool = False
     skip_eval_loss: bool = False
     subsample: Optional[float] = None
 
@@ -112,7 +110,7 @@ def main():
         one_sample_per_line: bool = False,
     ):
         with training_args.main_process_first():
-            # maybe we use more than 1 lang later at once.
+            # this only uses 1 dataset-language combination, but can be easily adapted if needed
             for lang in include_languages:
                 if split == "train":
                     dataset = data[lang]["sentence"][dataset_name]["meta"]["train_data"]
@@ -160,7 +158,7 @@ def main():
                 dataset = dataset.select(range(int(subsample * len(dataset))))
             logger.warning(f"Subsampled {len(dataset)} examples from {old_length}.")
 
-        # very likely not relevant / used only for the compound part
+        # ignore
         if args.ignore_non_hyphen:
             with training_args.main_process_first():
                 dataset = dataset.filter(
@@ -170,7 +168,7 @@ def main():
                 with training_args.main_process_first():
                     logger.info(f"Filtered to {len(dataset)} examples.")
 
-        # "punctuation-specific sampling" in the paper
+        # "punctuation-specific sampling" in the WtP paper
         if args.non_punctuation_sample_ratio is not None:
             languages_without_punctuation = {
                 lang_code
@@ -369,7 +367,7 @@ def main():
         data = torch.load(
             args.text_path,
         )
-        # sort alphabetically by key to enable alphabetical filtering w/o losses
+        # sort alphabetically by key for alphabetical filtering
         data = dict(sorted(data.items()))
 
     if not args.include_languages:
@@ -377,8 +375,7 @@ def main():
 
     # 1 wandb run for all language-dataset combinations
     if "wandb" in training_args.report_to and training_args.process_index == 0:
-        # TODO: don't hardcode entity
-        wandb.init(name=wandb_name, project=args.wandb_project, group=wandb_name, entity="markus_583")
+        wandb.init(name=wandb_name, project=args.wandb_project, group=wandb_name)
         wandb.config.update(args)
         wandb.config.update(training_args)
         wandb.config.update(label_args)
@@ -410,11 +407,10 @@ def main():
                     # not available.
                     print("SKIP: ", lang, dataset_name)
                     continue
+                if not any(x in dataset_name for x in ["ersatz", "opus", "ud"]):
+                    print("SKIP: ", lang, dataset_name)
+                    continue
                 print("RUNNING:", dataset_name, lang)
-                # skip langs starting with a, b, ..., k
-                # if lang.startswith(tuple("abcd")):
-                #     print(f"Skipping {lang} {dataset_name}")
-                #     continue
                 # do model stuff here; otherwise, head params would be overwritten every time
                 backbone = SubwordXLMForTokenClassification.from_pretrained(
                     args.model_name_or_path, config=copy.deepcopy(config), ignore_mismatched_sizes=True
@@ -440,7 +436,7 @@ def main():
                 if "short" in dataset_name:
                     one_sample_per_line = True
                 else:
-                    one_sample_per_line = args.one_sample_per_line
+                    one_sample_per_line = args.one_sample_per_line  # used for lyrics
 
                 model = Model(
                     backbone,
@@ -496,8 +492,7 @@ def main():
                     model = trainer._wrap_model(trainer.model, training=False)
 
                     with training_args.main_process_first():
-                        # XXX: feeding in single samples is too slow --> feed in as one long text
-                        # also for lyrics, tweets, ...
+                        # feeding in single samples is too slow --> feed in as one long text
                         if args.one_sample_per_line:
                             eval_data = [item for sublist in eval_data for item in sublist]
                         elif isinstance(eval_data[0], list):
@@ -506,26 +501,14 @@ def main():
                             lang,
                             eval_data,
                             model,
-                            stride=128,
-                            block_size=512,
+                            stride=args.eval_stride,
+                            block_size=args.block_size,
                             batch_size=training_args.per_device_eval_batch_size,
                         )
                         metrics[f"{dataset_name}/{lang}/pr_auc"] = score
                         metrics[f"{dataset_name}/{lang}/f1"] = info["f1"]
                         metrics[f"{dataset_name}/{lang}/f1_best"] = info["f1_best"]
                         metrics[f"{dataset_name}/{lang}/threshold_best"] = info["threshold_best"]
-                        if args.eval_pairwise:
-                            score_pairwise, avg_acc = evaluate_sentence_pairwise(
-                                lang,
-                                eval_data,
-                                model,
-                                stride=args.eval_stride,
-                                block_size=args.block_size,
-                                batch_size=training_args.per_device_eval_batch_size,
-                                threshold=0.1,
-                            )
-                            metrics[f"{dataset_name}/{lang}/pairwise/pr_auc"] = score_pairwise
-                            metrics[f"{dataset_name}/{lang}/pairwise/acc"] = avg_acc
 
                     return metrics
 
@@ -541,7 +524,7 @@ def main():
                     model.backbone.train_adapter("text")
                     kwargs = {"logging_prefix": f"{dataset_name}/{lang}/", "skip_eval_loss": args.skip_eval_loss}
                 else:
-                    # needed in the trainer otherwise
+                    # needed in the trainer otherwise (WtP-related only)
                     training_args.adapter_warmup_steps = args.adapter_warmup_steps
                     training_args.adapter_lr_multiplier = args.adapter_lr_multiplier
                     kwargs = {}
@@ -553,23 +536,10 @@ def main():
                     for n, p in model.backbone.named_parameters():
                         if "classifier" in n:
                             p.requires_grad = False
+                # not done: keeping clf head is much better
                 if args.clf_from_scratch:
                     model.backbone.classifier = torch.nn.Linear(model.backbone.config.hidden_size, num_labels)
 
-                if args.unfreeze_ln:
-                    for n, p in model.backbone.named_parameters():
-                        if "LayerNorm" in n:
-                            p.requires_grad = True
-
-                if args.meta_clf:
-                    clf = model.backbone.classifier
-                    model.backbone.classifier = torch.nn.Sequential(
-                        clf,  # original classifier - if frozen above, also frozen here
-                        torch.nn.Linear(clf.out_features, 1),
-                    )
-                    model.backbone.config.num_labels = 1
-
-                # if args.one_sample_per_line:
                 # eval only 5x during the entire training
                 training_args.evaluation_strategy = "steps"
                 training_args.eval_steps = max(
@@ -584,7 +554,6 @@ def main():
                 )
 
                 trainer_cls = AdapterTrainer if adapter_args.train_adapter else Trainer
-                # add logging_prefix and skip_eval_loss as args to trainer_cls if trainer_cls is AdapterTrainer only
 
                 trainer = trainer_cls(
                     model,
@@ -604,6 +573,8 @@ def main():
                 )
                 trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
                 logger.warning(f"Finished training for {lang} {dataset_name}.")
+                
+                # only save trained module
                 if training_args.local_rank == 0:
                     if not os.path.exists(os.path.join(training_args.output_dir, dataset_name, lang)):
                         os.makedirs(os.path.join(training_args.output_dir, dataset_name, lang))
@@ -617,34 +588,6 @@ def main():
                         )
                     else:
                         save_model.to("cpu").save_pretrained(os.path.join(training_args.output_dir, dataset_name, lang))
-    # TODO
-    # if training_args.local_rank == 0:
-    #     # eval here within 1 go
-    #     cmd = ""
-
-    #     if args.eval_pairwise:
-    #         eval_function = "intrinsic_pairwise"
-    #     elif args.one_sample_per_line:
-    #         eval_function = "intrinsic_list"
-    #     else:
-    #         eval_function = "intrinsic"
-    #     if args.do_lowercase and args.do_remove_punct:
-    #         suffix = "--do_lowercase --do_remove_punct"
-    #     elif "multilingual" in trainings_args.model_name_or_path:
-    #         suffix = "--threshold 0.5"
-    #     else:
-    #         suffix = ""
-    #     if "adapter" in training_args.output_dir:
-    #         model_info = f"--model_path {args.model_name_or_path} --adapter_path {training_args.output_dir}"
-    #     else:
-    #         model_info = f"--model_path {training_args.output_dir}"
-
-    #     if "verses" in args.text_path or "lines" in args.text_path:
-    #         cmd = f"python3 wtpsplit/evaluation/{eval_function}.py {model_info} --threshold 0.1 --custom_language_list data/mldb_langs.csv --eval_data_path {args.text_path} {suffix}"
-    #     else:
-    #         cmd = f"python3 wtpsplit/evaluation/{eval_function}.py {model_info} --threshold 0.1  {suffix}"
-    #     print(cmd)
-    #     os.system(cmd)
 
 
 def _mp_fn(index):
@@ -653,5 +596,4 @@ def _mp_fn(index):
 
 
 if __name__ == "__main__":
-    # try:
     main()
