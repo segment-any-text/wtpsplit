@@ -425,7 +425,7 @@ def align_llm_output(row):
         )
         # same as aligned_in, aligned_llm, but with additional formatting. Latter used to debug only.
         formatted_alignment = alignment._format_alignment(aligned_in, aligned_llm).split("\n")
-    except:
+    except:    # ruff: ignore=E722
         print("Alignment failed: ", row.name)
         formatted_alignment = [row["test_chunks"], "", " " * len(row["test_chunks"])]
     return pd.Series(

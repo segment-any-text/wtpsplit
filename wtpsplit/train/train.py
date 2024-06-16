@@ -34,7 +34,7 @@ from wtpsplit.models import (
 )
 from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.trainer import Trainer
-from wtpsplit.train.utils import Model, cleanup_cache_files
+from wtpsplit.train.utils import Model
 # from wtpsplit.train.utils import cleanup_cache_files
 from wtpsplit.utils import Constants, LabelArgs, corrupt_training, get_label_dict, get_subword_label_dict
 
