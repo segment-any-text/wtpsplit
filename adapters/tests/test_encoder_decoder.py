@@ -4,7 +4,7 @@ import unittest
 import adapters
 from hf_transformers.tests.models.encoder_decoder.test_modeling_encoder_decoder import *  # Imported to execute model tests
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, BertConfig
-from transformers.testing_utils import require_torch, torch_device
+from transformers.testing_utils import require_torch
 
 from .methods import (
     BottleneckAdapterTestMixin,

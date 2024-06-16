@@ -261,7 +261,7 @@ def main(args):
     ):
         try:
             model_path = os.path.join(args.model_path, os.listdir(args.model_path)[0], "en")
-        except:
+        except:  # noqa
             model_path = args.model_path
         print(model_path)
     else:

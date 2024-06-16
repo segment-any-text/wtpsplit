@@ -512,7 +512,7 @@ class SaT:
                     # merge lora weights into transformer for 0 efficiency overhead
                     self.model.model.merge_adapter("sat-lora")
                     self.use_lora = True
-                except:
+                except:  # noqa
                     if lora_path:
                         print(f"LoRA at {lora_path} not found, using base model...")
                     else:

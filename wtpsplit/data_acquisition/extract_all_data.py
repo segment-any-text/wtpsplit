@@ -93,7 +93,7 @@ def corrupt_asr(sentences, lang):
 
     try:
         tokenizer = MosesTokenizer(lang)
-    except:
+    except:  # noqa
         corrupted_sentences = [
             preprocess_sentence("".join([char for char in sentence if char not in punct_chars]).lower())
             for sentence in sentences

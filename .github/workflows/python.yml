@@ -25,7 +25,7 @@ jobs:
       - name: Lint with ruff
         run: |
           # stop the build if there are Python syntax errors or undefined names
-          ruff --output-format=github --select=E9,F63,F7,F82 --ignore=E722 --target-version=py37 .
+          ruff --output-format=github --select=E9,F63,F7,F82 --target-version=py37 .
           # default set of ruff rules with GitHub Annotations
           ruff --output-format=github --target-version=py37 .
       - name: Test with pytest

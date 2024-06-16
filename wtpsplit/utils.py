@@ -229,7 +229,7 @@ def corrupt_asr(text: str, lang):
         corrupted_sentences = [
             tokenizer.detokenize(corrupted_tokens).lower() for corrupted_tokens in corrupted_tokenized_sentences
         ]
-    except:
+    except:  # noqa
         corrupted_sentences = [
             "".join([char for char in sentence if char not in Constants.PUNCTUATION_CHARS]).lower()
             for sentence in sentences
