@@ -76,6 +76,7 @@ if is_accelerate_available():
         pass
 logger = logging.get_logger(__name__)
 
+TRAINING_ARGS_NAME = "training_args.bin"
 
 class AdapterTrainer(Trainer):
     def __init__(
