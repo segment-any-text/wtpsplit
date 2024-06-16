@@ -10,13 +10,14 @@ setup(
     install_requires=[
         "onnxruntime>=1.13.1",
         "transformers>=4.22.2",
-        "numpy>=1",
+        "numpy>=1.0,<=2.0",
         "scikit-learn>=1",
         "tqdm",
         "skops",
         "pandas>=1",
         "cached_property",  # for Py37
         "torchinfo",
+        "fast-mosestokenizer"
     ],
     url="https://github.com/bminixhofer/wtpsplit",
     package_data={"wtpsplit": ["data/*"]},
