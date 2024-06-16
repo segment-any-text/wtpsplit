@@ -581,7 +581,6 @@ if __name__ == "__main__":
     }
 
     # LEGAL
-
     langs = ["de", "en", "es", "fr", "it"]
 
     all_subset_data = {
