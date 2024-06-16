@@ -9,7 +9,6 @@ import sys
 import logging
 
 import h5py
-import skops.io as sio
 import torch
 from datasets import load_dataset
 from tqdm.auto import tqdm
@@ -290,7 +289,7 @@ def main(args):
 
     print(save_str)
     eval_data = torch.load(args.eval_data_path)
-    if "canine" in args.model_path and not "no-adapters" in args.model_path:
+    if "canine" in args.model_path and "no-adapters" not in args.model_path:
         eval_data = split_language_data(eval_data)
     if args.valid_text_path is not None:
         valid_data = load_dataset("parquet", data_files=args.valid_text_path, split="train")

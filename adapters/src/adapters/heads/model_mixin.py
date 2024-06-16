@@ -707,7 +707,10 @@ class ModelWithFlexibleHeadsAdaptersMixin(ModelWithHeadsAdaptersMixin):
             if len(model.base_model_prefix) > 0 and not any(
                 s.startswith(model.base_model_prefix) for s in loaded_keys
             ):
-                rename_func = lambda x: model.base_model_prefix + "." + x if x not in head_state_dict else x
+                def rename_func(x):
+                    if x not in head_state_dict:
+                        return model.base_model_prefix + "." + x
+                    return x
                 state_dict = {rename_func(k): v for k, v in state_dict.items()}
                 loaded_keys = [rename_func(k) for k in loaded_keys]
 

@@ -742,6 +742,8 @@ def get_head_config_and_rename_list(model_class_name, head_name, label2id, num_l
             escaped_name = re.escape(name)
             rename_list.append((rf"{escaped_name}\.(\S+)", f"heads.{head_name}.{i}.{{0}}"))
         i += 1
-    rename_func = lambda k, rename_list=rename_list: _regex_list_rename_func(k, rename_list)
+    def rename_func(k, rename_list=rename_list):
+        return _regex_list_rename_func(k, rename_list)
+
 
     return config, rename_func

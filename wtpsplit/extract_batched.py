@@ -3,7 +3,6 @@ import sys
 import logging
 
 import numpy as np
-from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 from tokenizers import AddedToken
 

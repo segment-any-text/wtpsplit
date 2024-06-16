@@ -1,12 +1,10 @@
 import copy
 import math
-import warnings
 from typing import List, Optional, Tuple, Union
 
 import torch
 from torch import Tensor, nn
 from torch.nn import CrossEntropyLoss
-from torchinfo import summary
 from transformers import AutoModel, AutoModelForTokenClassification
 from transformers.modeling_outputs import (
     BaseModelOutputWithPoolingAndCrossAttentions,
@@ -40,7 +38,6 @@ from transformers.models.xlm_roberta import (
 )
 from transformers.models.xlm_roberta.modeling_xlm_roberta import (
     XLMRobertaEmbeddings,
-    XLMRobertaEncoder,
     XLMRobertaPooler,
     XLMRobertaLayer,
 )
@@ -1395,30 +1392,30 @@ AutoModelForTokenClassification.register(BertCharConfig, BertCharForTokenClassif
 AutoModel.register(SubwordXLMConfig, SubwordXLMForTokenClassification)
 AutoModelForTokenClassification.register(SubwordXLMConfig, SubwordXLMForTokenClassification)
 
-if __name__ == "__main__":
-    # test XLM
-    from transformers import AutoConfig, AutoTokenizer
+# if __name__ == "__main__":
+#     # test XLM
+#     from transformers import AutoTokenizer
 
-    model_str = "xlm-roberta-base"
-    config = SubwordXLMConfig.from_pretrained(model_str)
-    config.num_labels = 4
-    config.num_hidden_layers = 12
-    config.lookahead = 48
-    config.lookahead_split_layers = 6
-    backbone = SubwordXLMForTokenClassification.from_pretrained(model_str, config=config)
-    print(summary(backbone, depth=4))
+#     model_str = "xlm-roberta-base"
+#     config = SubwordXLMConfig.from_pretrained(model_str)
+#     config.num_labels = 4
+#     config.num_hidden_layers = 12
+#     config.lookahead = 48
+#     config.lookahead_split_layers = 6
+#     backbone = SubwordXLMForTokenClassification.from_pretrained(model_str, config=config)
+#     print(summary(backbone, depth=4))
 
-    # some sample input
-    text = "A sentence. Now we move on. And on and this is the last sentence. Now, we are starting to move on to the next sentence. This is the last sentence."
-    tokenizer = AutoTokenizer.from_pretrained(model_str)
+#     # some sample input
+#     text = "A sentence. Now we move on. And on and this is the last sentence. Now, we are starting to move on to the next sentence. This is the last sentence."
+#     tokenizer = AutoTokenizer.from_pretrained(model_str)
 
-    tokens = tokenizer(text, return_tensors="pt", add_special_tokens=False, pad_to_multiple_of=512, padding=True)
-    from tokenizers import AddedToken
+#     tokens = tokenizer(text, return_tensors="pt", add_special_tokens=False, pad_to_multiple_of=512, padding=True)
+#     from tokenizers import AddedToken
 
-    tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
-    print(tokenizer.tokenize(text))
-    print(tokenizer.encode(text))
-    print(tokens)
+#     tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
+#     print(tokenizer.tokenize(text))
+#     print(tokenizer.encode(text))
+#     print(tokens)
 
-    # forward pass
-    print(backbone(**tokens))
+#     # forward pass
+#     print(backbone(**tokens))

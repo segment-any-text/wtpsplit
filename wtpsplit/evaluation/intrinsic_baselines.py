@@ -152,7 +152,7 @@ if __name__ == "__main__":
                         indices[lang][dataset_name][name]["length"] = [metrics.pop("length")]
                         results[lang][dataset_name][name] = metrics
                 except LanguageError as e:
-                    print("Language not supported for", name)
+                    print("Language not supported for", name, e)
                     results[lang][dataset_name][name] = None
 
     json.dump(results, open(Constants.CACHE_DIR / "intrinsic_baselines.json", "w"), indent=4, default=int)

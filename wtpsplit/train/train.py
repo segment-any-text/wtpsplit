@@ -4,7 +4,7 @@ import os
 import random
 import shutil
 import sys
-import time
+# import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from functools import partial
@@ -17,7 +17,7 @@ import torch
 import torch_xla.core.xla_model as xm
 import transformers
 from datasets import load_dataset
-from datasets.download import DownloadConfig
+# from datasets.download import DownloadConfig
 from tokenizers import AddedToken
 from torchinfo import summary
 from tqdm.auto import tqdm
@@ -35,6 +35,7 @@ from wtpsplit.models import (
 from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.trainer import Trainer
 from wtpsplit.train.utils import Model, cleanup_cache_files
+# from wtpsplit.train.utils import cleanup_cache_files
 from wtpsplit.utils import Constants, LabelArgs, corrupt_training, get_label_dict, get_subword_label_dict
 
 logger = logging.getLogger(__name__)

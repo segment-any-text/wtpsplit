@@ -152,7 +152,7 @@ def validate_composition(adapter_composition: AdapterCompositionBlock, level=0, 
                     f"Models of type {model_type} don't support adapter composition using {block_type.__name__}."
                 )
         for child in adapter_composition:
-            if not type(child) in ALLOWED_NESTINGS[type(adapter_composition)]:
+            if type(child) not in ALLOWED_NESTINGS[type(adapter_composition)]:
                 raise ValueError(f"Adapter setup is invalid. Cannot nest {child} in {adapter_composition}")
             # recursively validate children
             validate_composition(child, level=level + 1)
