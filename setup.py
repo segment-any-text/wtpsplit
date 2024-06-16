@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name="segment-any-text",
     version="1.0.0",
-    packages=["segment-any-text"],
+    packages=["wtpsplit"],
     description="Universal Robust, Efficient and Adaptable Sentence Segmentation",
     author="Markus Frohmann, Igor Sterner, Benjamin Minixhofer",
     author_email="markus.frohmann@gmail.com",
