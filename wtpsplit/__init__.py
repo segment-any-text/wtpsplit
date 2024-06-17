@@ -15,7 +15,7 @@ from transformers.utils.hub import cached_file
 
 import adapters
 from wtpsplit.evaluation import token_to_char_probs
-from wtpsplit.extract import ORTWrapper, PyTorchWrapper, extract
+from wtpsplit.extract import BertCharORTWrapper, PyTorchWrapper, SaTORTWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid
 
 __version__ = "1.0.0"
@@ -74,13 +74,15 @@ class WtP:
 
                 try:
                     import onnxruntime as ort  # noqa
+
+                    ort.set_default_logger_severity(0)
                 except ModuleNotFoundError:
                     raise ValueError("Please install `onnxruntime` to use WtP with an ONNX model.")
 
                 # to register models for AutoConfig
                 import wtpsplit.configs  # noqa
 
-                self.model = ORTWrapper(
+                self.model = BertCharORTWrapper(
                     AutoConfig.from_pretrained(model_name_to_fetch, **(from_pretrained_kwargs or {})),
                     ort.InferenceSession(str(onnx_path), providers=ort_providers, **(ort_kwargs or {})),
                 )
@@ -449,6 +451,8 @@ class SaT:
 
                 try:
                     import onnxruntime as ort  # noqa
+
+                    ort.set_default_logger_severity(0)
                 except ModuleNotFoundError:
                     raise ValueError("Please install `onnxruntime` to use WtP with an ONNX model.")
 
@@ -456,7 +460,7 @@ class SaT:
                 import wtpsplit.configs  # noqa
 
                 # TODO: ONNX integration
-                self.model = ORTWrapper(
+                self.model = SaTORTWrapper(
                     AutoConfig.from_pretrained(model_name_to_fetch, **(from_pretrained_kwargs or {})),
                     ort.InferenceSession(str(onnx_path), providers=ort_providers, **(ort_kwargs or {})),
                 )
@@ -707,12 +711,21 @@ class SaT:
 
 
 if __name__ == "__main__":
-    sat_lora = SaT("sat-3l", style_or_domain="ud", language="en")
-    out = sat_lora.split(
-        "Hello this is a test But this is different now Now the next one starts looool",
-        do_paragraph_segmentation=False,
-        strip_whitespace=True,
-    )
-    print(out)
-    splits = list(sat_lora.split(["Paragraph-A Paragraph-B", "Paragraph-C100 Paragraph-D"]))
+    # sat_lora = SaT("sat-3l", style_or_domain="ud", language="en")
+    # out = sat_lora.split(
+    #     "Hello this is a test But this is different now Now the next one starts looool",
+    #     do_paragraph_segmentation=False,
+    #     strip_whitespace=True,
+    # )
+    # print(out)
+    # splits = list(sat_lora.split(["Paragraph-A Paragraph-B", "Paragraph-C100 Paragraph-D"]))
+    # print(splits)
+    # sat_sm = SaT("sat-12l-sm")
+    # splits = sat_sm.split("This is a test sentence. This is another test sentence.", threshold=0.25)
+    # print(splits)
+    sat_ort_sm = SaT("/home/Markus/wtpsplit/scripts/sat-12l-sm", ort_providers=["CPUExecutionProvider"])
+    splits = sat_ort_sm.split("This is a test sentence. This is another test sentence.", threshold=0.25)
     print(splits)
+    # wtp = WtP("wtp-bert-mini", ort_providers=["CPUExecutionProvider"])
+
+    # splits = wtp.split("This is a test sentence This is another test sentence.", threshold=0.005)

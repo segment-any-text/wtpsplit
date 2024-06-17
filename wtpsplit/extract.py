@@ -12,7 +12,7 @@ from wtpsplit.utils import Constants, hash_encode
 logger = logging.getLogger(__name__)
 
 
-class ORTWrapper:
+class BertCharORTWrapper:
     def __init__(self, config, ort_session):
         self.config = config
         self.ort_session = ort_session
@@ -32,6 +32,26 @@ class ORTWrapper:
 
         return {"logits": logits}
 
+class SaTORTWrapper:
+    def __init__(self, config, ort_session):
+        self.config = config
+        self.ort_session = ort_session
+
+    def __getattr__(self, name):
+        assert hasattr(self, "ort_session")
+        return getattr(self.ort_session, name)
+
+    def __call__(self, input_ids, attention_mask):
+        logits = self.ort_session.run(
+            ["logits"],
+            {
+                "attention_mask": attention_mask.astype(np.int64),
+                "input_ids": input_ids.astype(np.int64)
+            },
+        )[0]
+
+        return {"logits": logits}
+
 
 class PyTorchWrapper:
     def __init__(self, model):
@@ -42,7 +62,7 @@ class PyTorchWrapper:
         assert hasattr(self, "model")
         return getattr(self.model, name)
 
-    def __call__(self, input_ids, hashed_ids, attention_mask, language_ids=None):
+    def __call__(self, hashed_ids, attention_mask, language_ids=None, input_ids=None):
         try:
             import torch
         except ImportError:
@@ -111,11 +131,10 @@ def extract(
 
     # total number of forward passes
     num_chunks = sum(math.ceil(max(length - actual_block_size, 0) / stride) + 1 for length in text_lengths)
-    if text_lengths[0] <= max_block_size - 2:
+    if text_lengths[0] <= max_block_size - 2 and use_subwords:
         # if the input is smaller than the block size, we only need one forward pass
         num_chunks = 1
-        if use_subwords:
-            actual_block_size, block_size = actual_block_size + 2, block_size + 2  # account for CLS and SEP tokens
+        actual_block_size, block_size = actual_block_size + 2, block_size + 2  # account for CLS and SEP tokens
 
     # preallocate a buffer for all input hashes & attention masks
     if not use_subwords:
@@ -187,7 +206,7 @@ def extract(
         if lang_code is None:
             raise ValueError("Please specify a `lang_code` when using a model with language adapters.")
 
-        if isinstance(model, ORTWrapper):
+        if isinstance(model, BertCharORTWrapper):
             raise ValueError("Language adapters are not supported in ONNX models.")
 
         language_ids = np.array(
@@ -218,10 +237,12 @@ def extract(
             batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
 
         kwargs = {"language_ids": language_ids[: len(batch_attention_mask)]} if uses_lang_adapters else {}
+        if use_subwords:
+            kwargs["input_ids"] = batch_input_ids
+        else:
+            kwargs["hashed_ids"] = batch_input_hashes
 
         logits = model(
-            input_ids=batch_input_ids if use_subwords else None,
-            hashed_ids=None if use_subwords else batch_input_hashes,
             attention_mask=batch_attention_mask,
             **kwargs,
         )["logits"]

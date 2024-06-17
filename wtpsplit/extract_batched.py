@@ -7,7 +7,7 @@ from transformers import AutoTokenizer
 from tokenizers import AddedToken
 
 from wtpsplit.utils import Constants, hash_encode
-from wtpsplit.extract import ORTWrapper
+from wtpsplit.extract import BertCharORTWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ def extract_batched(
         if lang_code is None:
             raise ValueError("Please specify a `lang_code` when using a model with language adapters.")
 
-        if isinstance(model, ORTWrapper):
+        if isinstance(model, BertCharORTWrapper):
             raise ValueError("Language adapters are not supported in ONNX models.")
 
         language_ids = np.array(
