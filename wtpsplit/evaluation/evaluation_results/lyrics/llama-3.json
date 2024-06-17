@@ -1,0 +1,516 @@
+{
+    "en": {
+        "lyrics-Alternative Metal": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.47571215989814275,
+                "f1_success": 0.47571215989814275,
+                "recall": 0.8120123066897259,
+                "recall_success": 0.8120123066897259,
+                "precision": 0.4428542106670182,
+                "precision_success": 0.4428542106670182,
+                "correct_pairwise": 0.0,
+                "correct_pairwise_success": 0.0,
+                "hallucination_rate": 0.0028618859176862475,
+                "hallucination_rate_success": 0.0028618859176862475,
+                "deletion_rate": 0.004320942548054267,
+                "deletion_rate_success": 0.004320942548054267
+            }
+        },
+        "lyrics-Alternative Metal-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5232335423354388,
+                "f1_success": 0.5232335423354388,
+                "recall": 0.5962992921057435,
+                "recall_success": 0.5962992921057435,
+                "precision": 0.5938863772846535,
+                "precision_success": 0.5938863772846535,
+                "correct_pairwise": 0.025806451612903226,
+                "correct_pairwise_success": 0.025806451612903226,
+                "hallucination_rate": 0.002817763188822882,
+                "hallucination_rate_success": 0.002817763188822882,
+                "deletion_rate": 0.007514711290043217,
+                "deletion_rate_success": 0.007514711290043217
+            }
+        },
+        "lyrics-Alternative Rock": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.4927912082835997,
+                "f1_success": 0.4927912082835997,
+                "recall": 0.8650785519532082,
+                "recall_success": 0.8650785519532082,
+                "precision": 0.4368440390032589,
+                "precision_success": 0.4368440390032589,
+                "correct_pairwise": 0.01985981308411215,
+                "correct_pairwise_success": 0.01985981308411215,
+                "hallucination_rate": 0.0031471912540192155,
+                "hallucination_rate_success": 0.0031471912540192155,
+                "deletion_rate": 0.007142651676932983,
+                "deletion_rate_success": 0.007142651676932983
+            }
+        },
+        "lyrics-Alternative Rock-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5407653146280289,
+                "f1_success": 0.5407653146280289,
+                "recall": 0.6421414011436002,
+                "recall_success": 0.6421414011436002,
+                "precision": 0.6030560546580574,
+                "precision_success": 0.6030560546580574,
+                "correct_pairwise": 0.012850467289719626,
+                "correct_pairwise_success": 0.012850467289719626,
+                "hallucination_rate": 0.005968895538800839,
+                "hallucination_rate_success": 0.005968895538800839,
+                "deletion_rate": 0.012948717437108426,
+                "deletion_rate_success": 0.012948717437108426
+            }
+        },
+        "lyrics-Country": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.46990725530633265,
+                "f1_success": 0.46990725530633265,
+                "recall": 0.8950296421815411,
+                "recall_success": 0.8950296421815411,
+                "precision": 0.3846907482224643,
+                "precision_success": 0.3846907482224643,
+                "correct_pairwise": 0.03938115330520394,
+                "correct_pairwise_success": 0.03938115330520394,
+                "hallucination_rate": 0.0038347409729824543,
+                "hallucination_rate_success": 0.0038347409729824543,
+                "deletion_rate": 0.004177017770087422,
+                "deletion_rate_success": 0.004177017770087422
+            }
+        },
+        "lyrics-Country-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5461575882937414,
+                "f1_success": 0.5461575882937414,
+                "recall": 0.6908638556317879,
+                "recall_success": 0.6908638556317879,
+                "precision": 0.5518917528540344,
+                "precision_success": 0.5518917528540344,
+                "correct_pairwise": 0.02390998593530239,
+                "correct_pairwise_success": 0.02390998593530239,
+                "hallucination_rate": 0.005769656112096943,
+                "hallucination_rate_success": 0.005769656112096943,
+                "deletion_rate": 0.006843178640639219,
+                "deletion_rate_success": 0.006843178640639219
+            }
+        },
+        "lyrics-Gangsta Rap": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.3280520114572881,
+                "f1_success": 0.3280520114572881,
+                "recall": 0.7226021374458873,
+                "recall_success": 0.7226021374458873,
+                "precision": 0.3010132164573576,
+                "precision_success": 0.3010132164573576,
+                "correct_pairwise": 0.015625,
+                "correct_pairwise_success": 0.015625,
+                "hallucination_rate": 0.002672397716042446,
+                "hallucination_rate_success": 0.002672397716042446,
+                "deletion_rate": 0.020529351582990605,
+                "deletion_rate_success": 0.020529351582990605
+            }
+        },
+        "lyrics-Gangsta Rap-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.36163431551826364,
+                "f1_success": 0.36163431551826364,
+                "recall": 0.49132965558746794,
+                "recall_success": 0.49132965558746794,
+                "precision": 0.3923645110723202,
+                "precision_success": 0.3923645110723202,
+                "correct_pairwise": 0.015625,
+                "correct_pairwise_success": 0.015625,
+                "hallucination_rate": 0.0005653571996204706,
+                "hallucination_rate_success": 0.0005653571996204706,
+                "deletion_rate": 0.033429576473969276,
+                "deletion_rate_success": 0.033429576473969276
+            }
+        },
+        "lyrics-Hard Rock": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.4873554112780847,
+                "f1_success": 0.4873554112780847,
+                "recall": 0.8568046685796338,
+                "recall_success": 0.8568046685796338,
+                "precision": 0.4175304224728504,
+                "precision_success": 0.4175304224728504,
+                "correct_pairwise": 0.013953488372093023,
+                "correct_pairwise_success": 0.013953488372093023,
+                "hallucination_rate": 0.004263309423223886,
+                "hallucination_rate_success": 0.004263309423223886,
+                "deletion_rate": 0.005194537236623749,
+                "deletion_rate_success": 0.005194537236623749
+            }
+        },
+        "lyrics-Hard Rock-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5218410057954037,
+                "f1_success": 0.5218410057954037,
+                "recall": 0.6338722692416265,
+                "recall_success": 0.6338722692416265,
+                "precision": 0.574149862807808,
+                "precision_success": 0.574149862807808,
+                "correct_pairwise": 0.0069767441860465115,
+                "correct_pairwise_success": 0.0069767441860465115,
+                "hallucination_rate": 0.005252136328205107,
+                "hallucination_rate_success": 0.005252136328205107,
+                "deletion_rate": 0.009611467898911217,
+                "deletion_rate_success": 0.009611467898911217
+            }
+        },
+        "lyrics-Heavy Metal": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.4713740817195306,
+                "f1_success": 0.4713740817195306,
+                "recall": 0.8276989441205126,
+                "recall_success": 0.8276989441205126,
+                "precision": 0.41988739484271953,
+                "precision_success": 0.41988739484271953,
+                "correct_pairwise": 0.027777777777777776,
+                "correct_pairwise_success": 0.027777777777777776,
+                "hallucination_rate": 0.004125768761574286,
+                "hallucination_rate_success": 0.004125768761574286,
+                "deletion_rate": 0.004090632121435744,
+                "deletion_rate_success": 0.004090632121435744
+            }
+        },
+        "lyrics-Heavy Metal-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.4920087151834146,
+                "f1_success": 0.4920087151834146,
+                "recall": 0.601009798579028,
+                "recall_success": 0.601009798579028,
+                "precision": 0.5523882992192902,
+                "precision_success": 0.5523882992192902,
+                "correct_pairwise": 0.009259259259259259,
+                "correct_pairwise_success": 0.009259259259259259,
+                "hallucination_rate": 0.003629584208979596,
+                "hallucination_rate_success": 0.003629584208979596,
+                "deletion_rate": 0.005104671063477011,
+                "deletion_rate_success": 0.005104671063477011
+            }
+        },
+        "lyrics-Hip Hop": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.35661311390596717,
+                "f1_success": 0.35661311390596717,
+                "recall": 0.6972772552568671,
+                "recall_success": 0.6972772552568671,
+                "precision": 0.33490122048504134,
+                "precision_success": 0.33490122048504134,
+                "correct_pairwise": 0.008356545961002786,
+                "correct_pairwise_success": 0.008356545961002786,
+                "hallucination_rate": 0.0016279138100711865,
+                "hallucination_rate_success": 0.0016279138100711865,
+                "deletion_rate": 0.01972996251149363,
+                "deletion_rate_success": 0.01972996251149363
+            }
+        },
+        "lyrics-Hip Hop-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.3811124446129976,
+                "f1_success": 0.3811124446129976,
+                "recall": 0.45429892135369676,
+                "recall_success": 0.45429892135369676,
+                "precision": 0.445708414433919,
+                "precision_success": 0.445708414433919,
+                "correct_pairwise": 0.002785515320334262,
+                "correct_pairwise_success": 0.002785515320334262,
+                "hallucination_rate": 0.004314719579215101,
+                "hallucination_rate_success": 0.004314719579215101,
+                "deletion_rate": 0.031030264629988456,
+                "deletion_rate_success": 0.031030264629988456
+            }
+        },
+        "lyrics-Indie Rock": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.48355534701288366,
+                "f1_success": 0.48355534701288366,
+                "recall": 0.8618755671516678,
+                "recall_success": 0.8618755671516678,
+                "precision": 0.42070837579064496,
+                "precision_success": 0.42070837579064496,
+                "correct_pairwise": 0.009836065573770493,
+                "correct_pairwise_success": 0.009836065573770493,
+                "hallucination_rate": 0.002408457329505608,
+                "hallucination_rate_success": 0.002408457329505608,
+                "deletion_rate": 0.003792629718803859,
+                "deletion_rate_success": 0.003792629718803859
+            }
+        },
+        "lyrics-Indie Rock-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.539864799612169,
+                "f1_success": 0.539864799612169,
+                "recall": 0.6704107966618751,
+                "recall_success": 0.6704107966618751,
+                "precision": 0.5768639594241539,
+                "precision_success": 0.5768639594241539,
+                "correct_pairwise": 0.013114754098360656,
+                "correct_pairwise_success": 0.013114754098360656,
+                "hallucination_rate": 0.006402296622954274,
+                "hallucination_rate_success": 0.006402296622954274,
+                "deletion_rate": 0.009230011525746217,
+                "deletion_rate_success": 0.009230011525746217
+            }
+        },
+        "lyrics-Pop": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.469954728584912,
+                "f1_success": 0.469954728584912,
+                "recall": 0.8163465843002439,
+                "recall_success": 0.8163465843002439,
+                "precision": 0.43992955608031453,
+                "precision_success": 0.43992955608031453,
+                "correct_pairwise": 0.02132435465768799,
+                "correct_pairwise_success": 0.02132435465768799,
+                "hallucination_rate": 0.0038892259327546613,
+                "hallucination_rate_success": 0.0038892259327546613,
+                "deletion_rate": 0.005039723008703935,
+                "deletion_rate_success": 0.005039723008703935
+            }
+        },
+        "lyrics-Pop Punk": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.4946987234481033,
+                "f1_success": 0.4946987234481033,
+                "recall": 0.8208832341811065,
+                "recall_success": 0.8208832341811065,
+                "precision": 0.4593284825077087,
+                "precision_success": 0.4593284825077087,
+                "correct_pairwise": 0.0070921985815602835,
+                "correct_pairwise_success": 0.0070921985815602835,
+                "hallucination_rate": 0.004645805843607475,
+                "hallucination_rate_success": 0.004645805843607475,
+                "deletion_rate": 0.0044133656695961474,
+                "deletion_rate_success": 0.0044133656695961474
+            }
+        },
+        "lyrics-Pop Punk-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5705073967936827,
+                "f1_success": 0.5705073967936827,
+                "recall": 0.6146541992286672,
+                "recall_success": 0.6146541992286672,
+                "precision": 0.6563566038743089,
+                "precision_success": 0.6563566038743089,
+                "correct_pairwise": 0.0070921985815602835,
+                "correct_pairwise_success": 0.0070921985815602835,
+                "hallucination_rate": 0.006023352744393245,
+                "hallucination_rate_success": 0.006023352744393245,
+                "deletion_rate": 0.008012511651428128,
+                "deletion_rate_success": 0.008012511651428128
+            }
+        },
+        "lyrics-Pop Rock": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.4711883947176374,
+                "f1_success": 0.4711883947176374,
+                "recall": 0.8527220675055368,
+                "recall_success": 0.8527220675055368,
+                "precision": 0.4179975141379932,
+                "precision_success": 0.4179975141379932,
+                "correct_pairwise": 0.019417475728155338,
+                "correct_pairwise_success": 0.019417475728155338,
+                "hallucination_rate": 0.003299162753881552,
+                "hallucination_rate_success": 0.003299162753881552,
+                "deletion_rate": 0.005054984111733084,
+                "deletion_rate_success": 0.005054984111733084
+            }
+        },
+        "lyrics-Pop Rock-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5277145690521913,
+                "f1_success": 0.5277145690521913,
+                "recall": 0.6445151133570916,
+                "recall_success": 0.6445151133570916,
+                "precision": 0.5705202364093735,
+                "precision_success": 0.5705202364093735,
+                "correct_pairwise": 0.01699029126213592,
+                "correct_pairwise_success": 0.01699029126213592,
+                "hallucination_rate": 0.0046537848672379084,
+                "hallucination_rate_success": 0.0046537848672379084,
+                "deletion_rate": 0.008868443110152885,
+                "deletion_rate_success": 0.008868443110152885
+            }
+        },
+        "lyrics-Pop-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5169027427161252,
+                "f1_success": 0.5169027427161252,
+                "recall": 0.6245401945762101,
+                "recall_success": 0.6245401945762101,
+                "precision": 0.5827947482607292,
+                "precision_success": 0.5827947482607292,
+                "correct_pairwise": 0.01122334455667789,
+                "correct_pairwise_success": 0.01122334455667789,
+                "hallucination_rate": 0.006421711010705094,
+                "hallucination_rate_success": 0.006421711010705094,
+                "deletion_rate": 0.009229849466959296,
+                "deletion_rate_success": 0.009229849466959296
+            }
+        },
+        "lyrics-Punk Rock": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5018948749058487,
+                "f1_success": 0.5018948749058487,
+                "recall": 0.8389908565625527,
+                "recall_success": 0.8389908565625527,
+                "precision": 0.4466888137337874,
+                "precision_success": 0.4466888137337874,
+                "correct_pairwise": 0.015789473684210527,
+                "correct_pairwise_success": 0.015789473684210527,
+                "hallucination_rate": 0.0032100253821084747,
+                "hallucination_rate_success": 0.0032100253821084747,
+                "deletion_rate": 0.0052815679982145675,
+                "deletion_rate_success": 0.0052815679982145675
+            }
+        },
+        "lyrics-Punk Rock-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5348527914122733,
+                "f1_success": 0.5348527914122733,
+                "recall": 0.688915080357153,
+                "recall_success": 0.688915080357153,
+                "precision": 0.5553741132105721,
+                "precision_success": 0.5553741132105721,
+                "correct_pairwise": 0.021052631578947368,
+                "correct_pairwise_success": 0.021052631578947368,
+                "hallucination_rate": 0.00463885935636689,
+                "hallucination_rate_success": 0.00463885935636689,
+                "deletion_rate": 0.006733275639224856,
+                "deletion_rate_success": 0.006733275639224856
+            }
+        },
+        "lyrics-RnB": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.4569610063918978,
+                "f1_success": 0.4569610063918978,
+                "recall": 0.725223477839801,
+                "recall_success": 0.725223477839801,
+                "precision": 0.46136623472987565,
+                "precision_success": 0.46136623472987565,
+                "correct_pairwise": 0.017486338797814208,
+                "correct_pairwise_success": 0.017486338797814208,
+                "hallucination_rate": 0.003071638709458078,
+                "hallucination_rate_success": 0.003071638709458078,
+                "deletion_rate": 0.011804183130616298,
+                "deletion_rate_success": 0.011804183130616298
+            }
+        },
+        "lyrics-RnB-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.4735712247816916,
+                "f1_success": 0.4735712247816916,
+                "recall": 0.525471205809609,
+                "recall_success": 0.525471205809609,
+                "precision": 0.5689081467996766,
+                "precision_success": 0.5689081467996766,
+                "correct_pairwise": 0.006557377049180328,
+                "correct_pairwise_success": 0.006557377049180328,
+                "hallucination_rate": 0.004552839880019815,
+                "hallucination_rate_success": 0.004552839880019815,
+                "deletion_rate": 0.013471080225304303,
+                "deletion_rate_success": 0.013471080225304303
+            }
+        },
+        "lyrics-Rock": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.48225109961929474,
+                "f1_success": 0.48225109961929474,
+                "recall": 0.8518827864646923,
+                "recall_success": 0.8518827864646923,
+                "precision": 0.42013912240143403,
+                "precision_success": 0.42013912240143403,
+                "correct_pairwise": 0.02284263959390863,
+                "correct_pairwise_success": 0.02284263959390863,
+                "hallucination_rate": 0.003711453963284602,
+                "hallucination_rate_success": 0.003711453963284602,
+                "deletion_rate": 0.006557807247720643,
+                "deletion_rate_success": 0.006557807247720643
+            }
+        },
+        "lyrics-Rock-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5377580890388446,
+                "f1_success": 0.5377580890388446,
+                "recall": 0.6684055473491832,
+                "recall_success": 0.6684055473491832,
+                "precision": 0.5686608084479471,
+                "precision_success": 0.5686608084479471,
+                "correct_pairwise": 0.023688663282571912,
+                "correct_pairwise_success": 0.023688663282571912,
+                "hallucination_rate": 0.004436346851859637,
+                "hallucination_rate_success": 0.004436346851859637,
+                "deletion_rate": 0.007239958332443037,
+                "deletion_rate_success": 0.007239958332443037
+            }
+        },
+        "lyrics-Soul": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.4869711724510954,
+                "f1_success": 0.4869711724510954,
+                "recall": 0.813061300350211,
+                "recall_success": 0.813061300350211,
+                "precision": 0.4468388221570048,
+                "precision_success": 0.4468388221570048,
+                "correct_pairwise": 0.01818181818181818,
+                "correct_pairwise_success": 0.01818181818181818,
+                "hallucination_rate": 0.001864791148739862,
+                "hallucination_rate_success": 0.001864791148739862,
+                "deletion_rate": 0.006594616753692189,
+                "deletion_rate_success": 0.006594616753692189
+            }
+        },
+        "lyrics-Soul-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5194884554678562,
+                "f1_success": 0.5194884554678562,
+                "recall": 0.6125367149346883,
+                "recall_success": 0.6125367149346883,
+                "precision": 0.5870334031004198,
+                "precision_success": 0.5870334031004198,
+                "correct_pairwise": 0.00909090909090909,
+                "correct_pairwise_success": 0.00909090909090909,
+                "hallucination_rate": 0.001632130662386947,
+                "hallucination_rate_success": 0.001632130662386947,
+                "deletion_rate": 0.013857480261042563,
+                "deletion_rate_success": 0.013857480261042563
+            }
+        },
+        "lyrics-Southern Hip Hop": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.34744561438565164,
+                "f1_success": 0.34744561438565164,
+                "recall": 0.7384071522577631,
+                "recall_success": 0.7384071522577631,
+                "precision": 0.3224396620726566,
+                "precision_success": 0.3224396620726566,
+                "correct_pairwise": 0.004807692307692308,
+                "correct_pairwise_success": 0.004807692307692308,
+                "hallucination_rate": 0.0015509072107167997,
+                "hallucination_rate_success": 0.0015509072107167997,
+                "deletion_rate": 0.012350043088450526,
+                "deletion_rate_success": 0.012350043088450526
+            }
+        },
+        "lyrics-Southern Hip Hop-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.3664443742407662,
+                "f1_success": 0.3664443742407662,
+                "recall": 0.4828060928186684,
+                "recall_success": 0.4828060928186684,
+                "precision": 0.38539508300173686,
+                "precision_success": 0.38539508300173686,
+                "correct_pairwise": 0.004807692307692308,
+                "correct_pairwise_success": 0.004807692307692308,
+                "hallucination_rate": 0.006252788235703268,
+                "hallucination_rate_success": 0.006252788235703268,
+                "deletion_rate": 0.02770300046784307,
+                "deletion_rate_success": 0.02770300046784307
+            }
+        }
+    }
+}

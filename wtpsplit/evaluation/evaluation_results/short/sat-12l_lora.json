@@ -1,0 +1,1137 @@
+{
+    "af": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8441025641025642,
+            "t": 0.8580512820512821,
+            "punct": null,
+            "u_acc": 0.5723076923076923,
+            "t_acc": 0.6123076923076923,
+            "punct_acc": null,
+            "threshold_t": 0.19579030573368073,
+            "threshold_adj": 0.5
+        }
+    },
+    "am": {
+        "ted2020-corrupted-asr": {
+            "u": 0.7440104166666666,
+            "t": 0.7867187499999999,
+            "punct": null,
+            "u_acc": 0.2890625,
+            "t_acc": 0.4140625,
+            "punct_acc": null,
+            "threshold_t": 0.3118801414966583,
+            "threshold_adj": 0.5
+        }
+    },
+    "ar": {
+        "ersatz": {
+            "u": 0.9404255319148935,
+            "t": 0.915691489361702,
+            "punct": null,
+            "u_acc": 0.8218085106382979,
+            "t_acc": 0.7473404255319149,
+            "punct_acc": null,
+            "threshold_t": 0.9947788715362549,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.820327619047619,
+            "t": 0.8249466666666667,
+            "punct": null,
+            "u_acc": 0.5484,
+            "t_acc": 0.5652,
+            "punct_acc": null,
+            "threshold_t": 0.3529928922653198,
+            "threshold_adj": 0.5
+        }
+    },
+    "az": {
+        "ted2020-corrupted-asr": {
+            "u": 0.853230890464933,
+            "t": 0.8652876280535855,
+            "punct": null,
+            "u_acc": 0.6046099290780141,
+            "t_acc": 0.6465721040189125,
+            "punct_acc": null,
+            "threshold_t": 0.3037700057029724,
+            "threshold_adj": 0.5
+        }
+    },
+    "be": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8668397144711227,
+            "t": 0.872853125675968,
+            "punct": null,
+            "u_acc": 0.6580142764438677,
+            "t_acc": 0.6781310837118754,
+            "punct_acc": null,
+            "threshold_t": 0.2582862079143524,
+            "threshold_adj": 0.5
+        }
+    },
+    "bg": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8578800000000001,
+            "t": 0.8707866666666667,
+            "punct": null,
+            "u_acc": 0.6264,
+            "t_acc": 0.6624,
+            "punct_acc": null,
+            "threshold_t": 0.2115507870912552,
+            "threshold_adj": 0.5
+        }
+    },
+    "bn": {
+        "ted2020-corrupted-asr": {
+            "u": 0.7255897435897436,
+            "t": 0.7263882783882784,
+            "punct": null,
+            "u_acc": 0.3169230769230769,
+            "t_acc": 0.3230769230769231,
+            "punct_acc": null,
+            "threshold_t": 0.4404241442680359,
+            "threshold_adj": 0.5
+        }
+    },
+    "ca": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8634933333333332,
+            "t": 0.8732533333333333,
+            "punct": null,
+            "u_acc": 0.6472,
+            "t_acc": 0.6648,
+            "punct_acc": null,
+            "threshold_t": 0.1559576392173767,
+            "threshold_adj": 0.5
+        }
+    },
+    "ceb": {
+        "ted2020-corrupted-asr": {
+            "u": 0.6904761904761905,
+            "t": 0.7357142857142857,
+            "punct": null,
+            "u_acc": 0.07142857142857142,
+            "t_acc": 0.2857142857142857,
+            "punct_acc": null,
+            "threshold_t": 0.29914459586143494,
+            "threshold_adj": 0.5
+        }
+    },
+    "cs": {
+        "ersatz": {
+            "u": 0.9532407407407406,
+            "t": 0.9612654320987654,
+            "punct": null,
+            "u_acc": 0.8587962962962963,
+            "t_acc": 0.8819444444444444,
+            "punct_acc": null,
+            "threshold_t": 0.19247128069400787,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8686799999999999,
+            "t": 0.8644060606060606,
+            "punct": null,
+            "u_acc": 0.652,
+            "t_acc": 0.6404,
+            "punct_acc": null,
+            "threshold_t": 0.6012640595436096,
+            "threshold_adj": 0.5
+        }
+    },
+    "cy": {},
+    "da": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8879466666666666,
+            "t": 0.8923466666666665,
+            "punct": null,
+            "u_acc": 0.7028,
+            "t_acc": 0.7172,
+            "punct_acc": null,
+            "threshold_t": 0.3706859350204468,
+            "threshold_adj": 0.5
+        }
+    },
+    "de": {
+        "ersatz": {
+            "u": 0.9971486761710795,
+            "t": 0.9952477936184656,
+            "punct": null,
+            "u_acc": 0.9898167006109979,
+            "t_acc": 0.9857433808553971,
+            "punct_acc": null,
+            "threshold_t": 0.9587974548339844,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8975200000000001,
+            "t": 0.90828,
+            "punct": null,
+            "u_acc": 0.7244,
+            "t_acc": 0.756,
+            "punct_acc": null,
+            "threshold_t": 0.1908755898475647,
+            "threshold_adj": 0.5
+        }
+    },
+    "el": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8702799999999999,
+            "t": 0.8766507936507937,
+            "punct": null,
+            "u_acc": 0.6588,
+            "t_acc": 0.6752,
+            "punct_acc": null,
+            "threshold_t": 0.22551190853118896,
+            "threshold_adj": 0.5
+        }
+    },
+    "en": {
+        "ersatz": {
+            "u": 0.9948251990308065,
+            "t": 0.9941502249913464,
+            "punct": null,
+            "u_acc": 0.9844236760124611,
+            "t_acc": 0.9818276220145379,
+            "punct_acc": null,
+            "threshold_t": 0.913185715675354,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8873022222222222,
+            "t": 0.8986133333333335,
+            "punct": null,
+            "u_acc": 0.7012,
+            "t_acc": 0.7316,
+            "punct_acc": null,
+            "threshold_t": 0.2006220817565918,
+            "threshold_adj": 0.5
+        }
+    },
+    "eo": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8494152046783625,
+            "t": 0.864640768588137,
+            "punct": null,
+            "u_acc": 0.6109022556390977,
+            "t_acc": 0.649749373433584,
+            "punct_acc": null,
+            "threshold_t": 0.19565223157405853,
+            "threshold_adj": 0.5
+        }
+    },
+    "es": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8610228571428572,
+            "t": 0.8745961904761905,
+            "punct": null,
+            "u_acc": 0.6332,
+            "t_acc": 0.6672,
+            "punct_acc": null,
+            "threshold_t": 0.19770503044128418,
+            "threshold_adj": 0.5
+        }
+    },
+    "et": {
+        "ersatz": {
+            "u": 0.9841269841269841,
+            "t": 0.9697089947089946,
+            "punct": null,
+            "u_acc": 0.9484126984126984,
+            "t_acc": 0.9067460317460317,
+            "punct_acc": null,
+            "threshold_t": 0.954222559928894,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8734687719298244,
+            "t": 0.8884307692307691,
+            "punct": null,
+            "u_acc": 0.6692,
+            "t_acc": 0.7056,
+            "punct_acc": null,
+            "threshold_t": 0.11381562054157257,
+            "threshold_adj": 0.5
+        }
+    },
+    "eu": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8090725806451613,
+            "t": 0.811491935483871,
+            "punct": null,
+            "u_acc": 0.5114247311827957,
+            "t_acc": 0.521505376344086,
+            "punct_acc": null,
+            "threshold_t": 0.4130879044532776,
+            "threshold_adj": 0.5
+        }
+    },
+    "fa": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8414685714285713,
+            "t": 0.8513085714285713,
+            "punct": null,
+            "u_acc": 0.5824,
+            "t_acc": 0.6136,
+            "punct_acc": null,
+            "threshold_t": 0.29287630319595337,
+            "threshold_adj": 0.5
+        }
+    },
+    "fi": {
+        "ersatz": {
+            "u": 0.9986639946559785,
+            "t": 0.9866399465597862,
+            "punct": null,
+            "u_acc": 0.9959919839679359,
+            "t_acc": 0.9599198396793587,
+            "punct_acc": null,
+            "threshold_t": 0.9984474778175354,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8743866666666666,
+            "t": 0.8867200000000001,
+            "punct": null,
+            "u_acc": 0.6648,
+            "t_acc": 0.6868,
+            "punct_acc": null,
+            "threshold_t": 0.10764780640602112,
+            "threshold_adj": 0.5
+        }
+    },
+    "fr": {
+        "ersatz": {
+            "u": 0.9925925925925926,
+            "t": 0.985829307568438,
+            "punct": null,
+            "u_acc": 0.9758454106280193,
+            "t_acc": 0.9565217391304348,
+            "punct_acc": null,
+            "threshold_t": 0.9767431616783142,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.87324,
+            "t": 0.8812933333333333,
+            "punct": null,
+            "u_acc": 0.6696,
+            "t_acc": 0.6908,
+            "punct_acc": null,
+            "threshold_t": 0.27513280510902405,
+            "threshold_adj": 0.5
+        }
+    },
+    "fy": {},
+    "ga": {
+        "ted2020-corrupted-asr": {
+            "u": 0.638888888888889,
+            "t": 0.6376984126984128,
+            "punct": null,
+            "u_acc": 0.16666666666666666,
+            "t_acc": 0.25,
+            "punct_acc": null,
+            "threshold_t": 0.32635071873664856,
+            "threshold_adj": 0.5
+        }
+    },
+    "gd": {},
+    "gl": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8596,
+            "t": 0.8748419047619049,
+            "punct": null,
+            "u_acc": 0.6288,
+            "t_acc": 0.6728,
+            "punct_acc": null,
+            "threshold_t": 0.19677530229091644,
+            "threshold_adj": 0.5
+        }
+    },
+    "gu": {
+        "ersatz": {
+            "u": 0.9069553805774279,
+            "t": 0.8930446194225721,
+            "punct": null,
+            "u_acc": 0.7244094488188977,
+            "t_acc": 0.6811023622047244,
+            "punct_acc": null,
+            "threshold_t": 0.913463830947876,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7578386056141364,
+            "t": 0.7618325388800616,
+            "punct": null,
+            "u_acc": 0.391304347826087,
+            "t_acc": 0.4089989888776542,
+            "punct_acc": null,
+            "threshold_t": 0.38816583156585693,
+            "threshold_adj": 0.5
+        }
+    },
+    "ha": {
+        "ted2020-corrupted-asr": {
+            "u": 0.7777777777777777,
+            "t": 0.6666666666666666,
+            "punct": null,
+            "u_acc": 0.3333333333333333,
+            "t_acc": 0.0,
+            "punct_acc": null,
+            "threshold_t": 0.7916362881660461,
+            "threshold_adj": 0.5
+        }
+    },
+    "he": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8383009523809524,
+            "t": 0.8413142857142859,
+            "punct": null,
+            "u_acc": 0.5952,
+            "t_acc": 0.6036,
+            "punct_acc": null,
+            "threshold_t": 0.4341721832752228,
+            "threshold_adj": 0.5
+        }
+    },
+    "hi": {
+        "ersatz": {
+            "u": 0.8715873015873015,
+            "t": 0.8306878306878307,
+            "punct": null,
+            "u_acc": 0.6158730158730159,
+            "t_acc": 0.4936507936507937,
+            "punct_acc": null,
+            "threshold_t": 0.957030177116394,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8040933333333333,
+            "t": 0.8094133333333334,
+            "punct": null,
+            "u_acc": 0.4988,
+            "t_acc": 0.516,
+            "punct_acc": null,
+            "threshold_t": 0.37882882356643677,
+            "threshold_adj": 0.5
+        }
+    },
+    "hu": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8615333333333333,
+            "t": 0.8631733333333333,
+            "punct": null,
+            "u_acc": 0.6416,
+            "t_acc": 0.6472,
+            "punct_acc": null,
+            "threshold_t": 0.4466886818408966,
+            "threshold_adj": 0.5
+        }
+    },
+    "hy": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8523733333333333,
+            "t": 0.8592933333333335,
+            "punct": null,
+            "u_acc": 0.6284,
+            "t_acc": 0.6432,
+            "punct_acc": null,
+            "threshold_t": 0.27335861325263977,
+            "threshold_adj": 0.5
+        }
+    },
+    "id": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8466266666666666,
+            "t": 0.8632666666666666,
+            "punct": null,
+            "u_acc": 0.5992,
+            "t_acc": 0.6476,
+            "punct_acc": null,
+            "threshold_t": 0.19267326593399048,
+            "threshold_adj": 0.5
+        }
+    },
+    "ig": {
+        "ted2020-corrupted-asr": {
+            "u": 0.6602564102564104,
+            "t": 0.5974358974358973,
+            "punct": null,
+            "u_acc": 0.038461538461538464,
+            "t_acc": 0.07692307692307693,
+            "punct_acc": null,
+            "threshold_t": 0.2033560574054718,
+            "threshold_adj": 0.5
+        }
+    },
+    "is": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8411365564037321,
+            "t": 0.8466497031382528,
+            "punct": null,
+            "u_acc": 0.5801526717557252,
+            "t_acc": 0.6030534351145038,
+            "punct_acc": null,
+            "threshold_t": 0.11891120672225952,
+            "threshold_adj": 0.5
+        }
+    },
+    "it": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8621866666666667,
+            "t": 0.8683066666666668,
+            "punct": null,
+            "u_acc": 0.6384,
+            "t_acc": 0.6576,
+            "punct_acc": null,
+            "threshold_t": 0.30462852120399475,
+            "threshold_adj": 0.5
+        }
+    },
+    "ja": {
+        "ersatz": {
+            "u": 0.9463930348258707,
+            "t": 0.8967661691542288,
+            "punct": null,
+            "u_acc": 0.8395522388059702,
+            "t_acc": 0.6902985074626866,
+            "punct_acc": null,
+            "threshold_t": 0.9985142350196838,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.9796666666666668,
+            "t": 0.977,
+            "punct": null,
+            "u_acc": 0.9416,
+            "t_acc": 0.9336,
+            "punct_acc": null,
+            "threshold_t": 0.7422925233840942,
+            "threshold_adj": 0.5
+        }
+    },
+    "jv": {},
+    "ka": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8170533333333333,
+            "t": 0.8292666666666666,
+            "punct": null,
+            "u_acc": 0.5388,
+            "t_acc": 0.5672,
+            "punct_acc": null,
+            "threshold_t": 0.1828896701335907,
+            "threshold_adj": 0.5
+        }
+    },
+    "kk": {
+        "ersatz": {
+            "u": 0.9773333333333334,
+            "t": 0.9453333333333332,
+            "punct": null,
+            "u_acc": 0.932,
+            "t_acc": 0.836,
+            "punct_acc": null,
+            "threshold_t": 0.9638625979423523,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8501026694045175,
+            "t": 0.87191421400867,
+            "punct": null,
+            "u_acc": 0.5879534565366188,
+            "t_acc": 0.6584531143052703,
+            "punct_acc": null,
+            "threshold_t": 0.1676095873117447,
+            "threshold_adj": 0.5
+        }
+    },
+    "km": {
+        "ersatz": {
+            "u": 0.9624858757062147,
+            "t": 0.963728813559322,
+            "punct": null,
+            "u_acc": 0.8932203389830509,
+            "t_acc": 0.8949152542372881,
+            "punct_acc": null,
+            "threshold_t": 0.8011752963066101,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.9395989974937343,
+            "t": 0.9433941997851771,
+            "punct": null,
+            "u_acc": 0.8270676691729323,
+            "t_acc": 0.8120300751879699,
+            "punct_acc": null,
+            "threshold_t": 0.17783597111701965,
+            "threshold_adj": 0.5
+        }
+    },
+    "kn": {
+        "ted2020-corrupted-asr": {
+            "u": 0.7015151515151515,
+            "t": 0.6996669996669997,
+            "punct": null,
+            "u_acc": 0.26223776223776224,
+            "t_acc": 0.2692307692307692,
+            "punct_acc": null,
+            "threshold_t": 0.3851678967475891,
+            "threshold_adj": 0.5
+        }
+    },
+    "ko": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8284799999999999,
+            "t": 0.82836,
+            "punct": null,
+            "u_acc": 0.5404,
+            "t_acc": 0.54,
+            "punct_acc": null,
+            "threshold_t": 0.5049299001693726,
+            "threshold_adj": 0.5
+        }
+    },
+    "ku": {
+        "ted2020-corrupted-asr": {
+            "u": 0.7300800000000001,
+            "t": 0.7284666666666666,
+            "punct": null,
+            "u_acc": 0.32,
+            "t_acc": 0.3384,
+            "punct_acc": null,
+            "threshold_t": 0.3670436441898346,
+            "threshold_adj": 0.5
+        }
+    },
+    "ky": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8065359477124183,
+            "t": 0.8052287581699347,
+            "punct": null,
+            "u_acc": 0.4411764705882353,
+            "t_acc": 0.43137254901960786,
+            "punct_acc": null,
+            "threshold_t": 0.5519641637802124,
+            "threshold_adj": 0.5
+        }
+    },
+    "la": {
+        "ted2020-corrupted-asr": {
+            "u": 0.611111111111111,
+            "t": 0.5555555555555555,
+            "punct": null,
+            "u_acc": 0.0,
+            "t_acc": 0.0,
+            "punct_acc": null,
+            "threshold_t": 0.2783312499523163,
+            "threshold_adj": 0.5
+        }
+    },
+    "lt": {
+        "ersatz": {
+            "u": 0.9665333333333334,
+            "t": 0.9433333333333332,
+            "punct": null,
+            "u_acc": 0.9,
+            "t_acc": 0.832,
+            "punct_acc": null,
+            "threshold_t": 0.9372919201850891,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8645333333333333,
+            "t": 0.8694,
+            "punct": null,
+            "u_acc": 0.6472,
+            "t_acc": 0.6584,
+            "punct_acc": null,
+            "threshold_t": 0.372035950422287,
+            "threshold_adj": 0.5
+        }
+    },
+    "lv": {
+        "ersatz": {
+            "u": 0.987037037037037,
+            "t": 0.9605820105820105,
+            "punct": null,
+            "u_acc": 0.9603174603174603,
+            "t_acc": 0.8809523809523809,
+            "punct_acc": null,
+            "threshold_t": 0.9802069067955017,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8688799999999999,
+            "t": 0.8791542857142857,
+            "punct": null,
+            "u_acc": 0.6612,
+            "t_acc": 0.6884,
+            "punct_acc": null,
+            "threshold_t": 0.22174270451068878,
+            "threshold_adj": 0.5
+        }
+    },
+    "mg": {
+        "ted2020-corrupted-asr": {
+            "u": 0.76358024691358,
+            "t": 0.7520576131687242,
+            "punct": null,
+            "u_acc": 0.3888888888888889,
+            "t_acc": 0.3333333333333333,
+            "punct_acc": null,
+            "threshold_t": 0.5807532072067261,
+            "threshold_adj": 0.5
+        }
+    },
+    "mk": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8565142857142859,
+            "t": 0.8612993939393938,
+            "punct": null,
+            "u_acc": 0.6244,
+            "t_acc": 0.6404,
+            "punct_acc": null,
+            "threshold_t": 0.38633400201797485,
+            "threshold_adj": 0.5
+        }
+    },
+    "ml": {
+        "ted2020-corrupted-asr": {
+            "u": 0.7187389770723104,
+            "t": 0.7185689090450996,
+            "punct": null,
+            "u_acc": 0.2962962962962963,
+            "t_acc": 0.30687830687830686,
+            "punct_acc": null,
+            "threshold_t": 0.34563663601875305,
+            "threshold_adj": 0.5
+        }
+    },
+    "mn": {
+        "ted2020-corrupted-asr": {
+            "u": 0.9208864069264069,
+            "t": 0.9283752380952381,
+            "punct": null,
+            "u_acc": 0.7816,
+            "t_acc": 0.8032,
+            "punct_acc": null,
+            "threshold_t": 0.1847454309463501,
+            "threshold_adj": 0.5
+        }
+    },
+    "mr": {
+        "ted2020-corrupted-asr": {
+            "u": 0.7603200000000001,
+            "t": 0.7627009523809524,
+            "punct": null,
+            "u_acc": 0.3948,
+            "t_acc": 0.4172,
+            "punct_acc": null,
+            "threshold_t": 0.3679860234260559,
+            "threshold_adj": 0.5
+        }
+    },
+    "ms": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8376280663780663,
+            "t": 0.8514365079365079,
+            "punct": null,
+            "u_acc": 0.575595238095238,
+            "t_acc": 0.6154761904761905,
+            "punct_acc": null,
+            "threshold_t": 0.22683577239513397,
+            "threshold_adj": 0.5
+        }
+    },
+    "mt": {
+        "ted2020-corrupted-asr": {
+            "u": 0.6794871794871795,
+            "t": 0.7012820512820513,
+            "punct": null,
+            "u_acc": 0.038461538461538464,
+            "t_acc": 0.11538461538461539,
+            "punct_acc": null,
+            "threshold_t": 0.30841144919395447,
+            "threshold_adj": 0.5
+        }
+    },
+    "my": {
+        "ted2020-corrupted-asr": {
+            "u": 0.9689599999999998,
+            "t": 0.9679333333333332,
+            "punct": null,
+            "u_acc": 0.9104,
+            "t_acc": 0.9072,
+            "punct_acc": null,
+            "threshold_t": 0.6025581955909729,
+            "threshold_adj": 0.5
+        }
+    },
+    "ne": {
+        "ted2020-corrupted-asr": {
+            "u": 0.7977691977691977,
+            "t": 0.7928785928785929,
+            "punct": null,
+            "u_acc": 0.49613899613899615,
+            "t_acc": 0.47297297297297297,
+            "punct_acc": null,
+            "threshold_t": 0.5876527428627014,
+            "threshold_adj": 0.5
+        }
+    },
+    "nl": {
+        "ted2020-corrupted-asr": {
+            "u": 0.9138266666666667,
+            "t": 0.9254609523809524,
+            "punct": null,
+            "u_acc": 0.764,
+            "t_acc": 0.7888,
+            "punct_acc": null,
+            "threshold_t": 0.08820687979459763,
+            "threshold_adj": 0.5
+        }
+    },
+    "no": {},
+    "pa": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8088652482269505,
+            "t": 0.8120567375886526,
+            "punct": null,
+            "u_acc": 0.44680851063829785,
+            "t_acc": 0.44680851063829785,
+            "punct_acc": null,
+            "threshold_t": 0.49258989095687866,
+            "threshold_adj": 0.5
+        }
+    },
+    "pl": {
+        "ersatz": {
+            "u": 0.9713147410358566,
+            "t": 0.9673306772908367,
+            "punct": null,
+            "u_acc": 0.9123505976095617,
+            "t_acc": 0.900398406374502,
+            "punct_acc": null,
+            "threshold_t": 0.9030606746673584,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8744533333333333,
+            "t": 0.8789066666666666,
+            "punct": null,
+            "u_acc": 0.6716,
+            "t_acc": 0.6868,
+            "punct_acc": null,
+            "threshold_t": 0.3802283704280853,
+            "threshold_adj": 0.5
+        }
+    },
+    "ps": {
+        "ersatz": {
+            "u": 0.9789345063538611,
+            "t": 0.963782991202346,
+            "punct": null,
+            "u_acc": 0.9413489736070382,
+            "t_acc": 0.8944281524926686,
+            "punct_acc": null,
+            "threshold_t": 0.9997029900550842,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8018248175182482,
+            "t": 0.7811030008110301,
+            "punct": null,
+            "u_acc": 0.5255474452554745,
+            "t_acc": 0.45985401459854014,
+            "punct_acc": null,
+            "threshold_t": 0.6427596807479858,
+            "threshold_adj": 0.5
+        }
+    },
+    "pt": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8806933333333334,
+            "t": 0.8905066666666666,
+            "punct": null,
+            "u_acc": 0.6916,
+            "t_acc": 0.7164,
+            "punct_acc": null,
+            "threshold_t": 0.24612975120544434,
+            "threshold_adj": 0.5
+        }
+    },
+    "ro": {
+        "ersatz": {
+            "u": 0.936,
+            "t": 0.9046666666666665,
+            "punct": null,
+            "u_acc": 0.808,
+            "t_acc": 0.714,
+            "punct_acc": null,
+            "threshold_t": 0.9346901774406433,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.865415238095238,
+            "t": 0.8751085714285715,
+            "punct": null,
+            "u_acc": 0.6496,
+            "t_acc": 0.6732,
+            "punct_acc": null,
+            "threshold_t": 0.1866168975830078,
+            "threshold_adj": 0.5
+        }
+    },
+    "ru": {
+        "ersatz": {
+            "u": 0.9978494623655914,
+            "t": 0.9905913978494624,
+            "punct": null,
+            "u_acc": 0.9919354838709677,
+            "t_acc": 0.9717741935483871,
+            "punct_acc": null,
+            "threshold_t": 0.9972395896911621,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8733375438596491,
+            "t": 0.8789961904761904,
+            "punct": null,
+            "u_acc": 0.6716,
+            "t_acc": 0.69,
+            "punct_acc": null,
+            "threshold_t": 0.2638762891292572,
+            "threshold_adj": 0.5
+        }
+    },
+    "si": {
+        "ted2020-corrupted-asr": {
+            "u": 0.7674418604651163,
+            "t": 0.775968992248062,
+            "punct": null,
+            "u_acc": 0.34108527131782945,
+            "t_acc": 0.3798449612403101,
+            "punct_acc": null,
+            "threshold_t": 0.42813217639923096,
+            "threshold_adj": 0.5
+        }
+    },
+    "sk": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8788533333333333,
+            "t": 0.8840666666666668,
+            "punct": null,
+            "u_acc": 0.6788,
+            "t_acc": 0.6984,
+            "punct_acc": null,
+            "threshold_t": 0.36077985167503357,
+            "threshold_adj": 0.5
+        }
+    },
+    "sl": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8806133333333334,
+            "t": 0.8925219047619048,
+            "punct": null,
+            "u_acc": 0.6792,
+            "t_acc": 0.7176,
+            "punct_acc": null,
+            "threshold_t": 0.2213369607925415,
+            "threshold_adj": 0.5
+        }
+    },
+    "sq": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8482666666666666,
+            "t": 0.8580876190476192,
+            "punct": null,
+            "u_acc": 0.6084,
+            "t_acc": 0.632,
+            "punct_acc": null,
+            "threshold_t": 0.20154695212841034,
+            "threshold_adj": 0.5
+        }
+    },
+    "sr": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8560666666666666,
+            "t": 0.8596342857142858,
+            "punct": null,
+            "u_acc": 0.624,
+            "t_acc": 0.6364,
+            "punct_acc": null,
+            "threshold_t": 0.4065939784049988,
+            "threshold_adj": 0.5
+        }
+    },
+    "sv": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8836,
+            "t": 0.8968,
+            "punct": null,
+            "u_acc": 0.6864,
+            "t_acc": 0.7212,
+            "punct_acc": null,
+            "threshold_t": 0.20190034806728363,
+            "threshold_adj": 0.5
+        }
+    },
+    "ta": {
+        "ersatz": {
+            "u": 0.948074369189907,
+            "t": 0.9387782204515271,
+            "punct": null,
+            "u_acc": 0.8446215139442231,
+            "t_acc": 0.8167330677290837,
+            "punct_acc": null,
+            "threshold_t": 0.7620065808296204,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7515302491103204,
+            "t": 0.7519132350449076,
+            "punct": null,
+            "u_acc": 0.3736654804270463,
+            "t_acc": 0.3822064056939502,
+            "punct_acc": null,
+            "threshold_t": 0.439586877822876,
+            "threshold_adj": 0.5
+        }
+    },
+    "te": {
+        "ted2020-corrupted-asr": {
+            "u": 0.7735649546827795,
+            "t": 0.7732628398791541,
+            "punct": null,
+            "u_acc": 0.43051359516616317,
+            "t_acc": 0.43202416918429004,
+            "punct_acc": null,
+            "threshold_t": 0.4583691358566284,
+            "threshold_adj": 0.5
+        }
+    },
+    "tg": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8219298245614034,
+            "t": 0.8219298245614035,
+            "punct": null,
+            "u_acc": 0.5,
+            "t_acc": 0.5,
+            "punct_acc": null,
+            "threshold_t": 0.4422083795070648,
+            "threshold_adj": 0.5
+        }
+    },
+    "th": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8222835294117645,
+            "t": 0.8294743394536498,
+            "punct": null,
+            "u_acc": 0.5416,
+            "t_acc": 0.5716,
+            "punct_acc": null,
+            "threshold_t": 0.25836485624313354,
+            "threshold_adj": 0.5
+        }
+    },
+    "tr": {
+        "ersatz": {
+            "u": 0.989095744680851,
+            "t": 0.983554964539007,
+            "punct": null,
+            "u_acc": 0.9654255319148937,
+            "t_acc": 0.9521276595744681,
+            "punct_acc": null,
+            "threshold_t": 0.9601643085479736,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8487066666666666,
+            "t": 0.8664695438596491,
+            "punct": null,
+            "u_acc": 0.5808,
+            "t_acc": 0.6388,
+            "punct_acc": null,
+            "threshold_t": 0.1862250566482544,
+            "threshold_adj": 0.5
+        }
+    },
+    "uk": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8644400000000001,
+            "t": 0.8778666666666668,
+            "punct": null,
+            "u_acc": 0.6456,
+            "t_acc": 0.6756,
+            "punct_acc": null,
+            "threshold_t": 0.1702127456665039,
+            "threshold_adj": 0.5
+        }
+    },
+    "ur": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8148681055155874,
+            "t": 0.8337224098272402,
+            "punct": null,
+            "u_acc": 0.5231243576567317,
+            "t_acc": 0.5765673175745119,
+            "punct_acc": null,
+            "threshold_t": 0.1470322459936142,
+            "threshold_adj": 0.5
+        }
+    },
+    "uz": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8401195499296765,
+            "t": 0.8565400843881856,
+            "punct": null,
+            "u_acc": 0.569620253164557,
+            "t_acc": 0.6181434599156118,
+            "punct_acc": null,
+            "threshold_t": 0.19590476155281067,
+            "threshold_adj": 0.5
+        }
+    },
+    "vi": {
+        "ted2020-corrupted-asr": {
+            "u": 0.8373466666666667,
+            "t": 0.8485638095238097,
+            "punct": null,
+            "u_acc": 0.574,
+            "t_acc": 0.6108,
+            "punct_acc": null,
+            "threshold_t": 0.2558405101299286,
+            "threshold_adj": 0.5
+        }
+    },
+    "xh": {},
+    "yi": {},
+    "yo": {},
+    "zh": {
+        "ersatz": {
+            "u": 0.9690666666666666,
+            "t": 0.9607333333333333,
+            "punct": null,
+            "u_acc": 0.908,
+            "t_acc": 0.88,
+            "punct_acc": null,
+            "threshold_t": 0.9007353782653809,
+            "threshold_adj": 0.5
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.9358999670944389,
+            "t": 0.9241526818032249,
+            "punct": null,
+            "u_acc": 0.8371174728529122,
+            "t_acc": 0.7941757156959526,
+            "punct_acc": null,
+            "threshold_t": 0.8769904375076294,
+            "threshold_adj": 0.5
+        }
+    },
+    "zu": {},
+    "tr-de": {},
+    "es-en": {},
+    "vi-en": {},
+    "en-de": {}
+}

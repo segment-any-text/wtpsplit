@@ -1,7 +1,8 @@
-import argparse
 import math
 import random
+import sys
 from collections import defaultdict
+from dataclasses import dataclass
 from itertools import cycle
 from typing import Iterable, List, Sequence, Tuple
 
@@ -11,21 +12,28 @@ import transformers
 from datasets import Dataset
 from torch.utils.data import BatchSampler, ConcatDataset, DataLoader, SubsetRandomSampler
 from tqdm import tqdm
-from transformers import AutoTokenizer, Trainer, TrainerCallback, TrainingArguments
+from transformers import AutoTokenizer, HfArgumentParser, Trainer, TrainerCallback, TrainingArguments
 
 import wandb
 from wtpsplit.models import SubwordXLMForTokenClassification
 from wtpsplit.utils import Constants
 
-parser = argparse.ArgumentParser()
 
-parser.add_argument("--block_size", type=int, default=256)
-parser.add_argument("--num_layers", type=int, default=12)
-parser.add_argument("--lim_lookahead", type=bool, default=False)
-parser.add_argument("--without_pretraining", type=bool, default=False)
-parser.add_argument("--no_sm_corruption", type=bool, default=False)
+@dataclass
+class Args:
+    block_size: int = 256
+    num_layers: int = 12
+    lim_lookahead: bool = False
+    without_pretraining: bool = False
+    no_sm_corruption: bool = False
 
-args = parser.parse_args()
+# Parsing command line arguments or JSON config files as needed
+parser = HfArgumentParser([Args, TrainingArguments])
+
+if len(sys.argv) > 1 and sys.argv[1].endswith(".json"):
+    args, training_args = parser.parse_json_file(sys.argv[1])
+else:
+    args, training_args = parser.parse_args_into_dataclasses()
 
 data_path = "data/all_data_11_05-all.pth"
 all_data = torch.load(data_path)
@@ -113,33 +121,33 @@ tokenizer_checkpoint = "xlm-roberta-base"
 if args.without_pretraining:
     model_checkpoint = "xlm-roberta-base"
 elif args.num_layers == 1:
-    if args.lim_lookahead:
-        raise NotImplementedError("Not implemented")
-    else:
+    if not args.lim_lookahead:
         model_checkpoint = "segment-any-text/sat-1l-no-limited-lookahead"
+    else:
+        model_checkpoint = "segment-any-text/sat-1l"
 elif args.num_layers == 3:
-    if args.lim_lookahead:
+    if not args.lim_lookahead:
         model_checkpoint = "segment-any-text/sat-3l-no-limited-lookahead"
     else:
         model_checkpoint = "segment-any-text/sat-3"
 elif args.num_layers == 6:
-    if args.lim_lookahead:
+    if not args.lim_lookahead:
         model_checkpoint = "segment-any-text/sat-6l-no-limited-lookahead"
     else:
         model_checkpoint = "segment-any-text/sat-6l"
 elif args.num_layers == 9:
-    if args.lim_lookahead:
+    if not args.lim_lookahead:
         model_checkpoint = "segment-any-text/sat-9l-no-limited-lookahead"
     else:
         model_checkpoint = "segment-any-text/sat-9l"
 elif args.num_layers == 12:
-    if args.lim_lookahead:
+    if not args.lim_lookahead:
         model_checkpoint = "segment-any-text/sat-12l-no-limited-lookahead"
     else:
         model_checkpoint = "segment-any-text/sat-12l"
 
 else:
-    raise ValueError("Invalid number of layers. Valid values are 3, 6, 12.")
+    raise ValueError("Invalid number of layers. Valid values are 1, 3, 6, 9, 12.")
 
 print(model_checkpoint)
 
@@ -291,10 +299,12 @@ for lang_code in packed_test_data:
 
 experiment_name = model_checkpoint.split("/")[-1]
 
-experiment_name += str(args.num_layers) + "L"
+# experiment_name += str(args.num_layers) + "L"
 
 if args.no_sm_corruption:
     experiment_name += "-no-corruption"
+
+training_args.output_dir = experiment_name
 
 
 def compute_prf(true_values, predicted_values):
@@ -375,24 +385,24 @@ train_datasets = ConcatDataset(train_datasets)
 run = wandb.init(project="sentence")
 wandb.run.name = experiment_name
 
-args = TrainingArguments(
-    output_dir=experiment_name,
-    overwrite_output_dir=True,
-    evaluation_strategy="steps",
-    eval_steps=250,
-    report_to="wandb",
-    learning_rate=3e-5,
-    warmup_steps=500,
-    per_device_train_batch_size=128,
-    per_device_eval_batch_size=128,
-    weight_decay=0.01,
-    push_to_hub=False,
-    save_total_limit=1,
-    save_strategy="steps",
-    save_steps=1000,
-    load_best_model_at_end=False,
-    max_steps=20000,
-)
+# args = TrainingArguments(
+#     output_dir=experiment_name,
+#     overwrite_output_dir=True,
+#     evaluation_strategy="steps",
+#     eval_steps=250,
+#     report_to="wandb",
+#     learning_rate=3e-5,
+#     warmup_steps=500,
+#     per_device_train_batch_size=128,
+#     per_device_eval_batch_size=128,
+#     weight_decay=0.01,
+#     push_to_hub=False,
+#     save_total_limit=1,
+#     save_strategy="steps",
+#     save_steps=1000,
+#     load_best_model_at_end=False,
+#     max_steps=20000,
+# )
 
 
 class RoundRobinSampler:
@@ -498,7 +508,7 @@ class CustomTrainer(Trainer):
 
 trainer = CustomTrainer(
     model=model,
-    args=args,
+    args=training_args,
     train_dataset=train_datasets,
     eval_dataset=None,
     compute_metrics=compute_metrics,

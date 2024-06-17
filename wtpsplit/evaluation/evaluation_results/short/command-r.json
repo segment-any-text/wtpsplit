@@ -1,0 +1,1884 @@
+{
+    "af": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.742041958041959,
+                "f1_success": 0.742041958041959,
+                "recall": 0.816923076923077,
+                "recall_success": 0.816923076923077,
+                "precision": 0.7184786324786321,
+                "precision_success": 0.7184786324786321,
+                "correct_pairwise": 0.3446153846153846,
+                "correct_pairwise_success": 0.3446153846153846,
+                "hallucination_rate": 0.00764430733741661,
+                "hallucination_rate_success": 0.00764430733741661,
+                "deletion_rate": 0.004539096958915308,
+                "deletion_rate_success": 0.004539096958915308
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "am": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7028645833333337,
+                "f1_success": 0.7028645833333337,
+                "recall": 0.5859375,
+                "recall_success": 0.5859375,
+                "precision": 0.9498697916666666,
+                "precision_success": 0.9498697916666666,
+                "correct_pairwise": 0.140625,
+                "correct_pairwise_success": 0.140625,
+                "hallucination_rate": 0.22776179957560075,
+                "hallucination_rate_success": 0.22776179957560075,
+                "deletion_rate": 0.000998149633337706,
+                "deletion_rate_success": 0.000998149633337706
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ar": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7364777964519267,
+                "f1_success": 0.7364777964519267,
+                "recall": 0.6774,
+                "recall_success": 0.6774,
+                "precision": 0.8922212987012994,
+                "precision_success": 0.8922212987012994,
+                "correct_pairwise": 0.254,
+                "correct_pairwise_success": 0.254,
+                "hallucination_rate": 0.028052573260608688,
+                "hallucination_rate_success": 0.028052573260608688,
+                "deletion_rate": 0.004170630067201417,
+                "deletion_rate_success": 0.004170630067201417
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.8997340425531926,
+                "f1_success": 0.8997340425531926,
+                "recall": 0.8882978723404256,
+                "recall_success": 0.8882978723404256,
+                "precision": 0.9485815602836883,
+                "precision_success": 0.9485815602836883,
+                "correct_pairwise": 0.6861702127659575,
+                "correct_pairwise_success": 0.6861702127659575,
+                "hallucination_rate": 0.013093681113866811,
+                "hallucination_rate_success": 0.013093681113866811,
+                "deletion_rate": 0.0062952431486673725,
+                "deletion_rate_success": 0.0062952431486673725
+            }
+        }
+    },
+    "az": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7184989387855792,
+                "f1_success": 0.7184989387855792,
+                "recall": 0.6734633569739953,
+                "recall_success": 0.6734633569739953,
+                "precision": 0.8577075124770172,
+                "precision_success": 0.8577075124770172,
+                "correct_pairwise": 0.22754137115839243,
+                "correct_pairwise_success": 0.22754137115839243,
+                "hallucination_rate": 0.1557517784699498,
+                "hallucination_rate_success": 0.1557517784699498,
+                "deletion_rate": 0.015544618649329984,
+                "deletion_rate_success": 0.015544618649329984
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "be": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.699917620167622,
+                "f1_success": 0.699917620167622,
+                "recall": 0.6502271252433485,
+                "recall_success": 0.6502271252433485,
+                "precision": 0.8284188921866898,
+                "precision_success": 0.8284188921866898,
+                "correct_pairwise": 0.23750811161583388,
+                "correct_pairwise_success": 0.23750811161583388,
+                "hallucination_rate": 0.04224054782250744,
+                "hallucination_rate_success": 0.04224054782250744,
+                "deletion_rate": 0.000725819717417133,
+                "deletion_rate_success": 0.000725819717417133
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "bg": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7194126007326134,
+                "f1_success": 0.7194126007326134,
+                "recall": 0.6442,
+                "recall_success": 0.6442,
+                "precision": 0.8904727272727274,
+                "precision_success": 0.8904727272727274,
+                "correct_pairwise": 0.2336,
+                "correct_pairwise_success": 0.2336,
+                "hallucination_rate": 0.02325590683961359,
+                "hallucination_rate_success": 0.02325590683961359,
+                "deletion_rate": 0.0018253831670905594,
+                "deletion_rate_success": 0.0018253831670905594
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "bn": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6657179487179382,
+                "f1_success": 0.6657179487179382,
+                "recall": 0.5053846153846154,
+                "recall_success": 0.5053846153846154,
+                "precision": 0.9882051282051281,
+                "precision_success": 0.9882051282051281,
+                "correct_pairwise": 0.006153846153846154,
+                "correct_pairwise_success": 0.006153846153846154,
+                "hallucination_rate": 0.00464046413817987,
+                "hallucination_rate_success": 0.00464046413817987,
+                "deletion_rate": 0.7237476183158241,
+                "deletion_rate_success": 0.7237476183158241
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ca": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7460609220019793,
+                "f1_success": 0.7460609220019793,
+                "recall": 0.7852,
+                "recall_success": 0.7852,
+                "precision": 0.7804090849673238,
+                "precision_success": 0.7804090849673238,
+                "correct_pairwise": 0.3104,
+                "correct_pairwise_success": 0.3104,
+                "hallucination_rate": 0.02332136398923648,
+                "hallucination_rate_success": 0.02332136398923648,
+                "deletion_rate": 0.008175682469222541,
+                "deletion_rate_success": 0.008175682469222541
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ceb": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6384353741496599,
+                "f1_success": 0.6384353741496599,
+                "recall": 0.6785714285714286,
+                "recall_success": 0.6785714285714286,
+                "precision": 0.6357142857142858,
+                "precision_success": 0.6357142857142858,
+                "correct_pairwise": 0.21428571428571427,
+                "correct_pairwise_success": 0.21428571428571427,
+                "hallucination_rate": 0.0036815730628342587,
+                "hallucination_rate_success": 0.0036815730628342587,
+                "deletion_rate": 0.0052742018792684125,
+                "deletion_rate_success": 0.0052742018792684125
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "cs": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7791565914787013,
+                "f1_success": 0.7791565914787013,
+                "recall": 0.7916,
+                "recall_success": 0.7916,
+                "precision": 0.8346138257408258,
+                "precision_success": 0.8346138257408258,
+                "correct_pairwise": 0.384,
+                "correct_pairwise_success": 0.384,
+                "hallucination_rate": 0.026411217300974118,
+                "hallucination_rate_success": 0.026411217300974118,
+                "deletion_rate": 0.00724844224249262,
+                "deletion_rate_success": 0.00724844224249262
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9236882716049395,
+                "f1_success": 0.9236882716049395,
+                "recall": 0.9293981481481481,
+                "recall_success": 0.9293981481481481,
+                "precision": 0.9375000000000002,
+                "precision_success": 0.9375000000000002,
+                "correct_pairwise": 0.7708333333333334,
+                "correct_pairwise_success": 0.7708333333333334,
+                "hallucination_rate": 0.008082900242980022,
+                "hallucination_rate_success": 0.008082900242980022,
+                "deletion_rate": 0.010235403370898902,
+                "deletion_rate_success": 0.010235403370898902
+            }
+        }
+    },
+    "da": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7528985037185054,
+                "f1_success": 0.7528985037185054,
+                "recall": 0.8214,
+                "recall_success": 0.8214,
+                "precision": 0.7473885137085179,
+                "precision_success": 0.7473885137085179,
+                "correct_pairwise": 0.334,
+                "correct_pairwise_success": 0.334,
+                "hallucination_rate": 0.012632197566401758,
+                "hallucination_rate_success": 0.012632197566401758,
+                "deletion_rate": 0.005261477363069736,
+                "deletion_rate_success": 0.005261477363069736
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "de": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7993616816412138,
+                "f1_success": 0.8006427099771773,
+                "recall": 0.8284,
+                "recall_success": 0.8297275641025641,
+                "precision": 0.8352583193277348,
+                "precision_success": 0.8365968743266574,
+                "correct_pairwise": 0.42,
+                "correct_pairwise_success": 0.4206730769230769,
+                "hallucination_rate": 0.018907751187086045,
+                "hallucination_rate_success": 0.01893805207039868,
+                "deletion_rate": 0.007735512117456042,
+                "deletion_rate_success": 0.007747908771490427
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9347929395790912,
+                "f1_success": 0.9386162235855496,
+                "recall": 0.9439918533604889,
+                "recall_success": 0.9478527607361963,
+                "precision": 0.9416157501697218,
+                "precision_success": 0.9454669393319701,
+                "correct_pairwise": 0.8065173116089613,
+                "correct_pairwise_success": 0.8098159509202454,
+                "hallucination_rate": 0.0079310865713006,
+                "hallucination_rate_success": 0.007963524553187308,
+                "deletion_rate": 0.008245369578313773,
+                "deletion_rate_success": 0.008279092971272111
+            }
+        }
+    },
+    "el": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7551435497835619,
+                "f1_success": 0.7551435497835619,
+                "recall": 0.6912,
+                "recall_success": 0.6912,
+                "precision": 0.9051729166666667,
+                "precision_success": 0.9051729166666667,
+                "correct_pairwise": 0.3212,
+                "correct_pairwise_success": 0.3212,
+                "hallucination_rate": 0.020385946126547087,
+                "hallucination_rate_success": 0.020385946126547087,
+                "deletion_rate": 0.002913229488099663,
+                "deletion_rate_success": 0.002913229488099663
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "en": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7685310606060592,
+                "f1_success": 0.7685310606060592,
+                "recall": 0.8672,
+                "recall_success": 0.8672,
+                "precision": 0.7326607448107497,
+                "precision_success": 0.7326607448107497,
+                "correct_pairwise": 0.3576,
+                "correct_pairwise_success": 0.3576,
+                "hallucination_rate": 0.008963147514711266,
+                "hallucination_rate_success": 0.008963147514711266,
+                "deletion_rate": 0.006797345197943549,
+                "deletion_rate_success": 0.006797345197943549
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.8908058481267174,
+                "f1_success": 0.8908058481267174,
+                "recall": 0.9356178608515057,
+                "recall_success": 0.9356178608515057,
+                "precision": 0.8731753449043209,
+                "precision_success": 0.8731753449043209,
+                "correct_pairwise": 0.6531671858774662,
+                "correct_pairwise_success": 0.6531671858774662,
+                "hallucination_rate": 0.007396126305900879,
+                "hallucination_rate_success": 0.007396126305900879,
+                "deletion_rate": 0.012810447146721462,
+                "deletion_rate_success": 0.012810447146721462
+            }
+        }
+    },
+    "eo": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7150032820145559,
+                "f1_success": 0.7150032820145559,
+                "recall": 0.7772556390977443,
+                "recall_success": 0.7772556390977443,
+                "precision": 0.7098385845566292,
+                "precision_success": 0.7098385845566292,
+                "correct_pairwise": 0.2844611528822055,
+                "correct_pairwise_success": 0.2844611528822055,
+                "hallucination_rate": 0.02233501910595867,
+                "hallucination_rate_success": 0.02233501910595867,
+                "deletion_rate": 0.0067078172838749475,
+                "deletion_rate_success": 0.0067078172838749475
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "es": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7668192457542519,
+                "f1_success": 0.7668192457542519,
+                "recall": 0.7702,
+                "recall_success": 0.7702,
+                "precision": 0.8249011399711417,
+                "precision_success": 0.8249011399711417,
+                "correct_pairwise": 0.3852,
+                "correct_pairwise_success": 0.3852,
+                "hallucination_rate": 0.014476972755433096,
+                "hallucination_rate_success": 0.014476972755433096,
+                "deletion_rate": 0.005569953840830867,
+                "deletion_rate_success": 0.005569953840830867
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9234240954867573,
+                "f1_success": 0.9234240954867573,
+                "recall": 0.9425587467362925,
+                "recall_success": 0.9425587467362925,
+                "precision": 0.9224978241949519,
+                "precision_success": 0.9224978241949519,
+                "correct_pairwise": 0.7689295039164491,
+                "correct_pairwise_success": 0.7689295039164491,
+                "hallucination_rate": 0.0027359771404764505,
+                "hallucination_rate_success": 0.0027359771404764505,
+                "deletion_rate": 0.005765641686468666,
+                "deletion_rate_success": 0.005765641686468666
+            }
+        }
+    },
+    "et": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7295228460428468,
+                "f1_success": 0.7295228460428468,
+                "recall": 0.7986,
+                "recall_success": 0.7986,
+                "precision": 0.7183071861471887,
+                "precision_success": 0.7183071861471887,
+                "correct_pairwise": 0.308,
+                "correct_pairwise_success": 0.308,
+                "hallucination_rate": 0.014705376066020159,
+                "hallucination_rate_success": 0.014705376066020159,
+                "deletion_rate": 0.006314660185543035,
+                "deletion_rate_success": 0.006314660185543035
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9020502645502658,
+                "f1_success": 0.9020502645502658,
+                "recall": 0.9444444444444444,
+                "recall_success": 0.9444444444444444,
+                "precision": 0.8820767195767204,
+                "precision_success": 0.8820767195767204,
+                "correct_pairwise": 0.6845238095238095,
+                "correct_pairwise_success": 0.6845238095238095,
+                "hallucination_rate": 0.004113101392425944,
+                "hallucination_rate_success": 0.004113101392425944,
+                "deletion_rate": 0.006403865957329934,
+                "deletion_rate_success": 0.006403865957329934
+            }
+        }
+    },
+    "eu": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6353617298173687,
+                "f1_success": 0.6353617298173687,
+                "recall": 0.6942204301075269,
+                "recall_success": 0.6942204301075269,
+                "precision": 0.6323572708653354,
+                "precision_success": 0.6323572708653354,
+                "correct_pairwise": 0.1875,
+                "correct_pairwise_success": 0.1875,
+                "hallucination_rate": 0.020412552565926265,
+                "hallucination_rate_success": 0.020412552565926265,
+                "deletion_rate": 0.006377542182572841,
+                "deletion_rate_success": 0.006377542182572841
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "fa": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7372498989899101,
+                "f1_success": 0.7372498989899101,
+                "recall": 0.6854,
+                "recall_success": 0.6854,
+                "precision": 0.8883647130647143,
+                "precision_success": 0.8883647130647143,
+                "correct_pairwise": 0.2548,
+                "correct_pairwise_success": 0.2548,
+                "hallucination_rate": 0.027822346174447347,
+                "hallucination_rate_success": 0.027822346174447347,
+                "deletion_rate": 0.00824279931318209,
+                "deletion_rate_success": 0.00824279931318209
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "fi": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7232425574425572,
+                "f1_success": 0.7232425574425572,
+                "recall": 0.807,
+                "recall_success": 0.807,
+                "precision": 0.7020209812409861,
+                "precision_success": 0.7020209812409861,
+                "correct_pairwise": 0.2916,
+                "correct_pairwise_success": 0.2916,
+                "hallucination_rate": 0.011860393674153917,
+                "hallucination_rate_success": 0.011860393674153917,
+                "deletion_rate": 0.008258249462886724,
+                "deletion_rate_success": 0.008258249462886724
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.8760377898654464,
+                "f1_success": 0.8760377898654464,
+                "recall": 0.9208416833667334,
+                "recall_success": 0.9208416833667334,
+                "precision": 0.8589846359385443,
+                "precision_success": 0.8589846359385443,
+                "correct_pairwise": 0.6192384769539078,
+                "correct_pairwise_success": 0.6192384769539078,
+                "hallucination_rate": 0.004682319344580942,
+                "hallucination_rate_success": 0.004682319344580942,
+                "deletion_rate": 0.0038225048490608793,
+                "deletion_rate_success": 0.0038225048490608793
+            }
+        }
+    },
+    "fr": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7847123987124013,
+                "f1_success": 0.7847123987124013,
+                "recall": 0.8154,
+                "recall_success": 0.8154,
+                "precision": 0.8126774891774937,
+                "precision_success": 0.8126774891774937,
+                "correct_pairwise": 0.4056,
+                "correct_pairwise_success": 0.4056,
+                "hallucination_rate": 0.015507182226342382,
+                "hallucination_rate_success": 0.015507182226342382,
+                "deletion_rate": 0.005711007282383363,
+                "deletion_rate_success": 0.005711007282383363
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9304232804232814,
+                "f1_success": 0.9304232804232814,
+                "recall": 0.9456521739130435,
+                "recall_success": 0.9456521739130435,
+                "precision": 0.9351851851851852,
+                "precision_success": 0.9351851851851852,
+                "correct_pairwise": 0.785024154589372,
+                "correct_pairwise_success": 0.785024154589372,
+                "hallucination_rate": 0.010267809756027767,
+                "hallucination_rate_success": 0.010267809756027767,
+                "deletion_rate": 0.006628876047322683,
+                "deletion_rate_success": 0.006628876047322683
+            }
+        }
+    },
+    "ga": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6194444444444445,
+                "f1_success": 0.6194444444444445,
+                "recall": 0.7083333333333334,
+                "recall_success": 0.7083333333333334,
+                "precision": 0.5694444444444445,
+                "precision_success": 0.5694444444444445,
+                "correct_pairwise": 0.16666666666666666,
+                "correct_pairwise_success": 0.16666666666666666,
+                "hallucination_rate": 0.0014483893710922782,
+                "hallucination_rate_success": 0.0014483893710922782,
+                "deletion_rate": 0.0027100749079977185,
+                "deletion_rate_success": 0.0027100749079977185
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "gl": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.736336168524,
+                "f1_success": 0.736336168524,
+                "recall": 0.7446,
+                "recall_success": 0.7446,
+                "precision": 0.7951781240981258,
+                "precision_success": 0.7951781240981258,
+                "correct_pairwise": 0.3128,
+                "correct_pairwise_success": 0.3128,
+                "hallucination_rate": 0.017391706572183516,
+                "hallucination_rate_success": 0.017391706572183516,
+                "deletion_rate": 0.006156082223138892,
+                "deletion_rate_success": 0.006156082223138892
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "gu": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6539006494011582,
+                "f1_success": 0.6539006494011582,
+                "recall": 0.5235085945399394,
+                "recall_success": 0.5235085945399394,
+                "precision": 0.9311304055174118,
+                "precision_success": 0.9311304055174118,
+                "correct_pairwise": 0.03083923154701719,
+                "correct_pairwise_success": 0.03083923154701719,
+                "hallucination_rate": 0.2799918319585747,
+                "hallucination_rate_success": 0.2799918319585747,
+                "deletion_rate": 0.031546053863365967,
+                "deletion_rate_success": 0.031546053863365967
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9522309711286087,
+                "f1_success": 0.9522309711286087,
+                "recall": 0.9409448818897638,
+                "recall_success": 0.9409448818897638,
+                "precision": 0.979002624671916,
+                "precision_success": 0.979002624671916,
+                "correct_pairwise": 0.8661417322834646,
+                "correct_pairwise_success": 0.8661417322834646,
+                "hallucination_rate": 0.03463022630670735,
+                "hallucination_rate_success": 0.03463022630670735,
+                "deletion_rate": 0.0009174847593828401,
+                "deletion_rate_success": 0.0009174847593828401
+            }
+        }
+    },
+    "ha": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.48888888888888893,
+                "f1_success": 0.48888888888888893,
+                "recall": 0.5,
+                "recall_success": 0.5,
+                "precision": 0.5555555555555555,
+                "precision_success": 0.5555555555555555,
+                "correct_pairwise": 0.0,
+                "correct_pairwise_success": 0.0,
+                "hallucination_rate": 0.003401360544217687,
+                "hallucination_rate_success": 0.003401360544217687,
+                "deletion_rate": 0.004877831282325665,
+                "deletion_rate_success": 0.004877831282325665
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "he": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7255493831168944,
+                "f1_success": 0.7258397190044962,
+                "recall": 0.6698,
+                "recall_success": 0.6700680272108843,
+                "precision": 0.8755420071684601,
+                "precision_success": 0.8758923641141058,
+                "correct_pairwise": 0.2432,
+                "correct_pairwise_success": 0.24329731892757103,
+                "hallucination_rate": 0.027614270951214753,
+                "hallucination_rate_success": 0.02762532107964661,
+                "deletion_rate": 0.0051981056493222,
+                "deletion_rate_success": 0.005200185723611645
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "hi": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6740939682539837,
+                "f1_success": 0.6740939682539837,
+                "recall": 0.5582,
+                "recall_success": 0.5582,
+                "precision": 0.9294076190476189,
+                "precision_success": 0.9294076190476189,
+                "correct_pairwise": 0.0648,
+                "correct_pairwise_success": 0.0648,
+                "hallucination_rate": 0.10149824352252486,
+                "hallucination_rate_success": 0.10149824352252486,
+                "deletion_rate": 0.02705097548248903,
+                "deletion_rate_success": 0.02705097548248903
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9052380952380958,
+                "f1_success": 0.9052380952380958,
+                "recall": 0.8936507936507937,
+                "recall_success": 0.8936507936507937,
+                "precision": 0.955952380952381,
+                "precision_success": 0.955952380952381,
+                "correct_pairwise": 0.6904761904761905,
+                "correct_pairwise_success": 0.6904761904761905,
+                "hallucination_rate": 0.01276574230748174,
+                "hallucination_rate_success": 0.01276574230748174,
+                "deletion_rate": 0.0089262341996774,
+                "deletion_rate_success": 0.0089262341996774
+            }
+        }
+    },
+    "hu": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7013793739593764,
+                "f1_success": 0.7013793739593764,
+                "recall": 0.79,
+                "recall_success": 0.79,
+                "precision": 0.6875075953213491,
+                "precision_success": 0.6875075953213491,
+                "correct_pairwise": 0.2392,
+                "correct_pairwise_success": 0.2392,
+                "hallucination_rate": 0.016541440941938157,
+                "hallucination_rate_success": 0.016541440941938157,
+                "deletion_rate": 0.006869903339723245,
+                "deletion_rate_success": 0.006869903339723245
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "hy": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6727736507936671,
+                "f1_success": 0.6727736507936671,
+                "recall": 0.5508,
+                "recall_success": 0.5508,
+                "precision": 0.9357838095238098,
+                "precision_success": 0.9357838095238098,
+                "correct_pairwise": 0.0592,
+                "correct_pairwise_success": 0.0592,
+                "hallucination_rate": 0.19425600398323706,
+                "hallucination_rate_success": 0.19425600398323706,
+                "deletion_rate": 0.007170133734286391,
+                "deletion_rate_success": 0.007170133734286391
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "id": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7563737429595558,
+                "f1_success": 0.7563737429595558,
+                "recall": 0.749,
+                "recall_success": 0.749,
+                "precision": 0.8291076026272604,
+                "precision_success": 0.8291076026272604,
+                "correct_pairwise": 0.3484,
+                "correct_pairwise_success": 0.3484,
+                "hallucination_rate": 0.016661198118268557,
+                "hallucination_rate_success": 0.016661198118268557,
+                "deletion_rate": 0.007888062837788232,
+                "deletion_rate_success": 0.007888062837788232
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ig": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.5809523809523809,
+                "f1_success": 0.5809523809523809,
+                "recall": 0.5769230769230769,
+                "recall_success": 0.5769230769230769,
+                "precision": 0.6403846153846153,
+                "precision_success": 0.6403846153846153,
+                "correct_pairwise": 0.07692307692307693,
+                "correct_pairwise_success": 0.07692307692307693,
+                "hallucination_rate": 0.0906959443924362,
+                "hallucination_rate_success": 0.0906959443924362,
+                "deletion_rate": 0.0035952571476571705,
+                "deletion_rate_success": 0.0035952571476571705
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "is": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7132679025808804,
+                "f1_success": 0.7132679025808804,
+                "recall": 0.7468193384223919,
+                "recall_success": 0.7468193384223919,
+                "precision": 0.7324427480916029,
+                "precision_success": 0.7324427480916029,
+                "correct_pairwise": 0.28498727735368956,
+                "correct_pairwise_success": 0.28498727735368956,
+                "hallucination_rate": 0.008732632199028067,
+                "hallucination_rate_success": 0.008732632199028067,
+                "deletion_rate": 0.006500438016680807,
+                "deletion_rate_success": 0.006500438016680807
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "it": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.793214245754248,
+                "f1_success": 0.793214245754248,
+                "recall": 0.823,
+                "recall_success": 0.823,
+                "precision": 0.816307330447335,
+                "precision_success": 0.816307330447335,
+                "correct_pairwise": 0.4372,
+                "correct_pairwise_success": 0.4372,
+                "hallucination_rate": 0.014720835163886037,
+                "hallucination_rate_success": 0.014720835163886037,
+                "deletion_rate": 0.005174152933756245,
+                "deletion_rate_success": 0.005174152933756245
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ja": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7110826617826723,
+                "f1_success": 0.7110826617826723,
+                "recall": 0.6726,
+                "recall_success": 0.6726,
+                "precision": 0.8559178354978377,
+                "precision_success": 0.8559178354978377,
+                "correct_pairwise": 0.1988,
+                "correct_pairwise_success": 0.1988,
+                "hallucination_rate": 0.03157197859726881,
+                "hallucination_rate_success": 0.03157197859726881,
+                "deletion_rate": 0.01523644791795989,
+                "deletion_rate_success": 0.01523644791795989
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.8814143567874911,
+                "f1_success": 0.8814143567874911,
+                "recall": 0.8675373134328358,
+                "recall_success": 0.8675373134328358,
+                "precision": 0.9320273631840794,
+                "precision_success": 0.9320273631840794,
+                "correct_pairwise": 0.6716417910447762,
+                "correct_pairwise_success": 0.6716417910447762,
+                "hallucination_rate": 0.03579429198382165,
+                "hallucination_rate_success": 0.03579429198382165,
+                "deletion_rate": 0.011974912369885998,
+                "deletion_rate_success": 0.011974912369885998
+            }
+        }
+    },
+    "ka": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6738640870241034,
+                "f1_success": 0.6738640870241034,
+                "recall": 0.546,
+                "recall_success": 0.546,
+                "precision": 0.9474703607503608,
+                "precision_success": 0.9474703607503608,
+                "correct_pairwise": 0.0604,
+                "correct_pairwise_success": 0.0604,
+                "hallucination_rate": 0.11525471714402827,
+                "hallucination_rate_success": 0.11525471714402827,
+                "deletion_rate": 0.012309388173529414,
+                "deletion_rate_success": 0.012309388173529414
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "kk": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6891311669545672,
+                "f1_success": 0.6891311669545672,
+                "recall": 0.6101984941820671,
+                "recall_success": 0.6101984941820671,
+                "precision": 0.862025357713243,
+                "precision_success": 0.862025357713243,
+                "correct_pairwise": 0.18275154004106775,
+                "correct_pairwise_success": 0.18275154004106775,
+                "hallucination_rate": 0.19420110925118406,
+                "hallucination_rate_success": 0.19420110925118406,
+                "deletion_rate": 0.0016580625166938501,
+                "deletion_rate_success": 0.0016580625166938501
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9680000000000001,
+                "f1_success": 0.9680000000000001,
+                "recall": 0.97,
+                "recall_success": 0.97,
+                "precision": 0.9746666666666667,
+                "precision_success": 0.9746666666666667,
+                "correct_pairwise": 0.9,
+                "correct_pairwise_success": 0.9,
+                "hallucination_rate": 0.012349353434860384,
+                "hallucination_rate_success": 0.012349353434860384,
+                "deletion_rate": 0.0018139447176940137,
+                "deletion_rate_success": 0.0018139447176940137
+            }
+        }
+    },
+    "km": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.5969208736126032,
+                "f1_success": 0.5969208736126032,
+                "recall": 0.5263157894736842,
+                "recall_success": 0.5263157894736842,
+                "precision": 0.7682957393483709,
+                "precision_success": 0.7682957393483709,
+                "correct_pairwise": 0.03759398496240601,
+                "correct_pairwise_success": 0.03759398496240601,
+                "hallucination_rate": 0.03213339071350462,
+                "hallucination_rate_success": 0.03213339071350462,
+                "deletion_rate": 0.17952670167219636,
+                "deletion_rate_success": 0.17952670167219636
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.8268926553672339,
+                "f1_success": 0.8268926553672339,
+                "recall": 0.7813559322033898,
+                "recall_success": 0.7813559322033898,
+                "precision": 0.9412320730117341,
+                "precision_success": 0.9412320730117341,
+                "correct_pairwise": 0.5135593220338983,
+                "correct_pairwise_success": 0.5135593220338983,
+                "hallucination_rate": 0.007625671616095744,
+                "hallucination_rate_success": 0.007625671616095744,
+                "deletion_rate": 0.2144866736377925,
+                "deletion_rate_success": 0.2144866736377925
+            }
+        }
+    },
+    "kn": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6631701631701614,
+                "f1_success": 0.6631701631701614,
+                "recall": 0.5034965034965035,
+                "recall_success": 0.5034965034965035,
+                "precision": 0.9825174825174825,
+                "precision_success": 0.9825174825174825,
+                "correct_pairwise": 0.006993006993006993,
+                "correct_pairwise_success": 0.006993006993006993,
+                "hallucination_rate": 0.14203428180944586,
+                "hallucination_rate_success": 0.14203428180944586,
+                "deletion_rate": 0.2153945592367976,
+                "deletion_rate_success": 0.2153945592367976
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ko": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7600711111111256,
+                "f1_success": 0.7600711111111256,
+                "recall": 0.697,
+                "recall_success": 0.697,
+                "precision": 0.9259676190476205,
+                "precision_success": 0.9259676190476205,
+                "correct_pairwise": 0.2848,
+                "correct_pairwise_success": 0.2848,
+                "hallucination_rate": 0.045768893489036684,
+                "hallucination_rate_success": 0.045768893489036684,
+                "deletion_rate": 0.004235518239799405,
+                "deletion_rate_success": 0.004235518239799405
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ku": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6948139194139336,
+                "f1_success": 0.6948139194139336,
+                "recall": 0.6018,
+                "recall_success": 0.6018,
+                "precision": 0.903806666666667,
+                "precision_success": 0.903806666666667,
+                "correct_pairwise": 0.1496,
+                "correct_pairwise_success": 0.1496,
+                "hallucination_rate": 0.07526763814194673,
+                "hallucination_rate_success": 0.07526763814194673,
+                "deletion_rate": 0.0024521663354752686,
+                "deletion_rate_success": 0.0024521663354752686
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ky": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6895424836601305,
+                "f1_success": 0.6895424836601305,
+                "recall": 0.6176470588235294,
+                "recall_success": 0.6176470588235294,
+                "precision": 0.8447712418300654,
+                "precision_success": 0.8447712418300654,
+                "correct_pairwise": 0.21568627450980393,
+                "correct_pairwise_success": 0.21568627450980393,
+                "hallucination_rate": 0.12510958415176396,
+                "hallucination_rate_success": 0.12510958415176396,
+                "deletion_rate": 0.001116916034425295,
+                "deletion_rate_success": 0.001116916034425295
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "la": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.8333333333333334,
+                "f1_success": 0.8333333333333334,
+                "recall": 0.8333333333333334,
+                "recall_success": 0.8333333333333334,
+                "precision": 0.8333333333333334,
+                "precision_success": 0.8333333333333334,
+                "correct_pairwise": 0.6666666666666666,
+                "correct_pairwise_success": 0.6666666666666666,
+                "hallucination_rate": 0.0,
+                "hallucination_rate_success": 0.0,
+                "deletion_rate": 0.006535947712418301,
+                "deletion_rate_success": 0.006535947712418301
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "lt": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7388252991452998,
+                "f1_success": 0.7388252991452998,
+                "recall": 0.8066,
+                "recall_success": 0.8066,
+                "precision": 0.7360304562104603,
+                "precision_success": 0.7360304562104603,
+                "correct_pairwise": 0.294,
+                "correct_pairwise_success": 0.294,
+                "hallucination_rate": 0.016033345627213338,
+                "hallucination_rate_success": 0.016033345627213338,
+                "deletion_rate": 0.007262854685909534,
+                "deletion_rate_success": 0.007262854685909534
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9222857142857148,
+                "f1_success": 0.9222857142857148,
+                "recall": 0.958,
+                "recall_success": 0.958,
+                "precision": 0.9039333333333328,
+                "precision_success": 0.9039333333333328,
+                "correct_pairwise": 0.74,
+                "correct_pairwise_success": 0.74,
+                "hallucination_rate": 0.00591385138117331,
+                "hallucination_rate_success": 0.00591385138117331,
+                "deletion_rate": 0.008990776520806659,
+                "deletion_rate_success": 0.008990776520806659
+            }
+        }
+    },
+    "lv": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.718294025974025,
+                "f1_success": 0.718294025974025,
+                "recall": 0.7998,
+                "recall_success": 0.7998,
+                "precision": 0.6940736507936547,
+                "precision_success": 0.6940736507936547,
+                "correct_pairwise": 0.2956,
+                "correct_pairwise_success": 0.2956,
+                "hallucination_rate": 0.01028567154396776,
+                "hallucination_rate_success": 0.01028567154396776,
+                "deletion_rate": 0.008750785279804283,
+                "deletion_rate_success": 0.008750785279804283
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9007936507936525,
+                "f1_success": 0.9007936507936525,
+                "recall": 0.9533730158730159,
+                "recall_success": 0.9533730158730159,
+                "precision": 0.8726521164021175,
+                "precision_success": 0.8726521164021175,
+                "correct_pairwise": 0.6666666666666666,
+                "correct_pairwise_success": 0.6666666666666666,
+                "hallucination_rate": 0.0021474137285435895,
+                "hallucination_rate_success": 0.0021474137285435895,
+                "deletion_rate": 0.0033661854315757207,
+                "deletion_rate_success": 0.0033661854315757207
+            }
+        }
+    },
+    "mg": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.5941798941798944,
+                "f1_success": 0.5941798941798944,
+                "recall": 0.5740740740740741,
+                "recall_success": 0.5740740740740741,
+                "precision": 0.6734567901234567,
+                "precision_success": 0.6734567901234567,
+                "correct_pairwise": 0.09259259259259259,
+                "correct_pairwise_success": 0.09259259259259259,
+                "hallucination_rate": 0.030855029690331784,
+                "hallucination_rate_success": 0.030855029690331784,
+                "deletion_rate": 0.0033367771032103053,
+                "deletion_rate_success": 0.0033367771032103053
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "mk": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6910944269765475,
+                "f1_success": 0.6910944269765475,
+                "recall": 0.5792,
+                "recall_success": 0.5792,
+                "precision": 0.9245359477124186,
+                "precision_success": 0.9245359477124186,
+                "correct_pairwise": 0.1352,
+                "correct_pairwise_success": 0.1352,
+                "hallucination_rate": 0.03235614993310591,
+                "hallucination_rate_success": 0.03235614993310591,
+                "deletion_rate": 0.0010755082291195265,
+                "deletion_rate_success": 0.0010755082291195265
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ml": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6645973466079359,
+                "f1_success": 0.6645973466079359,
+                "recall": 0.5059523809523809,
+                "recall_success": 0.5059523809523809,
+                "precision": 0.9879659024103469,
+                "precision_success": 0.9879659024103469,
+                "correct_pairwise": 0.005291005291005291,
+                "correct_pairwise_success": 0.005291005291005291,
+                "hallucination_rate": 0.0014435948887536385,
+                "hallucination_rate_success": 0.0014435948887536385,
+                "deletion_rate": 0.8789630104640619,
+                "deletion_rate_success": 0.8789630104640619
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "mn": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6838075213675351,
+                "f1_success": 0.6838075213675351,
+                "recall": 0.5844,
+                "recall_success": 0.5844,
+                "precision": 0.8934752181152186,
+                "precision_success": 0.8934752181152186,
+                "correct_pairwise": 0.146,
+                "correct_pairwise_success": 0.146,
+                "hallucination_rate": 0.15868647949854164,
+                "hallucination_rate_success": 0.15868647949854164,
+                "deletion_rate": 0.0003327605182357335,
+                "deletion_rate_success": 0.0003327605182357335
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "mr": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6555980952381114,
+                "f1_success": 0.6555980952381114,
+                "recall": 0.5204,
+                "recall_success": 0.5204,
+                "precision": 0.932,
+                "precision_success": 0.932,
+                "correct_pairwise": 0.0312,
+                "correct_pairwise_success": 0.0312,
+                "hallucination_rate": 0.04787753271647943,
+                "hallucination_rate_success": 0.04787753271647943,
+                "deletion_rate": 0.004127525174893096,
+                "deletion_rate_success": 0.004127525174893096
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ms": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7375487953166505,
+                "f1_success": 0.7375487953166505,
+                "recall": 0.7238095238095238,
+                "recall_success": 0.7238095238095238,
+                "precision": 0.8269867252456546,
+                "precision_success": 0.8269867252456546,
+                "correct_pairwise": 0.2970238095238095,
+                "correct_pairwise_success": 0.2970238095238095,
+                "hallucination_rate": 0.020025196390346837,
+                "hallucination_rate_success": 0.020025196390346837,
+                "deletion_rate": 0.010595385453237512,
+                "deletion_rate_success": 0.010595385453237512
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "mt": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6461538461538463,
+                "f1_success": 0.6461538461538463,
+                "recall": 0.6538461538461539,
+                "recall_success": 0.6538461538461539,
+                "precision": 0.6762820512820512,
+                "precision_success": 0.6762820512820512,
+                "correct_pairwise": 0.23076923076923078,
+                "correct_pairwise_success": 0.23076923076923078,
+                "hallucination_rate": 0.004086333164148621,
+                "hallucination_rate_success": 0.004086333164148621,
+                "deletion_rate": 0.006203009347863811,
+                "deletion_rate_success": 0.006203009347863811
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "my": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6590904633821617,
+                "f1_success": 0.6590904633821617,
+                "recall": 0.5566,
+                "recall_success": 0.5566,
+                "precision": 0.8930608978392456,
+                "precision_success": 0.8930608978392456,
+                "correct_pairwise": 0.0776,
+                "correct_pairwise_success": 0.0776,
+                "hallucination_rate": 0.02441253829698502,
+                "hallucination_rate_success": 0.02441253829698502,
+                "deletion_rate": 0.014316710552042087,
+                "deletion_rate_success": 0.014316710552042087
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ne": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.681367474224619,
+                "f1_success": 0.681367474224619,
+                "recall": 0.5733590733590733,
+                "recall_success": 0.5733590733590733,
+                "precision": 0.9117277992277992,
+                "precision_success": 0.9117277992277992,
+                "correct_pairwise": 0.12162162162162163,
+                "correct_pairwise_success": 0.12162162162162163,
+                "hallucination_rate": 0.04670995872629497,
+                "hallucination_rate_success": 0.04670995872629497,
+                "deletion_rate": 0.002260657481843977,
+                "deletion_rate_success": 0.002260657481843977
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "nl": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.8228601154401142,
+                "f1_success": 0.8228601154401142,
+                "recall": 0.8794,
+                "recall_success": 0.8794,
+                "precision": 0.8169618055555606,
+                "precision_success": 0.8169618055555606,
+                "correct_pairwise": 0.4724,
+                "correct_pairwise_success": 0.4724,
+                "hallucination_rate": 0.010348988505582855,
+                "hallucination_rate_success": 0.010348988505582855,
+                "deletion_rate": 0.008468107172170548,
+                "deletion_rate_success": 0.008468107172170548
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "pa": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6684397163120559,
+                "f1_success": 0.6684397163120559,
+                "recall": 0.5212765957446809,
+                "recall_success": 0.5212765957446809,
+                "precision": 0.9654255319148937,
+                "precision_success": 0.9654255319148937,
+                "correct_pairwise": 0.0425531914893617,
+                "correct_pairwise_success": 0.0425531914893617,
+                "hallucination_rate": 0.13977360639357864,
+                "hallucination_rate_success": 0.13977360639357864,
+                "deletion_rate": 0.002495077593021233,
+                "deletion_rate_success": 0.002495077593021233
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "pl": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7967635871318254,
+                "f1_success": 0.7967635871318254,
+                "recall": 0.8206,
+                "recall_success": 0.8206,
+                "precision": 0.8265766269841308,
+                "precision_success": 0.8265766269841308,
+                "correct_pairwise": 0.4324,
+                "correct_pairwise_success": 0.4324,
+                "hallucination_rate": 0.016026147988665734,
+                "hallucination_rate_success": 0.016026147988665734,
+                "deletion_rate": 0.006422038125919934,
+                "deletion_rate_success": 0.006422038125919934
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9289698349459307,
+                "f1_success": 0.9289698349459307,
+                "recall": 0.9462151394422311,
+                "recall_success": 0.9462151394422311,
+                "precision": 0.9265604249667994,
+                "precision_success": 0.9265604249667994,
+                "correct_pairwise": 0.796812749003984,
+                "correct_pairwise_success": 0.796812749003984,
+                "hallucination_rate": 0.005861315112451055,
+                "hallucination_rate_success": 0.005861315112451055,
+                "deletion_rate": 0.008287679666251041,
+                "deletion_rate_success": 0.008287679666251041
+            }
+        }
+    },
+    "ps": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6540145985401463,
+                "f1_success": 0.6540145985401463,
+                "recall": 0.5328467153284672,
+                "recall_success": 0.5328467153284672,
+                "precision": 0.9038929440389295,
+                "precision_success": 0.9038929440389295,
+                "correct_pairwise": 0.051094890510948905,
+                "correct_pairwise_success": 0.051094890510948905,
+                "hallucination_rate": 0.08371575663216115,
+                "hallucination_rate_success": 0.08371575663216115,
+                "deletion_rate": 0.0008762055841381216,
+                "deletion_rate_success": 0.0008762055841381216
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9345133361262394,
+                "f1_success": 0.9345133361262394,
+                "recall": 0.9274193548387096,
+                "recall_success": 0.9274193548387096,
+                "precision": 0.9656402737047898,
+                "precision_success": 0.9656402737047898,
+                "correct_pairwise": 0.7961876832844574,
+                "correct_pairwise_success": 0.7961876832844574,
+                "hallucination_rate": 0.01041134133945694,
+                "hallucination_rate_success": 0.01041134133945694,
+                "deletion_rate": 0.0019329334322075386,
+                "deletion_rate_success": 0.0019329334322075386
+            }
+        }
+    },
+    "pt": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7812109090909143,
+                "f1_success": 0.7812109090909143,
+                "recall": 0.791,
+                "recall_success": 0.791,
+                "precision": 0.8334000494405436,
+                "precision_success": 0.8334000494405436,
+                "correct_pairwise": 0.4008,
+                "correct_pairwise_success": 0.4008,
+                "hallucination_rate": 0.012465488198399283,
+                "hallucination_rate_success": 0.012465488198399283,
+                "deletion_rate": 0.005069105865265478,
+                "deletion_rate_success": 0.005069105865265478
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ro": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7652112265512322,
+                "f1_success": 0.7652112265512322,
+                "recall": 0.7528,
+                "recall_success": 0.7528,
+                "precision": 0.8484970436507964,
+                "precision_success": 0.8484970436507964,
+                "correct_pairwise": 0.3512,
+                "correct_pairwise_success": 0.3512,
+                "hallucination_rate": 0.017971452577177166,
+                "hallucination_rate_success": 0.017971452577177166,
+                "deletion_rate": 0.00657497734745277,
+                "deletion_rate_success": 0.00657497734745277
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9187777777777785,
+                "f1_success": 0.9187777777777785,
+                "recall": 0.924,
+                "recall_success": 0.924,
+                "precision": 0.9389190476190481,
+                "precision_success": 0.9389190476190481,
+                "correct_pairwise": 0.758,
+                "correct_pairwise_success": 0.758,
+                "hallucination_rate": 0.004883395813416173,
+                "hallucination_rate_success": 0.004883395813416173,
+                "deletion_rate": 0.003935490926545917,
+                "deletion_rate_success": 0.003935490926545917
+            }
+        }
+    },
+    "ru": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7801585048643171,
+                "f1_success": 0.7801585048643171,
+                "recall": 0.771,
+                "recall_success": 0.771,
+                "precision": 0.8568737931034511,
+                "precision_success": 0.8568737931034511,
+                "correct_pairwise": 0.3836,
+                "correct_pairwise_success": 0.3836,
+                "hallucination_rate": 0.021432034969910675,
+                "hallucination_rate_success": 0.021432034969910675,
+                "deletion_rate": 0.001471755391948671,
+                "deletion_rate_success": 0.001471755391948671
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.9391129032258064,
+                "f1_success": 0.9391129032258064,
+                "recall": 0.9455645161290323,
+                "recall_success": 0.9455645161290323,
+                "precision": 0.9487567204301073,
+                "precision_success": 0.9487567204301073,
+                "correct_pairwise": 0.8145161290322581,
+                "correct_pairwise_success": 0.8145161290322581,
+                "hallucination_rate": 0.005224312597570503,
+                "hallucination_rate_success": 0.005224312597570503,
+                "deletion_rate": 0.006669156631280926,
+                "deletion_rate_success": 0.006669156631280926
+            }
+        }
+    },
+    "si": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6477984164261322,
+                "f1_success": 0.6477984164261322,
+                "recall": 0.5930232558139535,
+                "recall_success": 0.5930232558139535,
+                "precision": 0.901769097043742,
+                "precision_success": 0.901769097043742,
+                "correct_pairwise": 0.06976744186046512,
+                "correct_pairwise_success": 0.06976744186046512,
+                "hallucination_rate": 0.691944647686711,
+                "hallucination_rate_success": 0.691944647686711,
+                "deletion_rate": 0.20273242330026617,
+                "deletion_rate_success": 0.20273242330026617
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "sk": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7533750360750366,
+                "f1_success": 0.7533750360750366,
+                "recall": 0.8098,
+                "recall_success": 0.8098,
+                "precision": 0.7601583638583679,
+                "precision_success": 0.7601583638583679,
+                "correct_pairwise": 0.3356,
+                "correct_pairwise_success": 0.3356,
+                "hallucination_rate": 0.01776482996649308,
+                "hallucination_rate_success": 0.01776482996649308,
+                "deletion_rate": 0.007381602543916036,
+                "deletion_rate_success": 0.007381602543916036
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "sl": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7302988455988471,
+                "f1_success": 0.7302988455988471,
+                "recall": 0.7928,
+                "recall_success": 0.7928,
+                "precision": 0.7359582539682588,
+                "precision_success": 0.7359582539682588,
+                "correct_pairwise": 0.2844,
+                "correct_pairwise_success": 0.2844,
+                "hallucination_rate": 0.013165560756783594,
+                "hallucination_rate_success": 0.013165560756783594,
+                "deletion_rate": 0.007196126754413198,
+                "deletion_rate_success": 0.007196126754413198
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "sq": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6911937254901976,
+                "f1_success": 0.6911937254901976,
+                "recall": 0.73,
+                "recall_success": 0.73,
+                "precision": 0.7124152380952401,
+                "precision_success": 0.7124152380952401,
+                "correct_pairwise": 0.2444,
+                "correct_pairwise_success": 0.2444,
+                "hallucination_rate": 0.021228101494129528,
+                "hallucination_rate_success": 0.021228101494129528,
+                "deletion_rate": 0.00628408372687049,
+                "deletion_rate_success": 0.00628408372687049
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "sr": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7383521212121263,
+                "f1_success": 0.7383521212121263,
+                "recall": 0.774,
+                "recall_success": 0.774,
+                "precision": 0.7710579365079399,
+                "precision_success": 0.7710579365079399,
+                "correct_pairwise": 0.314,
+                "correct_pairwise_success": 0.314,
+                "hallucination_rate": 0.015602819092274166,
+                "hallucination_rate_success": 0.015602819092274166,
+                "deletion_rate": 0.005909277008575971,
+                "deletion_rate_success": 0.005909277008575971
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "sv": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.770238470418472,
+                "f1_success": 0.770238470418472,
+                "recall": 0.8296,
+                "recall_success": 0.8296,
+                "precision": 0.7646107936507984,
+                "precision_success": 0.7646107936507984,
+                "correct_pairwise": 0.3792,
+                "correct_pairwise_success": 0.3792,
+                "hallucination_rate": 0.00999848608091287,
+                "hallucination_rate_success": 0.00999848608091287,
+                "deletion_rate": 0.007147143074467746,
+                "deletion_rate_success": 0.007147143074467746
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ta": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6638688357905318,
+                "f1_success": 0.6638688357905318,
+                "recall": 0.5060498220640569,
+                "recall_success": 0.5060498220640569,
+                "precision": 0.980688018979834,
+                "precision_success": 0.980688018979834,
+                "correct_pairwise": 0.011387900355871887,
+                "correct_pairwise_success": 0.011387900355871887,
+                "hallucination_rate": 0.04361670914297738,
+                "hallucination_rate_success": 0.04361670914297738,
+                "deletion_rate": 0.40827347575011486,
+                "deletion_rate_success": 0.40827347575011486
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.6938911022576352,
+                "f1_success": 0.6938911022576352,
+                "recall": 0.5418326693227091,
+                "recall_success": 0.5418326693227091,
+                "precision": 0.99800796812749,
+                "precision_success": 0.99800796812749,
+                "correct_pairwise": 0.08366533864541832,
+                "correct_pairwise_success": 0.08366533864541832,
+                "hallucination_rate": 0.001427416519297014,
+                "hallucination_rate_success": 0.001427416519297014,
+                "deletion_rate": 0.7694899219867076,
+                "deletion_rate_success": 0.7694899219867076
+            }
+        }
+    },
+    "te": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6575528700906391,
+                "f1_success": 0.6575528700906391,
+                "recall": 0.5128398791540786,
+                "recall_success": 0.5128398791540786,
+                "precision": 0.949773413897281,
+                "precision_success": 0.949773413897281,
+                "correct_pairwise": 0.019637462235649546,
+                "correct_pairwise_success": 0.019637462235649546,
+                "hallucination_rate": 0.056509760360937224,
+                "hallucination_rate_success": 0.056509760360937224,
+                "deletion_rate": 0.01270826595880584,
+                "deletion_rate_success": 0.01270826595880584
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "tg": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7385964912280699,
+                "f1_success": 0.7385964912280699,
+                "recall": 0.6447368421052632,
+                "recall_success": 0.6447368421052632,
+                "precision": 0.9298245614035087,
+                "precision_success": 0.9298245614035087,
+                "correct_pairwise": 0.27631578947368424,
+                "correct_pairwise_success": 0.27631578947368424,
+                "hallucination_rate": 0.045095164351861644,
+                "hallucination_rate_success": 0.045095164351861644,
+                "deletion_rate": 0.0,
+                "deletion_rate_success": 0.0
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "th": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7119818066378227,
+                "f1_success": 0.7119818066378227,
+                "recall": 0.6072,
+                "recall_success": 0.6072,
+                "precision": 0.9373497032436165,
+                "precision_success": 0.9373497032436165,
+                "correct_pairwise": 0.1756,
+                "correct_pairwise_success": 0.1756,
+                "hallucination_rate": 0.09078331879962911,
+                "hallucination_rate_success": 0.09078331879962911,
+                "deletion_rate": 0.009979857561166657,
+                "deletion_rate_success": 0.009979857561166657
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "tr": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7988917243867276,
+                "f1_success": 0.7992114089503078,
+                "recall": 0.8122,
+                "recall_success": 0.8125250100040016,
+                "precision": 0.8385681547619083,
+                "precision_success": 0.8389037162484075,
+                "correct_pairwise": 0.4476,
+                "correct_pairwise_success": 0.4477791116446579,
+                "hallucination_rate": 0.022818005714704843,
+                "hallucination_rate_success": 0.02282713656933258,
+                "deletion_rate": 0.005974251164195706,
+                "deletion_rate_success": 0.0059766418209240765
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.93254927696417,
+                "f1_success": 0.93254927696417,
+                "recall": 0.9394946808510638,
+                "recall_success": 0.9394946808510638,
+                "precision": 0.9460697399527187,
+                "precision_success": 0.9460697399527187,
+                "correct_pairwise": 0.7965425531914894,
+                "correct_pairwise_success": 0.7965425531914894,
+                "hallucination_rate": 0.011222622581850921,
+                "hallucination_rate_success": 0.011222622581850921,
+                "deletion_rate": 0.011100552086799855,
+                "deletion_rate_success": 0.011100552086799855
+            }
+        }
+    },
+    "uk": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7699092063492124,
+                "f1_success": 0.7699092063492124,
+                "recall": 0.753,
+                "recall_success": 0.753,
+                "precision": 0.8548709523809545,
+                "precision_success": 0.8548709523809545,
+                "correct_pairwise": 0.3676,
+                "correct_pairwise_success": 0.3676,
+                "hallucination_rate": 0.025052471545554393,
+                "hallucination_rate_success": 0.025052471545554393,
+                "deletion_rate": 0.001720369657195652,
+                "deletion_rate_success": 0.001720369657195652
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "ur": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.7086971980856889,
+                "f1_success": 0.7090615668250646,
+                "recall": 0.7217368961973278,
+                "recall_success": 0.722107969151671,
+                "precision": 0.7884248488179647,
+                "precision_success": 0.7888302086374084,
+                "correct_pairwise": 0.21788283658787255,
+                "correct_pairwise_success": 0.2179948586118252,
+                "hallucination_rate": 0.0547393072773642,
+                "hallucination_rate_success": 0.0547674508800775,
+                "deletion_rate": 0.0021501533183644916,
+                "deletion_rate_success": 0.0021512587956489977
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "uz": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6592694576871776,
+                "f1_success": 0.6592694576871776,
+                "recall": 0.569620253164557,
+                "recall_success": 0.569620253164557,
+                "precision": 0.868759627620387,
+                "precision_success": 0.868759627620387,
+                "correct_pairwise": 0.08333333333333333,
+                "correct_pairwise_success": 0.08333333333333333,
+                "hallucination_rate": 0.09462689515374498,
+                "hallucination_rate_success": 0.09462689515374498,
+                "deletion_rate": 0.02646456712691397,
+                "deletion_rate_success": 0.02646456712691397
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "vi": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.748867570207575,
+                "f1_success": 0.748867570207575,
+                "recall": 0.7514,
+                "recall_success": 0.7514,
+                "precision": 0.8122516017316039,
+                "precision_success": 0.8122516017316039,
+                "correct_pairwise": 0.336,
+                "correct_pairwise_success": 0.336,
+                "hallucination_rate": 0.014993090374010839,
+                "hallucination_rate_success": 0.014993090374010839,
+                "deletion_rate": 0.006271156081171968,
+                "deletion_rate_success": 0.006271156081171968
+            }
+        },
+        "ersatz": {
+            "command-r": {}
+        }
+    },
+    "zh": {
+        "ted2020-corrupted-asr": {
+            "command-r": {
+                "f1": 0.6590531525014833,
+                "f1_success": 0.6590531525014833,
+                "recall": 0.6409180651530109,
+                "recall_success": 0.6409180651530109,
+                "precision": 0.7950277524932038,
+                "precision_success": 0.7950277524932038,
+                "correct_pairwise": 0.10019743336623889,
+                "correct_pairwise_success": 0.10019743336623889,
+                "hallucination_rate": 0.038302424246560586,
+                "hallucination_rate_success": 0.038302424246560586,
+                "deletion_rate": 0.0046207016094190635,
+                "deletion_rate_success": 0.0046207016094190635
+            }
+        },
+        "ersatz": {
+            "command-r": {
+                "f1": 0.8727477925583206,
+                "f1_success": 0.8727477925583206,
+                "recall": 0.93,
+                "recall_success": 0.93,
+                "precision": 0.8658171122994659,
+                "precision_success": 0.8658171122994659,
+                "correct_pairwise": 0.592,
+                "correct_pairwise_success": 0.592,
+                "hallucination_rate": 0.0139215963997789,
+                "hallucination_rate_success": 0.0139215963997789,
+                "deletion_rate": 0.009442632208235395,
+                "deletion_rate_success": 0.009442632208235395
+            }
+        }
+    }
+}

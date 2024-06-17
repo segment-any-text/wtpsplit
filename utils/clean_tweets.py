@@ -62,7 +62,7 @@ def transform_data(data):
     return transformed_data
 
 
-data = torch.load("data/all_tweets.pth")
+data = torch.load("data/all_data.pth")
 
 transformed_data = transform_data(data)
 torch.save(transformed_data, "data/all_data_tweets_cleaned.pth")
