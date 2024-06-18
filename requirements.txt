@@ -17,3 +17,5 @@ genalog
 pandarallel
 cohere
 replicate
+onnx
+onnxruntime
