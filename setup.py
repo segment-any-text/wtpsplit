@@ -1,8 +1,8 @@
 from setuptools import setup
 
 setup(
-    name="segment-any-text",
-    version="1.0.0",
+    name="wtpsplit",
+    version="2.0.0",
     packages=["wtpsplit"],
     description="Universal Robust, Efficient and Adaptable Sentence Segmentation",
     author="Markus Frohmann, Igor Sterner, Benjamin Minixhofer",
@@ -20,7 +20,7 @@ setup(
         "mosestokenizer",
         "adapters==0.2.1"
     ],
-    url="https://github.com/bminixhofer/wtpsplit",
+    url="https://github.com/segment-any-text/wtpsplit",
     package_data={"wtpsplit": ["data/*"]},
     include_package_data=True,
     license="MIT",

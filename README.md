@@ -2,7 +2,7 @@
 
 Code for the paper [Segment Any Text: A Universal Approach for Robust, Efficient and Adaptable Sentence Segmentation](TODO) by Markus Frohmann, Igor Sterner, Benjamin Minixhofer, Ivan Vulić and Markus Schedl.
 
-This repository contains `segment-any-text`, a package for robust, efficient and adaptable sentence segmentation across 85 languages, as well as the code and configs to reproduce the **state-of-the-art** results in 8 distinct corpora and 85 languages demonstrated in our paper.
+This repository contains `wtpsplit`, a package for robust, efficient and adaptable sentence segmentation across 85 languages, as well as the code and configs to reproduce the **state-of-the-art** results in 8 distinct corpora and 85 languages demonstrated in our Segment any Text [paper](TODO).
 
 ![System Figure](./system-fig.png)
 
@@ -10,13 +10,13 @@ This repository contains `segment-any-text`, a package for robust, efficient and
 ## Installation
 
 ```bash
-pip install segment-any-text
+pip install wtpsplit
 ```
 
 ## Usage
 
 ```python
-from sat import SaT
+from wtpsplit import SaT
 
 sat = SaT("sat-3l")
 # optionally run on GPU for better performance
@@ -43,49 +43,48 @@ sat.split("This is a test This is another test.", lang_code="en", style="ud")
 ## Available Models
 
 If you need a general sentence segmentation model, use `-sm` models (e.g., `sat-3l-sm`)
-For speed-sensitive applications, we recommend 3-layer models (`sat-3l` and `sat-3l-sm`). They provide a good tradeoff between speen and performance.
-The best (and largest) models are our 12-layer models: `sat-12l` and `sat-12l-sm`.
-## TODO TODO TODO
-<!-- 
-| Model                                                                      |    English Score |    English Score<br>(adapted) |    Multilingual Score |    Multilingual Score<br>(adapted) |
-|:-----------------------------------------------------------------------|-----:|-----:|-----:|-----:|
-| [wtp-bert-tiny](https://huggingface.co/benjamin/wtp-bert-tiny)                | 83.8 | 91.9 | 79.5 | 88.6 |
-| [wtp-bert-mini](https://huggingface.co/benjamin/wtp-bert-mini)                | 91.8 | 95.9 | 84.3 | 91.3 |
-| [wtp-canine-s-1l](https://huggingface.co/benjamin/wtp-canine-s-1l)              | 94.5 | 96.5 | 86.7 | 92.8 |
-| [wtp-canine-s-1l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-1l-no-adapters)  | 93.1 | 96.4 | 85.1 | 91.8 |
-| [wtp-canine-s-3l](https://huggingface.co/benjamin/wtp-canine-s-3l)              | 94.4 | 96.8 | 86.7 | 93.4 |
-| [wtp-canine-s-3l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-3l-no-adapters)  | 93.8 | 96.4 | 86   | 92.3 |
-| [wtp-canine-s-6l](https://huggingface.co/benjamin/wtp-canine-s-6l)              | 94.5 | 97.1 | 87   | 93.6 |
-| [wtp-canine-s-6l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-6l-no-adapters)  | 94.4 | 96.8 | 86.4 | 92.8 |
-| [wtp-canine-s-9l](https://huggingface.co/benjamin/wtp-canine-s-9l)              | 94.8 | 97   | 87.7 | 93.8 |
-| [wtp-canine-s-9l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-9l-no-adapters)  | 94.3 | 96.9 | 86.6 | 93   |
-| [wtp-canine-s-12l](https://huggingface.co/benjamin/wtp-canine-s-12l)             | 94.7 | 97.1 | 87.9 | 94   |
-| [wtp-canine-s-12l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-12l-no-adapters) | 94.5 | 97   | 87.1 | 93.2 |
+For speed-sensitive applications, we recommend 3-layer models (`sat-3l` and `sat-3l-sm`). They provide a great tradeoff between speed and performance.
+The best models are our 12-layer models: `sat-12l` and `sat-12l-sm`.
 
-The scores are macro-average F1 score across all available datasets for "English", and macro-average F1 score across all datasets and languages for "Multilingual". "adapted" means adapation via LoRA; check out the paper for details. 
+| Model                              |    English Score  |  Multilingual Score
+|:-----------------------------------------------------------------------|-----:|-----:|
+| [sat-1l](https://huggingface.co/segment-any-text/sat-1l)             | 88.5  | 84.3
+| [sat-1l-sm](https://huggingface.co/segment-any-text/sat-1l-sm)           | 88.2  | 87.9
+| [sat-3l](https://huggingface.co/segment-any-text/sat-3l)              | 93.7  | 89.2
+| [sat-3l-lora](https://huggingface.co/segment-any-text/sat-3l/tree/main/loras)         | 96.7  | 94.8
+| [sat-3l-sm](https://huggingface.co/segment-any-text/sat-3l-sm)           | 96.5  | 93.5
+| [sat-6l](https://huggingface.co/segment-any-text/sat-6l)              | 94.1  | 89.7
+| [sat-6l-sm](https://huggingface.co/segment-any-text/sat-6l-sm)           | 96.9  | 95.1
+| [sat-9l](https://huggingface.co/segment-any-text/sat-9l)              | 94.3  | 90.3
+| [sat-12l](https://huggingface.co/segment-any-text/sat-12l)             | 94.0  | 90.4
+| [sat-12l-lora](https://huggingface.co/segment-any-text/sat-12l/tree/main/loras)        | 97.3  | 95.9
+| [sat-12l-sm](https://huggingface.co/segment-any-text/sat-12l-sm)          | 97.4  | 96.0
 
-For comparison, here's the English scores of some other tools:
+The scores are macro-average F1 score across all available datasets for "English", and macro-average F1 score across all datasets and languages for "Multilingual". "adapted" means adapation via LoRA; check out the [paper](TODO) for details. 
+
+For comparison, here the English scores of some other tools:
 
 | Model                                                                      |    English Score
 |:-----------------------------------------------------------------------|-----:|
-| SpaCy (sentencizer) | 86.8 |
-| PySBD | 69.8 |
-| SpaCy (dependency parser) | 93.1 |
-| Ersatz | 91.6 |
-| Punkt (`nltk.sent_tokenize`) | 92.5 | -->
+| PySBD | 69.6 |
+| SpaCy (sentencizer; monolingual) | 92.9 |
+| SpaCy (sentencizer; multilingual) | 91.5 |
+| Ersatz | 91.4 |
+| Punkt (`nltk.sent_tokenize`) | 92.2 |
+| [WtP (3l)](https://huggingface.co/benjamin/wtp-canine-s-3l) | 93.9 |
 
 Note that this library also supports previous [`WtP`](https://arxiv.org/abs/2305.18893) models.
 You can use them in essentially the same way as `SaT`models:
 
 ```python
-from sat import WtP
+from wtpsplit import WtP
 
 wtp = WtP("wtp-bert-mini")
 # similar functionality as for SaT models
 wtp.split("This is a test This is another test.")
 ```
 
-For more details on WtP and reproduction details, see the `wtpsplit` branch.
+For more details on WtP and reproduction details, see the `wtp` branch.
 
 ## Paragraph Segmentation
 
@@ -179,7 +178,7 @@ Our models can be efficiently adapted via LoRA in a powerful way. Only 10-100 tr
 Clone the repository and install requirements:
 
 ```
-git clone https://github.com/segment-any-text/segment-any-text
+git clone https://github.com/segment-any-text/wtpsplit
 cd segment-any-text
 pip install -e .
 pip install -r requirements.txt
@@ -349,7 +348,7 @@ For details, we refer to our [paper](TODO).
 
 ## Citation
 
-If you find our `segment-any-text` useful, please kindly cite our paper:
+If you find `wtpsplit` and our `SaT` models useful, please kindly cite our paper:
 ```
 @inproceedings{TODO,}
 ```
