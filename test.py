@@ -88,33 +88,33 @@ Daniel Wroughton Craig CMG (born 2 March 1968) is an English actor who gained in
     assert paragraph2.startswith("Daniel Wroughton Craig CMG (born 2 March 1968) is")
 
 
-def test_split_ort():
+def test_split_ort_wtp():
     wtp = WtP("wtp-bert-mini", ort_providers=["CPUExecutionProvider"])
 
     splits = wtp.split("This is a test sentence This is another test sentence.", threshold=0.005)
     assert splits == ["This is a test sentence ", "This is another test sentence."]
 
 
-def test_split_torch():
+def test_split_torch_wtp():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
 
     splits = wtp.split("This is a test sentence This is another test sentence.", threshold=0.005)
     assert splits == ["This is a test sentence ", "This is another test sentence."]
 
 
-def test_split_torch_canine():
+def test_split_torch_canine_wtp():
     wtp = WtP("benjamin/wtp-canine-s-1l", hub_prefix=None)
 
     splits = wtp.split("This is a test sentence. This is another test sentence.", lang_code="en")
     assert splits == ["This is a test sentence. ", "This is another test sentence."]
 
 
-def test_move_device():
+def test_move_device_wtp():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
     wtp.half().to("cpu")
 
 
-def test_strip_whitespace():
+def test_strip_whitespace_wtp():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
 
     splits = wtp.split(
@@ -123,7 +123,7 @@ def test_strip_whitespace():
     assert splits == ["This is a test sentence", "This is another test sentence."]
 
 
-def test_split_long():
+def test_split_long_wtp():
     prefix = "x" * 2000
 
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
@@ -132,7 +132,7 @@ def test_split_long():
     assert splits == [prefix + " " + "This is a test sentence. ", "This is another test sentence."]
 
 
-def test_split_batched():
+def test_split_batched_wtp():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
 
     splits = list(wtp.split(["Paragraph-A Paragraph-B", "Paragraph-C100 Paragraph-D"]))
@@ -143,7 +143,7 @@ def test_split_batched():
     ]
 
 
-def test_split_style():
+def test_split_style_wtp():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
 
     text = "’I couldn’t help it,’ said Five, in a sulky tone; ’Seven jogged my elbow.’ | On which Seven looked up and said, ’That’s right, Five! Always lay the blame (...)!’"
@@ -155,7 +155,7 @@ def test_split_style():
     assert splits_ud != splits_opus100 != splits_ersatz
 
 
-def test_split_paragraphs():
+def test_split_paragraphs_wtp():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
 
     text = " ".join(
@@ -174,7 +174,7 @@ Daniel Wroughton Craig CMG (born 2 March 1968) is an English actor who gained in
     assert paragraph2.startswith("Daniel Wroughton Craig CMG (born 2 March 1968) is")
 
 
-def test_split_paragraphs_with_language_adapters():
+def test_split_paragraphs_with_language_adapters_wtp():
     wtp = WtP("benjamin/wtp-canine-s-3l", hub_prefix=None)
 
     text = " ".join(
@@ -193,7 +193,7 @@ Daniel Wroughton Craig CMG (born 2 March 1968) is an English actor who gained in
     assert paragraph2.startswith("Daniel Wroughton Craig CMG (born 2 March 1968) is")
 
 
-def test_split_threshold():
+def test_split_threshold_wtp():
     wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None)
 
     punct_threshold = wtp.get_threshold("en", "ud", return_punctuation_threshold=True)
