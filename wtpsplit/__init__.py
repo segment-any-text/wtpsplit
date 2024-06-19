@@ -18,7 +18,7 @@ from wtpsplit.evaluation import token_to_char_probs
 from wtpsplit.extract import BertCharORTWrapper, PyTorchWrapper, SaTORTWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
 
 class WtP:
@@ -711,6 +711,7 @@ class SaT:
 
 
 if __name__ == "__main__":
+    # FIXME: remove
     # sat_lora = SaT("sat-3l", style_or_domain="ud", language="en")
     # out = sat_lora.split(
     #     "Hello this is a test But this is different now Now the next one starts looool",
@@ -720,12 +721,16 @@ if __name__ == "__main__":
     # print(out)
     # splits = list(sat_lora.split(["Paragraph-A Paragraph-B", "Paragraph-C100 Paragraph-D"]))
     # print(splits)
-    # sat_sm = SaT("sat-12l-sm")
-    # splits = sat_sm.split("This is a test sentence. This is another test sentence.", threshold=0.25)
-    # print(splits)
-    sat_ort_sm = SaT("/home/Markus/wtpsplit/scripts/sat-12l-sm", ort_providers=["CPUExecutionProvider"])
-    splits = sat_ort_sm.split("This is a test sentence. This is another test sentence.", threshold=0.25)
+    sat_sm = SaT("sat-3l-sm")
+    splits = sat_sm.split("this is a test this is another test")
     print(splits)
+    # sat_ort_sm = SaT("/home/Markus/wtpsplit/scripts/xlm-roberta-base", ort_providers=["CPUExecutionProvider"])
+    # splits = sat_ort_sm.split("This is a test sentence. This is another test sentence.", threshold=0.25)
+    # print(splits)
+    # sat_ort = SaT("/home/Markus/wtpsplit/scripts/sat-12l-no-limited-lookahead", ort_providers=["CPUExecutionProvider"])
+    # # sat_ort = SaT("/home/Markus/wtpsplit/scripts/sat-1l-sm", ort_providers=["CPUExecutionProvider"])
+    # splits = sat_ort.split("This is a test sentence. This is another test sentence.", threshold=0.25)
+    # print(splits)
     # wtp = WtP("wtp-bert-mini", ort_providers=["CPUExecutionProvider"])
 
     # splits = wtp.split("This is a test sentence This is another test sentence.", threshold=0.005)
