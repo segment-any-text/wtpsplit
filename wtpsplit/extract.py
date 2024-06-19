@@ -5,7 +5,6 @@ import logging
 import numpy as np
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
-from tokenizers import AddedToken
 
 from wtpsplit.utils import Constants, hash_encode
 
