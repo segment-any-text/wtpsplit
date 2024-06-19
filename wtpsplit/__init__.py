@@ -483,6 +483,10 @@ class SaT:
                 raise ValueError("Please specify both language and style_or_domain!")
             if style_or_domain and language:
                 import adapters  # noqa
+                # monkey patch mixin to avoid forking whole adapters library
+                from adapters.models import MODEL_MIXIN_MAPPING
+                from adapters.models.bert.mixin_bert import BertModelAdaptersMixin
+                MODEL_MIXIN_MAPPING["SubwordXLMRobertaModel"] = BertModelAdaptersMixin
                 model_type = self.model.model.config.model_type
                 # adapters need xlm-roberta as model type.
                 self.model.model.config.model_type = "xlm-roberta"
