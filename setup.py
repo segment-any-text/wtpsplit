@@ -18,7 +18,7 @@ setup(
         "cached_property",  # for Py37
         "torchinfo",
         "mosestokenizer",
-        "adapters==0.2.1"
+        "adapters==0.1.1"
     ],
     url="https://github.com/segment-any-text/wtpsplit",
     package_data={"wtpsplit": ["data/*"]},
