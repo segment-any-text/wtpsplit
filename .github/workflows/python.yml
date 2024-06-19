@@ -30,5 +30,4 @@ jobs:
           ruff --output-format=github --target-version=py37 .
       - name: Test with pytest
         run: |
-          pytest test_wtp.py
-          pytest test_sat.py
+          pytest test.py
