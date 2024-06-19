@@ -13,6 +13,9 @@ from huggingface_hub import hf_hub_download
 from transformers import AutoConfig, AutoModelForTokenClassification
 from transformers.utils.hub import cached_file
 
+import adapters  # noqa
+from adapters.models import MODEL_MIXIN_MAPPING
+from adapters.models.bert.mixin_bert import BertModelAdaptersMixin
 from wtpsplit.evaluation import token_to_char_probs
 from wtpsplit.extract import BertCharORTWrapper, PyTorchWrapper, SaTORTWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid
@@ -482,10 +485,7 @@ class SaT:
             if (style_or_domain and not language) or (language and not style_or_domain):
                 raise ValueError("Please specify both language and style_or_domain!")
             if style_or_domain and language:
-                import adapters  # noqa
                 # monkey patch mixin to avoid forking whole adapters library
-                from adapters.models import MODEL_MIXIN_MAPPING
-                from adapters.models.bert.mixin_bert import BertModelAdaptersMixin
                 MODEL_MIXIN_MAPPING["SubwordXLMRobertaModel"] = BertModelAdaptersMixin
                 model_type = self.model.model.config.model_type
                 # adapters need xlm-roberta as model type.

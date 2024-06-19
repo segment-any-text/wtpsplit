@@ -4,7 +4,7 @@ Code for the paper [Segment Any Text: A Universal Approach for Robust, Efficient
 
 This repository contains `wtpsplit`, a package for robust, efficient and adaptable sentence segmentation across 85 languages, as well as the code and configs to reproduce the **state-of-the-art** results in 8 distinct corpora and 85 languages demonstrated in our Segment any Text [paper](TODO).
 
-![System Figure](./system-fig.png)
+![System Figure](./configs/system-fig.png)
 
 
 ## Installation

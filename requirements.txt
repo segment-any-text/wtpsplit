@@ -19,3 +19,4 @@ cohere
 replicate
 onnx
 onnxruntime
+torchinfo
