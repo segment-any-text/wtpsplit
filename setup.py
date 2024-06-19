@@ -9,7 +9,7 @@ setup(
     author_email="markus.frohmann@gmail.com",
     install_requires=[
         "onnxruntime>=1.13.1",
-        "transformers>=4.22.2,<4.36",
+        "transformers>=4.22.2,<4.40",
         "numpy>=1.0,<2.0",
         "scikit-learn>=1",
         "tqdm",
@@ -18,7 +18,7 @@ setup(
         "cached_property",  # for Py37
         "torchinfo",
         "mosestokenizer",
-        "adapters==0.1.1"
+        "adapters==0.2.1"
     ],
     url="https://github.com/segment-any-text/wtpsplit",
     package_data={"wtpsplit": ["data/*"]},
