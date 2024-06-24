@@ -1,0 +1,326 @@
+# WtP usage in wtpsplit (Legacy)
+
+This doc details how to use the old `WtP` models. You should probably use [SaT](./README.md) instead.
+
+## Usage
+
+```python
+from wtpsplit import WtP
+
+wtp = WtP("wtp-bert-mini")
+# optionally run on GPU for better performance
+# also supports TPUs via e.g. wtp.to("xla:0"), in that case pass `pad_last_batch=True` to wtp.split
+wtp.half().to("cuda")
+
+# returns ["Hello ", "This is a test."]
+wtp.split("Hello This is a test.")
+
+# returns an iterator yielding a lists of sentences for every text
+# do this instead of calling wtp.split on every text individually for much better performance
+wtp.split(["Hello This is a test.", "And some more texts..."])
+
+# if you're using a model with language adapters, also pass a `lang_code`
+wtp.split("Hello This is a test.", lang_code="en")
+
+# depending on your usecase, adaptation to e.g. the Universal Dependencies style may give better results
+# this always requires a language code
+wtp.split("Hello This is a test.", lang_code="en", style="ud")
+```
+
+## ONNX support
+
+You can enable ONNX inference for the `wtp-bert-*` models:
+
+```python
+wtp = WtP("wtp-bert-mini", onnx_providers=["CUDAExecutionProvider"])
+```
+
+This requires `onnxruntime` and `onnxruntime-gpu`. It should give a good speedup on GPU!
+
+```python
+>>> from wtpsplit import WtP
+>>> texts = ["This is a sentence. This is another sentence."] * 1000
+
+# PyTorch GPU
+>>> model = WtP("wtp-bert-mini")
+>>> model.half().to("cuda")
+>>> %timeit list(model.split(texts))
+272 ms ± 16.1 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+
+# onnxruntime GPU
+>>> model = WtP("wtp-bert-mini", ort_providers=["CUDAExecutionProvider"])
+>>> %timeit list(model.split(texts))
+198 ms ± 1.36 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+```
+
+Notes:
+- The `wtp-canine-*` models are currently not supported with ONNX because the pooling done by CANINE is not trivial to export. Ideas to solve this are very welcome!
+- This does not work with Python 3.7 because `onnxruntime` does not support the opset we need for py37.
+
+
+## Available Models
+
+Pro tips: I recommend `wtp-bert-mini` for speed-sensitive applications, otherwise `wtp-canine-s-12l`. The `*-no-adapters` models provide a good tradeoff between speed and performance. You should *probably not* use `wtp-bert-tiny`.
+
+| Model                                                                      |    English Score |    English Score<br>(adapted) |    Multilingual Score |    Multilingual Score<br>(adapted) |
+|:-----------------------------------------------------------------------|-----:|-----:|-----:|-----:|
+| [wtp-bert-tiny](https://huggingface.co/benjamin/wtp-bert-tiny)                | 83.8 | 91.9 | 79.5 | 88.6 |
+| [wtp-bert-mini](https://huggingface.co/benjamin/wtp-bert-mini)                | 91.8 | 95.9 | 84.3 | 91.3 |
+| [wtp-canine-s-1l](https://huggingface.co/benjamin/wtp-canine-s-1l)              | 94.5 | 96.5 | 86.7 | 92.8 |
+| [wtp-canine-s-1l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-1l-no-adapters)  | 93.1 | 96.4 | 85.1 | 91.8 |
+| [wtp-canine-s-3l](https://huggingface.co/benjamin/wtp-canine-s-3l)              | 94.4 | 96.8 | 86.7 | 93.4 |
+| [wtp-canine-s-3l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-3l-no-adapters)  | 93.8 | 96.4 | 86   | 92.3 |
+| [wtp-canine-s-6l](https://huggingface.co/benjamin/wtp-canine-s-6l)              | 94.5 | 97.1 | 87   | 93.6 |
+| [wtp-canine-s-6l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-6l-no-adapters)  | 94.4 | 96.8 | 86.4 | 92.8 |
+| [wtp-canine-s-9l](https://huggingface.co/benjamin/wtp-canine-s-9l)              | 94.8 | 97   | 87.7 | 93.8 |
+| [wtp-canine-s-9l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-9l-no-adapters)  | 94.3 | 96.9 | 86.6 | 93   |
+| [wtp-canine-s-12l](https://huggingface.co/benjamin/wtp-canine-s-12l)             | 94.7 | 97.1 | 87.9 | 94   |
+| [wtp-canine-s-12l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-12l-no-adapters) | 94.5 | 97   | 87.1 | 93.2 |
+
+The scores are macro-average F1 score across all available datasets for "English", and macro-average F1 score across all datasets and languages for "Multilingual". "adapted" means adapation via WtP Punct; check out the paper for details. 
+
+For comparison, here's the English scores of some other tools:
+
+| Model                                                                      |    English Score
+|:-----------------------------------------------------------------------|-----:|
+| SpaCy (sentencizer) | 86.8 |
+| PySBD | 69.8 |
+| SpaCy (dependency parser) | 93.1 |
+| Ersatz | 91.6 |
+| Punkt (`nltk.sent_tokenize`) | 92.5 |
+
+### Paragraph Segmentation
+
+Since WtP models are trained to predict newline probablity, they can segment text into paragraphs in addition to sentences.
+
+```python
+# returns a list of paragraphs, each containing a list of sentences
+# adjust the paragraph threshold via the `paragraph_threshold` argument.
+wtp.split(text, do_paragraph_segmentation=True)
+```
+
+### Adaptation
+
+WtP can adapt to the Universal Dependencies, OPUS100 or Ersatz corpus segmentation style in many languages by punctuation adaptation (*preferred*) or threshold adaptation.
+
+#### Punctuation Adaptation
+
+```python
+# this requires a `lang_code`
+# check the paper or `wtp.mixtures` for supported styles
+wtp.split(text, lang_code="en", style="ud")
+```
+
+This also allows changing the threshold, but inherently has higher thresholds values since it is not newline probablity anymore being thresholded:
+
+```python
+wtp.split(text, lang_code="en", style="ud", threshold=0.7)
+```
+
+To get the default threshold for a style:
+```python
+wtp.get_threshold("en", "ud", return_punctuation_threshold=True)
+```
+
+#### Threshold Adaptation
+```python
+threshold = wtp.get_threshold("en", "ud")
+
+wtp.split(text, threshold=threshold)
+```
+
+### Advanced Usage
+
+__Get the newline or sentence boundary probabilities for a text:__
+
+```python
+# returns newline probabilities (supports batching!)
+wtp.predict_proba(text)
+
+# returns sentence boundary probabilities for the given style
+wtp.predict_proba(text, lang_code="en", style="ud")
+```
+
+__Load a WtP model in [HuggingFace `transformers`](https://github.com/huggingface/transformers):__
+
+```python
+# import wtpsplit.models to register the custom models 
+# (character-level BERT w/ hash embeddings and canine with language adapters)
+import wtpsplit.models
+from transformers import AutoModelForTokenClassification
+
+model = AutoModelForTokenClassification.from_pretrained("benjamin/wtp-bert-mini") # or some other model name
+```
+
+__** NEW ** Adapt to your own corpus using WtP_Punct:__
+
+Clone the repository:
+
+```
+git clone https://github.com/bminixhofer/wtpsplit
+cd wtpsplit
+```
+
+Create your data:
+```python
+import torch
+
+torch.save(
+    {
+        "en": {
+            "sentence": {
+                "dummy-dataset": {
+                    "meta": {
+                        "train_data": ["train sentence 1", "train sentence 2"],
+                    },
+                    "data": [
+                        "test sentence 1",
+                        "test sentence 2",
+                    ]
+                }
+            }
+        }
+    },
+    "dummy-dataset.pth"
+)
+```
+
+Run adaptation:
+
+```
+python3 wtpsplit/evaluation/adapt.py --model_path=benjamin/wtp-bert-mini --eval_data_path dummy-dataset.pth --include_langs=en
+```
+
+This should print something like 
+
+```
+en dummy-dataset U=0.500 T=0.667 PUNCT=0.667
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 30.52it/s]
+Wrote mixture to /Users/bminixhofer/Documents/wtpsplit/wtpsplit/.cache/wtp-bert-mini.skops
+Wrote results to /Users/bminixhofer/Documents/wtpsplit/wtpsplit/.cache/wtp-bert-mini_intrinsic_results.json
+```
+
+i.e. run adaptation on your data and save the mixtures and evaluation results. You can then load and use the mixture like this:
+
+```python
+from wtpsplit import WtP
+import skops.io as sio
+
+wtp = WtP(
+    "wtp-bert-mini",
+    mixtures=sio.load(
+        "wtpsplit/.cache/wtp-bert-mini.skops",
+        ["numpy.float32", "numpy.float64", "sklearn.linear_model._logistic.LogisticRegression"],
+    ),
+)
+
+wtp.split("your text here", lang_code="en", style="dummy-dataset")
+```
+
+... and adjust the dataset name, language and model in the above to your needs.
+
+## Reproducing the paper
+
+`configs/` contains the configs for the runs from the paper. We trained on a TPUv3-8. Launch training like this:
+
+```
+python wtpsplit/train/train.py configs/<config_name>.json
+```
+
+In addition:
+- `wtpsplit/data_acquisition` contains the code for obtaining evaluation data and raw text from the mC4 corpus.
+- `wtpsplit/evaluation` contains the code for:
+  - intrinsic evaluation (i.e. sentence segmentation results) via `adapt.py`. The raw intrinsic results in JSON format are also at `evaluation_results/`
+  - extrinsic evaluation on Machine Translation in `extrinsic.py`
+  - baseline (PySBD, nltk, etc.) intrinsic evaluation in `intrinsic_baselines.py`
+  - punctuation annotation experiments in `punct_annotation.py` and `punct_annotation_wtp.py`
+
+## Supported Languages
+
+| iso | Name                   |
+|:----|:-----------------------|
+| af  | Afrikaans              |
+| am  | Amharic                |
+| ar  | Arabic                 |
+| az  | Azerbaijani            |
+| be  | Belarusian             |
+| bg  | Bulgarian              |
+| bn  | Bengali                |
+| ca  | Catalan                |
+| ceb | Cebuano                |
+| cs  | Czech                  |
+| cy  | Welsh                  |
+| da  | Danish                 |
+| de  | German                 |
+| el  | Greek                  |
+| en  | English                |
+| eo  | Esperanto              |
+| es  | Spanish                |
+| et  | Estonian               |
+| eu  | Basque                 |
+| fa  | Persian                |
+| fi  | Finnish                |
+| fr  | French                 |
+| fy  | Western Frisian        |
+| ga  | Irish                  |
+| gd  | Scottish Gaelic        |
+| gl  | Galician               |
+| gu  | Gujarati               |
+| ha  | Hausa                  |
+| he  | Hebrew                 |
+| hi  | Hindi                  |
+| hu  | Hungarian              |
+| hy  | Armenian               |
+| id  | Indonesian             |
+| ig  | Igbo                   |
+| is  | Icelandic              |
+| it  | Italian                |
+| ja  | Japanese               |
+| jv  | Javanese               |
+| ka  | Georgian               |
+| kk  | Kazakh                 |
+| km  | Central Khmer          |
+| kn  | Kannada                |
+| ko  | Korean                 |
+| ku  | Kurdish                |
+| ky  | Kirghiz                |
+| la  | Latin                  |
+| lt  | Lithuanian             |
+| lv  | Latvian                |
+| mg  | Malagasy               |
+| mk  | Macedonian             |
+| ml  | Malayalam              |
+| mn  | Mongolian              |
+| mr  | Marathi                |
+| ms  | Malay                  |
+| mt  | Maltese                |
+| my  | Burmese                |
+| ne  | Nepali                 |
+| nl  | Dutch                  |
+| no  | Norwegian              |
+| pa  | Panjabi                |
+| pl  | Polish                 |
+| ps  | Pushto                 |
+| pt  | Portuguese             |
+| ro  | Romanian               |
+| ru  | Russian                |
+| si  | Sinhala                |
+| sk  | Slovak                 |
+| sl  | Slovenian              |
+| sq  | Albanian               |
+| sr  | Serbian                |
+| sv  | Swedish                |
+| ta  | Tamil                  |
+| te  | Telugu                 |
+| tg  | Tajik                  |
+| th  | Thai                   |
+| tr  | Turkish                |
+| uk  | Ukrainian              |
+| ur  | Urdu                   |
+| uz  | Uzbek                  |
+| vi  | Vietnamese             |
+| xh  | Xhosa                  |
+| yi  | Yiddish                |
+| yo  | Yoruba                 |
+| zh  | Chinese                |
+| zu  | Zulu                   |
