@@ -87,7 +87,7 @@ wtp = WtP("wtp-bert-mini")
 wtp.split("This is a test This is another test.")
 ```
 
-For more details on WtP and reproduction details, see the `wtp` branch.
+For more details on WtP and reproduction details, see the [WtP doc](./README_WTP.md).
 
 ## Paragraph Segmentation
 
