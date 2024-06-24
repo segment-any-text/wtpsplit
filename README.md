@@ -259,6 +259,9 @@ In addition:
 Ensure to install packages from `requirements.txt` beforehand.
 ## Supported Languages
 
+<details>
+  <summary>Table with supported languages</summary>
+
 | iso | Name                   |
 |:----|:-----------------------|
 | af  | Afrikaans              |
@@ -347,7 +350,9 @@ Ensure to install packages from `requirements.txt` beforehand.
 | zh  | Chinese                |
 | zu  | Zulu                   |
 
-For details, we refer to our [paper](TODO).
+</details>
+
+For details, please see the [paper](TODO).
 
 ## Citations
 
