@@ -1,8 +1,11 @@
-# Segment any Text: Robust, Efficient and Adaptable Sentence Segmentation
+<h1 align="center">wtpsplit🪓</h1>
+<h3 align="center">Segment any text quickly, and adaptably⚡</h3>
 
-Code for the paper [Segment Any Text: A Universal Approach for Robust, Efficient and Adaptable Sentence Segmentation](TODO) by Markus Frohmann, Igor Sterner, Benjamin Minixhofer, Ivan Vulić and Markus Schedl.
+This repository allows you to segment text into sentences or other semantic units. It implements the models from:
+- **SaT** &mdash; [Segment Any Text: A Universal Approach for Robust, Efficient and Adaptable Sentence Segmentation](TODO) by Markus Frohmann, Igor Sterner, Benjamin Minixhofer, Ivan Vulić and Markus Schedl (**state-of-the-art, encouraged**).
+- **WtP** &mdash; [Where’s the Point? Self-Supervised Multilingual Punctuation-Agnostic Sentence Segmentation](https://aclanthology.org/2023.acl-long.398/) by Benjamin Minixhofer, Jonas Pfeiffer and Ivan Vulić (*previous version, maintained for reproducibility*).
 
-This repository contains `wtpsplit`, a package for robust, efficient and adaptable sentence segmentation across 85 languages, as well as the code and configs to reproduce the **state-of-the-art** results in 8 distinct corpora and 85 languages demonstrated in our Segment any Text [paper](TODO).
+The namesake WtP is maintained for reproducibility. Our new followup SaT provides robust, efficient and adaptable sentence segmentation across 85 languages at higher performance and less compute cost. Check out the **state-of-the-art** results in 8 distinct corpora and 85 languages demonstrated in the [Segment any Text paper](TODO).
 
 ![System Figure](./configs/system-fig.png)
 
@@ -84,7 +87,7 @@ wtp = WtP("wtp-bert-mini")
 wtp.split("This is a test This is another test.")
 ```
 
-For more details on WtP and reproduction details, see the `wtp` branch.
+For more details on WtP and reproduction details, see the [WtP doc](./README_WTP.md).
 
 ## Paragraph Segmentation
 
@@ -256,6 +259,9 @@ In addition:
 Ensure to install packages from `requirements.txt` beforehand.
 ## Supported Languages
 
+<details>
+  <summary>Table with supported languages</summary>
+
 | iso | Name                   |
 |:----|:-----------------------|
 | af  | Afrikaans              |
@@ -344,15 +350,17 @@ Ensure to install packages from `requirements.txt` beforehand.
 | zh  | Chinese                |
 | zu  | Zulu                   |
 
-For details, we refer to our [paper](TODO).
+</details>
 
-## Citation
+For details, please see the [paper](TODO).
+
+## Citations
 
 If you find `wtpsplit` and our `SaT` models useful, please kindly cite our paper:
 ```
 @inproceedings{TODO,}
 ```
-If you use WtP models, cite:
+For the library and the WtP models, please cite:
 ```
 @inproceedings{minixhofer-etal-2023-wheres,
     title = "Where{'}s the Point? Self-Supervised Multilingual Punctuation-Agnostic Sentence Segmentation",
@@ -374,10 +382,6 @@ If you use WtP models, cite:
 This research was funded in whole or in part by the Austrian Science Fund (FWF): P36413, P33526, and DFH-23, and by the State of Upper Austria and the Federal Ministry of Education, Science, and Research, through grants LIT-2021-YOU-215. In addition, Ivan Vulic and Benjamin Minixhofer ´have been supported through the Royal Society University Research Fellowship ‘Inclusive and Sustainable Language Technology for a Truly Multilingual World’ (no 221137) awarded to Ivan Vulic.´ This research has also been supported with Cloud TPUs from Google’s TPU Research Cloud (TRC). This work was also supported by compute credits
 from a Cohere For AI Research Grant, these grants are designed to support academic partners conducting research with the goal of releasing scientific artifacts and data for good projects. We also thank Simone Teufel for fruitful discussions.
 
+---
 
-## Previous Version
-
-*This repository previously contained `nnsplit` and `wtpsplit`, the precursors to `segment-any-text`. We still support all functionality of `wtpsplit`. Moreover, you can still use the `nnsplit` branch (or the `nnsplit` PyPI releases) for the old version, however, this is highly discouraged and not maintained! Please let us know if you have a usecase which `nnsplit` can solve but `segment-any-test` can not.*
-
-## Final Words
-We hope this repo is useful. For any questions, please create an issue or send an email to markus.frohmann@gmail.com, and I will get back to you as soon as possible.
+For any questions, please create an issue or send an email to markus.frohmann@gmail.com, and I will get back to you as soon as possible.
