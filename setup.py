@@ -2,11 +2,11 @@ from setuptools import setup
 
 setup(
     name="wtpsplit",
-    version="1.3.0",
+    version="2.0.0",
     packages=["wtpsplit"],
-    description="Robust, adaptible sentence segmentation for 85 languages",
-    author="Benjamin Minixhofer",
-    author_email="bminixhofer@gmail.com",
+    description="Universal Robust, Efficient and Adaptable Sentence Segmentation",
+    author="Markus Frohmann, Igor Sterner, Benjamin Minixhofer",
+    author_email="markus.frohmann@gmail.com",
     install_requires=[
         "onnxruntime>=1.13.1",
         "transformers>=4.22.2",
@@ -16,8 +16,10 @@ setup(
         "skops",
         "pandas>=1",
         "cached_property",  # for Py37
+        "mosestokenizer",
+        "adapters==0.2.1"
     ],
-    url="https://github.com/bminixhofer/wtpsplit",
+    url="https://github.com/segment-any-text/wtpsplit",
     package_data={"wtpsplit": ["data/*"]},
     include_package_data=True,
     license="MIT",

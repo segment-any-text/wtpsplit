@@ -1,0 +1,260 @@
+{
+    "en": {
+        "lyrics-Alternative Metal": {
+            "u": 0.4469515683912542,
+            "t": 0.6860349188045153,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.03225806451612903,
+            "acc_punct": null
+        },
+        "lyrics-Alternative Metal-corrupted-asr": {
+            "u": 0.3989775541652121,
+            "t": 0.6686111189942725,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.01935483870967742,
+            "acc_punct": null
+        },
+        "lyrics-Alternative Rock": {
+            "u": 0.44205289001197307,
+            "t": 0.6490157146285984,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.017523364485981307,
+            "acc_punct": null
+        },
+        "lyrics-Alternative Rock-corrupted-asr": {
+            "u": 0.42603584083605006,
+            "t": 0.6740627756396088,
+            "punct": null,
+            "acc_u": 0.0011682242990654205,
+            "acc_t": 0.029205607476635514,
+            "acc_punct": null
+        },
+        "lyrics-Country": {
+            "u": 0.4250390594766046,
+            "t": 0.6668032021467015,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.02531645569620253,
+            "acc_punct": null
+        },
+        "lyrics-Country-corrupted-asr": {
+            "u": 0.4192402335541667,
+            "t": 0.6666240935316466,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.0450070323488045,
+            "acc_punct": null
+        },
+        "lyrics-Gangsta Rap": {
+            "u": 0.19815414912703533,
+            "t": 0.5032758449585243,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.0,
+            "acc_punct": null
+        },
+        "lyrics-Gangsta Rap-corrupted-asr": {
+            "u": 0.15177778670867306,
+            "t": 0.48446371216997736,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.0,
+            "acc_punct": null
+        },
+        "lyrics-Hard Rock": {
+            "u": 0.4434991611004468,
+            "t": 0.640597316091893,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.023255813953488372,
+            "acc_punct": null
+        },
+        "lyrics-Hard Rock-corrupted-asr": {
+            "u": 0.3959473458834924,
+            "t": 0.6359387632943083,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.018604651162790697,
+            "acc_punct": null
+        },
+        "lyrics-Heavy Metal": {
+            "u": 0.4351408419940857,
+            "t": 0.6372617149624907,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.023148148148148147,
+            "acc_punct": null
+        },
+        "lyrics-Heavy Metal-corrupted-asr": {
+            "u": 0.39931442365362274,
+            "t": 0.6240857035977596,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.018518518518518517,
+            "acc_punct": null
+        },
+        "lyrics-Hip Hop": {
+            "u": 0.22833279418736022,
+            "t": 0.5226172376909056,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.003714020427112349,
+            "acc_punct": null
+        },
+        "lyrics-Hip Hop-corrupted-asr": {
+            "u": 0.16016221876039913,
+            "t": 0.4557354570199437,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.0018570102135561746,
+            "acc_punct": null
+        },
+        "lyrics-Indie Rock": {
+            "u": 0.4281170733796194,
+            "t": 0.6387854312673187,
+            "punct": null,
+            "acc_u": 0.006557377049180328,
+            "acc_t": 0.022950819672131147,
+            "acc_punct": null
+        },
+        "lyrics-Indie Rock-corrupted-asr": {
+            "u": 0.42901862043042843,
+            "t": 0.6272677225024937,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.022950819672131147,
+            "acc_punct": null
+        },
+        "lyrics-Pop": {
+            "u": 0.4100042978887628,
+            "t": 0.6383337748577316,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.012345679012345678,
+            "acc_punct": null
+        },
+        "lyrics-Pop-corrupted-asr": {
+            "u": 0.3657318823330395,
+            "t": 0.6215624826147331,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.02356902356902357,
+            "acc_punct": null
+        },
+        "lyrics-Pop Punk": {
+            "u": 0.4884909784147525,
+            "t": 0.6920661641377792,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.0425531914893617,
+            "acc_punct": null
+        },
+        "lyrics-Pop Punk-corrupted-asr": {
+            "u": 0.4503542547225345,
+            "t": 0.6774460026050241,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.0425531914893617,
+            "acc_punct": null
+        },
+        "lyrics-Pop Rock": {
+            "u": 0.442941035493167,
+            "t": 0.6381600394268023,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.024271844660194174,
+            "acc_punct": null
+        },
+        "lyrics-Pop Rock-corrupted-asr": {
+            "u": 0.40727833309278705,
+            "t": 0.634981022009173,
+            "punct": null,
+            "acc_u": 0.0024271844660194173,
+            "acc_t": 0.014563106796116505,
+            "acc_punct": null
+        },
+        "lyrics-Punk Rock": {
+            "u": 0.45029726955501687,
+            "t": 0.6752782365432769,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.021052631578947368,
+            "acc_punct": null
+        },
+        "lyrics-Punk Rock-corrupted-asr": {
+            "u": 0.4367399124163557,
+            "t": 0.6721634633942115,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.04736842105263158,
+            "acc_punct": null
+        },
+        "lyrics-RnB": {
+            "u": 0.380773963914889,
+            "t": 0.6146528442393894,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.014207650273224045,
+            "acc_punct": null
+        },
+        "lyrics-RnB-corrupted-asr": {
+            "u": 0.33214041157705937,
+            "t": 0.5882947175131545,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.015300546448087432,
+            "acc_punct": null
+        },
+        "lyrics-Rock": {
+            "u": 0.44163048194744214,
+            "t": 0.6540898970614307,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.0338409475465313,
+            "acc_punct": null
+        },
+        "lyrics-Rock-corrupted-asr": {
+            "u": 0.41629476172106705,
+            "t": 0.6449536435157445,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.027918781725888325,
+            "acc_punct": null
+        },
+        "lyrics-Soul": {
+            "u": 0.38622367351087045,
+            "t": 0.5976782330976226,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.00909090909090909,
+            "acc_punct": null
+        },
+        "lyrics-Soul-corrupted-asr": {
+            "u": 0.38528337315270855,
+            "t": 0.6075695237128256,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.01818181818181818,
+            "acc_punct": null
+        },
+        "lyrics-Southern Hip Hop": {
+            "u": 0.22689918659214176,
+            "t": 0.5299465049718649,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.009615384615384616,
+            "acc_punct": null
+        },
+        "lyrics-Southern Hip Hop-corrupted-asr": {
+            "u": 0.15788282116734015,
+            "t": 0.44927483035117494,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": 0.009615384615384616,
+            "acc_punct": null
+        }
+    }
+}

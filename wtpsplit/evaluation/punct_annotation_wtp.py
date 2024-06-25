@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import json
 
 import numpy as np
 from sklearn import linear_model
@@ -6,8 +7,9 @@ from sklearn.metrics import f1_score
 from transformers import AutoModelForTokenClassification, HfArgumentParser
 
 import wtpsplit.models  # noqa
-from wtpsplit.extract import extract
+from wtpsplit.extract import PyTorchWrapper
 from wtpsplit.utils import Constants
+from wtpsplit.evaluation.intrinsic import process_logits
 
 
 @dataclass
@@ -18,7 +20,7 @@ class Args:
     stride: int = 64
     batch_size: int = 32
     n_subsample: int = None
-    device: str = "cuda"
+    device: str = "cpu"
 
 
 def load_iwslt(path, fix_space=True):
@@ -65,35 +67,21 @@ if __name__ == "__main__":
             Constants.ROOT_DIR / "data" / "external" / "punctuation_annotation" / "bn" / "test_ref",
         )
 
-    model = AutoModelForTokenClassification.from_pretrained(args.model_path).to(args.device)
+    print("Loading model...")
+    model = PyTorchWrapper(AutoModelForTokenClassification.from_pretrained(args.model_path).to(args.device))
 
     if args.n_subsample is None:
         args.n_subsample = len(train_text)
+    print("Using", args.n_subsample, "train samples...")
 
-    train_logits = extract(
-        [train_text[: args.n_subsample]],
-        model,
-        lang_code=args.lang,
-        stride=args.stride,
-        block_size=args.block_size,
-        batch_size=args.batch_size,
-        use_hidden_states=False,
-        pad_last_batch=False,
-    )[0].numpy()
+    train_logits = process_logits(train_text[: args.n_subsample], model, args.lang, args)
 
-    clf = linear_model.LogisticRegression(penalty="none", multi_class="multinomial", max_iter=10_000)
+    clf = linear_model.LogisticRegression(
+        penalty=None, multi_class="multinomial", max_iter=10_000, random_state=42, verbose=1
+    )
     clf.fit(train_logits, train_char_labels[: args.n_subsample])
 
-    test_logits = extract(
-        [test_text],
-        model,
-        lang_code=args.lang,
-        stride=args.stride,
-        block_size=args.block_size,
-        batch_size=args.batch_size,
-        use_hidden_states=False,
-        pad_last_batch=False,
-    )[0].numpy()
+    test_logits = process_logits(test_text, model, args.lang, args)
 
     test_preds = clf.predict(test_logits)
 
@@ -103,4 +91,20 @@ if __name__ == "__main__":
         f1_score(test_char_labels == 3, test_preds == 3),
     )
     avg = np.mean([question, period, comma])
-    print(question, period, comma, avg)
+    results = {
+        "C": comma,
+        "P": period,
+        "Q": question,
+        "AVG": avg,
+    }
+    print(results)
+
+    if not (Constants.CACHE_DIR / "extrinsic").exists():
+        (Constants.CACHE_DIR / "extrinsic").mkdir()
+    json.dump(
+        results,
+        open(
+            Constants.CACHE_DIR / "extrinsic" / f"iwslt_{args.model_path.replace('/','_')}_{args.lang}.json",
+            "w",
+        ),
+    )

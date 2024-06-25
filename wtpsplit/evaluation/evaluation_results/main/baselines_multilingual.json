@@ -1,0 +1,2962 @@
+{
+    "af": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.28727064220183485,
+                "precision": 0.7707692307692308,
+                "correct_pairwise": 0,
+                "f1": 0.41854636591478694
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9842931937172775,
+                "precision": 0.9817232375979112,
+                "correct_pairwise": 0,
+                "f1": 0.9830065359477125
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "am": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.03676880222841226,
+                "precision": 0.22372881355932203,
+                "correct_pairwise": 0,
+                "f1": 0.06315789473684211
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ar": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.8721359940872137,
+                "precision": 0.9539207760711399,
+                "correct_pairwise": 0,
+                "f1": 0.9111969111969114
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.4291294642857143,
+                "precision": 0.8879907621247113,
+                "correct_pairwise": 0,
+                "f1": 0.5786305492851768
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.8071895424836601,
+                "precision": 0.7755102040816326,
+                "correct_pairwise": 0,
+                "f1": 0.7910328262610089
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0003333333333333333,
+                "precision": 0.17647058823529413,
+                "correct_pairwise": 0,
+                "f1": 0.0006654097815237884
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "az": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8395543175487465,
+                "precision": 0.6353288364249579,
+                "correct_pairwise": 0,
+                "f1": 0.7233021358291336
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "be": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.22807017543859648,
+                "precision": 0.660655737704918,
+                "correct_pairwise": 0,
+                "f1": 0.3390828775767774
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.718266253869969,
+                "precision": 0.9015544041450777,
+                "correct_pairwise": 0,
+                "f1": 0.7995404939689833
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "bg": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9454646633277685,
+                "precision": 0.9233695652173913,
+                "correct_pairwise": 0,
+                "f1": 0.9342864998625241
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9073705179282868,
+                "precision": 0.9712153518123667,
+                "correct_pairwise": 0,
+                "f1": 0.9382080329557158
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "bn": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.253072625698324,
+                "precision": 0.703416149068323,
+                "correct_pairwise": 0,
+                "f1": 0.372226787181594
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.34,
+                "precision": 0.8095238095238095,
+                "correct_pairwise": 0,
+                "f1": 0.47887323943661975
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0014957264957264958,
+                "precision": 0.04,
+                "correct_pairwise": 0,
+                "f1": 0.002883625128733265
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ca": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8742953776775648,
+                "precision": 0.8857795545402627,
+                "correct_pairwise": 0,
+                "f1": 0.88
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9927754364840458,
+                "precision": 0.983890214797136,
+                "correct_pairwise": 0,
+                "f1": 0.9883128558585557
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ceb": {
+        "ud": {
+            "spacy_dp": {
+                "recall": 1.0,
+                "precision": 0.9712643678160919,
+                "correct_pairwise": 0,
+                "f1": 0.9854227405247813
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "cs": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.9394719896973599,
+                "precision": 0.9891525423728813,
+                "correct_pairwise": 0,
+                "f1": 0.963672391017173
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8510998307952623,
+                "precision": 0.8960807600950119,
+                "correct_pairwise": 0,
+                "f1": 0.8730112814579115
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.8316723250465448,
+                "precision": 0.9702312507985179,
+                "correct_pairwise": 0,
+                "f1": 0.8956244840193419
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "cy": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.15818181818181817,
+                "precision": 0.696,
+                "correct_pairwise": 0,
+                "f1": 0.2577777777777778
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9813302217036173,
+                "precision": 0.9964454976303317,
+                "correct_pairwise": 0,
+                "f1": 0.988830099941211
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {}
+    },
+    "da": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9042553191489362,
+                "precision": 0.8992204899777283,
+                "correct_pairwise": 0,
+                "f1": 0.9017308766052484
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.937007874015748,
+                "precision": 0.9616161616161616,
+                "correct_pairwise": 0,
+                "f1": 0.9491525423728813
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "de": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.9202488687782805,
+                "precision": 0.9503504672897196,
+                "correct_pairwise": 0,
+                "f1": 0.9350574712643679
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.6942488262910798,
+                "precision": 0.7666882696046662,
+                "correct_pairwise": 0,
+                "f1": 0.7286726208808131
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.838452787258248,
+                "precision": 0.9189526184538653,
+                "correct_pairwise": 0,
+                "f1": 0.8768590124925639
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.00022222222222222223,
+                "precision": 0.6666666666666666,
+                "correct_pairwise": 0,
+                "f1": 0.00044429634566255696
+            }
+        },
+        "ted2020-corrupted-social-media": {},
+        "legal-CD_jug": {},
+        "legal-CD_jug-corrupted-asr": {},
+        "legal-CD_jug-corrupted-social-media": {},
+        "legal-gesCode": {},
+        "legal-gesCode-corrupted-asr": {},
+        "legal-gesCode-corrupted-social-media": {},
+        "legal-all-laws": {
+            "spacy_dp": {
+                "recall": 0.5929768620717848,
+                "precision": 0.7944919354544225,
+                "correct_pairwise": 0.0,
+                "f1": 0.678502657105934
+            }
+        },
+        "legal-all-laws-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.00018426386585590566,
+                "precision": 0.16666666666666666,
+                "correct_pairwise": 0.0,
+                "f1": 0.000368120743603902
+            }
+        },
+        "legal-all-laws-corrupted-social-media": {},
+        "legal-all-judgements": {
+            "spacy_dp": {
+                "recall": 0.6250474316231315,
+                "precision": 0.7088479534185868,
+                "correct_pairwise": 0.0,
+                "f1": 0.6576812011883165
+            }
+        },
+        "legal-all-judgements-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.011306203549478498,
+                "precision": 0.5652263374485598,
+                "correct_pairwise": 0.0,
+                "f1": 0.022007225889482316
+            }
+        },
+        "legal-all-judgements-corrupted-social-media": {}
+    },
+    "el": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8844221105527639,
+                "precision": 0.8989784335981839,
+                "correct_pairwise": 0,
+                "f1": 0.891640866873065
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9146341463414634,
+                "precision": 0.9615384615384616,
+                "correct_pairwise": 0,
+                "f1": 0.9375000000000001
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0034444444444444444,
+                "precision": 0.3229166666666667,
+                "correct_pairwise": 0,
+                "f1": 0.006816182937554969
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "en": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.9600519180847995,
+                "precision": 0.9203649937785151,
+                "correct_pairwise": 0,
+                "f1": 0.9397896520081881
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8609085810431857,
+                "precision": 0.9164179104477612,
+                "correct_pairwise": 0,
+                "f1": 0.8877964141122036
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.8732251521298174,
+                "precision": 0.9663299663299664,
+                "correct_pairwise": 0,
+                "f1": 0.9174214171550347
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {},
+        "legal-CD_scotus": {},
+        "legal-CD_scotus-corrupted-asr": {},
+        "legal-CD_scotus-corrupted-social-media": {},
+        "legal-CD_cyber_crime": {},
+        "legal-CD_cyber_crime-corrupted-asr": {},
+        "legal-CD_cyber_crime-corrupted-social-media": {},
+        "legal-CD_intellectual_property": {},
+        "legal-CD_intellectual_property-corrupted-asr": {},
+        "legal-CD_intellectual_property-corrupted-social-media": {},
+        "legal-CD_bva": {},
+        "legal-CD_bva-corrupted-asr": {},
+        "legal-CD_bva-corrupted-social-media": {},
+        "legal-all-judgements": {
+            "spacy_dp": {
+                "recall": 0.809353050430616,
+                "precision": 0.8256017933295092,
+                "correct_pairwise": 0.0,
+                "f1": 0.8139672157555427
+            }
+        },
+        "legal-all-judgements-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0008068458875978191,
+                "precision": 0.020604727398205656,
+                "correct_pairwise": 0.0,
+                "f1": 0.0015406011575137654
+            }
+        },
+        "legal-all-judgements-corrupted-social-media": {}
+    },
+    "eo": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8457655636567583,
+                "precision": 0.9251533742331288,
+                "correct_pairwise": 0,
+                "f1": 0.8836800468795781
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "es": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.9535727239753355,
+                "precision": 0.9909536373916321,
+                "correct_pairwise": 0,
+                "f1": 0.9719038817005545
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8921953958450309,
+                "precision": 0.9153225806451613,
+                "correct_pairwise": 0,
+                "f1": 0.903611032129656
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9896640826873385,
+                "precision": 0.9833119383825417,
+                "correct_pairwise": 0,
+                "f1": 0.986477784932389
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.00022222222222222223,
+                "precision": 1.0,
+                "correct_pairwise": 0,
+                "f1": 0.0004443457009553433
+            }
+        },
+        "ted2020-corrupted-social-media": {},
+        "legal-CD_wipolex": {},
+        "legal-CD_wipolex-corrupted-asr": {},
+        "legal-CD_wipolex-corrupted-social-media": {},
+        "legal-CD_multi_legal": {},
+        "legal-CD_multi_legal-corrupted-asr": {},
+        "legal-CD_multi_legal-corrupted-social-media": {},
+        "legal-CriminalCode": {},
+        "legal-CriminalCode-corrupted-asr": {},
+        "legal-CriminalCode-corrupted-social-media": {},
+        "legal-CivilCode": {},
+        "legal-CivilCode-corrupted-asr": {},
+        "legal-CivilCode-corrupted-social-media": {},
+        "legal-constitution": {},
+        "legal-constitution-corrupted-asr": {},
+        "legal-constitution-corrupted-social-media": {},
+        "legal-all-laws": {
+            "spacy_dp": {
+                "recall": 0.7719608128010266,
+                "precision": 0.9710974960047031,
+                "correct_pairwise": 0.20218579234972678,
+                "f1": 0.8520410296265981
+            }
+        },
+        "legal-all-laws-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0.0,
+                "f1": 0.0
+            }
+        },
+        "legal-all-laws-corrupted-social-media": {},
+        "legal-all-judgements": {
+            "spacy_dp": {
+                "recall": 0.5584242272996296,
+                "precision": 0.8943712092950141,
+                "correct_pairwise": 0.0,
+                "f1": 0.6768126285646107
+            }
+        },
+        "legal-all-judgements-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.007819912505792663,
+                "precision": 0.2735042735042735,
+                "correct_pairwise": 0.0,
+                "f1": 0.01500094629132969
+            }
+        },
+        "legal-all-judgements-corrupted-social-media": {}
+    },
+    "et": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.962534435261708,
+                "precision": 0.977069351230425,
+                "correct_pairwise": 0,
+                "f1": 0.9697474326949764
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8461538461538461,
+                "precision": 0.8954248366013072,
+                "correct_pairwise": 0,
+                "f1": 0.8700923787528868
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9083679114799447,
+                "precision": 0.9654538772510106,
+                "correct_pairwise": 0,
+                "f1": 0.9360413326207019
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.00011111111111111112,
+                "precision": 0.5,
+                "correct_pairwise": 0,
+                "f1": 0.00022217285047767166
+            }
+        },
+        "ted2020-corrupted-social-media": {},
+        "short-sequences": {
+            "spacy_dp": {
+                "recall": 0.797742848572509,
+                "precision": 0.9808925021914392,
+                "correct_pairwise": 0.47783251231527096,
+                "f1": 0.853932413643405
+            }
+        },
+        "short-sequences-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.2780591304670904,
+                "precision": 1.0,
+                "correct_pairwise": 0.0,
+                "f1": 0.41700835327030683
+            }
+        },
+        "short-sequences-corrupted-social-media": {}
+    },
+    "eu": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.7574396406513195,
+                "precision": 0.8630838131797824,
+                "correct_pairwise": 0,
+                "f1": 0.8068181818181819
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9302038295243977,
+                "precision": 0.9856020942408377,
+                "correct_pairwise": 0,
+                "f1": 0.9571020019065777
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "fa": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.45712694877505566,
+                "precision": 0.6751644736842105,
+                "correct_pairwise": 0,
+                "f1": 0.5451527224435591
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9992360580595875,
+                "precision": 0.9969512195121951,
+                "correct_pairwise": 0,
+                "f1": 0.9980923311713087
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.00011111111111111112,
+                "precision": 0.25,
+                "correct_pairwise": 0,
+                "f1": 0.00022212350066637052
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "fi": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.928173719376392,
+                "precision": 0.9731465265615878,
+                "correct_pairwise": 0,
+                "f1": 0.9501282416642919
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9379888268156424,
+                "precision": 0.9194961664841182,
+                "correct_pairwise": 0,
+                "f1": 0.9286504424778762
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.8934953538241601,
+                "precision": 0.963020030816641,
+                "correct_pairwise": 0,
+                "f1": 0.9269558769002596
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "fr": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.9370395177494977,
+                "precision": 0.9921985815602837,
+                "correct_pairwise": 0,
+                "f1": 0.9638305201515673
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8286358511837655,
+                "precision": 0.8739595719381689,
+                "correct_pairwise": 0,
+                "f1": 0.8506944444444444
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9438502673796791,
+                "precision": 0.9778393351800554,
+                "correct_pairwise": 0,
+                "f1": 0.9605442176870749
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.00011111111111111112,
+                "precision": 0.25,
+                "correct_pairwise": 0,
+                "f1": 0.00022212350066637052
+            }
+        },
+        "ted2020-corrupted-social-media": {},
+        "legal-CD_swiss_judgement": {},
+        "legal-CD_swiss_judgement-corrupted-asr": {},
+        "legal-CD_swiss_judgement-corrupted-social-media": {},
+        "legal-CriminalCode": {},
+        "legal-CriminalCode-corrupted-asr": {},
+        "legal-CriminalCode-corrupted-social-media": {},
+        "legal-CivilCode": {},
+        "legal-CivilCode-corrupted-asr": {},
+        "legal-CivilCode-corrupted-social-media": {},
+        "legal-constitution": {},
+        "legal-constitution-corrupted-asr": {},
+        "legal-constitution-corrupted-social-media": {},
+        "legal-all-laws": {
+            "spacy_dp": {
+                "recall": 0.5430177518729712,
+                "precision": 0.7372314776726542,
+                "correct_pairwise": 0.1655773420479303,
+                "f1": 0.6122465655902699
+            }
+        },
+        "legal-all-laws-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0.0,
+                "f1": 0.0
+            }
+        },
+        "legal-all-laws-corrupted-social-media": {},
+        "legal-all-judgements": {
+            "spacy_dp": {
+                "recall": 0.8136576618840008,
+                "precision": 0.8524152516626565,
+                "correct_pairwise": 0.0,
+                "f1": 0.8266024799701818
+            }
+        },
+        "legal-all-judgements-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0.0,
+                "f1": 0.0
+            }
+        },
+        "legal-all-judgements-corrupted-social-media": {}
+    },
+    "fy": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.12880143112701253,
+                "precision": 0.6923076923076923,
+                "correct_pairwise": 0,
+                "f1": 0.21719457013574664
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {}
+    },
+    "ga": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.452914798206278,
+                "precision": 0.9319492502883506,
+                "correct_pairwise": 0,
+                "f1": 0.6095812900792154
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9534313725490197,
+                "precision": 0.9725,
+                "correct_pairwise": 0,
+                "f1": 0.9628712871287128
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "gd": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.25308641975308643,
+                "precision": 0.6473684210526316,
+                "correct_pairwise": 0,
+                "f1": 0.363905325443787
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.4673469387755102,
+                "precision": 0.9621848739495799,
+                "correct_pairwise": 0,
+                "f1": 0.6291208791208791
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {}
+    },
+    "gl": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.867152466367713,
+                "precision": 0.897852582704585,
+                "correct_pairwise": 0,
+                "f1": 0.8822355289421157
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.875,
+                "precision": 0.9722222222222222,
+                "correct_pairwise": 0,
+                "f1": 0.9210526315789473
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "gu": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.02292576419213974,
+                "precision": 0.1099476439790576,
+                "correct_pairwise": 0,
+                "f1": 0.037940379403794036
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.02875215641173088,
+                "precision": 0.2976190476190476,
+                "correct_pairwise": 0,
+                "f1": 0.05243838489774515
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.006740626316528577,
+                "precision": 0.0730593607305936,
+                "correct_pairwise": 0,
+                "f1": 0.012342504499871431
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ha": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9655364091161757,
+                "precision": 0.8174117647058824,
+                "correct_pairwise": 0,
+                "f1": 0.8853211009174312
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "he": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9354120267260579,
+                "precision": 0.9017713365539453,
+                "correct_pairwise": 0,
+                "f1": 0.9182836840666849
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.886685552407932,
+                "precision": 0.9968152866242038,
+                "correct_pairwise": 0,
+                "f1": 0.9385307346326837
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "hi": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.11331569664902998,
+                "precision": 0.4233937397034596,
+                "correct_pairwise": 0,
+                "f1": 0.17878260869565218
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.3997747747747748,
+                "precision": 0.7768052516411379,
+                "correct_pairwise": 0,
+                "f1": 0.5278810408921932
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.0006600660066006601,
+                "precision": 0.005917159763313609,
+                "correct_pairwise": 0,
+                "f1": 0.0011876484560570072
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0023333333333333335,
+                "precision": 0.10096153846153846,
+                "correct_pairwise": 0,
+                "f1": 0.004561251086012163
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "hu": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9384443200895355,
+                "precision": 0.9209225700164745,
+                "correct_pairwise": 0,
+                "f1": 0.9296008869179602
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9900990099009901,
+                "precision": 0.975609756097561,
+                "correct_pairwise": 0,
+                "f1": 0.9828009828009828
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.00011111111111111112,
+                "precision": 0.043478260869565216,
+                "correct_pairwise": 0,
+                "f1": 0.0002216557685913776
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "hy": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.14129746835443038,
+                "precision": 0.8424528301886792,
+                "correct_pairwise": 0,
+                "f1": 0.24200542005420056
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.06542056074766354,
+                "precision": 0.4069767441860465,
+                "correct_pairwise": 0,
+                "f1": 0.11272141706924314
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "id": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8772029562251279,
+                "precision": 0.9151838671411625,
+                "correct_pairwise": 0,
+                "f1": 0.8957910014513788
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9844444444444445,
+                "precision": 0.9714912280701754,
+                "correct_pairwise": 0,
+                "f1": 0.9779249448123621
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ig": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.18653198653198652,
+                "precision": 0.7466307277628033,
+                "correct_pairwise": 0,
+                "f1": 0.29849137931034475
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "is": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9631284916201117,
+                "precision": 0.9364475828354155,
+                "correct_pairwise": 0,
+                "f1": 0.949600660974938
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9638009049773756,
+                "precision": 0.938719832109129,
+                "correct_pairwise": 0,
+                "f1": 0.9510950457155007
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "it": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8480941704035875,
+                "precision": 0.867545871559633,
+                "correct_pairwise": 0,
+                "f1": 0.8577097505668934
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.8799076212471132,
+                "precision": 0.9694656488549618,
+                "correct_pairwise": 0,
+                "f1": 0.9225181598062954
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {},
+        "legal-CD_multi_legal": {},
+        "legal-CD_multi_legal-corrupted-asr": {},
+        "legal-CD_multi_legal-corrupted-social-media": {},
+        "legal-CD_swiss_judgement": {},
+        "legal-CD_swiss_judgement-corrupted-asr": {},
+        "legal-CD_swiss_judgement-corrupted-social-media": {},
+        "legal-CriminalCode": {},
+        "legal-CriminalCode-corrupted-asr": {},
+        "legal-CriminalCode-corrupted-social-media": {},
+        "legal-CivilCode": {},
+        "legal-CivilCode-corrupted-asr": {},
+        "legal-CivilCode-corrupted-social-media": {},
+        "legal-constitution": {},
+        "legal-constitution-corrupted-asr": {},
+        "legal-constitution-corrupted-social-media": {},
+        "legal-all-laws": {
+            "spacy_dp": {
+                "recall": 0.5268200963335908,
+                "precision": 0.5930653744929315,
+                "correct_pairwise": 0.125,
+                "f1": 0.5384060549262739
+            }
+        },
+        "legal-all-laws-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0.0014204545454545455,
+                "f1": 0.0
+            }
+        },
+        "legal-all-laws-corrupted-social-media": {},
+        "legal-all-judgements": {
+            "spacy_dp": {
+                "recall": 0.7531369243767247,
+                "precision": 0.736497603661552,
+                "correct_pairwise": 0.0,
+                "f1": 0.736498935685725
+            }
+        },
+        "legal-all-judgements-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0020469180956228373,
+                "precision": 0.0663265306122449,
+                "correct_pairwise": 0.0,
+                "f1": 0.003907190271968741
+            }
+        },
+        "legal-all-judgements-corrupted-social-media": {}
+    },
+    "ja": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.0005580357142857143,
+                "precision": 0.022222222222222223,
+                "correct_pairwise": 0,
+                "f1": 0.0010887316276537832
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "jv": {
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9933333333333333,
+                "precision": 0.9644012944983819,
+                "correct_pairwise": 0,
+                "f1": 0.9786535303776683
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {}
+    },
+    "ka": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.24555555555555555,
+                "precision": 0.8735177865612648,
+                "correct_pairwise": 0,
+                "f1": 0.3833477883781439
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "kk": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.9722530521642619,
+                "precision": 0.9658213891951488,
+                "correct_pairwise": 0,
+                "f1": 0.9690265486725664
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.28211009174311924,
+                "precision": 0.826890756302521,
+                "correct_pairwise": 0,
+                "f1": 0.4206926036767849
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9723991507430998,
+                "precision": 0.950207468879668,
+                "correct_pairwise": 0,
+                "f1": 0.9611752360965372
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "km": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "kn": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.05521472392638037,
+                "precision": 0.4326923076923077,
+                "correct_pairwise": 0,
+                "f1": 0.09793253536452665
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.005842259006815969,
+                "precision": 0.08571428571428572,
+                "correct_pairwise": 0,
+                "f1": 0.010938924339106653
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ko": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.3707865168539326,
+                "precision": 0.8108108108108109,
+                "correct_pairwise": 0,
+                "f1": 0.5088666152659985
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9975704567541303,
+                "precision": 0.9980554205153136,
+                "correct_pairwise": 0,
+                "f1": 0.997812879708384
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.12233333333333334,
+                "precision": 0.6608643457382953,
+                "correct_pairwise": 0,
+                "f1": 0.20645040315019692
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ku": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.16002310803004044,
+                "precision": 0.8244047619047619,
+                "correct_pairwise": 0,
+                "f1": 0.2680212868892114
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ky": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.12698412698412698,
+                "precision": 0.7529411764705882,
+                "correct_pairwise": 0,
+                "f1": 0.21731748726655348
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "la": {
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "lt": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.9111111111111111,
+                "precision": 0.9568261376896149,
+                "correct_pairwise": 0,
+                "f1": 0.93340922026181
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.6642376681614349,
+                "precision": 0.9025133282559025,
+                "correct_pairwise": 0,
+                "f1": 0.7652567000322893
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9056910569105691,
+                "precision": 0.9720767888307156,
+                "correct_pairwise": 0,
+                "f1": 0.9377104377104377
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.00022222222222222223,
+                "precision": 0.6666666666666666,
+                "correct_pairwise": 0,
+                "f1": 0.00044429634566255696
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "lv": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.9790633608815427,
+                "precision": 0.993847874720358,
+                "correct_pairwise": 0,
+                "f1": 0.9864002220371914
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.663661971830986,
+                "precision": 0.9153069153069153,
+                "correct_pairwise": 0,
+                "f1": 0.7694317439581972
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9774193548387097,
+                "precision": 0.9920486435921422,
+                "correct_pairwise": 0,
+                "f1": 0.9846796657381616
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0006666666666666666,
+                "precision": 1.0,
+                "correct_pairwise": 0,
+                "f1": 0.0013324450366422385
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "mg": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.7587176602924635,
+                "precision": 0.917687074829932,
+                "correct_pairwise": 0,
+                "f1": 0.8306650246305418
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "mk": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9533333333333334,
+                "precision": 0.9122807017543859,
+                "correct_pairwise": 0,
+                "f1": 0.932355338223309
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ml": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.26674107142857145,
+                "precision": 0.7071005917159763,
+                "correct_pairwise": 0,
+                "f1": 0.38735818476499195
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0069801616458486405,
+                "precision": 0.06209150326797386,
+                "correct_pairwise": 0,
+                "f1": 0.012549537648612946
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "mn": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.19724284199363734,
+                "precision": 0.9815303430079155,
+                "correct_pairwise": 0,
+                "f1": 0.328476821192053
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "mr": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.7929490766648013,
+                "precision": 0.9503688799463448,
+                "correct_pairwise": 0,
+                "f1": 0.8645515558267237
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.8809523809523809,
+                "precision": 0.9736842105263158,
+                "correct_pairwise": 0,
+                "f1": 0.925
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.003777777777777778,
+                "precision": 0.26356589147286824,
+                "correct_pairwise": 0,
+                "f1": 0.0074487895716946004
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ms": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8346681922196796,
+                "precision": 0.9210858585858586,
+                "correct_pairwise": 0,
+                "f1": 0.8757503001200481
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "mt": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.4622747747747748,
+                "precision": 0.697536108751062,
+                "correct_pairwise": 0,
+                "f1": 0.5560447003047749
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.8841201716738197,
+                "precision": 0.8306451612903226,
+                "correct_pairwise": 0,
+                "f1": 0.8565488565488565
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "my": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ne": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.03407755581668625,
+                "precision": 0.5576923076923077,
+                "correct_pairwise": 0,
+                "f1": 0.06423034330011074
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0005367686527106817,
+                "precision": 0.024390243902439025,
+                "correct_pairwise": 0,
+                "f1": 0.001050420168067227
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "nl": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9705555555555555,
+                "precision": 0.8926928972917731,
+                "correct_pairwise": 0,
+                "f1": 0.9299973383018366
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.8955223880597015,
+                "precision": 0.9619238476953907,
+                "correct_pairwise": 0,
+                "f1": 0.927536231884058
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "no": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9736989367655288,
+                "precision": 0.9265175718849841,
+                "correct_pairwise": 0,
+                "f1": 0.9495225102319237
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.954727793696275,
+                "precision": 0.9840519787359716,
+                "correct_pairwise": 0,
+                "f1": 0.9691681210005817
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {}
+    },
+    "pa": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.025611838360842343,
+                "precision": 0.4891304347826087,
+                "correct_pairwise": 0,
+                "f1": 0.048674959437533805
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.020527859237536656,
+                "precision": 0.15217391304347827,
+                "correct_pairwise": 0,
+                "f1": 0.03617571059431524
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "pl": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.911504424778761,
+                "precision": 0.9548088064889919,
+                "correct_pairwise": 0,
+                "f1": 0.9326542161856254
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9214806505888952,
+                "precision": 0.9183901621017329,
+                "correct_pairwise": 0,
+                "f1": 0.91993281075028
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9603612644254892,
+                "precision": 0.976530612244898,
+                "correct_pairwise": 0,
+                "f1": 0.9683784467493044
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.001,
+                "precision": 0.6,
+                "correct_pairwise": 0,
+                "f1": 0.0019966722129783694
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ps": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.905829596412556,
+                "precision": 0.9840566873339238,
+                "correct_pairwise": 0,
+                "f1": 0.9433241350031839
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.012376237623762377,
+                "precision": 0.7142857142857143,
+                "correct_pairwise": 0,
+                "f1": 0.024330900243309
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "pt": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.927007299270073,
+                "precision": 0.9061470911086718,
+                "correct_pairwise": 0,
+                "f1": 0.9164585067998889
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9123809523809524,
+                "precision": 0.9896694214876033,
+                "correct_pairwise": 0,
+                "f1": 0.9494549058473736
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.00011111111111111112,
+                "precision": 0.5,
+                "correct_pairwise": 0,
+                "f1": 0.00022217285047767166
+            }
+        },
+        "ted2020-corrupted-social-media": {},
+        "legal-CivilCode": {},
+        "legal-CivilCode-corrupted-asr": {},
+        "legal-CivilCode-corrupted-social-media": {},
+        "legal-CD_wipolex": {},
+        "legal-CD_wipolex-corrupted-asr": {},
+        "legal-CD_wipolex-corrupted-social-media": {},
+        "legal-CriminalCode": {},
+        "legal-CriminalCode-corrupted-asr": {},
+        "legal-CriminalCode-corrupted-social-media": {},
+        "legal-constitution": {},
+        "legal-constitution-corrupted-asr": {},
+        "legal-constitution-corrupted-social-media": {},
+        "legal-all-laws": {
+            "spacy_dp": {
+                "recall": 0.5659702227229676,
+                "precision": 0.8441405837426906,
+                "correct_pairwise": 0.10344827586206896,
+                "f1": 0.6453821632414989
+            }
+        },
+        "legal-all-laws-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0.0,
+                "f1": 0.0
+            }
+        },
+        "legal-all-laws-corrupted-social-media": {},
+        "legal-all-judgements": {
+            "spacy_dp": {
+                "recall": 0.727548404207832,
+                "precision": 0.8081849683472037,
+                "correct_pairwise": 0.0,
+                "f1": 0.7603588516644859
+            }
+        },
+        "legal-all-judgements-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0.0,
+                "f1": 0.0
+            }
+        },
+        "legal-all-judgements-corrupted-social-media": {}
+    },
+    "ro": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.9255555555555556,
+                "precision": 0.9719953325554259,
+                "correct_pairwise": 0,
+                "f1": 0.9482071713147411
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.909652076318743,
+                "precision": 0.915819209039548,
+                "correct_pairwise": 0,
+                "f1": 0.9127252252252253
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9809725158562368,
+                "precision": 0.9778714436248683,
+                "correct_pairwise": 0,
+                "f1": 0.9794195250659631
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ru": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.9147025813692481,
+                "precision": 0.9509918319719953,
+                "correct_pairwise": 0,
+                "f1": 0.9324942791762014
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.770501138952164,
+                "precision": 0.734926670287887,
+                "correct_pairwise": 0,
+                "f1": 0.7522935779816513
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.7727272727272727,
+                "precision": 0.9216867469879518,
+                "correct_pairwise": 0,
+                "f1": 0.8406593406593407
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "si": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.6804932735426009,
+                "precision": 0.8442280945757997,
+                "correct_pairwise": 0,
+                "f1": 0.7535692116697704
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.004310344827586207,
+                "precision": 0.045454545454545456,
+                "correct_pairwise": 0,
+                "f1": 0.007874015748031496
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "sk": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8996074032529445,
+                "precision": 0.9331006399069226,
+                "correct_pairwise": 0,
+                "f1": 0.9160479725870931
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.8301886792452831,
+                "precision": 0.9887640449438202,
+                "correct_pairwise": 0,
+                "f1": 0.9025641025641026
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "sl": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9464882943143813,
+                "precision": 0.9060832443970117,
+                "correct_pairwise": 0,
+                "f1": 0.925845147219193
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9757155247181266,
+                "precision": 0.9868421052631579,
+                "correct_pairwise": 0,
+                "f1": 0.981247274313127
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.00022222222222222223,
+                "precision": 0.6666666666666666,
+                "correct_pairwise": 0,
+                "f1": 0.00044429634566255696
+            }
+        },
+        "ted2020-corrupted-social-media": {},
+        "short-sequences": {
+            "spacy_dp": {
+                "recall": 0.679992174044594,
+                "precision": 0.971770702415863,
+                "correct_pairwise": 0.31708211143695014,
+                "f1": 0.7729565420731193
+            }
+        },
+        "short-sequences-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.4661208862821763,
+                "precision": 0.9965175953079178,
+                "correct_pairwise": 0.0344574780058651,
+                "f1": 0.6238615998696797
+            }
+        },
+        "short-sequences-corrupted-social-media": {}
+    },
+    "sq": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.928369994359842,
+                "precision": 0.9236812570145904,
+                "correct_pairwise": 0,
+                "f1": 0.9260196905766526
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 1.0,
+                "precision": 1.0,
+                "correct_pairwise": 1,
+                "f1": 1.0
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "sr": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9693080357142857,
+                "precision": 0.9244278871740287,
+                "correct_pairwise": 0,
+                "f1": 0.9463361481885045
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9572649572649573,
+                "precision": 1.0,
+                "correct_pairwise": 0,
+                "f1": 0.9781659388646288
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {},
+        "short-sequences": {
+            "spacy_dp": {
+                "recall": 0.8490885416666666,
+                "precision": 0.9791666666666665,
+                "correct_pairwise": 0.6510416666666666,
+                "f1": 0.8910269129019128
+            }
+        },
+        "short-sequences-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.43632812499999996,
+                "precision": 1.0,
+                "correct_pairwise": 0.005208333333333333,
+                "f1": 0.5994212962962973
+            }
+        },
+        "short-sequences-corrupted-social-media": {}
+    },
+    "sv": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.9452819653824679,
+                "precision": 0.9166215484569572,
+                "correct_pairwise": 0,
+                "f1": 0.9307311709730621
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9484425349087003,
+                "precision": 0.9474248927038627,
+                "correct_pairwise": 0,
+                "f1": 0.9479334406870639
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ta": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.620575221238938,
+                "precision": 0.75,
+                "correct_pairwise": 0,
+                "f1": 0.679176755447942
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.2598870056497175,
+                "precision": 0.6199460916442049,
+                "correct_pairwise": 0,
+                "f1": 0.3662420382165605
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.6018518518518519,
+                "precision": 0.6842105263157895,
+                "correct_pairwise": 0,
+                "f1": 0.6403940886699506
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.017793594306049824,
+                "precision": 0.11936339522546419,
+                "correct_pairwise": 0,
+                "f1": 0.030970406056434967
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "te": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.4883720930232558,
+                "precision": 0.9308108108108109,
+                "correct_pairwise": 0,
+                "f1": 0.640625
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.12636439966414778,
+                "precision": 0.40511440107671604,
+                "correct_pairwise": 0,
+                "f1": 0.19264
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "tg": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.6497490239821528,
+                "precision": 0.7463164638052531,
+                "correct_pairwise": 0,
+                "f1": 0.6946929039952296
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "th": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.12626262626262627,
+                "precision": 0.78125,
+                "correct_pairwise": 0,
+                "f1": 0.21739130434782608
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.01,
+                "precision": 0.34615384615384615,
+                "correct_pairwise": 0,
+                "f1": 0.019438444924406047
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.006111111111111111,
+                "precision": 0.2412280701754386,
+                "correct_pairwise": 0,
+                "f1": 0.011920242739488513
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "tr": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.9298375184638109,
+                "precision": 0.9752130131680867,
+                "correct_pairwise": 0,
+                "f1": 0.9519848771266539
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.954443194600675,
+                "precision": 0.9177934018388318,
+                "correct_pairwise": 0,
+                "f1": 0.9357595809208713
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9737373737373738,
+                "precision": 0.9757085020242915,
+                "correct_pairwise": 0,
+                "f1": 0.9747219413549039
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "uk": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.8922389726409827,
+                "precision": 0.8912437255995538,
+                "correct_pairwise": 0,
+                "f1": 0.8917410714285715
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9331683168316832,
+                "precision": 0.9448621553884712,
+                "correct_pairwise": 0,
+                "f1": 0.9389788293897883
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "ur": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.19047619047619047,
+                "precision": 0.6403162055335968,
+                "correct_pairwise": 0,
+                "f1": 0.29361123697326685
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "uz": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.6660997732426304,
+                "precision": 0.6081780538302277,
+                "correct_pairwise": 0,
+                "f1": 0.6358225108225108
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "vi": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.875,
+                "precision": 0.9296543359611886,
+                "correct_pairwise": 0,
+                "f1": 0.9014995589532491
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.9847222222222223,
+                "precision": 0.9365918097754293,
+                "correct_pairwise": 0,
+                "f1": 0.9600541638456331
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "xh": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.5192861255037421,
+                "precision": 0.8549763033175355,
+                "correct_pairwise": 0,
+                "f1": 0.6461318051575932
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {}
+    },
+    "yi": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.020905923344947737,
+                "precision": 0.96,
+                "correct_pairwise": 0,
+                "f1": 0.040920716112531966
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {}
+    },
+    "yo": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.17103235747303544,
+                "precision": 0.6649769585253457,
+                "correct_pairwise": 0,
+                "f1": 0.2720844725181484
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.7587412587412588,
+                "precision": 0.8282442748091603,
+                "correct_pairwise": 0,
+                "f1": 0.791970802919708
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {}
+    },
+    "zh": {
+        "ersatz": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ersatz-corrupted-asr": {},
+        "ersatz-corrupted-social-media": {},
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {},
+        "ud": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ud-corrupted-asr": {},
+        "ud-corrupted-social-media": {},
+        "ted2020-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "ted2020-corrupted-social-media": {}
+    },
+    "zu": {
+        "opus100": {
+            "spacy_dp": {
+                "recall": 0.1538918597742127,
+                "precision": 0.7254901960784313,
+                "correct_pairwise": 0,
+                "f1": 0.25392156862745097
+            }
+        },
+        "opus100-corrupted-asr": {},
+        "opus100-corrupted-social-media": {}
+    },
+    "tr-de_TR": {
+        "code-switching": {
+            "spacy_dp": {
+                "recall": 0.9986187845303868,
+                "precision": 1.0,
+                "correct_pairwise": 0,
+                "f1": 0.9993089149965445
+            }
+        },
+        "code-switching-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "code-switching-corrupted-social-media": {}
+    },
+    "tr-de_DE": {
+        "code-switching": {
+            "spacy_dp": {
+                "recall": 0.9986187845303868,
+                "precision": 1.0,
+                "correct_pairwise": 0,
+                "f1": 0.9993089149965445
+            }
+        },
+        "code-switching-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "code-switching-corrupted-social-media": {}
+    },
+    "es-en_ES": {
+        "code-switching": {
+            "spacy_dp": {
+                "recall": 0.7766666666666666,
+                "precision": 0.9957264957264957,
+                "correct_pairwise": 0,
+                "f1": 0.8726591760299625
+            }
+        },
+        "code-switching-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "code-switching-corrupted-social-media": {}
+    },
+    "es-en_EN": {
+        "code-switching": {
+            "spacy_dp": {
+                "recall": 0.7766666666666666,
+                "precision": 0.9957264957264957,
+                "correct_pairwise": 0,
+                "f1": 0.8726591760299625
+            }
+        },
+        "code-switching-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "code-switching-corrupted-social-media": {}
+    },
+    "vi-en_VI": {
+        "code-switching": {
+            "spacy_dp": {
+                "recall": 0.0016339869281045752,
+                "precision": 0.5,
+                "correct_pairwise": 0,
+                "f1": 0.003257328990228013
+            }
+        },
+        "code-switching-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "code-switching-corrupted-social-media": {}
+    },
+    "vi-en_EN": {
+        "code-switching": {
+            "spacy_dp": {
+                "recall": 0.0016339869281045752,
+                "precision": 0.5,
+                "correct_pairwise": 0,
+                "f1": 0.003257328990228013
+            }
+        },
+        "code-switching-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "code-switching-corrupted-social-media": {}
+    },
+    "en-de_EN": {
+        "code-switching": {
+            "spacy_dp": {
+                "recall": 0.8441558441558441,
+                "precision": 0.8488805970149254,
+                "correct_pairwise": 0,
+                "f1": 0.8465116279069768
+            }
+        },
+        "code-switching-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "code-switching-corrupted-social-media": {},
+        "short-sequences": {
+            "spacy_dp": {
+                "recall": 0.946311929004237,
+                "precision": 0.9433599566260463,
+                "correct_pairwise": 0.6964656964656964,
+                "f1": 0.9330828034336727
+            }
+        },
+        "short-sequences-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.38094752400241794,
+                "precision": 0.9958419958419958,
+                "correct_pairwise": 0.10602910602910603,
+                "f1": 0.5094625591005684
+            }
+        },
+        "short-sequences-corrupted-social-media": {}
+    },
+    "en-de_DE": {
+        "code-switching": {
+            "spacy_dp": {
+                "recall": 0.8441558441558441,
+                "precision": 0.8488805970149254,
+                "correct_pairwise": 0,
+                "f1": 0.8465116279069768
+            }
+        },
+        "code-switching-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.0,
+                "precision": 0.0,
+                "correct_pairwise": 0,
+                "f1": 0.0
+            }
+        },
+        "code-switching-corrupted-social-media": {},
+        "short-sequences": {
+            "spacy_dp": {
+                "recall": 0.946311929004237,
+                "precision": 0.9433599566260463,
+                "correct_pairwise": 0.6964656964656964,
+                "f1": 0.9330828034336727
+            }
+        },
+        "short-sequences-corrupted-asr": {
+            "spacy_dp": {
+                "recall": 0.38094752400241794,
+                "precision": 0.9958419958419958,
+                "correct_pairwise": 0.10602910602910603,
+                "f1": 0.5094625591005684
+            }
+        },
+        "short-sequences-corrupted-social-media": {}
+    }
+}

@@ -1,0 +1,1884 @@
+{
+    "af": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7122246642246655,
+                "f1_success": 0.7122246642246655,
+                "recall": 0.8323076923076923,
+                "recall_success": 0.8323076923076923,
+                "precision": 0.666388278388278,
+                "precision_success": 0.666388278388278,
+                "correct_pairwise": 0.2553846153846154,
+                "correct_pairwise_success": 0.2553846153846154,
+                "hallucination_rate": 0.001604040396252146,
+                "hallucination_rate_success": 0.001604040396252146,
+                "deletion_rate": 0.00350566677049251,
+                "deletion_rate_success": 0.00350566677049251
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "am": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5913318452380948,
+                "f1_success": 0.5913318452380948,
+                "recall": 0.70703125,
+                "recall_success": 0.70703125,
+                "precision": 0.5434895833333334,
+                "precision_success": 0.5434895833333334,
+                "correct_pairwise": 0.1171875,
+                "correct_pairwise_success": 0.1171875,
+                "hallucination_rate": 0.001159333054092175,
+                "hallucination_rate_success": 0.001159333054092175,
+                "deletion_rate": 0.0005826749143147705,
+                "deletion_rate_success": 0.0005826749143147705
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ar": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6863714499027541,
+                "f1_success": 0.6863714499027541,
+                "recall": 0.8636,
+                "recall_success": 0.8636,
+                "precision": 0.6045459213092084,
+                "precision_success": 0.6045459213092084,
+                "correct_pairwise": 0.216,
+                "correct_pairwise_success": 0.216,
+                "hallucination_rate": 0.009037833424094031,
+                "hallucination_rate_success": 0.009037833424094031,
+                "deletion_rate": 0.0025260426840785152,
+                "deletion_rate_success": 0.0025260426840785152
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9012672315863821,
+                "f1_success": 0.9012672315863821,
+                "recall": 0.9813829787234043,
+                "recall_success": 0.9813829787234043,
+                "precision": 0.8601422661263092,
+                "precision_success": 0.8601422661263092,
+                "correct_pairwise": 0.6781914893617021,
+                "correct_pairwise_success": 0.6781914893617021,
+                "hallucination_rate": 0.004030885046919083,
+                "hallucination_rate_success": 0.004030885046919083,
+                "deletion_rate": 0.00828917699020409,
+                "deletion_rate_success": 0.00828917699020409
+            }
+        }
+    },
+    "az": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7537445972729603,
+                "f1_success": 0.7541903362423708,
+                "recall": 0.8912529550827423,
+                "recall_success": 0.8917800118273211,
+                "precision": 0.6882849731697241,
+                "precision_success": 0.6886920015394283,
+                "correct_pairwise": 0.3067375886524823,
+                "correct_pairwise_success": 0.3069189828503844,
+                "hallucination_rate": 0.001893332608078846,
+                "hallucination_rate_success": 0.0018944522607152025,
+                "deletion_rate": 0.002730540616558457,
+                "deletion_rate_success": 0.002732155365592495
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "be": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6729128035422576,
+                "f1_success": 0.6729128035422576,
+                "recall": 0.7959117456197274,
+                "recall_success": 0.7959117456197274,
+                "precision": 0.6206636800001479,
+                "precision_success": 0.6206636800001479,
+                "correct_pairwise": 0.2044127190136275,
+                "correct_pairwise_success": 0.2044127190136275,
+                "hallucination_rate": 0.0032691630134157766,
+                "hallucination_rate_success": 0.0032691630134157766,
+                "deletion_rate": 0.0013528810486998291,
+                "deletion_rate_success": 0.0013528810486998291
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "bg": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7205628860028866,
+                "f1_success": 0.7205628860028866,
+                "recall": 0.845,
+                "recall_success": 0.845,
+                "precision": 0.6710882539682572,
+                "precision_success": 0.6710882539682572,
+                "correct_pairwise": 0.2796,
+                "correct_pairwise_success": 0.2796,
+                "hallucination_rate": 0.005126613744113337,
+                "hallucination_rate_success": 0.005126613744113337,
+                "deletion_rate": 0.0018571023910618752,
+                "deletion_rate_success": 0.0018571023910618752
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "bn": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5250391446160644,
+                "f1_success": 0.5250391446160644,
+                "recall": 0.6357692307692308,
+                "recall_success": 0.6357692307692308,
+                "precision": 0.4828611388611383,
+                "precision_success": 0.4828611388611383,
+                "correct_pairwise": 0.06153846153846154,
+                "correct_pairwise_success": 0.06153846153846154,
+                "hallucination_rate": 0.003911769122860138,
+                "hallucination_rate_success": 0.003911769122860138,
+                "deletion_rate": 0.0015575294104951802,
+                "deletion_rate_success": 0.0015575294104951802
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ca": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7239014754354707,
+                "f1_success": 0.7239014754354707,
+                "recall": 0.8496,
+                "recall_success": 0.8496,
+                "precision": 0.6785616246498629,
+                "precision_success": 0.6785616246498629,
+                "correct_pairwise": 0.2756,
+                "correct_pairwise_success": 0.2756,
+                "hallucination_rate": 0.0013514705726471487,
+                "hallucination_rate_success": 0.0013514705726471487,
+                "deletion_rate": 0.005857298605548459,
+                "deletion_rate_success": 0.005857298605548459
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ceb": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6785714285714287,
+                "f1_success": 0.6785714285714287,
+                "recall": 0.6785714285714286,
+                "recall_success": 0.6785714285714286,
+                "precision": 0.744047619047619,
+                "precision_success": 0.744047619047619,
+                "correct_pairwise": 0.21428571428571427,
+                "correct_pairwise_success": 0.21428571428571427,
+                "hallucination_rate": 0.0,
+                "hallucination_rate_success": 0.0,
+                "deletion_rate": 0.005280981648616139,
+                "deletion_rate_success": 0.005280981648616139
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "cs": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7200636452436462,
+                "f1_success": 0.7200636452436462,
+                "recall": 0.8762,
+                "recall_success": 0.8762,
+                "precision": 0.6544044588744633,
+                "precision_success": 0.6544044588744633,
+                "correct_pairwise": 0.262,
+                "correct_pairwise_success": 0.262,
+                "hallucination_rate": 0.002717155190506149,
+                "hallucination_rate_success": 0.002717155190506149,
+                "deletion_rate": 0.006719941569336467,
+                "deletion_rate_success": 0.006719941569336467
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9671075837742512,
+                "f1_success": 0.9671075837742512,
+                "recall": 0.9953703703703703,
+                "recall_success": 0.9953703703703703,
+                "precision": 0.9517746913580253,
+                "precision_success": 0.9517746913580253,
+                "correct_pairwise": 0.8726851851851852,
+                "correct_pairwise_success": 0.8726851851851852,
+                "hallucination_rate": 0.00017262247216067573,
+                "hallucination_rate_success": 0.00017262247216067573,
+                "deletion_rate": 0.003033285538653087,
+                "deletion_rate_success": 0.003033285538653087
+            }
+        }
+    },
+    "da": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7226730913530917,
+                "f1_success": 0.7226730913530917,
+                "recall": 0.862,
+                "recall_success": 0.862,
+                "precision": 0.664086536796541,
+                "precision_success": 0.664086536796541,
+                "correct_pairwise": 0.2688,
+                "correct_pairwise_success": 0.2688,
+                "hallucination_rate": 0.0006413303539216884,
+                "hallucination_rate_success": 0.0006413303539216884,
+                "deletion_rate": 0.004724810016243603,
+                "deletion_rate_success": 0.004724810016243603
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "de": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7445098066378053,
+                "f1_success": 0.7445098066378053,
+                "recall": 0.9062,
+                "recall_success": 0.9062,
+                "precision": 0.6709705414875037,
+                "precision_success": 0.6709705414875037,
+                "correct_pairwise": 0.2892,
+                "correct_pairwise_success": 0.2892,
+                "hallucination_rate": 0.0020830963874782695,
+                "hallucination_rate_success": 0.0020830963874782695,
+                "deletion_rate": 0.007932859449733909,
+                "deletion_rate_success": 0.007932859449733909
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9646688003103489,
+                "f1_success": 0.9646688003103489,
+                "recall": 0.994908350305499,
+                "recall_success": 0.994908350305499,
+                "precision": 0.9475899524779368,
+                "precision_success": 0.9475899524779368,
+                "correct_pairwise": 0.8615071283095723,
+                "correct_pairwise_success": 0.8615071283095723,
+                "hallucination_rate": 0.00015548873706891376,
+                "hallucination_rate_success": 0.00015548873706891376,
+                "deletion_rate": 0.002140143972809658,
+                "deletion_rate_success": 0.002140143972809658
+            }
+        }
+    },
+    "el": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7186772508650768,
+                "f1_success": 0.7186772508650768,
+                "recall": 0.8464,
+                "recall_success": 0.8464,
+                "precision": 0.6611584271284304,
+                "precision_success": 0.6611584271284304,
+                "correct_pairwise": 0.2848,
+                "correct_pairwise_success": 0.2848,
+                "hallucination_rate": 0.0055787265350388535,
+                "hallucination_rate_success": 0.0055787265350388535,
+                "deletion_rate": 0.002094137820348499,
+                "deletion_rate_success": 0.002094137820348499
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "en": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7626767526917527,
+                "f1_success": 0.7626767526917527,
+                "recall": 0.8792,
+                "recall_success": 0.8792,
+                "precision": 0.7216922799422851,
+                "precision_success": 0.7216922799422851,
+                "correct_pairwise": 0.3456,
+                "correct_pairwise_success": 0.3456,
+                "hallucination_rate": 0.00026265667466657646,
+                "hallucination_rate_success": 0.00026265667466657646,
+                "deletion_rate": 0.005970995367882132,
+                "deletion_rate_success": 0.005970995367882132
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9843190097084175,
+                "f1_success": 0.9843190097084175,
+                "recall": 0.9919522326064382,
+                "recall_success": 0.9919522326064382,
+                "precision": 0.9829723582060038,
+                "precision_success": 0.9829723582060038,
+                "correct_pairwise": 0.9454828660436138,
+                "correct_pairwise_success": 0.9454828660436138,
+                "hallucination_rate": 0.00020010954196402812,
+                "hallucination_rate_success": 0.00020010954196402812,
+                "deletion_rate": 0.0028172985570319073,
+                "deletion_rate_success": 0.0028172985570319073
+            }
+        }
+    },
+    "eo": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6968441030360476,
+                "f1_success": 0.6968441030360476,
+                "recall": 0.8104636591478697,
+                "recall_success": 0.8104636591478697,
+                "precision": 0.6651587256380477,
+                "precision_success": 0.6651587256380477,
+                "correct_pairwise": 0.24060150375939848,
+                "correct_pairwise_success": 0.24060150375939848,
+                "hallucination_rate": 0.0017317375814834308,
+                "hallucination_rate_success": 0.0017317375814834308,
+                "deletion_rate": 0.006930215586338839,
+                "deletion_rate_success": 0.006930215586338839
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "es": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7419401692751704,
+                "f1_success": 0.7419401692751704,
+                "recall": 0.8634,
+                "recall_success": 0.8634,
+                "precision": 0.6968655544813646,
+                "precision_success": 0.6968655544813646,
+                "correct_pairwise": 0.3204,
+                "correct_pairwise_success": 0.3204,
+                "hallucination_rate": 0.0013886044128626662,
+                "hallucination_rate_success": 0.0013886044128626662,
+                "deletion_rate": 0.004050014935875112,
+                "deletion_rate_success": 0.004050014935875112
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9673629242819829,
+                "f1_success": 0.9673629242819829,
+                "recall": 0.9954308093994778,
+                "recall_success": 0.9954308093994778,
+                "precision": 0.9525239338555255,
+                "precision_success": 0.9525239338555255,
+                "correct_pairwise": 0.8720626631853786,
+                "correct_pairwise_success": 0.8720626631853786,
+                "hallucination_rate": 0.0001270819326595631,
+                "hallucination_rate_success": 0.0001270819326595631,
+                "deletion_rate": 0.0016451797190921065,
+                "deletion_rate_success": 0.0016451797190921065
+            }
+        }
+    },
+    "et": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6801899855699867,
+                "f1_success": 0.6801899855699867,
+                "recall": 0.8046,
+                "recall_success": 0.8046,
+                "precision": 0.633719126984129,
+                "precision_success": 0.633719126984129,
+                "correct_pairwise": 0.2216,
+                "correct_pairwise_success": 0.2216,
+                "hallucination_rate": 0.0016944977445362077,
+                "hallucination_rate_success": 0.0016944977445362077,
+                "deletion_rate": 0.005684882292718094,
+                "deletion_rate_success": 0.005684882292718094
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9652588813303106,
+                "f1_success": 0.9652588813303106,
+                "recall": 0.996031746031746,
+                "recall_success": 0.996031746031746,
+                "precision": 0.9474206349206354,
+                "precision_success": 0.9474206349206354,
+                "correct_pairwise": 0.8611111111111112,
+                "correct_pairwise_success": 0.8611111111111112,
+                "hallucination_rate": 0.0005148916962823468,
+                "hallucination_rate_success": 0.0005148916962823468,
+                "deletion_rate": 0.0022427767273954266,
+                "deletion_rate_success": 0.0022427767273954266
+            }
+        }
+    },
+    "eu": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6081092667786159,
+                "f1_success": 0.6081092667786159,
+                "recall": 0.7547043010752689,
+                "recall_success": 0.7547043010752689,
+                "precision": 0.5518668588729073,
+                "precision_success": 0.5518668588729073,
+                "correct_pairwise": 0.13440860215053763,
+                "correct_pairwise_success": 0.13440860215053763,
+                "hallucination_rate": 0.0012354459970849096,
+                "hallucination_rate_success": 0.0012354459970849096,
+                "deletion_rate": 0.005779418334873687,
+                "deletion_rate_success": 0.005779418334873687
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "fa": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7181195712783939,
+                "f1_success": 0.7181195712783939,
+                "recall": 0.9148,
+                "recall_success": 0.9148,
+                "precision": 0.6264229958930018,
+                "precision_success": 0.6264229958930018,
+                "correct_pairwise": 0.2292,
+                "correct_pairwise_success": 0.2292,
+                "hallucination_rate": 0.008324433796186897,
+                "hallucination_rate_success": 0.008324433796186897,
+                "deletion_rate": 0.0023002868959551234,
+                "deletion_rate_success": 0.0023002868959551234
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "fi": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6811043845043855,
+                "f1_success": 0.6811043845043855,
+                "recall": 0.832,
+                "recall_success": 0.832,
+                "precision": 0.6163594083694109,
+                "precision_success": 0.6163594083694109,
+                "correct_pairwise": 0.2132,
+                "correct_pairwise_success": 0.2132,
+                "hallucination_rate": 0.0022237218019029556,
+                "hallucination_rate_success": 0.0022237218019029556,
+                "deletion_rate": 0.007212381156056804,
+                "deletion_rate_success": 0.007212381156056804
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.976629449374941,
+                "f1_success": 0.976629449374941,
+                "recall": 0.9949899799599199,
+                "recall_success": 0.9949899799599199,
+                "precision": 0.9660654642618574,
+                "precision_success": 0.9660654642618574,
+                "correct_pairwise": 0.9038076152304609,
+                "correct_pairwise_success": 0.9038076152304609,
+                "hallucination_rate": 0.0007584823690826701,
+                "hallucination_rate_success": 0.0007584823690826701,
+                "deletion_rate": 0.0012274137700842983,
+                "deletion_rate_success": 0.0012274137700842983
+            }
+        }
+    },
+    "fr": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7524085603285594,
+                "f1_success": 0.7524085603285594,
+                "recall": 0.8818,
+                "recall_success": 0.8818,
+                "precision": 0.7015899800199862,
+                "precision_success": 0.7015899800199862,
+                "correct_pairwise": 0.3292,
+                "correct_pairwise_success": 0.3292,
+                "hallucination_rate": 0.0014988767164814045,
+                "hallucination_rate_success": 0.0014988767164814045,
+                "deletion_rate": 0.00525415334929543,
+                "deletion_rate_success": 0.00525415334929543
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9799631930066718,
+                "f1_success": 0.9799631930066718,
+                "recall": 0.998792270531401,
+                "recall_success": 0.998792270531401,
+                "precision": 0.9687600644122387,
+                "precision_success": 0.9687600644122387,
+                "correct_pairwise": 0.9106280193236715,
+                "correct_pairwise_success": 0.9106280193236715,
+                "hallucination_rate": 0.00017550425976162645,
+                "hallucination_rate_success": 0.00017550425976162645,
+                "deletion_rate": 0.0016168170682637247,
+                "deletion_rate_success": 0.0016168170682637247
+            }
+        }
+    },
+    "ga": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.4778499278499278,
+                "f1_success": 0.4778499278499278,
+                "recall": 0.5833333333333334,
+                "recall_success": 0.5833333333333334,
+                "precision": 0.43703703703703706,
+                "precision_success": 0.43703703703703706,
+                "correct_pairwise": 0.08333333333333333,
+                "correct_pairwise_success": 0.08333333333333333,
+                "hallucination_rate": 0.00023946360153256704,
+                "hallucination_rate_success": 0.00023946360153256704,
+                "deletion_rate": 0.0027180840087342568,
+                "deletion_rate_success": 0.0027180840087342568
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "gl": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6925341125541129,
+                "f1_success": 0.6925341125541129,
+                "recall": 0.8174,
+                "recall_success": 0.8174,
+                "precision": 0.6500488400488443,
+                "precision_success": 0.6500488400488443,
+                "correct_pairwise": 0.2292,
+                "correct_pairwise_success": 0.2292,
+                "hallucination_rate": 0.002501017962951279,
+                "hallucination_rate_success": 0.002501017962951279,
+                "deletion_rate": 0.004713634326457196,
+                "deletion_rate_success": 0.004713634326457196
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "gu": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5470488228414856,
+                "f1_success": 0.5470488228414856,
+                "recall": 0.6799797775530839,
+                "recall_success": 0.6799797775530839,
+                "precision": 0.48654031680520143,
+                "precision_success": 0.48654031680520143,
+                "correct_pairwise": 0.09201213346814964,
+                "correct_pairwise_success": 0.09201213346814964,
+                "hallucination_rate": 0.0035868787077950382,
+                "hallucination_rate_success": 0.0035868787077950382,
+                "deletion_rate": 0.002110500120244847,
+                "deletion_rate_success": 0.002110500120244847
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9531214848143985,
+                "f1_success": 0.9531214848143985,
+                "recall": 0.968503937007874,
+                "recall_success": 0.968503937007874,
+                "precision": 0.9480314960629921,
+                "precision_success": 0.9480314960629921,
+                "correct_pairwise": 0.8700787401574803,
+                "correct_pairwise_success": 0.8700787401574803,
+                "hallucination_rate": 0.00040397257431827187,
+                "hallucination_rate_success": 0.00040397257431827187,
+                "deletion_rate": 0.0002581459085413413,
+                "deletion_rate_success": 0.0002581459085413413
+            }
+        }
+    },
+    "ha": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5666666666666668,
+                "f1_success": 0.5666666666666668,
+                "recall": 0.6666666666666666,
+                "recall_success": 0.6666666666666666,
+                "precision": 0.49999999999999994,
+                "precision_success": 0.49999999999999994,
+                "correct_pairwise": 0.0,
+                "correct_pairwise_success": 0.0,
+                "hallucination_rate": 0.0,
+                "hallucination_rate_success": 0.0,
+                "deletion_rate": 0.00706581794847751,
+                "deletion_rate_success": 0.00706581794847751
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "he": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6985441269841274,
+                "f1_success": 0.6985441269841274,
+                "recall": 0.7932,
+                "recall_success": 0.7932,
+                "precision": 0.6589095238095262,
+                "precision_success": 0.6589095238095262,
+                "correct_pairwise": 0.2664,
+                "correct_pairwise_success": 0.2664,
+                "hallucination_rate": 0.002354411447344948,
+                "hallucination_rate_success": 0.002354411447344948,
+                "deletion_rate": 0.0009971099391658845,
+                "deletion_rate_success": 0.0009971099391658845
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "hi": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6302300965700959,
+                "f1_success": 0.6302300965700959,
+                "recall": 0.7912,
+                "recall_success": 0.7912,
+                "precision": 0.5605708802308824,
+                "precision_success": 0.5605708802308824,
+                "correct_pairwise": 0.1512,
+                "correct_pairwise_success": 0.1512,
+                "hallucination_rate": 0.006361529148411784,
+                "hallucination_rate_success": 0.006361529148411784,
+                "deletion_rate": 0.0020359761741864505,
+                "deletion_rate_success": 0.0020359761741864505
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9488359788359786,
+                "f1_success": 0.9488359788359786,
+                "recall": 0.9928571428571429,
+                "recall_success": 0.9928571428571429,
+                "precision": 0.9237566137566137,
+                "precision_success": 0.9237566137566137,
+                "correct_pairwise": 0.8111111111111111,
+                "correct_pairwise_success": 0.8111111111111111,
+                "hallucination_rate": 0.00040159374284163125,
+                "hallucination_rate_success": 0.00040159374284163125,
+                "deletion_rate": 0.0019516630358997857,
+                "deletion_rate_success": 0.0019516630358997857
+            }
+        }
+    },
+    "hu": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6770017027417047,
+                "f1_success": 0.6770017027417047,
+                "recall": 0.843,
+                "recall_success": 0.843,
+                "precision": 0.6068121733821773,
+                "precision_success": 0.6068121733821773,
+                "correct_pairwise": 0.1972,
+                "correct_pairwise_success": 0.1972,
+                "hallucination_rate": 0.0017405548943279208,
+                "hallucination_rate_success": 0.0017405548943279208,
+                "deletion_rate": 0.005464434444069083,
+                "deletion_rate_success": 0.005464434444069083
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "hy": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6289050907015615,
+                "f1_success": 0.6289050907015615,
+                "recall": 0.8132,
+                "recall_success": 0.8132,
+                "precision": 0.5434500288600304,
+                "precision_success": 0.5434500288600304,
+                "correct_pairwise": 0.138,
+                "correct_pairwise_success": 0.138,
+                "hallucination_rate": 0.0028651838724944815,
+                "hallucination_rate_success": 0.0028651838724944815,
+                "deletion_rate": 0.002827470976955292,
+                "deletion_rate_success": 0.002827470976955292
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "id": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7224911688311687,
+                "f1_success": 0.7224911688311687,
+                "recall": 0.8278,
+                "recall_success": 0.8278,
+                "precision": 0.6836798412698448,
+                "precision_success": 0.6836798412698448,
+                "correct_pairwise": 0.298,
+                "correct_pairwise_success": 0.298,
+                "hallucination_rate": 0.0024197281100977446,
+                "hallucination_rate_success": 0.0024197281100977446,
+                "deletion_rate": 0.0059872734963386425,
+                "deletion_rate_success": 0.0059872734963386425
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ig": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5923992673992674,
+                "f1_success": 0.5923992673992674,
+                "recall": 0.5961538461538461,
+                "recall_success": 0.5961538461538461,
+                "precision": 0.6583333333333333,
+                "precision_success": 0.6583333333333333,
+                "correct_pairwise": 0.11538461538461539,
+                "correct_pairwise_success": 0.11538461538461539,
+                "hallucination_rate": 0.0003076923076923077,
+                "hallucination_rate_success": 0.0003076923076923077,
+                "deletion_rate": 0.005033555027736393,
+                "deletion_rate_success": 0.005033555027736393
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "is": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6992729916394045,
+                "f1_success": 0.6992729916394045,
+                "recall": 0.7506361323155216,
+                "recall_success": 0.7506361323155216,
+                "precision": 0.7107294317217977,
+                "precision_success": 0.7107294317217977,
+                "correct_pairwise": 0.25699745547073793,
+                "correct_pairwise_success": 0.25699745547073793,
+                "hallucination_rate": 0.002372414392832522,
+                "hallucination_rate_success": 0.002372414392832522,
+                "deletion_rate": 0.00520909562057498,
+                "deletion_rate_success": 0.00520909562057498
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "it": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.732853726273727,
+                "f1_success": 0.732853726273727,
+                "recall": 0.8736,
+                "recall_success": 0.8736,
+                "precision": 0.6795851692751745,
+                "precision_success": 0.6795851692751745,
+                "correct_pairwise": 0.2804,
+                "correct_pairwise_success": 0.2804,
+                "hallucination_rate": 0.0013159844186293645,
+                "hallucination_rate_success": 0.0013159844186293645,
+                "deletion_rate": 0.003794821228409647,
+                "deletion_rate_success": 0.003794821228409647
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ja": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6338160686910321,
+                "f1_success": 0.6338160686910321,
+                "recall": 0.893,
+                "recall_success": 0.893,
+                "precision": 0.5245039229071599,
+                "precision_success": 0.5245039229071599,
+                "correct_pairwise": 0.1288,
+                "correct_pairwise_success": 0.1288,
+                "hallucination_rate": 0.002364787830144739,
+                "hallucination_rate_success": 0.002364787830144739,
+                "deletion_rate": 0.002376555687495188,
+                "deletion_rate_success": 0.002376555687495188
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9009891021085055,
+                "f1_success": 0.9009891021085055,
+                "recall": 0.9347014925373134,
+                "recall_success": 0.9347014925373134,
+                "precision": 0.888823738450604,
+                "precision_success": 0.888823738450604,
+                "correct_pairwise": 0.7388059701492538,
+                "correct_pairwise_success": 0.7388059701492538,
+                "hallucination_rate": 0.0010767711770197832,
+                "hallucination_rate_success": 0.0010767711770197832,
+                "deletion_rate": 0.006229478495530674,
+                "deletion_rate_success": 0.006229478495530674
+            }
+        }
+    },
+    "ka": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.632883347763348,
+                "f1_success": 0.632883347763348,
+                "recall": 0.77,
+                "recall_success": 0.77,
+                "precision": 0.570441062271064,
+                "precision_success": 0.570441062271064,
+                "correct_pairwise": 0.1572,
+                "correct_pairwise_success": 0.1572,
+                "hallucination_rate": 0.0008742705852678822,
+                "hallucination_rate_success": 0.0008742705852678822,
+                "deletion_rate": 0.00110685619749627,
+                "deletion_rate_success": 0.00110685619749627
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "kk": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.727014596932454,
+                "f1_success": 0.727014596932454,
+                "recall": 0.8251197809719371,
+                "recall_success": 0.8251197809719371,
+                "precision": 0.6887726388753056,
+                "precision_success": 0.6887726388753056,
+                "correct_pairwise": 0.3052703627652293,
+                "correct_pairwise_success": 0.3052703627652293,
+                "hallucination_rate": 0.004332883202325234,
+                "hallucination_rate_success": 0.004332883202325234,
+                "deletion_rate": 0.0005423964900332614,
+                "deletion_rate_success": 0.0005423964900332614
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9881523809523811,
+                "f1_success": 0.9881523809523811,
+                "recall": 1.0,
+                "recall_success": 1.0,
+                "precision": 0.9809333333333332,
+                "precision_success": 0.9809333333333332,
+                "correct_pairwise": 0.948,
+                "correct_pairwise_success": 0.948,
+                "hallucination_rate": 8.573426515062544e-05,
+                "hallucination_rate_success": 8.573426515062544e-05,
+                "deletion_rate": 0.00035605121204929113,
+                "deletion_rate_success": 0.00035605121204929113
+            }
+        }
+    },
+    "km": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.40752584925517227,
+                "f1_success": 0.40752584925517227,
+                "recall": 0.5375939849624061,
+                "recall_success": 0.5375939849624061,
+                "precision": 0.3623045709511876,
+                "precision_success": 0.3623045709511876,
+                "correct_pairwise": 0.015037593984962405,
+                "correct_pairwise_success": 0.015037593984962405,
+                "hallucination_rate": 0.004620282171656489,
+                "hallucination_rate_success": 0.004620282171656489,
+                "deletion_rate": 0.0028545626750141623,
+                "deletion_rate_success": 0.0028545626750141623
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.8648654829163314,
+                "f1_success": 0.8648654829163314,
+                "recall": 0.9033898305084745,
+                "recall_success": 0.9033898305084745,
+                "precision": 0.8527582728006461,
+                "precision_success": 0.8527582728006461,
+                "correct_pairwise": 0.711864406779661,
+                "correct_pairwise_success": 0.711864406779661,
+                "hallucination_rate": 0.0017303437577980449,
+                "hallucination_rate_success": 0.0017303437577980449,
+                "deletion_rate": 0.0010896344753899756,
+                "deletion_rate_success": 0.0010896344753899756
+            }
+        }
+    },
+    "kn": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5964701964701968,
+                "f1_success": 0.5964701964701968,
+                "recall": 0.583916083916084,
+                "recall_success": 0.583916083916084,
+                "precision": 0.6699300699300701,
+                "precision_success": 0.6699300699300701,
+                "correct_pairwise": 0.07692307692307693,
+                "correct_pairwise_success": 0.07692307692307693,
+                "hallucination_rate": 0.010741663977518546,
+                "hallucination_rate_success": 0.010741663977518546,
+                "deletion_rate": 0.003985858856250373,
+                "deletion_rate_success": 0.003985858856250373
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ko": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7846010389610378,
+                "f1_success": 0.7846010389610378,
+                "recall": 0.9696,
+                "recall_success": 0.9696,
+                "precision": 0.6925797286226396,
+                "precision_success": 0.6925797286226396,
+                "correct_pairwise": 0.3256,
+                "correct_pairwise_success": 0.3256,
+                "hallucination_rate": 0.002837023408791547,
+                "hallucination_rate_success": 0.002837023408791547,
+                "deletion_rate": 0.0008630765398491523,
+                "deletion_rate_success": 0.0008630765398491523
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ku": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5815752358752353,
+                "f1_success": 0.5815752358752353,
+                "recall": 0.764,
+                "recall_success": 0.764,
+                "precision": 0.49683013875014004,
+                "precision_success": 0.49683013875014004,
+                "correct_pairwise": 0.0976,
+                "correct_pairwise_success": 0.0976,
+                "hallucination_rate": 0.003049939360773281,
+                "hallucination_rate_success": 0.003049939360773281,
+                "deletion_rate": 0.0013637554567615673,
+                "deletion_rate_success": 0.0013637554567615673
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ky": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6735760971055086,
+                "f1_success": 0.6735760971055086,
+                "recall": 0.7549019607843137,
+                "recall_success": 0.7549019607843137,
+                "precision": 0.6436274509803922,
+                "precision_success": 0.6436274509803922,
+                "correct_pairwise": 0.23529411764705882,
+                "correct_pairwise_success": 0.23529411764705882,
+                "hallucination_rate": 0.007140047064022797,
+                "hallucination_rate_success": 0.007140047064022797,
+                "deletion_rate": 4.901960784313725e-05,
+                "deletion_rate_success": 4.901960784313725e-05
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "la": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7777777777777777,
+                "f1_success": 0.7777777777777777,
+                "recall": 0.6666666666666666,
+                "recall_success": 0.6666666666666666,
+                "precision": 1.0,
+                "precision_success": 1.0,
+                "correct_pairwise": 0.3333333333333333,
+                "correct_pairwise_success": 0.3333333333333333,
+                "hallucination_rate": 0.0,
+                "hallucination_rate_success": 0.0,
+                "deletion_rate": 0.006535947712418301,
+                "deletion_rate_success": 0.006535947712418301
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "lt": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.670809586622528,
+                "f1_success": 0.670809586622528,
+                "recall": 0.8084,
+                "recall_success": 0.8084,
+                "precision": 0.6205203174603207,
+                "precision_success": 0.6205203174603207,
+                "correct_pairwise": 0.1976,
+                "correct_pairwise_success": 0.1976,
+                "hallucination_rate": 0.0015627861207847473,
+                "hallucination_rate_success": 0.0015627861207847473,
+                "deletion_rate": 0.005172720631451417,
+                "deletion_rate_success": 0.005172720631451417
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9592190476190482,
+                "f1_success": 0.9592190476190482,
+                "recall": 0.99,
+                "recall_success": 0.99,
+                "precision": 0.940933333333333,
+                "precision_success": 0.940933333333333,
+                "correct_pairwise": 0.84,
+                "correct_pairwise_success": 0.84,
+                "hallucination_rate": 0.0003513407500928848,
+                "hallucination_rate_success": 0.0003513407500928848,
+                "deletion_rate": 0.002082447145035081,
+                "deletion_rate_success": 0.002082447145035081
+            }
+        }
+    },
+    "lv": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6681591408591407,
+                "f1_success": 0.6681591408591407,
+                "recall": 0.8054,
+                "recall_success": 0.8054,
+                "precision": 0.6150585803085828,
+                "precision_success": 0.6150585803085828,
+                "correct_pairwise": 0.1972,
+                "correct_pairwise_success": 0.1972,
+                "hallucination_rate": 0.0012948329239719537,
+                "hallucination_rate_success": 0.0012948329239719537,
+                "deletion_rate": 0.00814116656024893,
+                "deletion_rate_success": 0.00814116656024893
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9701341647770227,
+                "f1_success": 0.9701341647770227,
+                "recall": 0.9990079365079365,
+                "recall_success": 0.9990079365079365,
+                "precision": 0.9531084656084663,
+                "precision_success": 0.9531084656084663,
+                "correct_pairwise": 0.878968253968254,
+                "correct_pairwise_success": 0.878968253968254,
+                "hallucination_rate": 0.0002377551652592137,
+                "hallucination_rate_success": 0.0002377551652592137,
+                "deletion_rate": 0.0010451384115143325,
+                "deletion_rate_success": 0.0010451384115143325
+            }
+        }
+    },
+    "mg": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5503968253968254,
+                "f1_success": 0.5503968253968254,
+                "recall": 0.6018518518518519,
+                "recall_success": 0.6018518518518519,
+                "precision": 0.5722222222222222,
+                "precision_success": 0.5722222222222222,
+                "correct_pairwise": 0.05555555555555555,
+                "correct_pairwise_success": 0.05555555555555555,
+                "hallucination_rate": 0.000257009990616548,
+                "hallucination_rate_success": 0.000257009990616548,
+                "deletion_rate": 0.002550153142789387,
+                "deletion_rate_success": 0.002550153142789387
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "mk": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6957636075036084,
+                "f1_success": 0.6957636075036084,
+                "recall": 0.8164,
+                "recall_success": 0.8164,
+                "precision": 0.6483677777777802,
+                "precision_success": 0.6483677777777802,
+                "correct_pairwise": 0.244,
+                "correct_pairwise_success": 0.244,
+                "hallucination_rate": 0.00401003811303035,
+                "hallucination_rate_success": 0.00401003811303035,
+                "deletion_rate": 0.0011058885307367865,
+                "deletion_rate_success": 0.0011058885307367865
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ml": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5615049779732317,
+                "f1_success": 0.5615049779732317,
+                "recall": 0.6554232804232805,
+                "recall_success": 0.6554232804232805,
+                "precision": 0.527830792810951,
+                "precision_success": 0.527830792810951,
+                "correct_pairwise": 0.09391534391534391,
+                "correct_pairwise_success": 0.09391534391534391,
+                "hallucination_rate": 0.0044283819169686905,
+                "hallucination_rate_success": 0.0044283819169686905,
+                "deletion_rate": 0.0059274793731573065,
+                "deletion_rate_success": 0.0059274793731573065
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "mn": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7002647619047646,
+                "f1_success": 0.7002647619047646,
+                "recall": 0.7308,
+                "recall_success": 0.7308,
+                "precision": 0.7100582051282051,
+                "precision_success": 0.7100582051282051,
+                "correct_pairwise": 0.3076,
+                "correct_pairwise_success": 0.3076,
+                "hallucination_rate": 0.0022027623800024263,
+                "hallucination_rate_success": 0.0022027623800024263,
+                "deletion_rate": 0.0001919116833279044,
+                "deletion_rate_success": 0.0001919116833279044
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "mr": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5943247907647932,
+                "f1_success": 0.5943247907647932,
+                "recall": 0.6368,
+                "recall_success": 0.6368,
+                "precision": 0.6110982539682542,
+                "precision_success": 0.6110982539682542,
+                "correct_pairwise": 0.1264,
+                "correct_pairwise_success": 0.1264,
+                "hallucination_rate": 0.01845174793779083,
+                "hallucination_rate_success": 0.01845174793779083,
+                "deletion_rate": 0.0010360322185237383,
+                "deletion_rate_success": 0.0010360322185237383
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ms": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7001579487293726,
+                "f1_success": 0.7001579487293726,
+                "recall": 0.8035714285714286,
+                "recall_success": 0.8035714285714286,
+                "precision": 0.6667267058338479,
+                "precision_success": 0.6667267058338479,
+                "correct_pairwise": 0.2708333333333333,
+                "correct_pairwise_success": 0.2708333333333333,
+                "hallucination_rate": 0.0028002939480644626,
+                "hallucination_rate_success": 0.0028002939480644626,
+                "deletion_rate": 0.005686214173233866,
+                "deletion_rate_success": 0.005686214173233866
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "mt": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6553113553113553,
+                "f1_success": 0.6553113553113553,
+                "recall": 0.7307692307692307,
+                "recall_success": 0.7307692307692307,
+                "precision": 0.6403846153846153,
+                "precision_success": 0.6403846153846153,
+                "correct_pairwise": 0.19230769230769232,
+                "correct_pairwise_success": 0.19230769230769232,
+                "hallucination_rate": 0.001549568499479054,
+                "hallucination_rate_success": 0.001549568499479054,
+                "deletion_rate": 0.007063306062367414,
+                "deletion_rate_success": 0.007063306062367414
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "my": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5136326784326777,
+                "f1_success": 0.5136326784326777,
+                "recall": 0.6358,
+                "recall_success": 0.6358,
+                "precision": 0.4626103318903346,
+                "precision_success": 0.4626103318903346,
+                "correct_pairwise": 0.0884,
+                "correct_pairwise_success": 0.0884,
+                "hallucination_rate": 0.0007777015376157116,
+                "hallucination_rate_success": 0.0007777015376157116,
+                "deletion_rate": 0.0017232568568641047,
+                "deletion_rate_success": 0.0017232568568641047
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ne": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6764268657125816,
+                "f1_success": 0.6764268657125816,
+                "recall": 0.8214285714285714,
+                "recall_success": 0.8214285714285714,
+                "precision": 0.6111884844027703,
+                "precision_success": 0.6111884844027703,
+                "correct_pairwise": 0.19305019305019305,
+                "correct_pairwise_success": 0.19305019305019305,
+                "hallucination_rate": 0.008891675467541769,
+                "hallucination_rate_success": 0.008891675467541769,
+                "deletion_rate": 0.0007190332039692074,
+                "deletion_rate_success": 0.0007190332039692074
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "nl": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.769668369408368,
+                "f1_success": 0.769668369408368,
+                "recall": 0.8878,
+                "recall_success": 0.8878,
+                "precision": 0.7196537103174655,
+                "precision_success": 0.7196537103174655,
+                "correct_pairwise": 0.3524,
+                "correct_pairwise_success": 0.3524,
+                "hallucination_rate": 0.0019698486990166455,
+                "hallucination_rate_success": 0.0019698486990166455,
+                "deletion_rate": 0.0063167320144829,
+                "deletion_rate_success": 0.0063167320144829
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "pa": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.603672745694022,
+                "f1_success": 0.603672745694022,
+                "recall": 0.7021276595744681,
+                "recall_success": 0.7021276595744681,
+                "precision": 0.5666666666666665,
+                "precision_success": 0.5666666666666665,
+                "correct_pairwise": 0.1702127659574468,
+                "correct_pairwise_success": 0.1702127659574468,
+                "hallucination_rate": 0.011356279671013176,
+                "hallucination_rate_success": 0.011356279671013176,
+                "deletion_rate": 0.0036338378020326955,
+                "deletion_rate_success": 0.0036338378020326955
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "pl": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7343102525252525,
+                "f1_success": 0.7343102525252525,
+                "recall": 0.873,
+                "recall_success": 0.873,
+                "precision": 0.6746723809523856,
+                "precision_success": 0.6746723809523856,
+                "correct_pairwise": 0.284,
+                "correct_pairwise_success": 0.284,
+                "hallucination_rate": 0.001148436920533467,
+                "hallucination_rate_success": 0.001148436920533467,
+                "deletion_rate": 0.004519199018912118,
+                "deletion_rate_success": 0.004519199018912118
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9564978182508072,
+                "f1_success": 0.9564978182508072,
+                "recall": 0.9960159362549801,
+                "recall_success": 0.9960159362549801,
+                "precision": 0.9337317397078346,
+                "precision_success": 0.9337317397078346,
+                "correct_pairwise": 0.8207171314741036,
+                "correct_pairwise_success": 0.8207171314741036,
+                "hallucination_rate": 0.00013880134537740848,
+                "hallucination_rate_success": 0.00013880134537740848,
+                "deletion_rate": 0.002192527519363867,
+                "deletion_rate_success": 0.002192527519363867
+            }
+        }
+    },
+    "ps": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6695084315522268,
+                "f1_success": 0.6695084315522268,
+                "recall": 0.8795620437956204,
+                "recall_success": 0.8795620437956204,
+                "precision": 0.5685262426138341,
+                "precision_success": 0.5685262426138341,
+                "correct_pairwise": 0.1678832116788321,
+                "correct_pairwise_success": 0.1678832116788321,
+                "hallucination_rate": 0.0020809230575481005,
+                "hallucination_rate_success": 0.0020809230575481005,
+                "deletion_rate": 0.0007645890132440491,
+                "deletion_rate_success": 0.0007645890132440491
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9510857422147743,
+                "f1_success": 0.9510857422147743,
+                "recall": 0.9853372434017595,
+                "recall_success": 0.9853372434017595,
+                "precision": 0.9312072336265883,
+                "precision_success": 0.9312072336265883,
+                "correct_pairwise": 0.8372434017595308,
+                "correct_pairwise_success": 0.8372434017595308,
+                "hallucination_rate": 0.0006950636263675396,
+                "hallucination_rate_success": 0.0006950636263675396,
+                "deletion_rate": 0.0019447416217771743,
+                "deletion_rate_success": 0.0019447416217771743
+            }
+        }
+    },
+    "pt": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7579291801684906,
+                "f1_success": 0.7579291801684906,
+                "recall": 0.87,
+                "recall_success": 0.87,
+                "precision": 0.71844947570948,
+                "precision_success": 0.71844947570948,
+                "correct_pairwise": 0.328,
+                "correct_pairwise_success": 0.328,
+                "hallucination_rate": 0.0012476129193182068,
+                "hallucination_rate_success": 0.0012476129193182068,
+                "deletion_rate": 0.0034508342591126136,
+                "deletion_rate_success": 0.0034508342591126136
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ro": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7198972272172273,
+                "f1_success": 0.7198972272172273,
+                "recall": 0.8394,
+                "recall_success": 0.8394,
+                "precision": 0.6736192496392528,
+                "precision_success": 0.6736192496392528,
+                "correct_pairwise": 0.2812,
+                "correct_pairwise_success": 0.2812,
+                "hallucination_rate": 0.0017816592054504877,
+                "hallucination_rate_success": 0.0017816592054504877,
+                "deletion_rate": 0.005348498914826303,
+                "deletion_rate_success": 0.005348498914826303
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.959926984126985,
+                "f1_success": 0.959926984126985,
+                "recall": 0.996,
+                "recall_success": 0.996,
+                "precision": 0.9404380952380955,
+                "precision_success": 0.9404380952380955,
+                "correct_pairwise": 0.846,
+                "correct_pairwise_success": 0.846,
+                "hallucination_rate": 0.0006243582977278069,
+                "hallucination_rate_success": 0.0006243582977278069,
+                "deletion_rate": 0.0013341217195902905,
+                "deletion_rate_success": 0.0013341217195902905
+            }
+        }
+    },
+    "ru": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7376602886002895,
+                "f1_success": 0.7376602886002895,
+                "recall": 0.8808,
+                "recall_success": 0.8808,
+                "precision": 0.6769525396825457,
+                "precision_success": 0.6769525396825457,
+                "correct_pairwise": 0.2896,
+                "correct_pairwise_success": 0.2896,
+                "hallucination_rate": 0.005110627494068416,
+                "hallucination_rate_success": 0.005110627494068416,
+                "deletion_rate": 0.0016374670443644707,
+                "deletion_rate_success": 0.0016374670443644707
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9862903225806454,
+                "f1_success": 0.9862903225806454,
+                "recall": 1.0,
+                "recall_success": 1.0,
+                "precision": 0.977822580645161,
+                "precision_success": 0.977822580645161,
+                "correct_pairwise": 0.9395161290322581,
+                "correct_pairwise_success": 0.9395161290322581,
+                "hallucination_rate": 0.0008858251221485894,
+                "hallucination_rate_success": 0.0008858251221485894,
+                "deletion_rate": 0.0009755970249184842,
+                "deletion_rate_success": 0.0009755970249184842
+            }
+        }
+    },
+    "si": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5955093571372638,
+                "f1_success": 0.5955093571372638,
+                "recall": 0.748062015503876,
+                "recall_success": 0.748062015503876,
+                "precision": 0.526738033714778,
+                "precision_success": 0.526738033714778,
+                "correct_pairwise": 0.16279069767441862,
+                "correct_pairwise_success": 0.16279069767441862,
+                "hallucination_rate": 0.002626053242324036,
+                "hallucination_rate_success": 0.002626053242324036,
+                "deletion_rate": 0.0015710555765964833,
+                "deletion_rate_success": 0.0015710555765964833
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "sk": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.697137340910283,
+                "f1_success": 0.697137340910283,
+                "recall": 0.8418,
+                "recall_success": 0.8418,
+                "precision": 0.6373501731601758,
+                "precision_success": 0.6373501731601758,
+                "correct_pairwise": 0.2304,
+                "correct_pairwise_success": 0.2304,
+                "hallucination_rate": 0.003301732272418076,
+                "hallucination_rate_success": 0.003301732272418076,
+                "deletion_rate": 0.0058937636425625715,
+                "deletion_rate_success": 0.0058937636425625715
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "sl": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6939812476412475,
+                "f1_success": 0.6939812476412475,
+                "recall": 0.825,
+                "recall_success": 0.825,
+                "precision": 0.6460621212121253,
+                "precision_success": 0.6460621212121253,
+                "correct_pairwise": 0.2312,
+                "correct_pairwise_success": 0.2312,
+                "hallucination_rate": 0.0020169758611796964,
+                "hallucination_rate_success": 0.0020169758611796964,
+                "deletion_rate": 0.0049312676660023536,
+                "deletion_rate_success": 0.0049312676660023536
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "sq": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6748963517528229,
+                "f1_success": 0.6748963517528229,
+                "recall": 0.78,
+                "recall_success": 0.78,
+                "precision": 0.6424058241758273,
+                "precision_success": 0.6424058241758273,
+                "correct_pairwise": 0.2196,
+                "correct_pairwise_success": 0.2196,
+                "hallucination_rate": 0.0010896130793104147,
+                "hallucination_rate_success": 0.0010896130793104147,
+                "deletion_rate": 0.006284639719491186,
+                "deletion_rate_success": 0.006284639719491186
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "sr": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7186816450216442,
+                "f1_success": 0.7186816450216442,
+                "recall": 0.8482,
+                "recall_success": 0.8482,
+                "precision": 0.6700098412698463,
+                "precision_success": 0.6700098412698463,
+                "correct_pairwise": 0.2768,
+                "correct_pairwise_success": 0.2768,
+                "hallucination_rate": 0.0017807752837845445,
+                "hallucination_rate_success": 0.0017807752837845445,
+                "deletion_rate": 0.004474098644158447,
+                "deletion_rate_success": 0.004474098644158447
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "sv": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7317646753246757,
+                "f1_success": 0.7317646753246757,
+                "recall": 0.8426,
+                "recall_success": 0.8426,
+                "precision": 0.6904955555555603,
+                "precision_success": 0.6904955555555603,
+                "correct_pairwise": 0.3036,
+                "correct_pairwise_success": 0.3036,
+                "hallucination_rate": 0.0018353528238923011,
+                "hallucination_rate_success": 0.0018353528238923011,
+                "deletion_rate": 0.006681205168288853,
+                "deletion_rate_success": 0.006681205168288853
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ta": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5593352436412893,
+                "f1_success": 0.5593352436412893,
+                "recall": 0.6412811387900356,
+                "recall_success": 0.6412811387900356,
+                "precision": 0.5320112410325943,
+                "precision_success": 0.5320112410325943,
+                "correct_pairwise": 0.10177935943060498,
+                "correct_pairwise_success": 0.10177935943060498,
+                "hallucination_rate": 0.003727363497056773,
+                "hallucination_rate_success": 0.003727363497056773,
+                "deletion_rate": 0.0008773235395904057,
+                "deletion_rate_success": 0.0008773235395904057
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9689243027888449,
+                "f1_success": 0.9689243027888449,
+                "recall": 0.9880478087649402,
+                "recall_success": 0.9880478087649402,
+                "precision": 0.9581673306772907,
+                "precision_success": 0.9581673306772907,
+                "correct_pairwise": 0.896414342629482,
+                "correct_pairwise_success": 0.896414342629482,
+                "hallucination_rate": 5.995954093251004e-05,
+                "hallucination_rate_success": 5.995954093251004e-05,
+                "deletion_rate": 0.0007168224166254561,
+                "deletion_rate_success": 0.0007168224166254561
+            }
+        }
+    },
+    "te": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5997542320049875,
+                "f1_success": 0.5997542320049875,
+                "recall": 0.6873111782477341,
+                "recall_success": 0.6873111782477341,
+                "precision": 0.5719572723349153,
+                "precision_success": 0.5719572723349153,
+                "correct_pairwise": 0.14501510574018128,
+                "correct_pairwise_success": 0.14501510574018128,
+                "hallucination_rate": 0.0036956792666189295,
+                "hallucination_rate_success": 0.0036956792666189295,
+                "deletion_rate": 0.0014475777669801394,
+                "deletion_rate_success": 0.0014475777669801394
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "tg": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7046365914786964,
+                "f1_success": 0.7046365914786964,
+                "recall": 0.7960526315789473,
+                "recall_success": 0.7960526315789473,
+                "precision": 0.6736842105263158,
+                "precision_success": 0.6736842105263158,
+                "correct_pairwise": 0.2631578947368421,
+                "correct_pairwise_success": 0.2631578947368421,
+                "hallucination_rate": 0.004273590912500673,
+                "hallucination_rate_success": 0.004273590912500673,
+                "deletion_rate": 0.0003510595615858774,
+                "deletion_rate_success": 0.0003510595615858774
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "th": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6377106933245635,
+                "f1_success": 0.6377106933245635,
+                "recall": 0.9532,
+                "recall_success": 0.9532,
+                "precision": 0.5072269356134071,
+                "precision_success": 0.5072269356134071,
+                "correct_pairwise": 0.1064,
+                "correct_pairwise_success": 0.1064,
+                "hallucination_rate": 0.0023143800642900386,
+                "hallucination_rate_success": 0.0023143800642900386,
+                "deletion_rate": 0.000655006324155229,
+                "deletion_rate_success": 0.000655006324155229
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "tr": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7708152856294018,
+                "f1_success": 0.7708152856294018,
+                "recall": 0.8984,
+                "recall_success": 0.8984,
+                "precision": 0.7143595526695586,
+                "precision_success": 0.7143595526695586,
+                "correct_pairwise": 0.3464,
+                "correct_pairwise_success": 0.3464,
+                "hallucination_rate": 0.004159457574508295,
+                "hallucination_rate_success": 0.004159457574508295,
+                "deletion_rate": 0.0032691364605659566,
+                "deletion_rate_success": 0.0032691364605659566
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9563893110435656,
+                "f1_success": 0.9563893110435656,
+                "recall": 0.9853723404255319,
+                "recall_success": 0.9853723404255319,
+                "precision": 0.9417220744680848,
+                "precision_success": 0.9417220744680848,
+                "correct_pairwise": 0.8404255319148937,
+                "correct_pairwise_success": 0.8404255319148937,
+                "hallucination_rate": 0.0006752741625126531,
+                "hallucination_rate_success": 0.0006752741625126531,
+                "deletion_rate": 0.0019815246532267627,
+                "deletion_rate_success": 0.0019815246532267627
+            }
+        }
+    },
+    "uk": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7214377720057719,
+                "f1_success": 0.7214377720057719,
+                "recall": 0.8542,
+                "recall_success": 0.8542,
+                "precision": 0.6661316281785897,
+                "precision_success": 0.6661316281785897,
+                "correct_pairwise": 0.2676,
+                "correct_pairwise_success": 0.2676,
+                "hallucination_rate": 0.005248351232303586,
+                "hallucination_rate_success": 0.005248351232303586,
+                "deletion_rate": 0.0020079313864787107,
+                "deletion_rate_success": 0.0020079313864787107
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "ur": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6787046058885684,
+                "f1_success": 0.6787046058885684,
+                "recall": 0.8689619732785201,
+                "recall_success": 0.8689619732785201,
+                "precision": 0.5833859443057785,
+                "precision_success": 0.5833859443057785,
+                "correct_pairwise": 0.17985611510791366,
+                "correct_pairwise_success": 0.17985611510791366,
+                "hallucination_rate": 0.001848737507566069,
+                "hallucination_rate_success": 0.001848737507566069,
+                "deletion_rate": 0.0009473076763764707,
+                "deletion_rate_success": 0.0009473076763764707
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "uz": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7066430580671058,
+                "f1_success": 0.7066430580671058,
+                "recall": 0.7985232067510548,
+                "recall_success": 0.7985232067510548,
+                "precision": 0.6842726542093631,
+                "precision_success": 0.6842726542093631,
+                "correct_pairwise": 0.23523206751054854,
+                "correct_pairwise_success": 0.23523206751054854,
+                "hallucination_rate": 0.0007118439654064576,
+                "hallucination_rate_success": 0.0007118439654064576,
+                "deletion_rate": 0.0034157980344862227,
+                "deletion_rate_success": 0.0034157980344862227
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "vi": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.7146309668109676,
+                "f1_success": 0.7146309668109676,
+                "recall": 0.7962,
+                "recall_success": 0.7962,
+                "precision": 0.7002101098901126,
+                "precision_success": 0.7002101098901126,
+                "correct_pairwise": 0.2948,
+                "correct_pairwise_success": 0.2948,
+                "hallucination_rate": 0.01096706041998189,
+                "hallucination_rate_success": 0.01096706041998189,
+                "deletion_rate": 0.006873043929119718,
+                "deletion_rate_success": 0.006873043929119718
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {}
+        }
+    },
+    "zh": {
+        "ted2020-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5457006412553302,
+                "f1_success": 0.5457006412553302,
+                "recall": 0.7448173741362291,
+                "recall_success": 0.7448173741362291,
+                "precision": 0.46754378870908136,
+                "precision_success": 0.46754378870908136,
+                "correct_pairwise": 0.09328726554787758,
+                "correct_pairwise_success": 0.09328726554787758,
+                "hallucination_rate": 0.009371017506540357,
+                "hallucination_rate_success": 0.009371017506540357,
+                "deletion_rate": 0.0013219064738309986,
+                "deletion_rate_success": 0.0013219064738309986
+            }
+        },
+        "ersatz": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.8075674617779903,
+                "f1_success": 0.8075674617779903,
+                "recall": 0.984,
+                "recall_success": 0.984,
+                "precision": 0.7330227400050927,
+                "precision_success": 0.7330227400050927,
+                "correct_pairwise": 0.49,
+                "correct_pairwise_success": 0.49,
+                "hallucination_rate": 0.0005536821504100962,
+                "hallucination_rate_success": 0.0005536821504100962,
+                "deletion_rate": 0.009728746116918196,
+                "deletion_rate_success": 0.009728746116918196
+            }
+        }
+    }
+}

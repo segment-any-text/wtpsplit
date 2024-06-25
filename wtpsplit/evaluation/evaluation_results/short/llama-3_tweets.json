@@ -1,0 +1,138 @@
+{
+    "en-de": {
+        "short-sequences": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9000743912756796,
+                "f1_success": 0.9000743912756796,
+                "recall": 0.9680330586439183,
+                "recall_success": 0.9680330586439183,
+                "precision": 0.8792181278755463,
+                "precision_success": 0.8792181278755463,
+                "correct_pairwise": 0.6340956340956341,
+                "correct_pairwise_success": 0.6340956340956341,
+                "hallucination_rate": 0.0011377342104382758,
+                "hallucination_rate_success": 0.0011377342104382758,
+                "deletion_rate": 0.008195428111353568,
+                "deletion_rate_success": 0.008195428111353568
+            }
+        },
+        "short-sequences-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6814990307122929,
+                "f1_success": 0.6814990307122929,
+                "recall": 0.8255033917185627,
+                "recall_success": 0.8255033917185627,
+                "precision": 0.6368230781035003,
+                "precision_success": 0.6368230781035003,
+                "correct_pairwise": 0.12266112266112267,
+                "correct_pairwise_success": 0.12266112266112267,
+                "hallucination_rate": 0.0004693245298112651,
+                "hallucination_rate_success": 0.0004693245298112651,
+                "deletion_rate": 0.005197690710770958,
+                "deletion_rate_success": 0.005197690710770958
+            }
+        }
+    },
+    "et": {
+        "short-sequences": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9137650111486688,
+                "f1_success": 0.9137650111486688,
+                "recall": 0.8866440174062679,
+                "recall_success": 0.8866440174062679,
+                "precision": 0.9596589918018488,
+                "precision_success": 0.9596589918018488,
+                "correct_pairwise": 0.5615763546798029,
+                "correct_pairwise_success": 0.5615763546798029,
+                "hallucination_rate": 0.0012150799494800382,
+                "hallucination_rate_success": 0.0012150799494800382,
+                "deletion_rate": 0.0025916411569781627,
+                "deletion_rate_success": 0.0025916411569781627
+            }
+        },
+        "short-sequences-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.5635486504595344,
+                "f1_success": 0.5635486504595344,
+                "recall": 0.5776919458699341,
+                "recall_success": 0.5776919458699341,
+                "precision": 0.622853624208304,
+                "precision_success": 0.622853624208304,
+                "correct_pairwise": 0.03940886699507389,
+                "correct_pairwise_success": 0.03940886699507389,
+                "hallucination_rate": 0.0011082062155977717,
+                "hallucination_rate_success": 0.0011082062155977717,
+                "deletion_rate": 0.0022317863489521067,
+                "deletion_rate_success": 0.0022317863489521067
+            }
+        }
+    },
+    "sl": {
+        "short-sequences": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9132655325287299,
+                "f1_success": 0.9132655325287299,
+                "recall": 0.9171784085090536,
+                "recall_success": 0.9171784085090536,
+                "precision": 0.94169590490155,
+                "precision_success": 0.94169590490155,
+                "correct_pairwise": 0.7338709677419355,
+                "correct_pairwise_success": 0.7338709677419355,
+                "hallucination_rate": 0.009590024681316176,
+                "hallucination_rate_success": 0.009590024681316176,
+                "deletion_rate": 0.009671156528351032,
+                "deletion_rate_success": 0.009671156528351032
+            }
+        },
+        "short-sequences-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6835416558840381,
+                "f1_success": 0.6835416558840381,
+                "recall": 0.6869996043383146,
+                "recall_success": 0.6869996043383146,
+                "precision": 0.7738261430549739,
+                "precision_success": 0.7738261430549739,
+                "correct_pairwise": 0.23313782991202345,
+                "correct_pairwise_success": 0.23313782991202345,
+                "hallucination_rate": 0.001969530277248845,
+                "hallucination_rate_success": 0.001969530277248845,
+                "deletion_rate": 0.011673369745347639,
+                "deletion_rate_success": 0.011673369745347639
+            }
+        }
+    },
+    "sr": {
+        "short-sequences": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.9218584656084658,
+                "f1_success": 0.9218584656084658,
+                "recall": 0.9375868055555553,
+                "recall_success": 0.9375868055555553,
+                "precision": 0.9243923611111113,
+                "precision_success": 0.9243923611111113,
+                "correct_pairwise": 0.7604166666666666,
+                "correct_pairwise_success": 0.7604166666666666,
+                "hallucination_rate": 0.002547107952804255,
+                "hallucination_rate_success": 0.002547107952804255,
+                "deletion_rate": 0.003932671999102301,
+                "deletion_rate_success": 0.003932671999102301
+            }
+        },
+        "short-sequences-corrupted-asr": {
+            "meta/meta-llama-3-8b-instruct": {
+                "f1": 0.6767789502164505,
+                "f1_success": 0.6767789502164505,
+                "recall": 0.7411458333333338,
+                "recall_success": 0.7411458333333338,
+                "precision": 0.6761615410052916,
+                "precision_success": 0.6761615410052916,
+                "correct_pairwise": 0.19270833333333334,
+                "correct_pairwise_success": 0.19270833333333334,
+                "hallucination_rate": 0.0009933949979813483,
+                "hallucination_rate_success": 0.0009933949979813483,
+                "deletion_rate": 0.0038828355682355674,
+                "deletion_rate_success": 0.0038828355682355674
+            }
+        }
+    }
+}

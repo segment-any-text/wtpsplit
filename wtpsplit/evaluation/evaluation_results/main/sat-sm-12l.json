@@ -1,0 +1,1645 @@
+{
+    "af": {
+        "opus100": {
+            "u": 0.9228206551915603,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 1.0,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7727461570419609,
+            "t": null,
+            "punct": null
+        }
+    },
+    "am": {
+        "opus100": {
+            "u": 0.8569926393270243,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.16666666666666666,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ar": {
+        "ersatz": {
+            "u": 0.8980544747081711,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.8334274421230942,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.8824427480916031,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.48829529610332423,
+            "t": null,
+            "punct": null
+        }
+    },
+    "az": {
+        "opus100": {
+            "u": 0.894929430214323,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7516778523489933,
+            "t": null,
+            "punct": null
+        }
+    },
+    "be": {
+        "opus100": {
+            "u": 0.9097162510748065,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9592573491490458,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.746497230368198,
+            "t": null,
+            "punct": null
+        }
+    },
+    "bg": {
+        "opus100": {
+            "u": 0.9672353100460331,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9995017438963627,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7545944913838368,
+            "t": null,
+            "punct": null
+        }
+    },
+    "bn": {
+        "opus100": {
+            "u": 0.9155005382131324,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 1.0,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.21498708010335918,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ca": {
+        "opus100": {
+            "u": 0.9449664429530201,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9993983152827919,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7405452102130928,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ceb": {
+        "ud": {
+            "u": 0.988095238095238,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.4705882352941176,
+            "t": null,
+            "punct": null
+        }
+    },
+    "cs": {
+        "ersatz": {
+            "u": 0.9913765570105397,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9532053015958886,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9724255600198138,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7702973197285554,
+            "t": null,
+            "punct": null
+        }
+    },
+    "cy": {
+        "opus100": {
+            "u": 0.876909254267745,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9970811441914769,
+            "t": null,
+            "punct": null
+        }
+    },
+    "da": {
+        "opus100": {
+            "u": 0.9560021727322107,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.98545101842871,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7843439006873911,
+            "t": null,
+            "punct": null
+        }
+    },
+    "de": {
+        "ersatz": {
+            "u": 0.995193666949392,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9070155902004454,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9850402761795166,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8053684477082805,
+            "t": null,
+            "punct": null
+        },
+        "legal-all-laws": {
+            "u": 0.9270252228744192,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-laws-corrupted-asr": {
+            "u": 0.8085419436835394,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-judgements": {
+            "u": 0.8128756881934007,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-judgements-corrupted-asr": {
+            "u": 0.7204728115166331,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": null,
+            "acc_punct": null
+        }
+    },
+    "el": {
+        "opus100": {
+            "u": 0.9668478260869565,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9827586206896552,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7438972162740899,
+            "t": null,
+            "punct": null
+        }
+    },
+    "en": {
+        "ersatz": {
+            "u": 0.9866781263429307,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9612868047982552,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9729177312212569,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.755235219635726,
+            "t": null,
+            "punct": null
+        },
+        "legal-all-judgements": {
+            "u": 0.930858602425791,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-judgements-corrupted-asr": {
+            "u": 0.7451231738130479,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": null,
+            "acc_punct": null
+        }
+    },
+    "eo": {
+        "opus100": {
+            "u": 0.9661387220098308,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7335933525521452,
+            "t": null,
+            "punct": null
+        }
+    },
+    "es": {
+        "ersatz": {
+            "u": 0.9970961887477314,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9603500136724091,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9929441949967929,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7494069550295261,
+            "t": null,
+            "punct": null
+        },
+        "legal-all-laws": {
+            "u": 0.8933690655461626,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.273224043715847,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-laws-corrupted-asr": {
+            "u": 0.8334968201842455,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.16393442622950818,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-judgements": {
+            "u": 0.8010546756322073,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-judgements-corrupted-asr": {
+            "u": 0.6533315684379014,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": null,
+            "acc_punct": null
+        }
+    },
+    "et": {
+        "ersatz": {
+            "u": 0.9956068094453597,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9489247311827957,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9864911673016973,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7945219173289348,
+            "t": null,
+            "punct": null
+        },
+        "short-sequences": {
+            "u": 0.9183852434278218,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.5270935960591133,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "short-sequences-corrupted-asr": {
+            "u": 0.8198776683619725,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.26108374384236455,
+            "acc_t": null,
+            "acc_punct": null
+        }
+    },
+    "eu": {
+        "opus100": {
+            "u": 0.9438872323122797,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9987646695491044,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6734227521112768,
+            "t": null,
+            "punct": null
+        }
+    },
+    "fa": {
+        "opus100": {
+            "u": 0.7891229005598507,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.999236641221374,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7122995737771463,
+            "t": null,
+            "punct": null
+        }
+    },
+    "fi": {
+        "ersatz": {
+            "u": 0.9947295423023579,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9650501219181794,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9882268997502676,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7816993464052288,
+            "t": null,
+            "punct": null
+        }
+    },
+    "fr": {
+        "ersatz": {
+            "u": 0.9821192052980132,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9406919275123559,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.983957219251337,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7646839157108563,
+            "t": null,
+            "punct": null
+        },
+        "legal-all-laws": {
+            "u": 0.958340068404897,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.7690631808278867,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-laws-corrupted-asr": {
+            "u": 0.8954279860179243,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.5664488017429193,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-judgements": {
+            "u": 0.8508394657816567,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-judgements-corrupted-asr": {
+            "u": 0.6877406233479306,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": null,
+            "acc_punct": null
+        }
+    },
+    "fy": {
+        "opus100": {
+            "u": 0.9423019431988041,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ga": {
+        "opus100": {
+            "u": 0.8635654074305338,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9865361077111383,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6666666666666666,
+            "t": null,
+            "punct": null
+        }
+    },
+    "gd": {
+        "opus100": {
+            "u": 0.9194174757281552,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.8676923076923078,
+            "t": null,
+            "punct": null
+        }
+    },
+    "gl": {
+        "opus100": {
+            "u": 0.9544105745886161,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9944289693593316,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7425200616463836,
+            "t": null,
+            "punct": null
+        }
+    },
+    "gu": {
+        "ersatz": {
+            "u": 0.9699289229086933,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.8926940639269406,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.3003490236770116,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ha": {
+        "opus100": {
+            "u": 0.9305263157894736,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.3846153846153846,
+            "t": null,
+            "punct": null
+        }
+    },
+    "he": {
+        "opus100": {
+            "u": 0.9290836653386454,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9843081312410842,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6927723177723178,
+            "t": null,
+            "punct": null
+        }
+    },
+    "hi": {
+        "ersatz": {
+            "u": 0.9895994689090506,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.8402061855670103,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9990095741168703,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6129987311433808,
+            "t": null,
+            "punct": null
+        }
+    },
+    "hu": {
+        "opus100": {
+            "u": 0.9650122050447517,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9987639060568604,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7564840708449855,
+            "t": null,
+            "punct": null
+        }
+    },
+    "hy": {
+        "opus100": {
+            "u": 0.9238021638330758,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9906191369606004,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7481222347978186,
+            "t": null,
+            "punct": null
+        }
+    },
+    "id": {
+        "opus100": {
+            "u": 0.9584257206208425,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9961046188091264,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7334908082571634,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ig": {
+        "opus100": {
+            "u": 0.9375612945406996,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.04123711340206186,
+            "t": null,
+            "punct": null
+        }
+    },
+    "is": {
+        "opus100": {
+            "u": 0.9680763983628922,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9650599873710798,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7440225035161744,
+            "t": null,
+            "punct": null
+        }
+    },
+    "it": {
+        "opus100": {
+            "u": 0.9237668161434978,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9965477560414269,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.730341425669794,
+            "t": null,
+            "punct": null
+        },
+        "legal-all-laws": {
+            "u": 0.8063534995946866,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.2869318181818182,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-laws-corrupted-asr": {
+            "u": 0.7189031476356387,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.11363636363636363,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-judgements": {
+            "u": 0.8828649987079539,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.02040816326530612,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-judgements-corrupted-asr": {
+            "u": 0.6229616452101648,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": null,
+            "acc_punct": null
+        }
+    },
+    "ja": {
+        "ersatz": {
+            "u": 0.9127937336814621,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.8998815165876777,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9732510288065844,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.909928780896523,
+            "t": null,
+            "punct": null
+        }
+    },
+    "jv": {
+        "ud": {
+            "u": 0.9911699779249448,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ka": {
+        "opus100": {
+            "u": 0.9396739130434784,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6898538122928102,
+            "t": null,
+            "punct": null
+        }
+    },
+    "kk": {
+        "ersatz": {
+            "u": 0.9988901220865705,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9538977367979883,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9962904080551139,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7850228310502283,
+            "t": null,
+            "punct": null
+        }
+    },
+    "km": {
+        "ersatz": {
+            "u": 0.9425556858147713,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.8968980797636633,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8139255702280912,
+            "t": null,
+            "punct": null
+        }
+    },
+    "kn": {
+        "opus100": {
+            "u": 0.9148264984227129,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.116017316017316,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ko": {
+        "opus100": {
+            "u": 0.8424177010253643,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.999514091350826,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7701349381729278,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ku": {
+        "opus100": {
+            "u": 0.9459693730135799,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.011368605159597726,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ky": {
+        "opus100": {
+            "u": 0.9674479166666666,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7522123893805309,
+            "t": null,
+            "punct": null
+        }
+    },
+    "la": {
+        "ud": {
+            "u": 0.9824561403508771,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.75,
+            "t": null,
+            "punct": null
+        }
+    },
+    "lt": {
+        "ersatz": {
+            "u": 0.9955506117908787,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9319518342201064,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9843363561417973,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7610337126449006,
+            "t": null,
+            "punct": null
+        }
+    },
+    "lv": {
+        "ersatz": {
+            "u": 0.9977973568281938,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9331514324693043,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.994701681640175,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7629435718440953,
+            "t": null,
+            "punct": null
+        }
+    },
+    "mg": {
+        "opus100": {
+            "u": 0.9690436705362078,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.1866666666666667,
+            "t": null,
+            "punct": null
+        }
+    },
+    "mk": {
+        "opus100": {
+            "u": 0.9614243323442138,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7500668842634706,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ml": {
+        "opus100": {
+            "u": 0.8989712476919018,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.3974666957851059,
+            "t": null,
+            "punct": null
+        }
+    },
+    "mn": {
+        "opus100": {
+            "u": 0.8648648648648648,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8517105871474803,
+            "t": null,
+            "punct": null
+        }
+    },
+    "mr": {
+        "opus100": {
+            "u": 0.9682274247491638,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.988235294117647,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.4913126071445119,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ms": {
+        "opus100": {
+            "u": 0.9576601671309192,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.738527871881737,
+            "t": null,
+            "punct": null
+        }
+    },
+    "mt": {
+        "opus100": {
+            "u": 0.8919213973799126,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9635193133047211,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.543046357615894,
+            "t": null,
+            "punct": null
+        }
+    },
+    "my": {
+        "opus100": {
+            "u": 0.9303496503496503,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.9493721690270053,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ne": {
+        "opus100": {
+            "u": 0.8684288684288685,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6613891726251276,
+            "t": null,
+            "punct": null
+        }
+    },
+    "nl": {
+        "opus100": {
+            "u": 0.950941394855476,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9741219963031423,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8136404427161231,
+            "t": null,
+            "punct": null
+        }
+    },
+    "no": {
+        "opus100": {
+            "u": 0.9619433198380566,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9945667715184443,
+            "t": null,
+            "punct": null
+        }
+    },
+    "pa": {
+        "opus100": {
+            "u": 0.8600464576074333,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.4795321637426901,
+            "t": null,
+            "punct": null
+        }
+    },
+    "pl": {
+        "ersatz": {
+            "u": 0.9905607995558023,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9618943930321175,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9977381251570746,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7777153653679212,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ps": {
+        "ersatz": {
+            "u": 0.9501216545012166,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9020957147325618,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6508659981768459,
+            "t": null,
+            "punct": null
+        }
+    },
+    "pt": {
+        "opus100": {
+            "u": 0.9531502423263327,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9899952358265842,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7618905323970316,
+            "t": null,
+            "punct": null
+        },
+        "legal-all-laws": {
+            "u": 0.8129326303690948,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.22413793103448276,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-laws-corrupted-asr": {
+            "u": 0.7198021254425427,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.15517241379310345,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-judgements": {
+            "u": 0.8698780384579432,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "legal-all-judgements-corrupted-asr": {
+            "u": 0.7046071835785037,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.0,
+            "acc_t": null,
+            "acc_punct": null
+        }
+    },
+    "ro": {
+        "ersatz": {
+            "u": 0.9947412122889565,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9709270433351619,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9941706412294647,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7602765025592316,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ru": {
+        "ersatz": {
+            "u": 0.9949579831932773,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.8909803921568628,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9404617253948967,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7735394499096566,
+            "t": null,
+            "punct": null
+        }
+    },
+    "si": {
+        "opus100": {
+            "u": 0.8890066225165564,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6496815286624203,
+            "t": null,
+            "punct": null
+        }
+    },
+    "sk": {
+        "opus100": {
+            "u": 0.9663842579939873,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9889182058047493,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.769440389294404,
+            "t": null,
+            "punct": null
+        }
+    },
+    "sl": {
+        "opus100": {
+            "u": 0.9596990865126277,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9935036812472932,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7889213126503865,
+            "t": null,
+            "punct": null
+        },
+        "short-sequences": {
+            "u": 0.8060720417575257,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.3812316715542522,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "short-sequences-corrupted-asr": {
+            "u": 0.6735773339970553,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.15212609970674487,
+            "acc_t": null,
+            "acc_punct": null
+        }
+    },
+    "sq": {
+        "opus100": {
+            "u": 0.9703133589884553,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 1.0,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6989548232337655,
+            "t": null,
+            "punct": null
+        }
+    },
+    "sr": {
+        "opus100": {
+            "u": 0.9671284976908449,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 1.0,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7579353006794441,
+            "t": null,
+            "punct": null
+        },
+        "short-sequences": {
+            "u": 0.9201012002023031,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.6979166666666666,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "short-sequences-corrupted-asr": {
+            "u": 0.7654431216931217,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.2916666666666667,
+            "acc_t": null,
+            "acc_punct": null
+        }
+    },
+    "sv": {
+        "opus100": {
+            "u": 0.9629831246597713,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.968186638388123,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7972672386399746,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ta": {
+        "ersatz": {
+            "u": 0.9862107004964149,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.8532518065591995,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 1.0,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.5596430522673466,
+            "t": null,
+            "punct": null
+        }
+    },
+    "te": {
+        "opus100": {
+            "u": 0.9025352112676057,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.3280793928779918,
+            "t": null,
+            "punct": null
+        }
+    },
+    "tg": {
+        "opus100": {
+            "u": 0.9449118046132972,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.08904109589041097,
+            "t": null,
+            "punct": null
+        }
+    },
+    "th": {
+        "opus100": {
+            "u": 0.7988209285187914,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.8907849829351536,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6986602470169563,
+            "t": null,
+            "punct": null
+        }
+    },
+    "tr": {
+        "ersatz": {
+            "u": 0.9796375864001494,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.9584699453551914,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9828109201213346,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7745322934189733,
+            "t": null,
+            "punct": null
+        }
+    },
+    "uk": {
+        "opus100": {
+            "u": 0.9525087201502549,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9814126394052044,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7634040840961674,
+            "t": null,
+            "punct": null
+        }
+    },
+    "ur": {
+        "opus100": {
+            "u": 0.7265415549597855,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.991701244813278,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6777416784159872,
+            "t": null,
+            "punct": null
+        }
+    },
+    "uz": {
+        "opus100": {
+            "u": 0.8899793388429751,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.5680724051607933,
+            "t": null,
+            "punct": null
+        }
+    },
+    "vi": {
+        "opus100": {
+            "u": 0.9597765363128492,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9986111111111111,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7196327683615821,
+            "t": null,
+            "punct": null
+        }
+    },
+    "xh": {
+        "opus100": {
+            "u": 0.9310933940774488,
+            "t": null,
+            "punct": null
+        }
+    },
+    "yi": {
+        "opus100": {
+            "u": 0.9238395673726905,
+            "t": null,
+            "punct": null
+        }
+    },
+    "yo": {
+        "opus100": {
+            "u": 0.6014765707397921,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.859560067681895,
+            "t": null,
+            "punct": null
+        }
+    },
+    "zh": {
+        "ersatz": {
+            "u": 0.9199888486200167,
+            "t": null,
+            "punct": null
+        },
+        "opus100": {
+            "u": 0.8918384637108161,
+            "t": null,
+            "punct": null
+        },
+        "ud": {
+            "u": 0.9877913429522752,
+            "t": null,
+            "punct": null
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.5179933590594992,
+            "t": null,
+            "punct": null
+        }
+    },
+    "zu": {
+        "opus100": {
+            "u": 0.9598358252711814,
+            "t": null,
+            "punct": null
+        }
+    },
+    "tr-de": {
+        "code-switching": {
+            "u": 0.9993089149965445,
+            "t": null,
+            "punct": null
+        },
+        "code-switching-corrupted-asr": {
+            "u": 0.4236234458259325,
+            "t": null,
+            "punct": null
+        }
+    },
+    "es-en": {
+        "code-switching": {
+            "u": 0.8985750209555743,
+            "t": null,
+            "punct": null
+        },
+        "code-switching-corrupted-asr": {
+            "u": 0.5955826351865955,
+            "t": null,
+            "punct": null
+        }
+    },
+    "vi-en": {
+        "code-switching": {
+            "u": 0.5639024390243902,
+            "t": null,
+            "punct": null
+        },
+        "code-switching-corrupted-asr": {
+            "u": 0.572541382667965,
+            "t": null,
+            "punct": null
+        }
+    },
+    "en-de": {
+        "code-switching": {
+            "u": 0.8322884012539186,
+            "t": null,
+            "punct": null
+        },
+        "code-switching-corrupted-asr": {
+            "u": 0.58416500332668,
+            "t": null,
+            "punct": null
+        },
+        "short-sequences": {
+            "u": 0.9024909186144939,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.6008316008316008,
+            "acc_t": null,
+            "acc_punct": null
+        },
+        "short-sequences-corrupted-asr": {
+            "u": 0.7598607073745072,
+            "t": null,
+            "punct": null,
+            "acc_u": 0.23492723492723494,
+            "acc_t": null,
+            "acc_punct": null
+        }
+    }
+}

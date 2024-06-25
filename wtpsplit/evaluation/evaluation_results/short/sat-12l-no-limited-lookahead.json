@@ -1,0 +1,3346 @@
+{
+    "af": {
+        "opus100": {
+            "u": 0.7462411918339981,
+            "t": 0.8225903033389663,
+            "punct": null,
+            "u_acc": 0.3140495867768595,
+            "t_acc": 0.47107438016528924,
+            "punct_acc": null,
+            "threshold_t": 0.17086972296237946,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8693996484613111,
+            "t": 0.8900957009447575,
+            "punct": null,
+            "u_acc": 0.7169811320754716,
+            "t_acc": 0.7264150943396226,
+            "punct_acc": null,
+            "threshold_t": 0.0639052465558052,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7020221146374992,
+            "t": 0.7892551892551892,
+            "punct": null,
+            "u_acc": 0.2553846153846154,
+            "t_acc": 0.38153846153846155,
+            "punct_acc": null,
+            "threshold_t": 0.08402670174837112,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7399310091617783,
+            "t": 0.7883369963369964,
+            "punct": null,
+            "u_acc": 0.3046153846153846,
+            "t_acc": 0.38153846153846155,
+            "punct_acc": null,
+            "threshold_t": 0.08099129796028137,
+            "threshold_adj": 0.01
+        }
+    },
+    "am": {
+        "opus100": {
+            "u": 0.5397043451536292,
+            "t": 0.735693166717263,
+            "punct": null,
+            "u_acc": 0.04618473895582329,
+            "t_acc": 0.30522088353413657,
+            "punct_acc": null,
+            "threshold_t": 0.19163824617862701,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.554195045405983,
+            "t": 0.7044414202192735,
+            "punct": null,
+            "u_acc": 0.0546875,
+            "t_acc": 0.296875,
+            "punct_acc": null,
+            "threshold_t": 0.0494118258357048,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.5513608830207264,
+            "t": 0.6838293217199467,
+            "punct": null,
+            "u_acc": 0.0703125,
+            "t_acc": 0.2734375,
+            "punct_acc": null,
+            "threshold_t": 0.047310952097177505,
+            "threshold_adj": 0.01
+        }
+    },
+    "ar": {
+        "ersatz": {
+            "u": 0.7224403278551521,
+            "t": 0.7691750378223389,
+            "punct": null,
+            "u_acc": 0.31648936170212766,
+            "t_acc": 0.40425531914893614,
+            "punct_acc": null,
+            "threshold_t": 0.018047424033284187,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.6932293936745785,
+            "t": 0.823341562498189,
+            "punct": null,
+            "u_acc": 0.20481927710843373,
+            "t_acc": 0.4899598393574297,
+            "punct_acc": null,
+            "threshold_t": 0.08267717808485031,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8259239535710124,
+            "t": 0.8560554684393693,
+            "punct": null,
+            "u_acc": 0.5411764705882353,
+            "t_acc": 0.5941176470588235,
+            "punct_acc": null,
+            "threshold_t": 0.1212124302983284,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6368075005004966,
+            "t": 0.7352308631238044,
+            "punct": null,
+            "u_acc": 0.154,
+            "t_acc": 0.2744,
+            "punct_acc": null,
+            "threshold_t": 0.093316450715065,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.6379936383267862,
+            "t": 0.7275650110329988,
+            "punct": null,
+            "u_acc": 0.16,
+            "t_acc": 0.2672,
+            "punct_acc": null,
+            "threshold_t": 0.08205945789813995,
+            "threshold_adj": 0.01
+        }
+    },
+    "az": {
+        "opus100": {
+            "u": 0.6456324308748564,
+            "t": 0.7447871766833034,
+            "punct": null,
+            "u_acc": 0.1927710843373494,
+            "t_acc": 0.3192771084337349,
+            "punct_acc": null,
+            "threshold_t": 0.23460319638252258,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7675943167404533,
+            "t": 0.7976843257871628,
+            "punct": null,
+            "u_acc": 0.3587470449172577,
+            "t_acc": 0.4095744680851064,
+            "punct_acc": null,
+            "threshold_t": 0.021320201456546783,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7813283860596291,
+            "t": 0.8054349465488391,
+            "punct": null,
+            "u_acc": 0.38416075650118203,
+            "t_acc": 0.43498817966903075,
+            "punct_acc": null,
+            "threshold_t": 0.0198686383664608,
+            "threshold_adj": 0.009999999999999998
+        }
+    },
+    "be": {
+        "opus100": {
+            "u": 0.7450067933357533,
+            "t": 0.8234704003183695,
+            "punct": null,
+            "u_acc": 0.2953156822810591,
+            "t_acc": 0.5112016293279023,
+            "punct_acc": null,
+            "threshold_t": 0.1496308594942093,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.7191235671329534,
+            "t": 0.8543162425164337,
+            "punct": null,
+            "u_acc": 0.42379182156133827,
+            "t_acc": 0.6245353159851301,
+            "punct_acc": null,
+            "threshold_t": 0.06955911964178085,
+            "threshold_adj": 0.010000000000000002
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7234497877620935,
+            "t": 0.7863627935983548,
+            "punct": null,
+            "u_acc": 0.2764438676184296,
+            "t_acc": 0.399740428293316,
+            "punct_acc": null,
+            "threshold_t": 0.06491836160421371,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7523486506156277,
+            "t": 0.8060451036150343,
+            "punct": null,
+            "u_acc": 0.3244646333549643,
+            "t_acc": 0.43218689162881246,
+            "punct_acc": null,
+            "threshold_t": 0.03417561948299408,
+            "threshold_adj": 0.009999999999999998
+        }
+    },
+    "bg": {
+        "opus100": {
+            "u": 0.8352679601215035,
+            "t": 0.8975552879802555,
+            "punct": null,
+            "u_acc": 0.5130260521042084,
+            "t_acc": 0.6693386773547094,
+            "punct_acc": null,
+            "threshold_t": 0.030938221141695976,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.872587428501407,
+            "t": 0.9569897645166461,
+            "punct": null,
+            "u_acc": 0.6236559139784946,
+            "t_acc": 0.8709677419354839,
+            "punct_acc": null,
+            "threshold_t": 0.0568266287446022,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7257914251823541,
+            "t": 0.7857257786657786,
+            "punct": null,
+            "u_acc": 0.2592,
+            "t_acc": 0.3976,
+            "punct_acc": null,
+            "threshold_t": 0.05969195067882538,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7610668841059182,
+            "t": 0.7951702009102009,
+            "punct": null,
+            "u_acc": 0.3332,
+            "t_acc": 0.4136,
+            "punct_acc": null,
+            "threshold_t": 0.06334113329648972,
+            "threshold_adj": 0.01
+        }
+    },
+    "bn": {
+        "opus100": {
+            "u": 0.7178910733617986,
+            "t": 0.8742031459728948,
+            "punct": null,
+            "u_acc": 0.26961770623742454,
+            "t_acc": 0.6217303822937625,
+            "punct_acc": null,
+            "threshold_t": 0.11572057753801346,
+            "threshold_adj": 0.010000000000000002
+        },
+        "ud": {
+            "u": 0.8738095238095239,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.5714285714285714,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.42323374561115806,
+            "t": 0.6328425831927856,
+            "punct": null,
+            "u_acc": 0.03230769230769231,
+            "t_acc": 0.13384615384615384,
+            "punct_acc": null,
+            "threshold_t": 0.08825229853391647,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.6449131323745386,
+            "t": 0.727093709622115,
+            "punct": null,
+            "u_acc": 0.16615384615384615,
+            "t_acc": 0.28384615384615386,
+            "punct_acc": null,
+            "threshold_t": 0.04090728610754013,
+            "threshold_adj": 0.009999999999999998
+        }
+    },
+    "ca": {
+        "opus100": {
+            "u": 0.7891790803599308,
+            "t": 0.8851279914565291,
+            "punct": null,
+            "u_acc": 0.4482758620689655,
+            "t_acc": 0.6673427991886409,
+            "punct_acc": null,
+            "threshold_t": 0.0575515516102314,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8795266011181855,
+            "t": 0.9298176846496174,
+            "punct": null,
+            "u_acc": 0.7554112554112554,
+            "t_acc": 0.8138528138528138,
+            "punct_acc": null,
+            "threshold_t": 0.06115436553955078,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7235613386922675,
+            "t": 0.7753998238019291,
+            "punct": null,
+            "u_acc": 0.2528,
+            "t_acc": 0.3656,
+            "punct_acc": null,
+            "threshold_t": 0.07235638052225113,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7565159007738197,
+            "t": 0.7814461730082783,
+            "punct": null,
+            "u_acc": 0.3308,
+            "t_acc": 0.3672,
+            "punct_acc": null,
+            "threshold_t": 0.09783986955881119,
+            "threshold_adj": 0.01
+        }
+    },
+    "ceb": {
+        "ud": {
+            "u": 0.9244542691351201,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.7659574468085106,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.010000000000000002
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.5125953411667697,
+            "t": 0.6428571428571429,
+            "punct": null,
+            "u_acc": 0.07142857142857142,
+            "t_acc": 0.07142857142857142,
+            "punct_acc": null,
+            "threshold_t": 0.0982419028878212,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.5825953411667698,
+            "t": 0.5816326530612245,
+            "punct": null,
+            "u_acc": 0.14285714285714285,
+            "t_acc": 0.07142857142857142,
+            "punct_acc": null,
+            "threshold_t": 0.04704254865646362,
+            "threshold_adj": 0.009999999999999998
+        },
+        "nllb": {
+            "u": 0.661853159643756,
+            "t": 0.8409170917970917,
+            "punct": null,
+            "u_acc": 0.2348,
+            "t_acc": 0.5312,
+            "punct_acc": null,
+            "threshold_t": 0.3238363265991211,
+            "threshold_adj": 0.01
+        }
+    },
+    "cs": {
+        "ersatz": {
+            "u": 0.8864335626703013,
+            "t": 0.9088245216717439,
+            "punct": null,
+            "u_acc": 0.7152777777777778,
+            "t_acc": 0.7384259259259259,
+            "punct_acc": null,
+            "threshold_t": 0.04261935129761696,
+            "threshold_adj": 0.009999999999999998
+        },
+        "opus100": {
+            "u": 0.783293216318821,
+            "t": 0.8621030684900053,
+            "punct": null,
+            "u_acc": 0.4105691056910569,
+            "t_acc": 0.5813008130081301,
+            "punct_acc": null,
+            "threshold_t": 0.027863454073667526,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.828847300745302,
+            "t": 0.8796401833721385,
+            "punct": null,
+            "u_acc": 0.5934542586750788,
+            "t_acc": 0.6723186119873817,
+            "punct_acc": null,
+            "threshold_t": 0.039900414645671844,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7209049023145517,
+            "t": 0.7821696687396001,
+            "punct": null,
+            "u_acc": 0.262,
+            "t_acc": 0.3828,
+            "punct_acc": null,
+            "threshold_t": 0.03985685482621193,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7580185045893725,
+            "t": 0.7892661189790602,
+            "punct": null,
+            "u_acc": 0.3284,
+            "t_acc": 0.3932,
+            "punct_acc": null,
+            "threshold_t": 0.06587418168783188,
+            "threshold_adj": 0.01
+        }
+    },
+    "cy": {
+        "opus100": {
+            "u": 0.700909946433964,
+            "t": 0.8065432868926318,
+            "punct": null,
+            "u_acc": 0.1943231441048035,
+            "t_acc": 0.4279475982532751,
+            "punct_acc": null,
+            "threshold_t": 0.12831339240074158,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.9100085488740952,
+            "t": 0.9612645058023209,
+            "punct": null,
+            "u_acc": 0.7647058823529411,
+            "t_acc": 0.8907563025210085,
+            "punct_acc": null,
+            "threshold_t": 0.030391117557883263,
+            "threshold_adj": 0.01
+        }
+    },
+    "da": {
+        "opus100": {
+            "u": 0.7502881599940809,
+            "t": 0.8879663347405283,
+            "punct": null,
+            "u_acc": 0.4213709677419355,
+            "t_acc": 0.6754032258064516,
+            "punct_acc": null,
+            "threshold_t": 0.06758835911750793,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.7463706321579006,
+            "t": 0.8483732973094675,
+            "punct": null,
+            "u_acc": 0.475177304964539,
+            "t_acc": 0.5390070921985816,
+            "punct_acc": null,
+            "threshold_t": 0.13665367662906647,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7137180289188584,
+            "t": 0.7857096681096682,
+            "punct": null,
+            "u_acc": 0.256,
+            "t_acc": 0.3864,
+            "punct_acc": null,
+            "threshold_t": 0.08109394460916519,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7564175304367196,
+            "t": 0.8068119738479615,
+            "punct": null,
+            "u_acc": 0.334,
+            "t_acc": 0.4336,
+            "punct_acc": null,
+            "threshold_t": 0.055176761001348495,
+            "threshold_adj": 0.01
+        }
+    },
+    "de": {
+        "ersatz": {
+            "u": 0.8661175511171385,
+            "t": 0.9020207898008304,
+            "punct": null,
+            "u_acc": 0.639511201629328,
+            "t_acc": 0.6924643584521385,
+            "punct_acc": null,
+            "threshold_t": 0.054823100566864014,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.6968799638238242,
+            "t": 0.8661900955832452,
+            "punct": null,
+            "u_acc": 0.3037974683544304,
+            "t_acc": 0.5949367088607594,
+            "punct_acc": null,
+            "threshold_t": 0.07835713773965836,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8609014834503284,
+            "t": 0.9210713694320252,
+            "punct": null,
+            "u_acc": 0.6352459016393442,
+            "t_acc": 0.7581967213114754,
+            "punct_acc": null,
+            "threshold_t": 0.028916532173752785,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7466287266452664,
+            "t": 0.7985374432584958,
+            "punct": null,
+            "u_acc": 0.3144,
+            "t_acc": 0.4232,
+            "punct_acc": null,
+            "threshold_t": 0.060850199311971664,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7623235352501312,
+            "t": 0.7872733111333112,
+            "punct": null,
+            "u_acc": 0.3524,
+            "t_acc": 0.3836,
+            "punct_acc": null,
+            "threshold_t": 0.09449916332960129,
+            "threshold_adj": 0.01
+        }
+    },
+    "el": {
+        "opus100": {
+            "u": 0.8094201059900985,
+            "t": 0.8977535289889972,
+            "punct": null,
+            "u_acc": 0.46586345381526106,
+            "t_acc": 0.6807228915662651,
+            "punct_acc": null,
+            "threshold_t": 0.054105233401060104,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8474863962495263,
+            "t": 0.9111338287238564,
+            "punct": null,
+            "u_acc": 0.6929824561403509,
+            "t_acc": 0.7719298245614035,
+            "punct_acc": null,
+            "threshold_t": 0.05938529968261719,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7137577188416445,
+            "t": 0.7739240685045948,
+            "punct": null,
+            "u_acc": 0.236,
+            "t_acc": 0.3636,
+            "punct_acc": null,
+            "threshold_t": 0.1103367954492569,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7539259591411913,
+            "t": 0.8111461000987317,
+            "punct": null,
+            "u_acc": 0.322,
+            "t_acc": 0.4484,
+            "punct_acc": null,
+            "threshold_t": 0.04845251888036728,
+            "threshold_adj": 0.01
+        }
+    },
+    "en": {
+        "ersatz": {
+            "u": 0.4698937959534297,
+            "t": 0.7338124269852897,
+            "punct": null,
+            "u_acc": 0.2736240913811007,
+            "t_acc": 0.39511941848390447,
+            "punct_acc": null,
+            "threshold_t": 0.07737099379301071,
+            "threshold_adj": 0.009999999999999998
+        },
+        "opus100": {
+            "u": 0.8367470699338319,
+            "t": 0.8754317959607333,
+            "punct": null,
+            "u_acc": 0.5645161290322581,
+            "t_acc": 0.6149193548387096,
+            "punct_acc": null,
+            "threshold_t": 0.0995228961110115,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.6514097961376508,
+            "t": 0.7237626323392747,
+            "punct": null,
+            "u_acc": 0.41605839416058393,
+            "t_acc": 0.2116788321167883,
+            "punct_acc": null,
+            "threshold_t": 0.18885008990764618,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7413823723579631,
+            "t": 0.7561130447330447,
+            "punct": null,
+            "u_acc": 0.3112,
+            "t_acc": 0.322,
+            "punct_acc": null,
+            "threshold_t": 0.04861266538500786,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.755640195020853,
+            "t": 0.7761763238097356,
+            "punct": null,
+            "u_acc": 0.346,
+            "t_acc": 0.384,
+            "punct_acc": null,
+            "threshold_t": 0.019070196896791458,
+            "threshold_adj": 0.01
+        }
+    },
+    "eo": {
+        "opus100": {
+            "u": 0.7933528198592338,
+            "t": 0.8919389750034912,
+            "punct": null,
+            "u_acc": 0.4475806451612903,
+            "t_acc": 0.6693548387096774,
+            "punct_acc": null,
+            "threshold_t": 0.12653613090515137,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6948454542328935,
+            "t": 0.733785547507352,
+            "punct": null,
+            "u_acc": 0.22556390977443608,
+            "t_acc": 0.275062656641604,
+            "punct_acc": null,
+            "threshold_t": 0.10466712713241577,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7254441218962623,
+            "t": 0.7753251379373135,
+            "punct": null,
+            "u_acc": 0.2869674185463659,
+            "t_acc": 0.37844611528822053,
+            "punct_acc": null,
+            "threshold_t": 0.0368618406355381,
+            "threshold_adj": 0.009999999999999998
+        }
+    },
+    "es": {
+        "ersatz": {
+            "u": 0.8675097054625011,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.6723237597911227,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.009999999999999998
+        },
+        "opus100": {
+            "u": 0.8029028153997517,
+            "t": 0.8859977627486585,
+            "punct": null,
+            "u_acc": 0.4797570850202429,
+            "t_acc": 0.6659919028340081,
+            "punct_acc": null,
+            "threshold_t": 0.043512120842933655,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ud": {
+            "u": 0.8319541590212572,
+            "t": 0.9064500761942623,
+            "punct": null,
+            "u_acc": 0.6604651162790698,
+            "t_acc": 0.7465116279069768,
+            "punct_acc": null,
+            "threshold_t": 0.09623082727193832,
+            "threshold_adj": 0.009999999999999997
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7168666474894513,
+            "t": 0.7442019713619713,
+            "punct": null,
+            "u_acc": 0.2468,
+            "t_acc": 0.2876,
+            "punct_acc": null,
+            "threshold_t": 0.13327527046203613,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7589951296853922,
+            "t": 0.788186147839089,
+            "punct": null,
+            "u_acc": 0.332,
+            "t_acc": 0.3972,
+            "punct_acc": null,
+            "threshold_t": 0.06772887706756592,
+            "threshold_adj": 0.01
+        }
+    },
+    "et": {
+        "ersatz": {
+            "u": 0.8501952735311696,
+            "t": 0.7647486772486771,
+            "punct": null,
+            "u_acc": 0.6190476190476191,
+            "t_acc": 0.29563492063492064,
+            "punct_acc": null,
+            "threshold_t": 0.2628614604473114,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.7058250259818929,
+            "t": 0.8454210345440031,
+            "punct": null,
+            "u_acc": 0.2793522267206478,
+            "t_acc": 0.5748987854251012,
+            "punct_acc": null,
+            "threshold_t": 0.05069363862276077,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ud": {
+            "u": 0.7602315263403637,
+            "t": 0.8438183733803111,
+            "punct": null,
+            "u_acc": 0.47139303482587064,
+            "t_acc": 0.6343283582089553,
+            "punct_acc": null,
+            "threshold_t": 0.023988820612430573,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7355979531968447,
+            "t": 0.7698908846708847,
+            "punct": null,
+            "u_acc": 0.2716,
+            "t_acc": 0.3476,
+            "punct_acc": null,
+            "threshold_t": 0.10298468917608261,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7627901081887695,
+            "t": 0.7988125953417423,
+            "punct": null,
+            "u_acc": 0.3296,
+            "t_acc": 0.4136,
+            "punct_acc": null,
+            "threshold_t": 0.06059236079454422,
+            "threshold_adj": 0.01
+        }
+    },
+    "eu": {
+        "opus100": {
+            "u": 0.6761636213009442,
+            "t": 0.8441356019504326,
+            "punct": null,
+            "u_acc": 0.29554655870445345,
+            "t_acc": 0.5728744939271255,
+            "punct_acc": null,
+            "threshold_t": 0.11762842535972595,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ud": {
+            "u": 0.8194601178855676,
+            "t": 0.9258565298173141,
+            "punct": null,
+            "u_acc": 0.5711111111111111,
+            "t_acc": 0.7933333333333333,
+            "punct_acc": null,
+            "threshold_t": 0.05893353000283241,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6493799209347122,
+            "t": 0.7399875885762984,
+            "punct": null,
+            "u_acc": 0.1646505376344086,
+            "t_acc": 0.28225806451612906,
+            "punct_acc": null,
+            "threshold_t": 0.06540399044752121,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7069063385992816,
+            "t": 0.765413898377608,
+            "punct": null,
+            "u_acc": 0.24596774193548387,
+            "t_acc": 0.3353494623655914,
+            "punct_acc": null,
+            "threshold_t": 0.07222872972488403,
+            "threshold_adj": 0.009999999999999998
+        }
+    },
+    "fa": {
+        "opus100": {
+            "u": 0.6235840265785088,
+            "t": 0.7755397889361468,
+            "punct": null,
+            "u_acc": 0.156312625250501,
+            "t_acc": 0.3847695390781563,
+            "punct_acc": null,
+            "threshold_t": 0.15697535872459412,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8726556410622345,
+            "t": 0.957997557997558,
+            "punct": null,
+            "u_acc": 0.5961538461538461,
+            "t_acc": 0.8626373626373627,
+            "punct_acc": null,
+            "threshold_t": 0.04455801472067833,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6939058007774969,
+            "t": 0.7635598445998446,
+            "punct": null,
+            "u_acc": 0.2344,
+            "t_acc": 0.3464,
+            "punct_acc": null,
+            "threshold_t": 0.07707837969064713,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.6949809118738492,
+            "t": 0.7575133862570533,
+            "punct": null,
+            "u_acc": 0.2352,
+            "t_acc": 0.3436,
+            "punct_acc": null,
+            "threshold_t": 0.0450618714094162,
+            "threshold_adj": 0.01
+        }
+    },
+    "fi": {
+        "ersatz": {
+            "u": 0.8609918459125826,
+            "t": 0.9333328439540864,
+            "punct": null,
+            "u_acc": 0.6232464929859719,
+            "t_acc": 0.7855711422845691,
+            "punct_acc": null,
+            "threshold_t": 0.06286048889160156,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.7844978799502597,
+            "t": 0.8907762545854254,
+            "punct": null,
+            "u_acc": 0.42052313883299797,
+            "t_acc": 0.6519114688128773,
+            "punct_acc": null,
+            "threshold_t": 0.03432605043053627,
+            "threshold_adj": 0.010000000000000002
+        },
+        "ud": {
+            "u": 0.7958843152670361,
+            "t": 0.8859834724267714,
+            "punct": null,
+            "u_acc": 0.5283505154639175,
+            "t_acc": 0.6829896907216495,
+            "punct_acc": null,
+            "threshold_t": 0.06031952425837517,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7125633954050915,
+            "t": 0.7506562948162948,
+            "punct": null,
+            "u_acc": 0.2528,
+            "t_acc": 0.3044,
+            "punct_acc": null,
+            "threshold_t": 0.0962330549955368,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7515148949731114,
+            "t": 0.7894446775446775,
+            "punct": null,
+            "u_acc": 0.3268,
+            "t_acc": 0.3948,
+            "punct_acc": null,
+            "threshold_t": 0.04666024073958397,
+            "threshold_adj": 0.01
+        }
+    },
+    "fr": {
+        "ersatz": {
+            "u": 0.8777675314682746,
+            "t": 0.9120962236904265,
+            "punct": null,
+            "u_acc": 0.6956521739130435,
+            "t_acc": 0.7367149758454107,
+            "punct_acc": null,
+            "threshold_t": 0.06313912570476532,
+            "threshold_adj": 0.009999999999999997
+        },
+        "opus100": {
+            "u": 0.7806470892512873,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.43204868154158216,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8270754028106969,
+            "t": 0.9355194641959348,
+            "punct": null,
+            "u_acc": 0.6153846153846154,
+            "t_acc": 0.8076923076923077,
+            "punct_acc": null,
+            "threshold_t": 0.05478711053729057,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7204254047912871,
+            "t": 0.7811930194951249,
+            "punct": null,
+            "u_acc": 0.2432,
+            "t_acc": 0.38,
+            "punct_acc": null,
+            "threshold_t": 0.06927863508462906,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7431041184958833,
+            "t": 0.7859197039218092,
+            "punct": null,
+            "u_acc": 0.3112,
+            "t_acc": 0.386,
+            "punct_acc": null,
+            "threshold_t": 0.08429136127233505,
+            "threshold_adj": 0.01
+        }
+    },
+    "fy": {
+        "opus100": {
+            "u": 0.7366969630274351,
+            "t": 0.7750065980752676,
+            "punct": null,
+            "u_acc": 0.28969957081545067,
+            "t_acc": 0.37553648068669526,
+            "punct_acc": null,
+            "threshold_t": 0.16443495452404022,
+            "threshold_adj": 0.01
+        }
+    },
+    "ga": {
+        "opus100": {
+            "u": 0.7091372429059087,
+            "t": 0.884954173109069,
+            "punct": null,
+            "u_acc": 0.3326612903225806,
+            "t_acc": 0.6733870967741935,
+            "punct_acc": null,
+            "threshold_t": 0.09284067153930664,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.774973062194212,
+            "t": 0.8089263562947774,
+            "punct": null,
+            "u_acc": 0.4649122807017544,
+            "t_acc": 0.4298245614035088,
+            "punct_acc": null,
+            "threshold_t": 0.28471624851226807,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.516912716912717,
+            "t": 0.6361111111111111,
+            "punct": null,
+            "u_acc": 0.08333333333333333,
+            "t_acc": 0.16666666666666666,
+            "punct_acc": null,
+            "threshold_t": 0.08492386341094971,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.5962962962962963,
+            "t": 0.65,
+            "punct": null,
+            "u_acc": 0.08333333333333333,
+            "t_acc": 0.16666666666666666,
+            "punct_acc": null,
+            "threshold_t": 0.06066688895225525,
+            "threshold_adj": 0.009999999999999998
+        }
+    },
+    "gd": {
+        "opus100": {
+            "u": 0.7497313392693509,
+            "t": 0.8393979477312811,
+            "punct": null,
+            "u_acc": 0.3333333333333333,
+            "t_acc": 0.5444444444444444,
+            "punct_acc": null,
+            "threshold_t": 0.17354267835617065,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.5873962248039047,
+            "t": 0.7358834370250779,
+            "punct": null,
+            "u_acc": 0.23529411764705882,
+            "t_acc": 0.39705882352941174,
+            "punct_acc": null,
+            "threshold_t": 0.07395295798778534,
+            "threshold_adj": 0.009999999999999998
+        }
+    },
+    "gl": {
+        "opus100": {
+            "u": 0.7963767079694499,
+            "t": 0.8862506892748827,
+            "punct": null,
+            "u_acc": 0.4334677419354839,
+            "t_acc": 0.6411290322580645,
+            "punct_acc": null,
+            "threshold_t": 0.11215537041425705,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8265969652683208,
+            "t": 0.9297338935574229,
+            "punct": null,
+            "u_acc": 0.65,
+            "t_acc": 0.82,
+            "punct_acc": null,
+            "threshold_t": 0.09006289392709732,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7162966283046158,
+            "t": 0.7822843933843934,
+            "punct": null,
+            "u_acc": 0.246,
+            "t_acc": 0.384,
+            "punct_acc": null,
+            "threshold_t": 0.06694859266281128,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.754500082415005,
+            "t": 0.7932450462739875,
+            "punct": null,
+            "u_acc": 0.3236,
+            "t_acc": 0.4004,
+            "punct_acc": null,
+            "threshold_t": 0.06373061239719391,
+            "threshold_adj": 0.01
+        }
+    },
+    "gu": {
+        "ersatz": {
+            "u": 0.9240466008182544,
+            "t": 0.8876386518118801,
+            "punct": null,
+            "u_acc": 0.7362204724409449,
+            "t_acc": 0.6732283464566929,
+            "punct_acc": null,
+            "threshold_t": 0.036841630935668945,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.7168415395528548,
+            "t": 0.809824777179545,
+            "punct": null,
+            "u_acc": 0.19461697722567287,
+            "t_acc": 0.42857142857142855,
+            "punct_acc": null,
+            "threshold_t": 0.10106858611106873,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.5065595482307309,
+            "t": 0.6342967257970374,
+            "punct": null,
+            "u_acc": 0.07381193124368049,
+            "t_acc": 0.16885743174924167,
+            "punct_acc": null,
+            "threshold_t": 0.06463704258203506,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.5974790366765843,
+            "t": 0.687366198104464,
+            "punct": null,
+            "u_acc": 0.13751263902932254,
+            "t_acc": 0.17138523761375127,
+            "punct_acc": null,
+            "threshold_t": 0.15034981071949005,
+            "threshold_adj": 0.01
+        }
+    },
+    "ha": {
+        "opus100": {
+            "u": 0.500455606302609,
+            "t": 0.728806441629212,
+            "punct": null,
+            "u_acc": 0.138,
+            "t_acc": 0.28,
+            "punct_acc": null,
+            "threshold_t": 0.4042413532733917,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6388888888888888,
+            "t": 0.6222222222222222,
+            "punct": null,
+            "u_acc": 0.3333333333333333,
+            "t_acc": 0.0,
+            "punct_acc": null,
+            "threshold_t": 0.07234271615743637,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7333333333333334,
+            "t": 0.7222222222222222,
+            "punct": null,
+            "u_acc": 0.3333333333333333,
+            "t_acc": 0.3333333333333333,
+            "punct_acc": null,
+            "threshold_t": 0.12043071538209915,
+            "threshold_adj": 0.01
+        }
+    },
+    "he": {
+        "opus100": {
+            "u": 0.7861282338236246,
+            "t": 0.8597656518498201,
+            "punct": null,
+            "u_acc": 0.3587174348697395,
+            "t_acc": 0.561122244488978,
+            "punct_acc": null,
+            "threshold_t": 0.027788808569312096,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.9121181139788583,
+            "t": 0.9111223243876305,
+            "punct": null,
+            "u_acc": 0.8163265306122449,
+            "t_acc": 0.7857142857142857,
+            "punct_acc": null,
+            "threshold_t": 0.02628382295370102,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.650370011396398,
+            "t": 0.7417577554471673,
+            "punct": null,
+            "u_acc": 0.1616,
+            "t_acc": 0.3036,
+            "punct_acc": null,
+            "threshold_t": 0.10338319838047028,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.6641887074768993,
+            "t": 0.7382636993725229,
+            "punct": null,
+            "u_acc": 0.192,
+            "t_acc": 0.308,
+            "punct_acc": null,
+            "threshold_t": 0.058549657464027405,
+            "threshold_adj": 0.01
+        }
+    },
+    "hi": {
+        "ersatz": {
+            "u": 0.8961737652291908,
+            "t": 0.8972134038800706,
+            "punct": null,
+            "u_acc": 0.6841269841269841,
+            "t_acc": 0.6873015873015873,
+            "punct_acc": null,
+            "threshold_t": 0.06009909138083458,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.6290492316161564,
+            "t": 0.7345969447410524,
+            "punct": null,
+            "u_acc": 0.20040485829959515,
+            "t_acc": 0.3319838056680162,
+            "punct_acc": null,
+            "threshold_t": 0.1601180136203766,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ud": {
+            "u": 0.9766159414615472,
+            "t": 0.9831467028616673,
+            "punct": null,
+            "u_acc": 0.9049881235154394,
+            "t_acc": 0.9358669833729216,
+            "punct_acc": null,
+            "threshold_t": 0.024755172431468964,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.5722044825487399,
+            "t": 0.6869602085060909,
+            "punct": null,
+            "u_acc": 0.1264,
+            "t_acc": 0.2276,
+            "punct_acc": null,
+            "threshold_t": 0.06354209035634995,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.679073658586869,
+            "t": 0.7378715473729678,
+            "punct": null,
+            "u_acc": 0.2092,
+            "t_acc": 0.2956,
+            "punct_acc": null,
+            "threshold_t": 0.04789718985557556,
+            "threshold_adj": 0.01
+        }
+    },
+    "hu": {
+        "opus100": {
+            "u": 0.7745891339128156,
+            "t": 0.8941010490405651,
+            "punct": null,
+            "u_acc": 0.3790322580645161,
+            "t_acc": 0.6653225806451613,
+            "punct_acc": null,
+            "threshold_t": 0.052902232855558395,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.757449675590434,
+            "t": 0.8509216295400506,
+            "punct": null,
+            "u_acc": 0.4642857142857143,
+            "t_acc": 0.6071428571428571,
+            "punct_acc": null,
+            "threshold_t": 0.07543044537305832,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7167699034704492,
+            "t": 0.7743138407080263,
+            "punct": null,
+            "u_acc": 0.25,
+            "t_acc": 0.3664,
+            "punct_acc": null,
+            "threshold_t": 0.0908251628279686,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7576221899999609,
+            "t": 0.7934558621523328,
+            "punct": null,
+            "u_acc": 0.336,
+            "t_acc": 0.4068,
+            "punct_acc": null,
+            "threshold_t": 0.0830591470003128,
+            "threshold_adj": 0.01
+        }
+    },
+    "hy": {
+        "opus100": {
+            "u": 0.605846037280462,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.13211845102505695,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ud": {
+            "u": 0.41718565696690235,
+            "t": 0.7644966390292257,
+            "punct": null,
+            "u_acc": 0.0945945945945946,
+            "t_acc": 0.47297297297297297,
+            "punct_acc": null,
+            "threshold_t": 0.26202017068862915,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.676858296924037,
+            "t": 0.7596265786065787,
+            "punct": null,
+            "u_acc": 0.198,
+            "t_acc": 0.3244,
+            "punct_acc": null,
+            "threshold_t": 0.14536896347999573,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.6873683524690732,
+            "t": 0.7712642250216244,
+            "punct": null,
+            "u_acc": 0.2332,
+            "t_acc": 0.3556,
+            "punct_acc": null,
+            "threshold_t": 0.11103285849094391,
+            "threshold_adj": 0.01
+        }
+    },
+    "id": {
+        "opus100": {
+            "u": 0.7626430305789502,
+            "t": 0.874704746528517,
+            "punct": null,
+            "u_acc": 0.3668032786885246,
+            "t_acc": 0.6229508196721312,
+            "punct_acc": null,
+            "threshold_t": 0.06966007500886917,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8397722600158493,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.656,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6911837477094929,
+            "t": 0.7241663564213564,
+            "punct": null,
+            "u_acc": 0.2204,
+            "t_acc": 0.2356,
+            "punct_acc": null,
+            "threshold_t": 0.10548818856477737,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7350332143698441,
+            "t": 0.7764232934712347,
+            "punct": null,
+            "u_acc": 0.3004,
+            "t_acc": 0.366,
+            "punct_acc": null,
+            "threshold_t": 0.03946973755955696,
+            "threshold_adj": 0.01
+        }
+    },
+    "ig": {
+        "opus100": {
+            "u": 0.6747954927857209,
+            "t": 0.8143435043920482,
+            "punct": null,
+            "u_acc": 0.18689320388349515,
+            "t_acc": 0.4368932038834951,
+            "punct_acc": null,
+            "threshold_t": 0.13112567365169525,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.28189615067408175,
+            "t": 0.5372327019385843,
+            "punct": null,
+            "u_acc": 0.07692307692307693,
+            "t_acc": 0.0,
+            "punct_acc": null,
+            "threshold_t": 0.12362644076347351,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.33995703600907223,
+            "t": 0.6473193473193473,
+            "punct": null,
+            "u_acc": 0.07692307692307693,
+            "t_acc": 0.23076923076923078,
+            "punct_acc": null,
+            "threshold_t": 0.11992623656988144,
+            "threshold_adj": 0.01
+        }
+    },
+    "is": {
+        "opus100": {
+            "u": 0.6537116411447199,
+            "t": 0.8781058902434212,
+            "punct": null,
+            "u_acc": 0.21327967806841047,
+            "t_acc": 0.613682092555332,
+            "punct_acc": null,
+            "threshold_t": 0.07726389169692993,
+            "threshold_adj": 0.010000000000000002
+        },
+        "ud": {
+            "u": 0.5740002177252502,
+            "t": 0.6643037136397499,
+            "punct": null,
+            "u_acc": 0.26144297905352987,
+            "t_acc": 0.10938712179984485,
+            "punct_acc": null,
+            "threshold_t": 0.365448921918869,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6934877010763855,
+            "t": 0.7806373439961226,
+            "punct": null,
+            "u_acc": 0.2010178117048346,
+            "t_acc": 0.3638676844783715,
+            "punct_acc": null,
+            "threshold_t": 0.07605885714292526,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7497262089362986,
+            "t": 0.7783250535158932,
+            "punct": null,
+            "u_acc": 0.3282442748091603,
+            "t_acc": 0.366412213740458,
+            "punct_acc": null,
+            "threshold_t": 0.09425143897533417,
+            "threshold_adj": 0.009999999999999998
+        }
+    },
+    "it": {
+        "opus100": {
+            "u": 0.7534575970676218,
+            "t": 0.8744552585787105,
+            "punct": null,
+            "u_acc": 0.4012096774193548,
+            "t_acc": 0.655241935483871,
+            "punct_acc": null,
+            "threshold_t": 0.06702739000320435,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8645619631868342,
+            "t": 0.9617592592592593,
+            "punct": null,
+            "u_acc": 0.6666666666666666,
+            "t_acc": 0.8916666666666667,
+            "punct_acc": null,
+            "threshold_t": 0.07127705961465836,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7033590189170995,
+            "t": 0.7656222977022977,
+            "punct": null,
+            "u_acc": 0.2276,
+            "t_acc": 0.3452,
+            "punct_acc": null,
+            "threshold_t": 0.10839729011058807,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7496403079892243,
+            "t": 0.795552019092019,
+            "punct": null,
+            "u_acc": 0.312,
+            "t_acc": 0.404,
+            "punct_acc": null,
+            "threshold_t": 0.08441238105297089,
+            "threshold_adj": 0.01
+        }
+    },
+    "ja": {
+        "ersatz": {
+            "u": 0.45190361138852525,
+            "t": 0.7483427020740454,
+            "punct": null,
+            "u_acc": 0.07835820895522388,
+            "t_acc": 0.3283582089552239,
+            "punct_acc": null,
+            "threshold_t": 0.5999999642372131,
+            "threshold_adj": 0.009999999999999998
+        },
+        "opus100": {
+            "u": 0.7277926145041665,
+            "t": 0.8325272228886686,
+            "punct": null,
+            "u_acc": 0.2469879518072289,
+            "t_acc": 0.5160642570281124,
+            "punct_acc": null,
+            "threshold_t": 0.04987381398677826,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.5746683827042596,
+            "t": 0.7958021265547217,
+            "punct": null,
+            "u_acc": 0.16176470588235295,
+            "t_acc": 0.41911764705882354,
+            "punct_acc": null,
+            "threshold_t": 0.5070424675941467,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7161192554296633,
+            "t": 0.8585273015873015,
+            "punct": null,
+            "u_acc": 0.2824,
+            "t_acc": 0.578,
+            "punct_acc": null,
+            "threshold_t": 0.2162763923406601,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7050321564536978,
+            "t": 0.8533663492063491,
+            "punct": null,
+            "u_acc": 0.2692,
+            "t_acc": 0.566,
+            "punct_acc": null,
+            "threshold_t": 0.2193368524312973,
+            "threshold_adj": 0.01
+        }
+    },
+    "jv": {
+        "ud": {
+            "u": 0.7776810151409778,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.496,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.01
+        },
+        "nllb": {
+            "u": 0.65249102172844,
+            "t": 0.8459648743069796,
+            "punct": null,
+            "u_acc": 0.1872,
+            "t_acc": 0.5376,
+            "punct_acc": null,
+            "threshold_t": 0.24660855531692505,
+            "threshold_adj": 0.01
+        }
+    },
+    "ka": {
+        "opus100": {
+            "u": 0.3548511000696706,
+            "t": 0.35765253671352204,
+            "punct": null,
+            "u_acc": 0.014,
+            "t_acc": 0.014,
+            "punct_acc": null,
+            "threshold_t": 0.016498446464538574,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6437995439602985,
+            "t": 0.7335275184990804,
+            "punct": null,
+            "u_acc": 0.1524,
+            "t_acc": 0.2748,
+            "punct_acc": null,
+            "threshold_t": 0.1277940422296524,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.649746134202352,
+            "t": 0.7367036444714706,
+            "punct": null,
+            "u_acc": 0.1644,
+            "t_acc": 0.2896,
+            "punct_acc": null,
+            "threshold_t": 0.08621473610401154,
+            "threshold_adj": 0.01
+        }
+    },
+    "kk": {
+        "ersatz": {
+            "u": 0.8123966756693265,
+            "t": 0.7878031746031745,
+            "punct": null,
+            "u_acc": 0.564,
+            "t_acc": 0.376,
+            "punct_acc": null,
+            "threshold_t": 0.35713326930999756,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.759040161705451,
+            "t": 0.8056017673786269,
+            "punct": null,
+            "u_acc": 0.3202479338842975,
+            "t_acc": 0.40702479338842973,
+            "punct_acc": null,
+            "threshold_t": 0.20200872421264648,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8175906016856126,
+            "t": 0.7485773768216515,
+            "punct": null,
+            "u_acc": 0.5992366412213741,
+            "t_acc": 0.2748091603053435,
+            "punct_acc": null,
+            "threshold_t": 0.29127442836761475,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.769286097020228,
+            "t": 0.7993506303567907,
+            "punct": null,
+            "u_acc": 0.34223134839151265,
+            "t_acc": 0.4134154688569473,
+            "punct_acc": null,
+            "threshold_t": 0.01841188222169876,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7762942924218441,
+            "t": 0.8048389690451724,
+            "punct": null,
+            "u_acc": 0.36960985626283366,
+            "t_acc": 0.42915811088295686,
+            "punct_acc": null,
+            "threshold_t": 0.04674410820007324,
+            "threshold_adj": 0.01
+        }
+    },
+    "km": {
+        "ersatz": {
+            "u": 0.6481683100642095,
+            "t": 0.9285875706214689,
+            "punct": null,
+            "u_acc": 0.2711864406779661,
+            "t_acc": 0.7813559322033898,
+            "punct_acc": null,
+            "threshold_t": 0.7252073287963867,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.6292436346482256,
+            "t": 0.7822516773032236,
+            "punct": null,
+            "u_acc": 0.13814432989690723,
+            "t_acc": 0.3731958762886598,
+            "punct_acc": null,
+            "threshold_t": 0.39394018054008484,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7315174382843554,
+            "t": 0.8385964912280701,
+            "punct": null,
+            "u_acc": 0.2556390977443609,
+            "t_acc": 0.518796992481203,
+            "punct_acc": null,
+            "threshold_t": 0.2973353862762451,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7325054227309866,
+            "t": 0.8107769423558898,
+            "punct": null,
+            "u_acc": 0.3082706766917293,
+            "t_acc": 0.43609022556390975,
+            "punct_acc": null,
+            "threshold_t": 0.452352911233902,
+            "threshold_adj": 0.01
+        }
+    },
+    "kn": {
+        "opus100": {
+            "u": 0.7054523893019468,
+            "t": 0.7827363393735075,
+            "punct": null,
+            "u_acc": 0.18141592920353983,
+            "t_acc": 0.37610619469026546,
+            "punct_acc": null,
+            "threshold_t": 0.13258981704711914,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.5031971319507312,
+            "t": 0.637009610436184,
+            "punct": null,
+            "u_acc": 0.04895104895104895,
+            "t_acc": 0.13286713286713286,
+            "punct_acc": null,
+            "threshold_t": 0.07348639518022537,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.5900019683420492,
+            "t": 0.6739399489399489,
+            "punct": null,
+            "u_acc": 0.0944055944055944,
+            "t_acc": 0.17132867132867133,
+            "punct_acc": null,
+            "threshold_t": 0.08862759917974472,
+            "threshold_adj": 0.01
+        }
+    },
+    "ko": {
+        "opus100": {
+            "u": 0.7214581190289692,
+            "t": 0.8194861059992639,
+            "punct": null,
+            "u_acc": 0.25101214574898784,
+            "t_acc": 0.43724696356275305,
+            "punct_acc": null,
+            "threshold_t": 0.10207992047071457,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ud": {
+            "u": 0.95320032531571,
+            "t": 0.9541553207105048,
+            "punct": null,
+            "u_acc": 0.8391608391608392,
+            "t_acc": 0.8479020979020979,
+            "punct_acc": null,
+            "threshold_t": 0.015119185671210289,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7002910967278635,
+            "t": 0.782363885633817,
+            "punct": null,
+            "u_acc": 0.2624,
+            "t_acc": 0.3936,
+            "punct_acc": null,
+            "threshold_t": 0.041432350873947144,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7092710362756636,
+            "t": 0.7720866161289691,
+            "punct": null,
+            "u_acc": 0.2696,
+            "t_acc": 0.374,
+            "punct_acc": null,
+            "threshold_t": 0.037183649837970734,
+            "threshold_adj": 0.01
+        }
+    },
+    "ku": {
+        "opus100": {
+            "u": 0.6403826272406813,
+            "t": 0.7228861378182645,
+            "punct": null,
+            "u_acc": 0.23700623700623702,
+            "t_acc": 0.20374220374220375,
+            "punct_acc": null,
+            "threshold_t": 0.6417993903160095,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.3762896715829894,
+            "t": 0.6387564514260909,
+            "punct": null,
+            "u_acc": 0.018,
+            "t_acc": 0.1468,
+            "punct_acc": null,
+            "threshold_t": 0.12150392681360245,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.3837410555382242,
+            "t": 0.6323281190016334,
+            "punct": null,
+            "u_acc": 0.0264,
+            "t_acc": 0.1576,
+            "punct_acc": null,
+            "threshold_t": 0.12033358216285706,
+            "threshold_adj": 0.01
+        }
+    },
+    "ky": {
+        "opus100": {
+            "u": 0.7973732915104728,
+            "t": 0.8676946334089191,
+            "punct": null,
+            "u_acc": 0.4,
+            "t_acc": 0.5904761904761905,
+            "punct_acc": null,
+            "threshold_t": 0.08654170483350754,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7832569391392922,
+            "t": 0.8225178960473077,
+            "punct": null,
+            "u_acc": 0.3627450980392157,
+            "t_acc": 0.4117647058823529,
+            "punct_acc": null,
+            "threshold_t": 0.027645820751786232,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7822984749455337,
+            "t": 0.7873171490818551,
+            "punct": null,
+            "u_acc": 0.39215686274509803,
+            "t_acc": 0.4215686274509804,
+            "punct_acc": null,
+            "threshold_t": 0.10091089457273483,
+            "threshold_adj": 0.009999999999999998
+        }
+    },
+    "la": {
+        "ud": {
+            "u": 0.7998533583655576,
+            "t": 0.7975028586848644,
+            "punct": null,
+            "u_acc": 0.4380952380952381,
+            "t_acc": 0.4533333333333333,
+            "punct_acc": null,
+            "threshold_t": 0.008251465857028961,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6349206349206349,
+            "t": 0.611111111111111,
+            "punct": null,
+            "u_acc": 0.0,
+            "t_acc": 0.0,
+            "punct_acc": null,
+            "threshold_t": 0.28847119212150574,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7238095238095239,
+            "t": 0.6666666666666666,
+            "punct": null,
+            "u_acc": 0.0,
+            "t_acc": 0.0,
+            "punct_acc": null,
+            "threshold_t": 0.5732043385505676,
+            "threshold_adj": 0.01
+        }
+    },
+    "lt": {
+        "ersatz": {
+            "u": 0.8255077691743422,
+            "t": 0.8354974358974359,
+            "punct": null,
+            "u_acc": 0.628,
+            "t_acc": 0.512,
+            "punct_acc": null,
+            "threshold_t": 0.27876564860343933,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.6063258833519996,
+            "t": 0.8496550777205308,
+            "punct": null,
+            "u_acc": 0.26814516129032256,
+            "t_acc": 0.6008064516129032,
+            "punct_acc": null,
+            "threshold_t": 0.19783656299114227,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.6784316325390782,
+            "t": 0.7782148975131432,
+            "punct": null,
+            "u_acc": 0.4444444444444444,
+            "t_acc": 0.39766081871345027,
+            "punct_acc": null,
+            "threshold_t": 0.25877875089645386,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7156058814388226,
+            "t": 0.7598898989898989,
+            "punct": null,
+            "u_acc": 0.242,
+            "t_acc": 0.3196,
+            "punct_acc": null,
+            "threshold_t": 0.10506356507539749,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7473330575854109,
+            "t": 0.795140313554022,
+            "punct": null,
+            "u_acc": 0.3188,
+            "t_acc": 0.4044,
+            "punct_acc": null,
+            "threshold_t": 0.03770362213253975,
+            "threshold_adj": 0.01
+        }
+    },
+    "lv": {
+        "ersatz": {
+            "u": 0.8635436817407857,
+            "t": 0.7493827160493827,
+            "punct": null,
+            "u_acc": 0.6865079365079365,
+            "t_acc": 0.25595238095238093,
+            "punct_acc": null,
+            "threshold_t": 0.34735098481178284,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.6169988270105569,
+            "t": 0.8590900905958775,
+            "punct": null,
+            "u_acc": 0.29006085192697767,
+            "t_acc": 0.6105476673427992,
+            "punct_acc": null,
+            "threshold_t": 0.2484002560377121,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.7400749879962474,
+            "t": 0.8433195141272544,
+            "punct": null,
+            "u_acc": 0.4709784411276949,
+            "t_acc": 0.6235489220563848,
+            "punct_acc": null,
+            "threshold_t": 0.053445782512426376,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7205893611926429,
+            "t": 0.7779715040515041,
+            "punct": null,
+            "u_acc": 0.2504,
+            "t_acc": 0.3716,
+            "punct_acc": null,
+            "threshold_t": 0.06831618398427963,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7493603842840213,
+            "t": 0.7883037265658318,
+            "punct": null,
+            "u_acc": 0.3128,
+            "t_acc": 0.3884,
+            "punct_acc": null,
+            "threshold_t": 0.0693230926990509,
+            "threshold_adj": 0.01
+        }
+    },
+    "mg": {
+        "opus100": {
+            "u": 0.7628605392129162,
+            "t": 0.8775341239010533,
+            "punct": null,
+            "u_acc": 0.4817813765182186,
+            "t_acc": 0.6518218623481782,
+            "punct_acc": null,
+            "threshold_t": 0.20589673519134521,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.5877678905456684,
+            "t": 0.6887298915076693,
+            "punct": null,
+            "u_acc": 0.09259259259259259,
+            "t_acc": 0.2222222222222222,
+            "punct_acc": null,
+            "threshold_t": 0.12973973155021667,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.6494085352706043,
+            "t": 0.694613030397344,
+            "punct": null,
+            "u_acc": 0.14814814814814814,
+            "t_acc": 0.25925925925925924,
+            "punct_acc": null,
+            "threshold_t": 0.09519579261541367,
+            "threshold_adj": 0.01
+        }
+    },
+    "mk": {
+        "opus100": {
+            "u": 0.7967371380294042,
+            "t": 0.882712172141584,
+            "punct": null,
+            "u_acc": 0.45,
+            "t_acc": 0.646,
+            "punct_acc": null,
+            "threshold_t": 0.059695322066545486,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7040830805360216,
+            "t": 0.7663643001443001,
+            "punct": null,
+            "u_acc": 0.2316,
+            "t_acc": 0.3392,
+            "punct_acc": null,
+            "threshold_t": 0.11587966978549957,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7390768293973324,
+            "t": 0.7939146164946165,
+            "punct": null,
+            "u_acc": 0.306,
+            "t_acc": 0.408,
+            "punct_acc": null,
+            "threshold_t": 0.04510485753417015,
+            "threshold_adj": 0.01
+        }
+    },
+    "ml": {
+        "opus100": {
+            "u": 0.7486074348629833,
+            "t": 0.8220339678171004,
+            "punct": null,
+            "u_acc": 0.2891566265060241,
+            "t_acc": 0.46987951807228917,
+            "punct_acc": null,
+            "threshold_t": 0.08955559134483337,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.5545852049671661,
+            "t": 0.6782983058543283,
+            "punct": null,
+            "u_acc": 0.07539682539682539,
+            "t_acc": 0.19973544973544974,
+            "punct_acc": null,
+            "threshold_t": 0.0785001739859581,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.6336050308062446,
+            "t": 0.7107089213998645,
+            "punct": null,
+            "u_acc": 0.14814814814814814,
+            "t_acc": 0.23544973544973544,
+            "punct_acc": null,
+            "threshold_t": 0.07504121959209442,
+            "threshold_adj": 0.01
+        }
+    },
+    "mn": {
+        "opus100": {
+            "u": 0.7955257718756821,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.3416030534351145,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.8062064162944039,
+            "t": 0.8442175186904598,
+            "punct": null,
+            "u_acc": 0.4404,
+            "t_acc": 0.534,
+            "punct_acc": null,
+            "threshold_t": 0.025924542918801308,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.8087021157103076,
+            "t": 0.8289230596967682,
+            "punct": null,
+            "u_acc": 0.4456,
+            "t_acc": 0.4864,
+            "punct_acc": null,
+            "threshold_t": 0.03463561460375786,
+            "threshold_adj": 0.01
+        },
+        "nllb": {
+            "u": 0.7481905563641111,
+            "t": 0.82530290885585,
+            "punct": null,
+            "u_acc": 0.36,
+            "t_acc": 0.4792,
+            "punct_acc": null,
+            "threshold_t": 0.32259994745254517,
+            "threshold_adj": 0.01
+        }
+    },
+    "mr": {
+        "opus100": {
+            "u": 0.8776151491877299,
+            "t": 0.8172427035330261,
+            "punct": null,
+            "u_acc": 0.5987903225806451,
+            "t_acc": 0.4435483870967742,
+            "punct_acc": null,
+            "threshold_t": 0.14453332126140594,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8266594516594518,
+            "t": 0.8452380952380952,
+            "punct": null,
+            "u_acc": 0.6666666666666666,
+            "t_acc": 0.5833333333333334,
+            "punct_acc": null,
+            "threshold_t": 0.029353925958275795,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.4712543281931581,
+            "t": 0.6460635618286082,
+            "punct": null,
+            "u_acc": 0.0488,
+            "t_acc": 0.1328,
+            "punct_acc": null,
+            "threshold_t": 0.10214222222566605,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.6471903358787299,
+            "t": 0.7215527781678246,
+            "punct": null,
+            "u_acc": 0.1852,
+            "t_acc": 0.2792,
+            "punct_acc": null,
+            "threshold_t": 0.06961324065923691,
+            "threshold_adj": 0.01
+        }
+    },
+    "ms": {
+        "opus100": {
+            "u": 0.7530623007228899,
+            "t": 0.861618766278907,
+            "punct": null,
+            "u_acc": 0.35802469135802467,
+            "t_acc": 0.5596707818930041,
+            "punct_acc": null,
+            "threshold_t": 0.07609706372022629,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6854105656536872,
+            "t": 0.7541314340421483,
+            "punct": null,
+            "u_acc": 0.21785714285714286,
+            "t_acc": 0.33214285714285713,
+            "punct_acc": null,
+            "threshold_t": 0.04506708309054375,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7212703460467125,
+            "t": 0.7571321710502383,
+            "punct": null,
+            "u_acc": 0.29642857142857143,
+            "t_acc": 0.32083333333333336,
+            "punct_acc": null,
+            "threshold_t": 0.08141870051622391,
+            "threshold_adj": 0.009999999999999998
+        }
+    },
+    "mt": {
+        "opus100": {
+            "u": 0.4074628058285113,
+            "t": 0.7578419230066601,
+            "punct": null,
+            "u_acc": 0.0951417004048583,
+            "t_acc": 0.4089068825910931,
+            "punct_acc": null,
+            "threshold_t": 0.48450610041618347,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ud": {
+            "u": 0.5896123941171237,
+            "t": 0.7030526738219046,
+            "punct": null,
+            "u_acc": 0.33076923076923076,
+            "t_acc": 0.16923076923076924,
+            "punct_acc": null,
+            "threshold_t": 0.4485345482826233,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.4162354739277816,
+            "t": 0.6307692307692307,
+            "punct": null,
+            "u_acc": 0.0,
+            "t_acc": 0.0,
+            "punct_acc": null,
+            "threshold_t": 0.11749071627855301,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.4877650127650127,
+            "t": 0.6605672105672105,
+            "punct": null,
+            "u_acc": 0.07692307692307693,
+            "t_acc": 0.11538461538461539,
+            "punct_acc": null,
+            "threshold_t": 0.12562145292758942,
+            "threshold_adj": 0.01
+        }
+    },
+    "my": {
+        "opus100": {
+            "u": 0.6556145019854697,
+            "t": 0.8348214285714285,
+            "punct": null,
+            "u_acc": 0.16532258064516128,
+            "t_acc": 0.5161290322580645,
+            "punct_acc": null,
+            "threshold_t": 0.23828040063381195,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7776834855385768,
+            "t": 0.909,
+            "punct": null,
+            "u_acc": 0.3528,
+            "t_acc": 0.722,
+            "punct_acc": null,
+            "threshold_t": 0.36629050970077515,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.761054982393954,
+            "t": 0.8935152795031056,
+            "punct": null,
+            "u_acc": 0.3416,
+            "t_acc": 0.6804,
+            "punct_acc": null,
+            "threshold_t": 0.3961370289325714,
+            "threshold_adj": 0.01
+        }
+    },
+    "ne": {
+        "opus100": {
+            "u": 0.7230660259885482,
+            "t": 0.8255484649247862,
+            "punct": null,
+            "u_acc": 0.21987315010570824,
+            "t_acc": 0.47568710359408034,
+            "punct_acc": null,
+            "threshold_t": 0.1013629138469696,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6606207423434315,
+            "t": 0.7241586991586991,
+            "punct": null,
+            "u_acc": 0.20077220077220076,
+            "t_acc": 0.2722007722007722,
+            "punct_acc": null,
+            "threshold_t": 0.08209216594696045,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.6430881403807022,
+            "t": 0.7116363623506481,
+            "punct": null,
+            "u_acc": 0.17374517374517376,
+            "t_acc": 0.2471042471042471,
+            "punct_acc": null,
+            "threshold_t": 0.08020491153001785,
+            "threshold_adj": 0.01
+        }
+    },
+    "nl": {
+        "opus100": {
+            "u": 0.8260656755693053,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.46,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8308402677727589,
+            "t": 0.8927702796830315,
+            "punct": null,
+            "u_acc": 0.5973154362416108,
+            "t_acc": 0.6912751677852349,
+            "punct_acc": null,
+            "threshold_t": 0.04922070726752281,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.769187898851974,
+            "t": 0.7945080885006466,
+            "punct": null,
+            "u_acc": 0.3468,
+            "t_acc": 0.4068,
+            "punct_acc": null,
+            "threshold_t": 0.08897779881954193,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.8008289308077543,
+            "t": 0.7973399711399712,
+            "punct": null,
+            "u_acc": 0.4228,
+            "t_acc": 0.404,
+            "punct_acc": null,
+            "threshold_t": 0.09174001961946487,
+            "threshold_adj": 0.01
+        }
+    },
+    "no": {
+        "opus100": {
+            "u": 0.8603806658348254,
+            "t": 0.9194060419866871,
+            "punct": null,
+            "u_acc": 0.5584677419354839,
+            "t_acc": 0.719758064516129,
+            "punct_acc": null,
+            "threshold_t": 0.04605588689446449,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8603149847145959,
+            "t": 0.9173174506852193,
+            "punct": null,
+            "u_acc": 0.6466942148760331,
+            "t_acc": 0.7644628099173554,
+            "punct_acc": null,
+            "threshold_t": 0.0698571428656578,
+            "threshold_adj": 0.01
+        }
+    },
+    "pa": {
+        "opus100": {
+            "u": 0.7145489600515486,
+            "t": 0.810493869679019,
+            "punct": null,
+            "u_acc": 0.18442622950819673,
+            "t_acc": 0.42827868852459017,
+            "punct_acc": null,
+            "threshold_t": 0.14506906270980835,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.629811677684018,
+            "t": 0.7343781411311476,
+            "punct": null,
+            "u_acc": 0.1276595744680851,
+            "t_acc": 0.2553191489361702,
+            "punct_acc": null,
+            "threshold_t": 0.09090995788574219,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7369508151423048,
+            "t": 0.7718649258542879,
+            "punct": null,
+            "u_acc": 0.2978723404255319,
+            "t_acc": 0.3723404255319149,
+            "punct_acc": null,
+            "threshold_t": 0.10594453662633896,
+            "threshold_adj": 0.01
+        }
+    },
+    "pl": {
+        "ersatz": {
+            "u": 0.839182200549943,
+            "t": 0.7598431670144816,
+            "punct": null,
+            "u_acc": 0.6175298804780877,
+            "t_acc": 0.2868525896414343,
+            "punct_acc": null,
+            "threshold_t": 0.3536304533481598,
+            "threshold_adj": 0.009999999999999998
+        },
+        "opus100": {
+            "u": 0.8071236665025339,
+            "t": 0.9108551842422811,
+            "punct": null,
+            "u_acc": 0.4375,
+            "t_acc": 0.6955645161290323,
+            "punct_acc": null,
+            "threshold_t": 0.05333507061004639,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.7780656923948835,
+            "t": 0.8915908988960592,
+            "punct": null,
+            "u_acc": 0.48736462093862815,
+            "t_acc": 0.7490974729241877,
+            "punct_acc": null,
+            "threshold_t": 0.036496199667453766,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.750855039664971,
+            "t": 0.7888244733044734,
+            "punct": null,
+            "u_acc": 0.296,
+            "t_acc": 0.398,
+            "punct_acc": null,
+            "threshold_t": 0.06295682489871979,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7783774429675359,
+            "t": 0.8151325891885892,
+            "punct": null,
+            "u_acc": 0.3704,
+            "t_acc": 0.452,
+            "punct_acc": null,
+            "threshold_t": 0.043462712317705154,
+            "threshold_adj": 0.01
+        }
+    },
+    "ps": {
+        "ersatz": {
+            "u": 0.7730023239809016,
+            "t": 0.8338942419587582,
+            "punct": null,
+            "u_acc": 0.4120234604105572,
+            "t_acc": 0.5029325513196481,
+            "punct_acc": null,
+            "threshold_t": 0.19525596499443054,
+            "threshold_adj": 0.009999999999999998
+        },
+        "opus100": {
+            "u": 0.7340742776154804,
+            "t": 0.7705270972531553,
+            "punct": null,
+            "u_acc": 0.22717149220489977,
+            "t_acc": 0.3363028953229399,
+            "punct_acc": null,
+            "threshold_t": 0.10388877242803574,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6287811515806364,
+            "t": 0.7087634688912061,
+            "punct": null,
+            "u_acc": 0.145985401459854,
+            "t_acc": 0.22627737226277372,
+            "punct_acc": null,
+            "threshold_t": 0.1185235008597374,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.6138647902695882,
+            "t": 0.6929903835013324,
+            "punct": null,
+            "u_acc": 0.1386861313868613,
+            "t_acc": 0.20437956204379562,
+            "punct_acc": null,
+            "threshold_t": 0.16284430027008057,
+            "threshold_adj": 0.01
+        }
+    },
+    "pt": {
+        "opus100": {
+            "u": 0.7611853736118319,
+            "t": 0.8856366450833018,
+            "punct": null,
+            "u_acc": 0.4251012145748988,
+            "t_acc": 0.6700404858299596,
+            "punct_acc": null,
+            "threshold_t": 0.05129510536789894,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ud": {
+            "u": 0.7432850963325336,
+            "t": 0.8922304388913977,
+            "punct": null,
+            "u_acc": 0.5068493150684932,
+            "t_acc": 0.7157534246575342,
+            "punct_acc": null,
+            "threshold_t": 0.09587306529283524,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.738912477805419,
+            "t": 0.7903725281254692,
+            "punct": null,
+            "u_acc": 0.2796,
+            "t_acc": 0.4048,
+            "punct_acc": null,
+            "threshold_t": 0.05895382910966873,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7782250484187445,
+            "t": 0.8107966958188011,
+            "punct": null,
+            "u_acc": 0.378,
+            "t_acc": 0.4508,
+            "punct_acc": null,
+            "threshold_t": 0.04780341312289238,
+            "threshold_adj": 0.01
+        }
+    },
+    "ro": {
+        "ersatz": {
+            "u": 0.8937483542018473,
+            "t": 0.745039259914492,
+            "punct": null,
+            "u_acc": 0.74,
+            "t_acc": 0.248,
+            "punct_acc": null,
+            "threshold_t": 0.43536946177482605,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.8245492960517974,
+            "t": 0.8996452257058317,
+            "punct": null,
+            "u_acc": 0.494949494949495,
+            "t_acc": 0.6787878787878788,
+            "punct_acc": null,
+            "threshold_t": 0.03984079137444496,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ud": {
+            "u": 0.4044802784107424,
+            "t": 0.6237838191739944,
+            "punct": null,
+            "u_acc": 0.12167300380228137,
+            "t_acc": 0.011406844106463879,
+            "punct_acc": null,
+            "threshold_t": 0.8401123285293579,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.714025670469881,
+            "t": 0.7685433856549955,
+            "punct": null,
+            "u_acc": 0.236,
+            "t_acc": 0.3488,
+            "punct_acc": null,
+            "threshold_t": 0.08738504350185394,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7569959291831081,
+            "t": 0.7741351666111667,
+            "punct": null,
+            "u_acc": 0.3272,
+            "t_acc": 0.3532,
+            "punct_acc": null,
+            "threshold_t": 0.10868360102176666,
+            "threshold_adj": 0.01
+        }
+    },
+    "ru": {
+        "ersatz": {
+            "u": 0.8623752836347713,
+            "t": 0.9248148758525894,
+            "punct": null,
+            "u_acc": 0.6935483870967742,
+            "t_acc": 0.8104838709677419,
+            "punct_acc": null,
+            "threshold_t": 0.08035257458686829,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.6304292664920431,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.2581967213114754,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.6956516637027373,
+            "t": 0.7922048214515083,
+            "punct": null,
+            "u_acc": 0.30454545454545456,
+            "t_acc": 0.44545454545454544,
+            "punct_acc": null,
+            "threshold_t": 0.22516754269599915,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7326875340596395,
+            "t": 0.7917059872680926,
+            "punct": null,
+            "u_acc": 0.2648,
+            "t_acc": 0.4012,
+            "punct_acc": null,
+            "threshold_t": 0.055929720401763916,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7618399233111346,
+            "t": 0.7889308350586611,
+            "punct": null,
+            "u_acc": 0.3332,
+            "t_acc": 0.3908,
+            "punct_acc": null,
+            "threshold_t": 0.07778003811836243,
+            "threshold_adj": 0.01
+        }
+    },
+    "si": {
+        "opus100": {
+            "u": 0.758500295561491,
+            "t": 0.8322168422974875,
+            "punct": null,
+            "u_acc": 0.3225806451612903,
+            "t_acc": 0.47580645161290325,
+            "punct_acc": null,
+            "threshold_t": 0.03705502673983574,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.5818651890744914,
+            "t": 0.7391023274744204,
+            "punct": null,
+            "u_acc": 0.11627906976744186,
+            "t_acc": 0.32558139534883723,
+            "punct_acc": null,
+            "threshold_t": 0.0850210040807724,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.5998771295077725,
+            "t": 0.7411325969465503,
+            "punct": null,
+            "u_acc": 0.13178294573643412,
+            "t_acc": 0.35658914728682173,
+            "punct_acc": null,
+            "threshold_t": 0.05737745016813278,
+            "threshold_adj": 0.01
+        }
+    },
+    "sk": {
+        "opus100": {
+            "u": 0.7902618665885881,
+            "t": 0.8984898303765027,
+            "punct": null,
+            "u_acc": 0.4254032258064516,
+            "t_acc": 0.7056451612903226,
+            "punct_acc": null,
+            "threshold_t": 0.09030794352293015,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.9200729529031416,
+            "t": 0.8796406109613657,
+            "punct": null,
+            "u_acc": 0.769811320754717,
+            "t_acc": 0.6452830188679245,
+            "punct_acc": null,
+            "threshold_t": 0.05720829591155052,
+            "threshold_adj": 0.010000000000000002
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7452956930903141,
+            "t": 0.7766838076302782,
+            "punct": null,
+            "u_acc": 0.2992,
+            "t_acc": 0.3716,
+            "punct_acc": null,
+            "threshold_t": 0.0720907673239708,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7665519219280413,
+            "t": 0.7978461619798801,
+            "punct": null,
+            "u_acc": 0.3532,
+            "t_acc": 0.4328,
+            "punct_acc": null,
+            "threshold_t": 0.04866090044379234,
+            "threshold_adj": 0.01
+        }
+    },
+    "sl": {
+        "opus100": {
+            "u": 0.7827069822891473,
+            "t": 0.8957146886722775,
+            "punct": null,
+            "u_acc": 0.39357429718875503,
+            "t_acc": 0.6546184738955824,
+            "punct_acc": null,
+            "threshold_t": 0.0632297545671463,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.7657470825663508,
+            "t": 0.8564796661671661,
+            "punct": null,
+            "u_acc": 0.51875,
+            "t_acc": 0.6125,
+            "punct_acc": null,
+            "threshold_t": 0.07011370360851288,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7343693106536079,
+            "t": 0.7686347633525895,
+            "punct": null,
+            "u_acc": 0.2904,
+            "t_acc": 0.3452,
+            "punct_acc": null,
+            "threshold_t": 0.10536323487758636,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7573287436929542,
+            "t": 0.7839546181796646,
+            "punct": null,
+            "u_acc": 0.3448,
+            "t_acc": 0.3804,
+            "punct_acc": null,
+            "threshold_t": 0.09057959914207458,
+            "threshold_adj": 0.01
+        }
+    },
+    "sq": {
+        "opus100": {
+            "u": 0.7763448286573598,
+            "t": 0.8839089053626923,
+            "punct": null,
+            "u_acc": 0.4532520325203252,
+            "t_acc": 0.6626016260162602,
+            "punct_acc": null,
+            "threshold_t": 0.072206512093544,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.9714285714285714,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.9333333333333333,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6842325916274176,
+            "t": 0.7674298730028142,
+            "punct": null,
+            "u_acc": 0.2004,
+            "t_acc": 0.352,
+            "punct_acc": null,
+            "threshold_t": 0.07836716622114182,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7341802150840788,
+            "t": 0.7846177895307308,
+            "punct": null,
+            "u_acc": 0.3004,
+            "t_acc": 0.3912,
+            "punct_acc": null,
+            "threshold_t": 0.07109081745147705,
+            "threshold_adj": 0.01
+        }
+    },
+    "sr": {
+        "opus100": {
+            "u": 0.7959584134530981,
+            "t": 0.9091870344528034,
+            "punct": null,
+            "u_acc": 0.41967871485943775,
+            "t_acc": 0.6807228915662651,
+            "punct_acc": null,
+            "threshold_t": 0.05623770132660866,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8660802596096713,
+            "t": 0.9299766899766899,
+            "punct": null,
+            "u_acc": 0.7230769230769231,
+            "t_acc": 0.7923076923076923,
+            "punct_acc": null,
+            "threshold_t": 0.07828009128570557,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6877903112400088,
+            "t": 0.7620202433823486,
+            "punct": null,
+            "u_acc": 0.2088,
+            "t_acc": 0.3456,
+            "punct_acc": null,
+            "threshold_t": 0.08801580965518951,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7223532875401678,
+            "t": 0.7687719046100099,
+            "punct": null,
+            "u_acc": 0.2872,
+            "t_acc": 0.3468,
+            "punct_acc": null,
+            "threshold_t": 0.10996741056442261,
+            "threshold_adj": 0.01
+        }
+    },
+    "sv": {
+        "opus100": {
+            "u": 0.8286461525724982,
+            "t": 0.9042759150241713,
+            "punct": null,
+            "u_acc": 0.5080321285140562,
+            "t_acc": 0.6746987951807228,
+            "punct_acc": null,
+            "threshold_t": 0.04241374507546425,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8286506032726779,
+            "t": 0.892626658440612,
+            "punct": null,
+            "u_acc": 0.5813953488372093,
+            "t_acc": 0.7131782945736435,
+            "punct_acc": null,
+            "threshold_t": 0.04127347841858864,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7296251693433456,
+            "t": 0.7914475901875901,
+            "punct": null,
+            "u_acc": 0.2824,
+            "t_acc": 0.4036,
+            "punct_acc": null,
+            "threshold_t": 0.07549653202295303,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7572179850219726,
+            "t": 0.7936356265956267,
+            "punct": null,
+            "u_acc": 0.3312,
+            "t_acc": 0.394,
+            "punct_acc": null,
+            "threshold_t": 0.07372824102640152,
+            "threshold_adj": 0.01
+        }
+    },
+    "ta": {
+        "ersatz": {
+            "u": 0.7925783125839316,
+            "t": 0.797426089045817,
+            "punct": null,
+            "u_acc": 0.545816733067729,
+            "t_acc": 0.41832669322709165,
+            "punct_acc": null,
+            "threshold_t": 0.28814736008644104,
+            "threshold_adj": 0.009999999999999998
+        },
+        "opus100": {
+            "u": 0.6246269823735009,
+            "t": 0.7332792053427483,
+            "punct": null,
+            "u_acc": 0.16666666666666666,
+            "t_acc": 0.2540650406504065,
+            "punct_acc": null,
+            "threshold_t": 0.36680668592453003,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8399803578064448,
+            "t": 0.9369369369369369,
+            "punct": null,
+            "u_acc": 0.6666666666666666,
+            "t_acc": 0.8666666666666667,
+            "punct_acc": null,
+            "threshold_t": 0.04847068339586258,
+            "threshold_adj": 0.010000000000000002
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.5235485224995273,
+            "t": 0.6881941718118795,
+            "punct": null,
+            "u_acc": 0.08185053380782918,
+            "t_acc": 0.2569395017793594,
+            "punct_acc": null,
+            "threshold_t": 0.055044710636138916,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.6312573802892971,
+            "t": 0.727471610443306,
+            "punct": null,
+            "u_acc": 0.16441281138790034,
+            "t_acc": 0.2889679715302491,
+            "punct_acc": null,
+            "threshold_t": 0.0803576111793518,
+            "threshold_adj": 0.009999999999999998
+        }
+    },
+    "te": {
+        "opus100": {
+            "u": 0.7040218052502097,
+            "t": 0.786287657920311,
+            "punct": null,
+            "u_acc": 0.23673469387755103,
+            "t_acc": 0.37755102040816324,
+            "punct_acc": null,
+            "threshold_t": 0.04151901230216026,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6275138555458515,
+            "t": 0.7072999088860117,
+            "punct": null,
+            "u_acc": 0.1555891238670695,
+            "t_acc": 0.22507552870090636,
+            "punct_acc": null,
+            "threshold_t": 0.09306807070970535,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.6584688223918251,
+            "t": 0.7139486813958114,
+            "punct": null,
+            "u_acc": 0.1782477341389728,
+            "t_acc": 0.22658610271903323,
+            "punct_acc": null,
+            "threshold_t": 0.12133269757032394,
+            "threshold_adj": 0.009999999999999998
+        }
+    },
+    "tg": {
+        "opus100": {
+            "u": 0.42262986751425996,
+            "t": 0.7364770530708425,
+            "punct": null,
+            "u_acc": 0.09839357429718876,
+            "t_acc": 0.30522088353413657,
+            "punct_acc": null,
+            "threshold_t": 0.5004799365997314,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7343193356351251,
+            "t": 0.7526942355889724,
+            "punct": null,
+            "u_acc": 0.3157894736842105,
+            "t_acc": 0.27631578947368424,
+            "punct_acc": null,
+            "threshold_t": 0.16461707651615143,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7626344415818099,
+            "t": 0.8089807852965748,
+            "punct": null,
+            "u_acc": 0.3684210526315789,
+            "t_acc": 0.4605263157894737,
+            "punct_acc": null,
+            "threshold_t": 0.10540329664945602,
+            "threshold_adj": 0.01
+        }
+    },
+    "th": {
+        "opus100": {
+            "u": 0.7324494585100645,
+            "t": 0.7801975017126533,
+            "punct": null,
+            "u_acc": 0.19595959595959597,
+            "t_acc": 0.3191919191919192,
+            "punct_acc": null,
+            "threshold_t": 0.10073047876358032,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ud": {
+            "u": 0.7677283161283163,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.288,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.5472497944400564,
+            "t": 0.6934567918112354,
+            "punct": null,
+            "u_acc": 0.0916,
+            "t_acc": 0.214,
+            "punct_acc": null,
+            "threshold_t": 0.09660183638334274,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.5432417976950523,
+            "t": 0.6819799657086173,
+            "punct": null,
+            "u_acc": 0.0912,
+            "t_acc": 0.2076,
+            "punct_acc": null,
+            "threshold_t": 0.09660183638334274,
+            "threshold_adj": 0.01
+        }
+    },
+    "tr": {
+        "ersatz": {
+            "u": 0.8558088924032247,
+            "t": 0.906903997687994,
+            "punct": null,
+            "u_acc": 0.5904255319148937,
+            "t_acc": 0.7367021276595744,
+            "punct_acc": null,
+            "threshold_t": 0.04181329533457756,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.8266514108262143,
+            "t": 0.8902101417938522,
+            "punct": null,
+            "u_acc": 0.46963562753036436,
+            "t_acc": 0.6396761133603239,
+            "punct_acc": null,
+            "threshold_t": 0.03596746176481247,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ud": {
+            "u": 0.8018085627074037,
+            "t": 0.8755216097034278,
+            "punct": null,
+            "u_acc": 0.49818181818181817,
+            "t_acc": 0.6436363636363637,
+            "punct_acc": null,
+            "threshold_t": 0.059762317687273026,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.759094878124971,
+            "t": 0.7974225347985348,
+            "punct": null,
+            "u_acc": 0.3312,
+            "t_acc": 0.4152,
+            "punct_acc": null,
+            "threshold_t": 0.029471680521965027,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7828125140772689,
+            "t": 0.8054253271874324,
+            "punct": null,
+            "u_acc": 0.384,
+            "t_acc": 0.4364,
+            "punct_acc": null,
+            "threshold_t": 0.030752742663025856,
+            "threshold_adj": 0.01
+        }
+    },
+    "uk": {
+        "opus100": {
+            "u": 0.7538007477997104,
+            "t": 0.8697308040720052,
+            "punct": null,
+            "u_acc": 0.3714859437751004,
+            "t_acc": 0.6024096385542169,
+            "punct_acc": null,
+            "threshold_t": 0.05568220093846321,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.6483168559201627,
+            "t": 0.7931677284355855,
+            "punct": null,
+            "u_acc": 0.35267857142857145,
+            "t_acc": 0.48660714285714285,
+            "punct_acc": null,
+            "threshold_t": 0.1227647140622139,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7152628470754052,
+            "t": 0.7788211695494048,
+            "punct": null,
+            "u_acc": 0.2344,
+            "t_acc": 0.3692,
+            "punct_acc": null,
+            "threshold_t": 0.08565552532672882,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7483529409476272,
+            "t": 0.8031632410382875,
+            "punct": null,
+            "u_acc": 0.3128,
+            "t_acc": 0.426,
+            "punct_acc": null,
+            "threshold_t": 0.046983759850263596,
+            "threshold_adj": 0.01
+        }
+    },
+    "ur": {
+        "opus100": {
+            "u": 0.5278535005670126,
+            "t": 0.7154094518423156,
+            "punct": null,
+            "u_acc": 0.1016949152542373,
+            "t_acc": 0.2733050847457627,
+            "punct_acc": null,
+            "threshold_t": 0.2766479551792145,
+            "threshold_adj": 0.01
+        },
+        "ud": {
+            "u": 0.8943370891132086,
+            "t": 0.9445628997867804,
+            "punct": null,
+            "u_acc": 0.7089552238805971,
+            "t_acc": 0.835820895522388,
+            "punct_acc": null,
+            "threshold_t": 0.0358482301235199,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6692320340684851,
+            "t": 0.7366438279291191,
+            "punct": null,
+            "u_acc": 0.2040082219938335,
+            "t_acc": 0.28776978417266186,
+            "punct_acc": null,
+            "threshold_t": 0.10113585740327835,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.6603894706841775,
+            "t": 0.737306093260675,
+            "punct": null,
+            "u_acc": 0.19578622816032887,
+            "t_acc": 0.2944501541623844,
+            "punct_acc": null,
+            "threshold_t": 0.08105884492397308,
+            "threshold_adj": 0.01
+        }
+    },
+    "uz": {
+        "opus100": {
+            "u": 0.5686001717656091,
+            "t": 0.7844029560034461,
+            "punct": null,
+            "u_acc": 0.15510204081632653,
+            "t_acc": 0.45510204081632655,
+            "punct_acc": null,
+            "threshold_t": 0.3144516944885254,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.7418946065495426,
+            "t": 0.7817295924890861,
+            "punct": null,
+            "u_acc": 0.29324894514767935,
+            "t_acc": 0.37869198312236285,
+            "punct_acc": null,
+            "threshold_t": 0.04272758960723877,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7464454604678754,
+            "t": 0.7790038563559611,
+            "punct": null,
+            "u_acc": 0.31645569620253167,
+            "t_acc": 0.3808016877637131,
+            "punct_acc": null,
+            "threshold_t": 0.020240047946572304,
+            "threshold_adj": 0.01
+        }
+    },
+    "vi": {
+        "opus100": {
+            "u": 0.7742385383268917,
+            "t": 0.8804859292513614,
+            "punct": null,
+            "u_acc": 0.4053497942386831,
+            "t_acc": 0.6255144032921811,
+            "punct_acc": null,
+            "threshold_t": 0.055730924010276794,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ud": {
+            "u": 0.8176212537462538,
+            "t": 0.8842546897546897,
+            "punct": null,
+            "u_acc": 0.445,
+            "t_acc": 0.64,
+            "punct_acc": null,
+            "threshold_t": 0.05645648390054703,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.6807474673414854,
+            "t": 0.7395216978576978,
+            "punct": null,
+            "u_acc": 0.2064,
+            "t_acc": 0.2852,
+            "punct_acc": null,
+            "threshold_t": 0.07871890813112259,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.7267998669333844,
+            "t": 0.7697841243070654,
+            "punct": null,
+            "u_acc": 0.2856,
+            "t_acc": 0.3652,
+            "punct_acc": null,
+            "threshold_t": 0.04699409380555153,
+            "threshold_adj": 0.01
+        }
+    },
+    "xh": {
+        "opus100": {
+            "u": 0.6491138460854754,
+            "t": 0.8010700875151513,
+            "punct": null,
+            "u_acc": 0.2987551867219917,
+            "t_acc": 0.508298755186722,
+            "punct_acc": null,
+            "threshold_t": 0.11879320442676544,
+            "threshold_adj": 0.01
+        }
+    },
+    "yi": {
+        "opus100": {
+            "u": 0.7151466784695625,
+            "t": 0.7323630392595909,
+            "punct": null,
+            "u_acc": 0.2225705329153605,
+            "t_acc": 0.2413793103448276,
+            "punct_acc": null,
+            "threshold_t": 0.12696965038776398,
+            "threshold_adj": 0.01
+        }
+    },
+    "yo": {
+        "opus100": {
+            "u": 0.4663989191017974,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.035409556313993173,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ud": {
+            "u": 0.25153204155545794,
+            "t": null,
+            "punct": null,
+            "u_acc": 0.0875,
+            "t_acc": null,
+            "punct_acc": null,
+            "threshold_t": 0,
+            "threshold_adj": 0.009999999999999998
+        },
+        "nllb": {
+            "u": 0.42766700577172717,
+            "t": 0.7218683313422193,
+            "punct": null,
+            "u_acc": 0.0972,
+            "t_acc": 0.278,
+            "punct_acc": null,
+            "threshold_t": 0.6914921402931213,
+            "threshold_adj": 0.01
+        }
+    },
+    "zh": {
+        "ersatz": {
+            "u": 0.7767222061063119,
+            "t": 0.7989252024874761,
+            "punct": null,
+            "u_acc": 0.518,
+            "t_acc": 0.554,
+            "punct_acc": null,
+            "threshold_t": 0.018511703237891197,
+            "threshold_adj": 0.01
+        },
+        "opus100": {
+            "u": 0.757577051757949,
+            "t": 0.8019175089846174,
+            "punct": null,
+            "u_acc": 0.3440643863179074,
+            "t_acc": 0.4386317907444668,
+            "punct_acc": null,
+            "threshold_t": 0.02879003994166851,
+            "threshold_adj": 0.010000000000000002
+        },
+        "ud": {
+            "u": 0.8984803640803641,
+            "t": 0.8825250305250305,
+            "punct": null,
+            "u_acc": 0.768,
+            "t_acc": 0.688,
+            "punct_acc": null,
+            "threshold_t": 0.03994122892618179,
+            "threshold_adj": 0.01
+        },
+        "ted2020-corrupted-asr": {
+            "u": 0.560326132856048,
+            "t": 0.5308702024502293,
+            "punct": null,
+            "u_acc": 0.09772951628825272,
+            "t_acc": 0.05873642645607108,
+            "punct_acc": null,
+            "threshold_t": 0.0035890808794647455,
+            "threshold_adj": 0.009999999999999998
+        },
+        "ted2020-corrupted-social-media": {
+            "u": 0.5625142837106123,
+            "t": 0.5301335779231647,
+            "punct": null,
+            "u_acc": 0.10513326752221125,
+            "t_acc": 0.06219151036525173,
+            "punct_acc": null,
+            "threshold_t": 0.0035890808794647455,
+            "threshold_adj": 0.009999999999999998
+        }
+    },
+    "zu": {
+        "opus100": {
+            "u": 0.742454032197622,
+            "t": 0.8192697734364399,
+            "punct": null,
+            "u_acc": 0.2948717948717949,
+            "t_acc": 0.452991452991453,
+            "punct_acc": null,
+            "threshold_t": 0.10627293586730957,
+            "threshold_adj": 0.01
+        }
+    },
+    "tr-de": {},
+    "es-en": {},
+    "vi-en": {},
+    "en-de": {}
+}

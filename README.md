@@ -1,8 +1,14 @@
-# wtpsplit🪓
+<h1 align="center">wtpsplit🪓</h1>
+<h3 align="center">Segment any Text - Robustly, Efficiently, Adaptably⚡</h3>
 
-Code for the paper [Where's the Point? Self-Supervised Multilingual Punctuation-Agnostic Sentence Segmentation](https://arxiv.org/abs/2305.18893) with Jonas Pfeiffer and Ivan Vulić, accepted at ACL 2023.
+This repository allows you to segment text into sentences or other semantic units. It implements the models from:
+- **SaT** &mdash; [Segment Any Text: A Universal Approach for Robust, Efficient and Adaptable Sentence Segmentation](https://arxiv.org/abs/2406.16678) by Markus Frohmann, Igor Sterner, Benjamin Minixhofer, Ivan Vulić and Markus Schedl (**state-of-the-art, encouraged**).
+- **WtP** &mdash; [Where’s the Point? Self-Supervised Multilingual Punctuation-Agnostic Sentence Segmentation](https://aclanthology.org/2023.acl-long.398/) by Benjamin Minixhofer, Jonas Pfeiffer and Ivan Vulić (*previous version, maintained for reproducibility*).
 
-This repository contains `wtpsplit`, a package for robust and adaptible sentence segmentation across 85 languages, as well as the code and configs to reproduce the experiments in the paper.
+The namesake WtP is maintained for reproducibility. Our new followup SaT provides robust, efficient and adaptable sentence segmentation across 85 languages at higher performance and less compute cost. Check out the **state-of-the-art** results in 8 distinct corpora and 85 languages demonstrated in our [Segment any Text paper](https://arxiv.org/abs/2406.16678).
+
+![System Figure](./configs/system-fig.png)
+
 
 ## Installation
 
@@ -13,169 +19,155 @@ pip install wtpsplit
 ## Usage
 
 ```python
-from wtpsplit import WtP
+from wtpsplit import SaT
 
-wtp = WtP("wtp-bert-mini")
+sat = SaT("sat-3l")
 # optionally run on GPU for better performance
 # also supports TPUs via e.g. wtp.to("xla:0"), in that case pass `pad_last_batch=True` to wtp.split
-wtp.half().to("cuda")
+sat.half().to("cuda")
 
-# returns ["Hello ", "This is a test."]
-wtp.split("Hello This is a test.")
+# returns ["This is a test", "This is another test."]
+sat.split("This is a test This is another test.")
 
 # returns an iterator yielding a lists of sentences for every text
 # do this instead of calling wtp.split on every text individually for much better performance
-wtp.split(["Hello This is a test.", "And some more texts..."])
+sat.split(["This is a test This is another test.", "And some more texts..."])
 
-# if you're using a model with language adapters, also pass a `lang_code`
-wtp.split("Hello This is a test.", lang_code="en")
+# use our '-sm' models for general sentence segmentation tasks
+sat_sm = SaT("sat-3l-sm")
+# this will be especially better for noisy text
+sat.split("this is a test this is another test")
+# returns ["this is a test", "this is another test"]
 
-# depending on your usecase, adaptation to e.g. the Universal Dependencies style may give better results
-# this always requires a language code
-wtp.split("Hello This is a test.", lang_code="en", style="ud")
+# use trained lora modules for strong adaptation to language & domain/style
+sat.split("This is a test This is another test.", lang_code="en", style="ud")
 ```
-
-## ONNX support
-
-You can enable ONNX inference for the `wtp-bert-*` models:
-
-```python
-wtp = WtP("wtp-bert-mini", onnx_providers=["CUDAExecutionProvider"])
-```
-
-This requires `onnxruntime` and `onnxruntime-gpu`. It should give a good speedup on GPU!
-
-```python
->>> from wtpsplit import WtP
->>> texts = ["This is a sentence. This is another sentence."] * 1000
-
-# PyTorch GPU
->>> model = WtP("wtp-bert-mini")
->>> model.half().to("cuda")
->>> %timeit list(model.split(texts))
-272 ms ± 16.1 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
-
-# onnxruntime GPU
->>> model = WtP("wtp-bert-mini", ort_providers=["CUDAExecutionProvider"])
->>> %timeit list(model.split(texts))
-198 ms ± 1.36 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
-```
-
-Notes:
-- The `wtp-canine-*` models are currently not supported with ONNX because the pooling done by CANINE is not trivial to export. Ideas to solve this are very welcome!
-- This does not work with Python 3.7 because `onnxruntime` does not support the opset we need for py37.
 
 
 ## Available Models
 
-Pro tips: I recommend `wtp-bert-mini` for speed-sensitive applications, otherwise `wtp-canine-s-12l`. The `*-no-adapters` models provide a good tradeoff between speed and performance. You should *probably not* use `wtp-bert-tiny`.
+If you need a general sentence segmentation model, use `-sm` models (e.g., `sat-3l-sm`)
+For speed-sensitive applications, we recommend 3-layer models (`sat-3l` and `sat-3l-sm`). They provide a great tradeoff between speed and performance.
+The best models are our 12-layer models: `sat-12l` and `sat-12l-sm`.
 
-| Model                                                                      |    English Score |    English Score<br>(adapted) |    Multilingual Score |    Multilingual Score<br>(adapted) |
-|:-----------------------------------------------------------------------|-----:|-----:|-----:|-----:|
-| [wtp-bert-tiny](https://huggingface.co/benjamin/wtp-bert-tiny)                | 83.8 | 91.9 | 79.5 | 88.6 |
-| [wtp-bert-mini](https://huggingface.co/benjamin/wtp-bert-mini)                | 91.8 | 95.9 | 84.3 | 91.3 |
-| [wtp-canine-s-1l](https://huggingface.co/benjamin/wtp-canine-s-1l)              | 94.5 | 96.5 | 86.7 | 92.8 |
-| [wtp-canine-s-1l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-1l-no-adapters)  | 93.1 | 96.4 | 85.1 | 91.8 |
-| [wtp-canine-s-3l](https://huggingface.co/benjamin/wtp-canine-s-3l)              | 94.4 | 96.8 | 86.7 | 93.4 |
-| [wtp-canine-s-3l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-3l-no-adapters)  | 93.8 | 96.4 | 86   | 92.3 |
-| [wtp-canine-s-6l](https://huggingface.co/benjamin/wtp-canine-s-6l)              | 94.5 | 97.1 | 87   | 93.6 |
-| [wtp-canine-s-6l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-6l-no-adapters)  | 94.4 | 96.8 | 86.4 | 92.8 |
-| [wtp-canine-s-9l](https://huggingface.co/benjamin/wtp-canine-s-9l)              | 94.8 | 97   | 87.7 | 93.8 |
-| [wtp-canine-s-9l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-9l-no-adapters)  | 94.3 | 96.9 | 86.6 | 93   |
-| [wtp-canine-s-12l](https://huggingface.co/benjamin/wtp-canine-s-12l)             | 94.7 | 97.1 | 87.9 | 94   |
-| [wtp-canine-s-12l-no-adapters](https://huggingface.co/benjamin/wtp-canine-s-12l-no-adapters) | 94.5 | 97   | 87.1 | 93.2 |
+| Model                              |    English Score  |  Multilingual Score
+|:-----------------------------------------------------------------------|-----:|-----:|
+| [sat-1l](https://huggingface.co/segment-any-text/sat-1l)             | 88.5  | 84.3
+| [sat-1l-sm](https://huggingface.co/segment-any-text/sat-1l-sm)           | 88.2  | 87.9
+| [sat-3l](https://huggingface.co/segment-any-text/sat-3l)              | 93.7  | 89.2
+| [sat-3l-lora](https://huggingface.co/segment-any-text/sat-3l/tree/main/loras)         | 96.7  | 94.8
+| [sat-3l-sm](https://huggingface.co/segment-any-text/sat-3l-sm)           | 96.5  | 93.5
+| [sat-6l](https://huggingface.co/segment-any-text/sat-6l)              | 94.1  | 89.7
+| [sat-6l-sm](https://huggingface.co/segment-any-text/sat-6l-sm)           | 96.9  | 95.1
+| [sat-9l](https://huggingface.co/segment-any-text/sat-9l)              | 94.3  | 90.3
+| [sat-12l](https://huggingface.co/segment-any-text/sat-12l)             | 94.0  | 90.4
+| [sat-12l-lora](https://huggingface.co/segment-any-text/sat-12l/tree/main/loras)        | 97.3  | 95.9
+| [sat-12l-sm](https://huggingface.co/segment-any-text/sat-12l-sm)          | 97.4  | 96.0
 
-The scores are macro-average F1 score across all available datasets for "English", and macro-average F1 score across all datasets and languages for "Multilingual". "adapted" means adapation via WtP Punct; check out the paper for details. 
+The scores are macro-average F1 score across all available datasets for "English", and macro-average F1 score across all datasets and languages for "Multilingual". "adapted" means adapation via LoRA; check out the [paper](https://arxiv.org/abs/2406.16678) for details. 
 
-For comparison, here's the English scores of some other tools:
+For comparison, here the English scores of some other tools:
 
 | Model                                                                      |    English Score
 |:-----------------------------------------------------------------------|-----:|
-| SpaCy (sentencizer) | 86.8 |
-| PySBD | 69.8 |
-| SpaCy (dependency parser) | 93.1 |
-| Ersatz | 91.6 |
-| Punkt (`nltk.sent_tokenize`) | 92.5 |
+| PySBD | 69.6 |
+| SpaCy (sentencizer; monolingual) | 92.9 |
+| SpaCy (sentencizer; multilingual) | 91.5 |
+| Ersatz | 91.4 |
+| Punkt (`nltk.sent_tokenize`) | 92.2 |
+| [WtP (3l)](https://huggingface.co/benjamin/wtp-canine-s-3l) | 93.9 |
 
-### Paragraph Segmentation
+Note that this library also supports previous [`WtP`](https://arxiv.org/abs/2305.18893) models.
+You can use them in essentially the same way as `SaT`models:
 
-Since WtP models are trained to predict newline probablity, they can segment text into paragraphs in addition to sentences.
+```python
+from wtpsplit import WtP
+
+wtp = WtP("wtp-bert-mini")
+# similar functionality as for SaT models
+wtp.split("This is a test This is another test.")
+```
+
+For more details on WtP and reproduction details, see the [WtP doc](./README_WTP.md).
+
+## Paragraph Segmentation
+
+Since SaT are trained to predict newline probablity, they can segment text into paragraphs in addition to sentences.
 
 ```python
 # returns a list of paragraphs, each containing a list of sentences
 # adjust the paragraph threshold via the `paragraph_threshold` argument.
-wtp.split(text, do_paragraph_segmentation=True)
+sat.split(text, do_paragraph_segmentation=True)
 ```
 
-### Adaptation
+## Adaptation
 
-WtP can adapt to the Universal Dependencies, OPUS100 or Ersatz corpus segmentation style in many languages by punctuation adaptation (*preferred*) or threshold adaptation.
 
-#### Punctuation Adaptation
+SaT can be domain- and style-adapted via LoRA. We provide trained LoRA modules for Universal Dependencies, OPUS100, Ersatz, and TED (i.e., ASR-style transcribed speecjes) sentence styles in 81 languages for `sat-3l`and `sat-12l`. Additionally, we provide LoRA modules for legal documents (laws and judgements) in 6 languages, code-switching in 4 language pairs, and tweets in 3 languages. For details, we refer to our [paper](https://arxiv.org/abs/2406.16678).
 
+We also provided verse segmentation modules for 16 genres for `sat-12-no-limited-lookahead`.
+
+Load LoRA modules like this:
 ```python
-# this requires a `lang_code`
-# check the paper or `wtp.mixtures` for supported styles
-wtp.split(text, lang_code="en", style="ud")
+
+# requires both lang_code and style_or_domain
+# for available ones, check the <model_repository>/loras folder
+sat_lora = SaT("sat-3l", style_or_domain="ud", language="en")
+sat_lora.split("Hello this is a test But this is different now Now the next one starts looool")
+# now for a highly distinct domain
+sat_lora_distinct = SaT("sat-12l", style_or_domain="code-switching", language="es-en")
+sat_lora_distinct.split("in the morning over there cada vez que yo decía algo él me decía algo")
 ```
 
-This also allows changing the threshold, but inherently has higher thresholds values since it is not newline probablity anymore being thresholded:
-
+You can also freely adapt the segmentation threshold, with a higher threshold leading to more conservative segmentation:
 ```python
-wtp.split(text, lang_code="en", style="ud", threshold=0.7)
+
+sat.split("This is a test This is another test.", threshold=0.4)
+# works similarly for lora; but thresholds are higher
+sat_lora.split("Hello this is a test But this is different now Now the next one starts looool", threshold=0.7)
 ```
 
-To get the default threshold for a style:
-```python
-wtp.get_threshold("en", "ud", return_punctuation_threshold=True)
-```
+## Advanced Usage
 
-#### Threshold Adaptation
-```python
-threshold = wtp.get_threshold("en", "ud")
-
-wtp.split(text, threshold=threshold)
-```
-
-### Advanced Usage
-
-__Get the newline or sentence boundary probabilities for a text:__
+### Get the newline or sentence boundary probabilities for a text:
 
 ```python
 # returns newline probabilities (supports batching!)
-wtp.predict_proba(text)
-
-# returns sentence boundary probabilities for the given style
-wtp.predict_proba(text, lang_code="en", style="ud")
+sat.predict_proba(text)
 ```
 
-__Load a WtP model in [HuggingFace `transformers`](https://github.com/huggingface/transformers):__
+### Load a SaT model in [HuggingFace `transformers`](https://github.com/huggingface/transformers):
 
 ```python
-# import wtpsplit.models to register the custom models 
-# (character-level BERT w/ hash embeddings and canine with language adapters)
-import wtpsplit.models
+# import library to register the custom models 
+import wtpsplit
 from transformers import AutoModelForTokenClassification
 
-model = AutoModelForTokenClassification.from_pretrained("benjamin/wtp-bert-mini") # or some other model name
+model = AutoModelForTokenClassification.from_pretrained("segment-any-text/sat-3l-sm") # or some other model name; see https://huggingface.co/segment-any-text
 ```
 
-__** NEW ** Adapt to your own corpus using WtP_Punct:__
+### Adapt to your own corpus via LoRA
+Our models can be efficiently adapted via LoRA in a powerful way. Only 10-100 training segmented training sentences should already improve performance considerably. To do so:
 
-Clone the repository:
+Clone the repository and install requirements:
 
 ```
-git clone https://github.com/bminixhofer/wtpsplit
-cd wtpsplit
+git clone https://github.com/segment-any-text/wtpsplit
+cd segment-any-text
+pip install -e .
+pip install -r requirements.txt
+cd adapters
+pip install -e .
+cd ..
 ```
 
-Create your data:
+Create data in this format:
 ```python
 import torch
 
 torch.save(
     {
-        "en": {
+        "language_code": {
             "sentence": {
                 "dummy-dataset": {
                     "meta": {
@@ -193,57 +185,53 @@ torch.save(
 )
 ```
 
-Run adaptation:
+Create/adapt config; provide base model via `model_name_or_path` and training data .pth via `text_path`:
 
-```
-python3 wtpsplit/evaluation/adapt.py --model_path=benjamin/wtp-bert-mini --eval_data_path dummy-dataset.pth --include_langs=en
-```
 
-This should print something like 
+`configs/lora/lora_dummy_config.json`
 
+Train LoRA:
 ```
-en dummy-dataset U=0.500 T=0.667 PUNCT=0.667
-100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 30.52it/s]
-Wrote mixture to /Users/bminixhofer/Documents/wtpsplit/wtpsplit/.cache/wtp-bert-mini.skops
-Wrote results to /Users/bminixhofer/Documents/wtpsplit/wtpsplit/.cache/wtp-bert-mini_intrinsic_results.json
+python3 wtpsplit/train/train_lora.py configs/lora/lora_dummy_config.json
 ```
 
-i.e. run adaptation on your data and save the mixtures and evaluation results. You can then load and use the mixture like this:
-
+Once training is done, provide your saved module's path to SaT:
 ```python
-from wtpsplit import WtP
-import skops.io as sio
 
-wtp = WtP(
-    "wtp-bert-mini",
-    mixtures=sio.load(
-        "wtpsplit/.cache/wtp-bert-mini.skops",
-        ["numpy.float32", "numpy.float64", "sklearn.linear_model._logistic.LogisticRegression"],
-    ),
-)
-
-wtp.split("your text here", lang_code="en", style="dummy-dataset")
+sat_lora_adapted = SaT("model-used", lora_path="dummy_lora_path")
+sat_lora_adapted.split("Some domains-specific or styled text")
 ```
 
-... and adjust the dataset name, language and model in the above to your needs.
+Adjust the dataset name, language and model in the above to your needs.
+
 
 ## Reproducing the paper
 
-`configs/` contains the configs for the runs from the paper. We trained on a TPUv3-8. Launch training like this:
+`configs/` contains the configs for the runs from the paper for base and sm models as well as LoRA modules. Launch training for each of them like this:
 
 ```
-python wtpsplit/train/train.py configs/<config_name>.json
+python3 wtpsplit/train/train.py configs/<config_name>.json
+python3 wtpsplit/train/train_sm.py configs/<config_name>.json
+python3 wtpsplit/train/train_lora.py configs/<config_name>.json
 ```
 
 In addition:
 - `wtpsplit/data_acquisition` contains the code for obtaining evaluation data and raw text from the mC4 corpus.
 - `wtpsplit/evaluation` contains the code for:
-  - intrinsic evaluation (i.e. sentence segmentation results) via `adapt.py`. The raw intrinsic results in JSON format are also at `evaluation_results/`
-  - extrinsic evaluation on Machine Translation in `extrinsic.py`
-  - baseline (PySBD, nltk, etc.) intrinsic evaluation in `intrinsic_baselines.py`
-  - punctuation annotation experiments in `punct_annotation.py` and `punct_annotation_wtp.py`
-
+  - evaluation (i.e. sentence segmentation results) via `intrinsic.py`. 
+  - short-sequence evaluation (i.e. sentence segmentation results for pairs/k-mers of sentences) via `intrinsic_pairwise.py`. 
+  - LLM baseline evaluation (`llm_sentence.py`), legal baseline evaluation (`legal_baselines.py`)
+  - baseline (PySBD, nltk, etc.) evaluation results in `intrinsic_baselines.py` and `intrinsic_baselines_multi.py`
+  - Raw results in JSON format are also in `evaluation_results/`
+  - Statistical significane testing code and results ara in `stat_tests/`
+  - punctuation annotation experiments in `punct_annotation.py` and `punct_annotation_wtp.py` (WtP only)
+  - extrinsic evaluation on Machine Translation in `extrinsic.py` (WtP only)
+  
+Ensure to install packages from `requirements.txt` beforehand.
 ## Supported Languages
+
+<details>
+  <summary>Table with supported languages</summary>
 
 | iso | Name                   |
 |:----|:-----------------------|
@@ -333,10 +321,24 @@ In addition:
 | zh  | Chinese                |
 | zu  | Zulu                   |
 
-## Citation
+</details>
 
-Please cite `wtpsplit` as 
+For details, please see our [Segment any Text paper](https://arxiv.org/abs/2406.16678).
 
+## Citations
+
+If you find the `wtpsplit` library and our `SaT` models useful, please kindly cite our paper:
+```
+@article{frohmann2024segment,
+    title={Segment Any Text: A Universal Approach for Robust, Efficient and Adaptable Sentence Segmentation},
+    author={Frohmann, Markus and Sterner, Igor and Vuli{\'c}, Ivan and Minixhofer, Benjamin and Schedl, Markus},
+    journal={arXiv preprint arXiv:2406.16678},
+    year={2024},
+    doi={10.48550/arXiv.2406.16678},
+    url={https://doi.org/10.48550/arXiv.2406.16678},
+}
+```
+For the library and the WtP models, please cite:
 ```
 @inproceedings{minixhofer-etal-2023-wheres,
     title = "Where{'}s the Point? Self-Supervised Multilingual Punctuation-Agnostic Sentence Segmentation",
@@ -349,15 +351,14 @@ Please cite `wtpsplit` as
     address = "Toronto, Canada",
     publisher = "Association for Computational Linguistics",
     url = "https://aclanthology.org/2023.acl-long.398",
-    pages = "7215--7235",
-    abstract = "Many NLP pipelines split text into sentences as one of the crucial preprocessing steps. Prior sentence segmentation tools either rely on punctuation or require a considerable amount of sentence-segmented training data: both central assumptions might fail when porting sentence segmenters to diverse languages on a massive scale. In this work, we thus introduce a multilingual punctuation-agnostic sentence segmentation method, currently covering 85 languages, trained in a self-supervised fashion on unsegmented text, by making use of newline characters which implicitly perform segmentation into paragraphs. We further propose an approach that adapts our method to the segmentation in a given corpus by using only a small number (64-256) of sentence-segmented examples. The main results indicate that our method outperforms all the prior best sentence-segmentation tools by an average of 6.1{\%} F1 points. Furthermore, we demonstrate that proper sentence segmentation has a point: the use of a (powerful) sentence segmenter makes a considerable difference for a downstream application such as machine translation (MT). By using our method to match sentence segmentation to the segmentation used during training of MT models, we achieve an average improvement of 2.3 BLEU points over the best prior segmentation tool, as well as massive gains over a trivial segmenter that splits text into equally-sized blocks.",
+    pages = "7215--7235"
 }
 ```
 
 ## Acknowledgments
 
-Ivan Vulić is supported by a personal Royal Society University Research Fellowship ‘Inclusive and Sustainable Language Technology for a Truly Multilingual World’ (no 221137; 2022–). Research supported with Cloud TPUs from Google’s TPU Research Cloud (TRC). We thank Christoph Minixhofer for advice in the initial stage of this project. We also thank Sebastian Ruder and Srini Narayanan for helpful feedback on a draft of the paper.
+This research was funded in whole or in part by the Austrian Science Fund (FWF): P36413, P33526, and DFH-23, and by the State of Upper Austria and the Federal Ministry of Education, Science, and Research, through grants LIT-2021-YOU-215. In addition, Ivan Vulic and Benjamin Minixhofer have been supported through the Royal Society University Research Fellowship ‘Inclusive and Sustainable Language Technology for a Truly Multilingual World’ (no 221137) awarded to Ivan Vulić. This research has also been supported with Cloud TPUs from Google’s TPU Research Cloud (TRC). This work was also supported by compute credits from a Cohere For AI Research Grant, these grants are designed to support academic partners conducting research with the goal of releasing scientific artifacts and data for good projects. We also thank Simone Teufel for fruitful discussions.
 
-## Previous Version
+---
 
-*This repository previously contained `nnsplit`, the precursor to `wtpsplit`. You can still use the `nnsplit` branch (or the `nnsplit` PyPI releases) for the old version, however, this is highly discouraged and not maintained! Please let me know if you have a usecase which `nnsplit` can solve but `wtpsplit` can not.*
+For any questions, please create an issue or send an email to markus.frohmann@gmail.com, and I will get back to you as soon as possible.
