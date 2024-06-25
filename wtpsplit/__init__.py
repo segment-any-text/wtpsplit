@@ -21,7 +21,7 @@ from wtpsplit.evaluation import token_to_char_probs
 from wtpsplit.extract import BertCharORTWrapper, PyTorchWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid
 
-__version__ = "2.0.1"
+__version__ = "2.0.2"
 
 warnings.simplefilter("default", DeprecationWarning)  # show by default
 
