@@ -1,26 +1,29 @@
 import contextlib
 import math
 import os
+import warnings
 from pathlib import Path
 
 # avoid the "None of PyTorch, TensorFlow, etc. have been found" warning.
 with contextlib.redirect_stderr(open(os.devnull, "w")):
     import transformers  # noqa
 
+import adapters  # noqa
 import numpy as np
 import skops.io as sio
+from adapters.models import MODEL_MIXIN_MAPPING
+from adapters.models.bert.mixin_bert import BertModelAdaptersMixin
 from huggingface_hub import hf_hub_download
 from transformers import AutoConfig, AutoModelForTokenClassification
 from transformers.utils.hub import cached_file
 
-import adapters  # noqa
-from adapters.models import MODEL_MIXIN_MAPPING
-from adapters.models.bert.mixin_bert import BertModelAdaptersMixin
 from wtpsplit.evaluation import token_to_char_probs
-from wtpsplit.extract import BertCharORTWrapper, PyTorchWrapper, SaTORTWrapper, extract
+from wtpsplit.extract import BertCharORTWrapper, PyTorchWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid
 
 __version__ = "2.0.0"
+
+warnings.simplefilter("default", DeprecationWarning)  # show by default
 
 
 class WtP:
@@ -32,12 +35,23 @@ class WtP:
         ort_kwargs=None,
         mixtures=None,
         hub_prefix="benjamin",
+        ignore_legacy_warning=False,
     ):
         self.model_name_or_model = model_name_or_model
         self.ort_providers = ort_providers
         self.ort_kwargs = ort_kwargs
 
         mixture_path = None
+
+        if not ignore_legacy_warning:
+            # WtP is deprecated!
+            warnings.warn(
+                "You are using WtP, the old sentence segmentation model. "
+                "It is highly encouraged to use SaT instead due to strongly improved performance and efficiency. "
+                "See https://github.com/segment-any-text/wtpsplit for more info. "
+                "To ignore this warning, set ignore_legacy_warning=True.",
+                DeprecationWarning,
+            )
 
         if isinstance(model_name_or_model, (str, Path)):
             model_name = str(model_name_or_model)
@@ -446,26 +460,27 @@ class SaT:
                     onnx_path = None
 
             if ort_providers is not None:
-                if onnx_path is None:
-                    raise ValueError(
-                        "Could not find an ONNX model in the model directory. Try `use_ort=False` to run with PyTorch."
-                    )
+                raise NotImplementedError("ONNX is not supported for SaT *yet*.")
+                # if onnx_path is None:
+                #     raise ValueError(
+                #         "Could not find an ONNX model in the model directory. Try `use_ort=False` to run with PyTorch."
+                #     )
 
-                try:
-                    import onnxruntime as ort  # noqa
+                # try:
+                #     import onnxruntime as ort  # noqa
 
-                    ort.set_default_logger_severity(0)
-                except ModuleNotFoundError:
-                    raise ValueError("Please install `onnxruntime` to use WtP with an ONNX model.")
+                #     ort.set_default_logger_severity(0)
+                # except ModuleNotFoundError:
+                #     raise ValueError("Please install `onnxruntime` to use WtP with an ONNX model.")
 
-                # to register models for AutoConfig
-                import wtpsplit.configs  # noqa
+                # # to register models for AutoConfig
+                # import wtpsplit.configs  # noqa
 
-                # TODO: ONNX integration
-                self.model = SaTORTWrapper(
-                    AutoConfig.from_pretrained(model_name_to_fetch, **(from_pretrained_kwargs or {})),
-                    ort.InferenceSession(str(onnx_path), providers=ort_providers, **(ort_kwargs or {})),
-                )
+                # # TODO: ONNX integration
+                # self.model = SaTORTWrapper(
+                #     AutoConfig.from_pretrained(model_name_to_fetch, **(from_pretrained_kwargs or {})),
+                #     ort.InferenceSession(str(onnx_path), providers=ort_providers, **(ort_kwargs or {})),
+                # )
             else:
                 # to register models for AutoConfig
                 try:
@@ -542,6 +557,8 @@ class SaT:
         block_size: int = 512,
         batch_size=32,
         pad_last_batch: bool = False,
+        remove_whitespace_before_inference: bool = False,
+        outer_batch_size=1000,
         return_paragraph_probabilities=False,
         verbose: bool = False,
     ):
@@ -553,6 +570,8 @@ class SaT:
                     block_size=block_size,
                     batch_size=batch_size,
                     pad_last_batch=pad_last_batch,
+                    remove_whitespace_before_inference=remove_whitespace_before_inference,
+                    outer_batch_size=outer_batch_size,
                     return_paragraph_probabilities=return_paragraph_probabilities,
                     verbose=verbose,
                 )
@@ -564,6 +583,8 @@ class SaT:
                 block_size=block_size,
                 batch_size=batch_size,
                 pad_last_batch=pad_last_batch,
+                remove_whitespace_before_inference=remove_whitespace_before_inference,
+                outer_batch_size=outer_batch_size,
                 return_paragraph_probabilities=return_paragraph_probabilities,
                 verbose=verbose,
             )
@@ -575,15 +596,42 @@ class SaT:
         block_size: int,
         batch_size: int,
         pad_last_batch: bool,
+        remove_whitespace_before_inference: bool,
+        outer_batch_size: int,
         return_paragraph_probabilities: bool,
         verbose: bool,
     ):
         def newline_probability_fn(logits):
             return sigmoid(logits[:, Constants.NEWLINE_INDEX])
 
-        for text in texts:
-            outer_batch_logits, offsets_mapping, tokenizer = extract(
-                [text],
+        n_outer_batches = math.ceil(len(texts) / outer_batch_size)
+
+        for outer_batch_idx in range(n_outer_batches):
+            start, end = outer_batch_idx * outer_batch_size, min((outer_batch_idx + 1) * outer_batch_size, len(texts))
+
+            outer_batch_texts = texts[start:end]
+            input_texts = []
+            space_positions = []
+
+            for text in outer_batch_texts:
+                if remove_whitespace_before_inference:
+                    text_space_positions = []
+                    input_text = ""
+
+                    for c in text:
+                        if c == " ":
+                            text_space_positions.append(len(input_text) + len(text_space_positions))
+                        else:
+                            input_text += c
+
+                    space_positions.append(text_space_positions)
+                else:
+                    input_text = text
+
+                input_texts.append(input_text)
+
+            outer_batch_logits, _, tokenizer, tokenizer_output = extract(
+                input_texts,
                 self.model,
                 stride=stride,
                 max_block_size=block_size,
@@ -592,19 +640,35 @@ class SaT:
                 verbose=verbose,
             )
 
-            logits = outer_batch_logits[0]
-            if offsets_mapping is not None:
-                offsets_mapping = offsets_mapping[0]
-            tokens = tokenizer.tokenize(text, verbose=False)
-
             # convert token probabilities to character probabilities for the entire array
-            logits = token_to_char_probs(text, tokens, logits, tokenizer, offsets_mapping)
-            sentence_probs = newline_probs = newline_probability_fn(logits)
+            outer_batch_logits = [
+                token_to_char_probs(
+                    input_texts[i],
+                    tokenizer_output["input_ids"][i],
+                    outer_batch_logits[i],
+                    tokenizer,
+                    tokenizer_output["offset_mapping"][i],
+                )
+                for i in range(len(input_texts))
+            ]
 
-            if return_paragraph_probabilities:
-                yield sentence_probs, newline_probs
-            else:
-                yield sentence_probs
+            for i, (text, logits) in enumerate(zip(outer_batch_texts, outer_batch_logits)):
+                sentence_probs = newline_probs = newline_probability_fn(logits)
+
+                if remove_whitespace_before_inference:
+                    full_newline_probs, full_sentence_probs = list(newline_probs), list(sentence_probs)
+
+                    for j in space_positions[i]:
+                        full_newline_probs.insert(j, np.zeros_like(newline_probs[0]))
+                        full_sentence_probs.insert(j, np.zeros_like(sentence_probs[0]))
+
+                    newline_probs = np.array(full_newline_probs)
+                    sentence_probs = np.array(full_sentence_probs)
+
+                if return_paragraph_probabilities:
+                    yield sentence_probs, newline_probs
+                else:
+                    yield sentence_probs
 
     def split(
         self,
@@ -614,6 +678,8 @@ class SaT:
         block_size: int = 512,
         batch_size=32,
         pad_last_batch: bool = False,
+        remove_whitespace_before_inference: bool = False,
+        outer_batch_size=1000,
         paragraph_threshold: float = 0.5,
         strip_whitespace: bool = False,
         do_paragraph_segmentation=False,
@@ -628,6 +694,8 @@ class SaT:
                     block_size=block_size,
                     batch_size=batch_size,
                     pad_last_batch=pad_last_batch,
+                    remove_whitespace_before_inference=remove_whitespace_before_inference,
+                    outer_batch_size=outer_batch_size,
                     paragraph_threshold=paragraph_threshold,
                     strip_whitespace=strip_whitespace,
                     do_paragraph_segmentation=do_paragraph_segmentation,
@@ -642,6 +710,8 @@ class SaT:
                 block_size=block_size,
                 batch_size=batch_size,
                 pad_last_batch=pad_last_batch,
+                remove_whitespace_before_inference=remove_whitespace_before_inference,
+                outer_batch_size=outer_batch_size,
                 paragraph_threshold=paragraph_threshold,
                 strip_whitespace=strip_whitespace,
                 do_paragraph_segmentation=do_paragraph_segmentation,
@@ -657,6 +727,8 @@ class SaT:
         batch_size: int,
         pad_last_batch: bool,
         paragraph_threshold: float,
+        remove_whitespace_before_inference: bool,
+        outer_batch_size: int,
         do_paragraph_segmentation: bool,
         strip_whitespace: bool,
         verbose: bool,
@@ -681,6 +753,8 @@ class SaT:
                 block_size=block_size,
                 batch_size=batch_size,
                 pad_last_batch=pad_last_batch,
+                remove_whitespace_before_inference=remove_whitespace_before_inference,
+                outer_batch_size=outer_batch_size,
                 return_paragraph_probabilities=do_paragraph_segmentation,
                 verbose=verbose,
             ),
@@ -712,29 +786,3 @@ class SaT:
                     text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
                 )
                 yield sentences
-
-
-if __name__ == "__main__":
-    # FIXME: remove
-    # sat_lora = SaT("sat-3l", style_or_domain="ud", language="en")
-    # out = sat_lora.split(
-    #     "Hello this is a test But this is different now Now the next one starts looool",
-    #     do_paragraph_segmentation=False,
-    #     strip_whitespace=True,
-    # )
-    # print(out)
-    # splits = list(sat_lora.split(["Paragraph-A Paragraph-B", "Paragraph-C100 Paragraph-D"]))
-    # print(splits)
-    sat_sm = SaT("sat-3l-sm")
-    splits = sat_sm.split("this is a test this is another test")
-    print(splits)
-    # sat_ort_sm = SaT("/home/Markus/wtpsplit/scripts/xlm-roberta-base", ort_providers=["CPUExecutionProvider"])
-    # splits = sat_ort_sm.split("This is a test sentence. This is another test sentence.", threshold=0.25)
-    # print(splits)
-    # sat_ort = SaT("/home/Markus/wtpsplit/scripts/sat-12l-no-limited-lookahead", ort_providers=["CPUExecutionProvider"])
-    # # sat_ort = SaT("/home/Markus/wtpsplit/scripts/sat-1l-sm", ort_providers=["CPUExecutionProvider"])
-    # splits = sat_ort.split("This is a test sentence. This is another test sentence.", threshold=0.25)
-    # print(splits)
-    # wtp = WtP("wtp-bert-mini", ort_providers=["CPUExecutionProvider"])
-
-    # splits = wtp.split("This is a test sentence This is another test sentence.", threshold=0.005)

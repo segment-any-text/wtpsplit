@@ -1,11 +1,11 @@
 <h1 align="center">wtpsplit🪓</h1>
-<h3 align="center">Segment any text quickly, and adaptably⚡</h3>
+<h3 align="center">Segment any Text - Robustly, Efficiently, Adaptably⚡</h3>
 
 This repository allows you to segment text into sentences or other semantic units. It implements the models from:
-- **SaT** &mdash; [Segment Any Text: A Universal Approach for Robust, Efficient and Adaptable Sentence Segmentation](TODO) by Markus Frohmann, Igor Sterner, Benjamin Minixhofer, Ivan Vulić and Markus Schedl (**state-of-the-art, encouraged**).
+- **SaT** &mdash; [Segment Any Text: A Universal Approach for Robust, Efficient and Adaptable Sentence Segmentation](https://arxiv.org/abs/2406.16678) by Markus Frohmann, Igor Sterner, Benjamin Minixhofer, Ivan Vulić and Markus Schedl (**state-of-the-art, encouraged**).
 - **WtP** &mdash; [Where’s the Point? Self-Supervised Multilingual Punctuation-Agnostic Sentence Segmentation](https://aclanthology.org/2023.acl-long.398/) by Benjamin Minixhofer, Jonas Pfeiffer and Ivan Vulić (*previous version, maintained for reproducibility*).
 
-The namesake WtP is maintained for reproducibility. Our new followup SaT provides robust, efficient and adaptable sentence segmentation across 85 languages at higher performance and less compute cost. Check out the **state-of-the-art** results in 8 distinct corpora and 85 languages demonstrated in the [Segment any Text paper](TODO).
+The namesake WtP is maintained for reproducibility. Our new followup SaT provides robust, efficient and adaptable sentence segmentation across 85 languages at higher performance and less compute cost. Check out the **state-of-the-art** results in 8 distinct corpora and 85 languages demonstrated in our [Segment any Text paper](https://arxiv.org/abs/2406.16678).
 
 ![System Figure](./configs/system-fig.png)
 
@@ -30,6 +30,7 @@ sat.half().to("cuda")
 sat.split("This is a test This is another test.")
 
 # returns an iterator yielding a lists of sentences for every text
+# do this instead of calling wtp.split on every text individually for much better performance
 sat.split(["This is a test This is another test.", "And some more texts..."])
 
 # use our '-sm' models for general sentence segmentation tasks
@@ -63,7 +64,7 @@ The best models are our 12-layer models: `sat-12l` and `sat-12l-sm`.
 | [sat-12l-lora](https://huggingface.co/segment-any-text/sat-12l/tree/main/loras)        | 97.3  | 95.9
 | [sat-12l-sm](https://huggingface.co/segment-any-text/sat-12l-sm)          | 97.4  | 96.0
 
-The scores are macro-average F1 score across all available datasets for "English", and macro-average F1 score across all datasets and languages for "Multilingual". "adapted" means adapation via LoRA; check out the [paper](TODO) for details. 
+The scores are macro-average F1 score across all available datasets for "English", and macro-average F1 score across all datasets and languages for "Multilingual". "adapted" means adapation via LoRA; check out the [paper](https://arxiv.org/abs/2406.16678) for details. 
 
 For comparison, here the English scores of some other tools:
 
@@ -102,7 +103,7 @@ sat.split(text, do_paragraph_segmentation=True)
 ## Adaptation
 
 
-SaT can be domain- and style-adapted via LoRA. We provide trained LoRA modules for Universal Dependencies, OPUS100, Ersatz, and TED (i.e., ASR-style transcribed speecjes) sentence styles in 81 languages for `sat-3l`and `sat-12l`. Additionally, we provide LoRA modules for legal documents (laws and judgements) in 6 languages, code-switching in 4 language pairs, and tweets in 3 languages. For details, we refer to our [paper](TODO).
+SaT can be domain- and style-adapted via LoRA. We provide trained LoRA modules for Universal Dependencies, OPUS100, Ersatz, and TED (i.e., ASR-style transcribed speecjes) sentence styles in 81 languages for `sat-3l`and `sat-12l`. Additionally, we provide LoRA modules for legal documents (laws and judgements) in 6 languages, code-switching in 4 language pairs, and tweets in 3 languages. For details, we refer to our [paper](https://arxiv.org/abs/2406.16678).
 
 We also provided verse segmentation modules for 16 genres for `sat-12-no-limited-lookahead`.
 
@@ -125,36 +126,6 @@ sat.split("This is a test This is another test.", threshold=0.4)
 # works similarly for lora; but thresholds are higher
 sat_lora.split("Hello this is a test But this is different now Now the next one starts looool", threshold=0.7)
 ```
-<!-- 
-#### WtP Adaptation
-
-WtP can adapt to the Universal Dependencies, OPUS100 or Ersatz corpus segmentation style in many languages by punctuation adaptation (*preferred*) or threshold adaptation.
-
-##### Punctuation Adaptation
-
-```python
-# this requires a `lang_code`
-# check the WtP paper or `wtp.mixtures` for supported styles
-wtp.split(text, lang_code="en", style="ud")
-```
-
-This also allows changing the threshold, but inherently has higher thresholds values since it is not newline probablity anymore being thresholded:
-
-```python
-wtp.split(text, lang_code="en", style="ud", threshold=0.7)
-```
-
-To get the default threshold for a style:
-```python
-wtp.get_threshold("en", "ud", return_punctuation_threshold=True)
-```
-
-##### Threshold Adaptation
-```python
-threshold = wtp.get_threshold("en", "ud")
-
-wtp.split(text, threshold=threshold)
-``` -->
 
 ## Advanced Usage
 
@@ -214,7 +185,7 @@ torch.save(
 )
 ```
 
-Create/adapt config; provide base model via `model_name_or_path` and training data .pth via ' text_path`:
+Create/adapt config; provide base model via `model_name_or_path` and training data .pth via `text_path`:
 
 
 `configs/lora/lora_dummy_config.json`
@@ -352,13 +323,20 @@ Ensure to install packages from `requirements.txt` beforehand.
 
 </details>
 
-For details, please see the [paper](TODO).
+For details, please see our [Segment any Text paper](https://arxiv.org/abs/2406.16678).
 
 ## Citations
 
-If you find `wtpsplit` and our `SaT` models useful, please kindly cite our paper:
+If you find the `wtpsplit` library and our `SaT` models useful, please kindly cite our paper:
 ```
-@inproceedings{TODO,}
+@article{frohmann2024segment,
+    title={Segment Any Text: A Universal Approach for Robust, Efficient and Adaptable Sentence Segmentation},
+    author={Frohmann, Markus and Sterner, Igor and Vuli{\'c}, Ivan and Minixhofer, Benjamin and Schedl, Markus},
+    journal={arXiv preprint arXiv:2406.16678},
+    year={2024},
+    doi={10.48550/arXiv.2406.16678},
+    url={https://doi.org/10.48550/arXiv.2406.16678},
+}
 ```
 For the library and the WtP models, please cite:
 ```
@@ -379,8 +357,7 @@ For the library and the WtP models, please cite:
 
 ## Acknowledgments
 
-This research was funded in whole or in part by the Austrian Science Fund (FWF): P36413, P33526, and DFH-23, and by the State of Upper Austria and the Federal Ministry of Education, Science, and Research, through grants LIT-2021-YOU-215. In addition, Ivan Vulic and Benjamin Minixhofer ´have been supported through the Royal Society University Research Fellowship ‘Inclusive and Sustainable Language Technology for a Truly Multilingual World’ (no 221137) awarded to Ivan Vulic.´ This research has also been supported with Cloud TPUs from Google’s TPU Research Cloud (TRC). This work was also supported by compute credits
-from a Cohere For AI Research Grant, these grants are designed to support academic partners conducting research with the goal of releasing scientific artifacts and data for good projects. We also thank Simone Teufel for fruitful discussions.
+This research was funded in whole or in part by the Austrian Science Fund (FWF): P36413, P33526, and DFH-23, and by the State of Upper Austria and the Federal Ministry of Education, Science, and Research, through grants LIT-2021-YOU-215. In addition, Ivan Vulic and Benjamin Minixhofer have been supported through the Royal Society University Research Fellowship ‘Inclusive and Sustainable Language Technology for a Truly Multilingual World’ (no 221137) awarded to Ivan Vulić. This research has also been supported with Cloud TPUs from Google’s TPU Research Cloud (TRC). This work was also supported by compute credits from a Cohere For AI Research Grant, these grants are designed to support academic partners conducting research with the goal of releasing scientific artifacts and data for good projects. We also thank Simone Teufel for fruitful discussions.
 
 ---
 

@@ -106,10 +106,12 @@ def extract(
             "facebookAI/xlm-roberta-base",
         )
         # tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
-        tokens = tokenizer(batch_of_texts, return_offsets_mapping=True, verbose=False)
+        tokens = tokenizer(batch_of_texts, return_offsets_mapping=True, verbose=False, add_special_tokens=False)
         # remove CLS and SEP tokens, they are added later anyhow
-        batch_of_texts = [text[1:-1] for text in tokens["input_ids"]]
-        offset_mapping = [offset[1:-1] for offset in tokens["offset_mapping"]]
+        # batch_of_texts = [text[1:-1] for text in tokens["input_ids"]]
+        batch_of_texts = tokens["input_ids"]
+        # offset_mapping = [offset[1:-1] for offset in tokens["offset_mapping"]]
+        offset_mapping = tokens["offset_mapping"]
         cls_token_id = tokenizer.cls_token_id
         sep_token_id = tokenizer.sep_token_id
         pad_token_id = tokenizer.pad_token_id
@@ -120,25 +122,23 @@ def extract(
     text_lengths = [len(text) for text in batch_of_texts]
     # reduce block size if possible
     block_size = min(max_block_size, max(text_lengths))
+    if use_subwords and block_size == 512:
+        block_size -= 2  # account for CLS and SEP tokens
 
     # make sure block_size is a multiple of downsampling rate
     downsampling_rate = getattr(model.config, "downsampling_rate", 1)
     block_size = math.ceil(block_size / downsampling_rate) * downsampling_rate
-    actual_block_size = block_size - 2 if use_subwords else block_size  # account for CLS and SEP tokens
 
     # total number of forward passes
-    num_chunks = sum(math.ceil(max(length - actual_block_size, 0) / stride) + 1 for length in text_lengths)
-    if text_lengths[0] <= max_block_size - 2 and use_subwords:
-        # if the input is smaller than the block size, we only need one forward pass
-        num_chunks = 1
-        actual_block_size, block_size = actual_block_size + 2, block_size + 2  # account for CLS and SEP tokens
+    num_chunks = sum(math.ceil(max(length - block_size, 0) / stride) + 1 for length in text_lengths)
 
     # preallocate a buffer for all input hashes & attention masks
     if not use_subwords:
         input_hashes = np.zeros((num_chunks, block_size, model.config.num_hash_functions), dtype=np.int64)
+        attention_mask = np.zeros((num_chunks, block_size), dtype=np.float32)
     else:
-        input_ids = np.zeros((num_chunks, block_size), dtype=np.int64)
-    attention_mask = np.zeros((num_chunks, block_size), dtype=np.float32)
+        input_ids = np.zeros((num_chunks, block_size + 2), dtype=np.int64)
+        attention_mask = np.zeros((num_chunks, block_size + 2), dtype=np.float32)
 
     # locs keep track of the location of every chunk with a 3-tuple (text_idx, char_start, char_end) that indexes
     # back into the batch_of_texts
@@ -160,12 +160,12 @@ def extract(
     for i in range(len(batch_of_texts)):
         for j in range(0, text_lengths[i], stride):
             # for every chunk, assign input hashes, attention mask and loc
-            start, end = j, j + actual_block_size
+            start, end = j, j + block_size
             done = False
 
             if end >= text_lengths[i]:
                 end = text_lengths[i]
-                start = max(end - actual_block_size, 0)
+                start = max(end - block_size, 0)
                 done = True
 
             if not use_subwords:
@@ -255,4 +255,9 @@ def extract(
     # so far, logits are summed, so we average them here
     all_logits = [(logits / counts[:, None]).astype(np.float16) for logits, counts in zip(all_logits, all_counts)]
 
-    return all_logits, offset_mapping if use_subwords else None, tokenizer if use_subwords else None
+    return (
+        all_logits,
+        offset_mapping if use_subwords else None,
+        tokenizer if use_subwords else None,
+        tokens if use_subwords else None,
+    )

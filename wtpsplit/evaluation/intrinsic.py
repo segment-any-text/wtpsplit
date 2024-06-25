@@ -71,7 +71,7 @@ def process_logits(text, model, lang_code, args):
     if isinstance(text, list):
         logits = []
         for short_seq in tqdm(text, desc="Listwise", disable=False):
-            current_logits, current_offsets_mapping, tokenizer = extract(
+            current_logits, current_offsets_mapping, tokenizer, _ = extract(
                 [short_seq],
                 model,
                 lang_code=lang_code,
@@ -94,7 +94,7 @@ def process_logits(text, model, lang_code, args):
 
             logits.append(current_logits)
     else:
-        logits, offsets_mapping, tokenizer = extract(
+        logits, offsets_mapping, tokenizer, _ = extract(
             [text],
             model,
             lang_code=lang_code,

@@ -91,7 +91,7 @@ def evaluate_sentence(
     sentences = [corrupt(sentence, do_lowercase, do_remove_punct) for sentence in sentences]
     text = separator.join(sentences)
 
-    logits, offsets_mapping, tokenizer = extract(
+    logits, offsets_mapping, tokenizer, _ = extract(
         [text],
         PyTorchWrapper(model.backbone),
         lang_code=lang_code,

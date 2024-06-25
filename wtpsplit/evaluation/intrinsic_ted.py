@@ -89,7 +89,7 @@ def process_logits_and_tokens(text, model, lang_code, args):
         logits = []
         tokens = []
         for short_seq in tqdm(text, desc="Evaluating...", disable=False):
-            current_logits, current_offsets_mapping, tokenizer = extract(
+            current_logits, current_offsets_mapping, tokenizer, _ = extract(
                 [short_seq],
                 model,
                 lang_code=lang_code,
