@@ -31,7 +31,7 @@ class ConstantsClass:
 
     @cached_property
     def ROOT_DIR(self):
-        return Path(os.path.abspath(os.path.join(os.path.dirname(__file__))))
+        return Path(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
     @cached_property
     def CACHE_DIR(self):
