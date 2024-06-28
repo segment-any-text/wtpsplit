@@ -23,14 +23,14 @@ from wtpsplit import SaT
 
 sat = SaT("sat-3l")
 # optionally run on GPU for better performance
-# also supports TPUs via e.g. wtp.to("xla:0"), in that case pass `pad_last_batch=True` to wtp.split
+# also supports TPUs via e.g. sat.to("xla:0"), in that case pass `pad_last_batch=True` to sat.split
 sat.half().to("cuda")
 
 # returns ["This is a test", "This is another test."]
 sat.split("This is a test This is another test.")
 
 # returns an iterator yielding a lists of sentences for every text
-# do this instead of calling wtp.split on every text individually for much better performance
+# do this instead of calling sat.split on every text individually for much better performance
 sat.split(["This is a test This is another test.", "And some more texts..."])
 
 # use our '-sm' models for general sentence segmentation tasks
@@ -40,7 +40,8 @@ sat.split("this is a test this is another test")
 # returns ["this is a test", "this is another test"]
 
 # use trained lora modules for strong adaptation to language & domain/style
-sat.split("This is a test This is another test.", lang_code="en", style="ud")
+sat_adapted = SaT("sat-3l-sm", lang_code="en", style="ud"))
+sat.split("This is a test This is another test.")
 ```
 
 
