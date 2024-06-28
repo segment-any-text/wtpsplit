@@ -17,11 +17,11 @@ from transformers import AutoModelForTokenClassification, HfArgumentParser
 
 import adapters
 import wtpsplit.models  # noqa: F401
-from wtpsplit.evaluation import evaluate_mixture, get_labels, token_to_char_probs, train_mixture
+from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture
 from wtpsplit.evaluation.intrinsic_baselines import split_language_data
 from wtpsplit.extract import PyTorchWrapper, extract
 from wtpsplit.models import SubwordXLMConfig, SubwordXLMForTokenClassification
-from wtpsplit.utils import Constants
+from wtpsplit.utils import Constants, token_to_char_probs
 
 logger = logging.getLogger()
 logger.setLevel(logging.WARNING)

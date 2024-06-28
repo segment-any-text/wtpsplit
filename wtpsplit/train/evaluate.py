@@ -5,10 +5,10 @@ import numpy as np
 import pysbd
 import sklearn.metrics
 
-from wtpsplit.evaluation import token_to_char_probs
+from wtpsplit.evaluation import
 from wtpsplit.evaluation.intrinsic_pairwise import generate_pairs, generate_k_mers, process_logits_k_mers
 from wtpsplit.extract import PyTorchWrapper, extract
-from wtpsplit.utils import Constants, sigmoid, corrupt
+from wtpsplit.utils import Constants, sigmoid, corrupt, token_to_char_probs
 
 logger = logging.getLogger(__name__)
 

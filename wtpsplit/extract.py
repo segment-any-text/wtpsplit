@@ -91,6 +91,7 @@ def extract(
     lang_code=None,
     pad_last_batch=False,
     verbose=False,
+    tokenizer=None,
 ):
     """
     Computes logits for the given batch of texts by:
@@ -102,9 +103,10 @@ def extract(
     """
     if "xlm" in model.config.model_type:
         use_subwords = True
-        tokenizer = AutoTokenizer.from_pretrained(
-            "facebookAI/xlm-roberta-base",
-        )
+        if not tokenizer:
+            tokenizer = AutoTokenizer.from_pretrained(
+                "facebookAI/xlm-roberta-base",
+            )
         # tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
         tokens = tokenizer(batch_of_texts, return_offsets_mapping=True, verbose=False, add_special_tokens=False)
         # remove CLS and SEP tokens, they are added later anyhow

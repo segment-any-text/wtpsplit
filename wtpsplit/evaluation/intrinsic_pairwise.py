@@ -17,11 +17,11 @@ import numpy as np
 import adapters
 
 import wtpsplit.models  # noqa: F401
-from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture, token_to_char_probs
+from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture
 from wtpsplit.evaluation.intrinsic_baselines import split_language_data
 from wtpsplit.extract import PyTorchWrapper
 from wtpsplit.extract_batched import extract_batched
-from wtpsplit.utils import Constants
+from wtpsplit.utils import Constants, token_to_char_probs
 from wtpsplit.evaluation.intrinsic import compute_statistics
 
 logger = logging.getLogger()

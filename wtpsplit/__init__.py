@@ -8,23 +8,20 @@ from pathlib import Path
 with contextlib.redirect_stderr(open(os.devnull, "w")):
     import transformers  # noqa
 
-import adapters  # noqa
 import numpy as np
 import skops.io as sio
-from adapters.models import MODEL_MIXIN_MAPPING
-from adapters.models.bert.mixin_bert import BertModelAdaptersMixin
+
 from huggingface_hub import hf_hub_download
-from transformers import AutoConfig, AutoModelForTokenClassification
+from transformers import AutoConfig, AutoModelForTokenClassification, AutoTokenizer
 from transformers.utils.hub import cached_file
 
-from wtpsplit.evaluation import token_to_char_probs
 from wtpsplit.extract import BertCharORTWrapper, PyTorchWrapper, extract
-from wtpsplit.utils import Constants, indices_to_sentences, sigmoid
+from wtpsplit.utils import Constants, indices_to_sentences, sigmoid, token_to_char_probs
 
-__version__ = "2.0.3"
+__version__ = "2.0.4"
 
 warnings.simplefilter("default", DeprecationWarning)  # show by default
-
+warnings.simplefilter("ignore", category=FutureWarning)  # for tranformers
 
 class WtP:
     def __init__(
@@ -438,6 +435,10 @@ class SaT:
 
         self.use_lora = False
 
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            "facebookAI/xlm-roberta-base"
+        )
+
         if isinstance(model_name_or_model, (str, Path)):
             model_name = str(model_name_or_model)
             is_local = os.path.isdir(model_name)
@@ -500,6 +501,9 @@ class SaT:
             if (style_or_domain and not language) or (language and not style_or_domain):
                 raise ValueError("Please specify both language and style_or_domain!")
             if style_or_domain and language:
+                import adapters  # noqa
+                from adapters.models import MODEL_MIXIN_MAPPING  # noqa
+                from adapters.models.bert.mixin_bert import BertModelAdaptersMixin  # noqa
                 # monkey patch mixin to avoid forking whole adapters library
                 MODEL_MIXIN_MAPPING["SubwordXLMRobertaModel"] = BertModelAdaptersMixin
                 model_type = self.model.model.config.model_type
@@ -638,6 +642,7 @@ class SaT:
                 batch_size=batch_size,
                 pad_last_batch=pad_last_batch,
                 verbose=verbose,
+                tokenizer=self.tokenizer
             )
 
             # convert token probabilities to character probabilities for the entire array
