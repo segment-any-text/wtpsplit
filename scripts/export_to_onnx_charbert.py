@@ -7,7 +7,7 @@ from onnxruntime.transformers.optimizer import optimize_model
 from transformers import AutoModelForTokenClassification, HfArgumentParser
 
 import wtpsplit  # noqa
-
+import wtpsplit.models  # noqa
 
 @dataclass
 class Args:

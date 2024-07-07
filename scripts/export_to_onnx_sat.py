@@ -12,9 +12,9 @@ import wtpsplit.models  # noqa
 
 @dataclass
 class Args:
-    model_name_or_path: str = "segment-any-text/sat-12l-no-limited-lookahead"
-    output_dir: str = "sat-12l-no-limited-lookahead"
-    device: str = "cpu"
+    model_name_or_path: str = "segment-any-text/sat-1l-sm"
+    output_dir: str = "sat-1l-sm"
+    device: str = "cuda"
     # TODO: lora merging here
 
 
@@ -24,15 +24,15 @@ if __name__ == "__main__":
     output_dir = Path(args.output_dir)
     output_dir.mkdir(exist_ok=True, parents=True)
 
-    model = AutoModelForTokenClassification.from_pretrained(args.model_name_or_path, force_download=True)
-    # model = model.half()  # CUDA ONLY!
+    model = AutoModelForTokenClassification.from_pretrained(args.model_name_or_path, force_download=False)
+    model = model.half()  # CUDA ONLY!
     model = model.to(args.device)
 
     torch.onnx.export(
         model,
         {
-            "attention_mask": torch.zeros((1, 14), dtype=torch.long, device=args.device),
-            "input_ids": torch.zeros((1, 14), dtype=torch.long, device=args.device),
+            "attention_mask": torch.zeros((1, 1), dtype=torch.float16, device=args.device),
+            "input_ids": torch.zeros((1, 1), dtype=torch.int64, device=args.device),
         },
         output_dir / "model.onnx",
         verbose=True,
@@ -41,21 +41,23 @@ if __name__ == "__main__":
         dynamic_axes={
             "input_ids": {0: "batch", 1: "sequence"},
             "attention_mask": {0: "batch", 1: "sequence"},
-            "logits": {0: "batch", 1: "sequence"}
+            "logits": {0: "batch", 1: "sequence"},
         },
         # opset_version=11
     )
 
-    # m = optimize_model(
-    #     str(output_dir / "model.onnx"),
-    #     model_type="bert",
-    #     optimization_options=None,
-    #     opt_level=0,
-    #     use_gpu=False,
-    # )
+    m = optimize_model(
+        str(output_dir / "model.onnx"),
+        model_type="bert",
+        num_heads=0,
+        hidden_size=0,
+        optimization_options=None,
+        opt_level=0,
+        use_gpu=False,
+    )
 
-    # optimized_model_path = output_dir / "model_optimized.onnx"
-    # onnx.save_model(m.model, optimized_model_path)
+    optimized_model_path = output_dir / "model_optimized.onnx"
+    onnx.save_model(m.model, optimized_model_path)
 
     onnx_model = onnx.load(output_dir / "model.onnx")
     onnx.checker.check_model(onnx_model, full_check=True)

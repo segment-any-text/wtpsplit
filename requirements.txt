@@ -13,7 +13,6 @@ numpy==1.23.5
 pydantic
 torchinfo
 conllu
-genalog
 pandarallel
 cohere
 replicate

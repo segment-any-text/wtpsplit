@@ -44,7 +44,10 @@ class SaTORTWrapper:
     def __call__(self, input_ids, attention_mask):
         logits = self.ort_session.run(
             output_names=["logits"],
-            input_feed={"attention_mask": attention_mask.astype(np.int64), "input_ids": input_ids.astype(np.int64)},
+            input_feed={
+                "attention_mask": attention_mask.astype(np.int64),
+                "input_ids": input_ids.astype(np.float16),
+            },  # .astype(np.int64)},
         )[0]
 
         return {"logits": logits}
@@ -71,9 +74,9 @@ class PyTorchWrapper:
                     input_ids=torch.from_numpy(input_ids).to(self.model.device) if input_ids is not None else None,
                     hashed_ids=torch.from_numpy(hashed_ids).to(self.model.device) if hashed_ids is not None else None,
                     attention_mask=torch.from_numpy(attention_mask).to(self.model.device),
-                    language_ids=torch.from_numpy(language_ids).to(self.model.device)
-                    if language_ids is not None
-                    else None,
+                    language_ids=(
+                        torch.from_numpy(language_ids).to(self.model.device) if language_ids is not None else None
+                    ),
                 )["logits"]
                 .cpu()
                 .numpy()
@@ -124,8 +127,9 @@ def extract(
     text_lengths = [len(text) for text in batch_of_texts]
     # reduce block size if possible
     block_size = min(max_block_size, max(text_lengths))
-    if use_subwords and block_size == 512:
-        block_size -= 2  # account for CLS and SEP tokens
+    if use_subwords and block_size > 510:
+        overflow_length = block_size - 510
+        block_size -= overflow_length  # account for CLS and SEP tokens
 
     # make sure block_size is a multiple of downsampling rate
     downsampling_rate = getattr(model.config, "downsampling_rate", 1)
