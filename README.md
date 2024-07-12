@@ -328,7 +328,7 @@ For details, please see our [Segment any Text paper](https://arxiv.org/abs/2406.
 
 ## Citations
 
-If you find the `wtpsplit` library and our `SaT` models useful, please kindly cite our paper:
+For the `SaT` models, please kindly cite our paper:
 ```
 @article{frohmann2024segment,
     title={Segment Any Text: A Universal Approach for Robust, Efficient and Adaptable Sentence Segmentation},
