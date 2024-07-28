@@ -9,7 +9,7 @@ from transformers import AutoModelForTokenClassification, HfArgumentParser
 import wtpsplit.models  # noqa
 from wtpsplit.extract import PyTorchWrapper
 from wtpsplit.utils import Constants
-from wtpsplit.evaluation.intrinsic import process_logits
+from wtpsplit.evaluation.adapt import process_logits
 
 
 @dataclass

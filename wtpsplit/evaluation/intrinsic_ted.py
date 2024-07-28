@@ -18,7 +18,7 @@ import adapters
 import wtpsplit.models  # noqa: F401
 from wtpsplit.evaluation import get_labels, train_mixture
 from wtpsplit.evaluation.evaluate_sepp_nlg_subtask1 import evaluate_subtask1
-from wtpsplit.evaluation.intrinsic import process_logits
+from wtpsplit.evaluation.adapt import process_logits
 from wtpsplit.extract import PyTorchWrapper, extract
 from wtpsplit.utils import Constants, sigmoid
 

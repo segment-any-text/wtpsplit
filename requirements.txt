@@ -19,3 +19,8 @@ replicate
 onnx
 onnxruntime
 torchinfo
+mosestokenizer
+cached_property
+tqdm
+skops
+pandas

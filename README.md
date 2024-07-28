@@ -5,7 +5,7 @@ This repository allows you to segment text into sentences or other semantic unit
 - **SaT** &mdash; [Segment Any Text: A Universal Approach for Robust, Efficient and Adaptable Sentence Segmentation](https://arxiv.org/abs/2406.16678) by Markus Frohmann, Igor Sterner, Benjamin Minixhofer, Ivan Vulić and Markus Schedl (**state-of-the-art, encouraged**).
 - **WtP** &mdash; [Where’s the Point? Self-Supervised Multilingual Punctuation-Agnostic Sentence Segmentation](https://aclanthology.org/2023.acl-long.398/) by Benjamin Minixhofer, Jonas Pfeiffer and Ivan Vulić (*previous version, maintained for reproducibility*).
 
-The namesake WtP is maintained for reproducibility. Our new followup SaT provides robust, efficient and adaptable sentence segmentation across 85 languages at higher performance and less compute cost. Check out the **state-of-the-art** results in 8 distinct corpora and 85 languages demonstrated in our [Segment any Text paper](https://arxiv.org/abs/2406.16678).
+The namesake WtP is maintained for consistency. Our new followup SaT provides robust, efficient and adaptable sentence segmentation across 85 languages at higher performance and less compute cost. Check out the **state-of-the-art** results in 8 distinct corpora and 85 languages demonstrated in our [Segment any Text paper](https://arxiv.org/abs/2406.16678).
 
 ![System Figure](./configs/system-fig.png)
 
@@ -154,11 +154,9 @@ Clone the repository and install requirements:
 
 ```
 git clone https://github.com/segment-any-text/wtpsplit
-cd segment-any-text
-pip install -e .
+cd wtpsplit
 pip install -r requirements.txt
-cd adapters
-pip install -e .
+pip install adapters==0.2.1 --no-dependencies
 cd ..
 ```
 

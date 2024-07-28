@@ -22,7 +22,7 @@ from wtpsplit.evaluation.intrinsic_baselines import split_language_data
 from wtpsplit.extract import PyTorchWrapper
 from wtpsplit.extract_batched import extract_batched
 from wtpsplit.utils import Constants, token_to_char_probs
-from wtpsplit.evaluation.intrinsic import compute_statistics
+from wtpsplit.evaluation.adapt import compute_statistics
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)

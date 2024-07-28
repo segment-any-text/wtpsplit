@@ -17,7 +17,7 @@ setup(
         "pandas>=1",
         "cached_property",  # for Py37
         "mosestokenizer",
-        "adapters==0.2.1"
+        "adapters"
     ],
     url="https://github.com/segment-any-text/wtpsplit",
     package_data={"wtpsplit": ["data/*"]},
