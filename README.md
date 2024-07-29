@@ -36,11 +36,11 @@ sat.split(["This is a test This is another test.", "And some more texts..."])
 # use our '-sm' models for general sentence segmentation tasks
 sat_sm = SaT("sat-3l-sm")
 # this will be especially better for noisy text
-sat.split("this is a test this is another test")
+sat_sm.split("this is a test this is another test")
 # returns ["this is a test", "this is another test"]
 
 # use trained lora modules for strong adaptation to language & domain/style
-sat_adapted = SaT("sat-3l-sm", lang_code="en", style="ud"))
+sat_adapted = SaT("sat-3l-sm", lang_code="en", style="ud")
 sat.split("This is a test This is another test.")
 ```
 
