@@ -5,7 +5,7 @@ import numpy as np
 import pysbd
 import sklearn.metrics
 
-from wtpsplit.evaluation.intrinsic_pairwise import generate_pairs, generate_k_mers, process_logits_k_mers
+from wtpsplit.evaluation.intrinsic_pairwise import generate_k_mers, process_logits_k_mers
 from wtpsplit.extract import PyTorchWrapper, extract
 from wtpsplit.utils import Constants, sigmoid, corrupt, token_to_char_probs
 
@@ -153,13 +153,12 @@ def evaluate_sentence_pairwise(
     accuracy_list = []
 
     # get pairs of sentences (non-overlapping)
-    sampled_pairs = generate_pairs(
+    sampled_pairs = generate_k_mers(
         sentences=sentences,
-        pair_sample_pct=pair_sample_pct,
-        max_n_pairs=max_pairs,
-        min_pair_length=0,
-        do_lowercase=do_lowercase,
-        do_remove_punct=do_remove_punct,
+        k=2,
+        sample_pct=pair_sample_pct,
+        max_n_samples=max_pairs,
+        min_k_mer_length=0,
     )
 
     # get logits for each pair

@@ -78,6 +78,7 @@ logger = logging.get_logger(__name__)
 
 TRAINING_ARGS_NAME = "training_args.bin"
 
+
 class AdapterTrainer(Trainer):
     def __init__(
         self,
@@ -484,11 +485,13 @@ class AdapterTrainer(Trainer):
             if all_inputs is not None:
                 all_inputs = nested_truncate(all_inputs, num_samples)
         else:
-            xm.rendezvous("eval_metrics")
+            if is_torch_tpu_available():
+                xm.rendezvous("eval_metrics")
             all_losses, all_preds, all_labels, all_inputs, num_samples = None, None, None, None, 0
 
         # Metrics!
-        xm.rendezvous("eval_metrics")
+        if is_torch_tpu_available():
+            xm.rendezvous("eval_metrics")
         # MODIFIED: always compute metrics
         if self.compute_metrics is not None:
             metrics = self.compute_metrics(self)

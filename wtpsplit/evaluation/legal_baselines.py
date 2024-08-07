@@ -131,7 +131,7 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
 
                     start_time = time.time()
                     test_logits = get_law_preds(test_text, model, current_name, args)
-                    end_time = time.time() 
+                    end_time = time.time()
                     total_test_time += end_time - start_time
                     if isinstance(test_sentences[0], list):
                         test_logit_lengths = []

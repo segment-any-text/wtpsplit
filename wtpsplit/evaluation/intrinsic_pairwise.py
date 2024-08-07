@@ -70,7 +70,6 @@ class Args:
     min_k_mer_length: int = 0
 
 
-
 def process_logits_k_mers(pairs, model, lang_code, block_size, batch_size, verbose=True) -> List[np.ndarray]:
     logits_list = []
     n_tokens_list = []

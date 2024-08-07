@@ -27,9 +27,11 @@ SPACY_LANG_TO_DP_MODEL = {
     "multi": "xx_sent_ud_sm"
 }
 
+
 def download_models():
     for lang, model in SPACY_LANG_TO_DP_MODEL.items():
         subprocess.run(["python3", "-m", "spacy", "download", model])
+
 
 if __name__ == "__main__":
     download_models()

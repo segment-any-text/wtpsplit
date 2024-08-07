@@ -182,7 +182,7 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
                     if args.adapter_path:
                         if args.clf_from_scratch:
                             model.model.classifier = torch.nn.Linear(model.model.classifier.in_features, 1)
-                            
+
                         dataset_load_name = dataset_name
                         model.model.load_adapter(
                             args.adapter_path + "/" + dataset_load_name + "/" + lang_code,
@@ -354,7 +354,7 @@ def main(args):
     clfs = {}
     if args.return_indices:
         indices = {}
-    
+
     u_scores, t_scores, punct_scores = [], [], []
 
     for lang_code, dsets in tqdm(eval_data.items()):

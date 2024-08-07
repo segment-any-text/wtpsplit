@@ -23,6 +23,7 @@ __version__ = "2.0.5"
 warnings.simplefilter("default", DeprecationWarning)  # show by default
 warnings.simplefilter("ignore", category=FutureWarning)  # for tranformers
 
+
 class WtP:
     def __init__(
         self,
@@ -435,9 +436,7 @@ class SaT:
 
         self.use_lora = False
 
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            "facebookAI/xlm-roberta-base"
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained("facebookAI/xlm-roberta-base")
 
         if isinstance(model_name_or_model, (str, Path)):
             model_name = str(model_name_or_model)
@@ -498,12 +497,14 @@ class SaT:
                 )
             # LoRA LOADING
             # TODO: LoRA + ONNX ?
-            if (style_or_domain and not language) or (language and not style_or_domain):
-                raise ValueError("Please specify both language and style_or_domain!")
-            if style_or_domain and language:
+            if not lora_path:
+                if (style_or_domain and not language) or (language and not style_or_domain):
+                    raise ValueError("Please specify both language and style_or_domain!")
+            if (style_or_domain and language) or lora_path:
                 import adapters  # noqa
                 from adapters.models import MODEL_MIXIN_MAPPING  # noqa
                 from adapters.models.bert.mixin_bert import BertModelAdaptersMixin  # noqa
+
                 # monkey patch mixin to avoid forking whole adapters library
                 MODEL_MIXIN_MAPPING["SubwordXLMRobertaModel"] = BertModelAdaptersMixin
                 model_type = self.model.model.config.model_type
@@ -642,7 +643,7 @@ class SaT:
                 batch_size=batch_size,
                 pad_last_batch=pad_last_batch,
                 verbose=verbose,
-                tokenizer=self.tokenizer
+                tokenizer=self.tokenizer,
             )
 
             # convert token probabilities to character probabilities for the entire array

@@ -22,10 +22,11 @@ from wtpsplit.utils import Constants
 @dataclass
 class Args:
     block_size: int = 256
-    num_layers: int = 12 # number of layers
-    lim_lookahead: bool = False # our "Lookahead" ablation
-    without_pretraining: bool = False # our "No pre-training" ablation
-    no_sm_corruption: bool = False # our "Only clean text" ablation
+    num_layers: int = 12  # number of layers
+    lim_lookahead: bool = False  # our "Lookahead" ablation
+    without_pretraining: bool = False  # our "No pre-training" ablation
+    no_sm_corruption: bool = False  # our "Only clean text" ablation
+
 
 # Parsing command line arguments or JSON config files as needed
 parser = HfArgumentParser([Args, TrainingArguments])
@@ -55,7 +56,7 @@ for lang_code in tqdm(all_data, desc="Loading data"):
         and all_data[lang_code]["sentence"]["ud"]["meta"]["train_data"] is not None
     ):
         train_data = all_data[lang_code]["sentence"]["ud"]["meta"]["train_data"]
-        
+
         if len(train_data) < 10000:
             # some languages have an insufficient number of sentences to fill a single batch
             # this is just a quick way to upsample these so we don't run into problems later
@@ -155,7 +156,7 @@ tokenizer = AutoTokenizer.from_pretrained(tokenizer_checkpoint)
 assert isinstance(tokenizer, transformers.PreTrainedTokenizerFast)
 
 if args.num_layers == 3 and args.without_pretraining:
-    # special case for one of our ablations, where we trim XLM-R (without any of our newline pretraining) to 3 layers 
+    # special case for one of our ablations, where we trim XLM-R (without any of our newline pretraining) to 3 layers
     model = SubwordXLMForTokenClassification.from_pretrained(
         model_checkpoint,
         num_labels=1,

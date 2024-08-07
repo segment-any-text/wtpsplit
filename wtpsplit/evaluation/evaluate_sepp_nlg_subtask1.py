@@ -12,7 +12,7 @@ def evaluate_subtask1(splits, langs, prediction_dir: str, supervisions, include_
     Mirrors the original SEPP-NLG 2021 Shared Task evaluation function
     https://sites.google.com/view/sentence-segmentation
     """
-    
+
     results = {}
     avg_holder = {}
     for supervision in supervisions:

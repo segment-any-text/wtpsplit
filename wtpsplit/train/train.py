@@ -4,6 +4,7 @@ import os
 import random
 import shutil
 import sys
+
 # import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -14,14 +15,15 @@ from typing import List, Optional
 import datasets
 import numpy as np
 import torch
-import torch_xla.core.xla_model as xm
 import transformers
 from datasets import load_dataset
+
 # from datasets.download import DownloadConfig
 from tokenizers import AddedToken
 from torchinfo import summary
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments, set_seed
+from transformers.trainer import is_torch_tpu_available
 
 import wandb
 from wtpsplit.models import (
@@ -35,6 +37,7 @@ from wtpsplit.models import (
 from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.trainer import Trainer
 from wtpsplit.train.utils import Model
+
 # from wtpsplit.train.utils import cleanup_cache_files
 from wtpsplit.utils import Constants, LabelArgs, corrupt_training, get_label_dict, get_subword_label_dict
 
@@ -197,12 +200,22 @@ def main():
     else:
         (args, training_args, label_args) = parser.parse_args_into_dataclasses()
         wandb_name = None
-    if xm.xrt_world_size() == 4:
-        # ensure same batch size on TPUv3 and TPUv4 using same config.json
-        training_args.per_device_train_batch_size *= 2
+
+    if is_torch_tpu_available():
+        import torch_xla.core.xla_model as xm
+
+        world_size = xm.xrt_world_size()
+        if world_size == 4:
+            # ensure same batch size on TPUv3 and TPUv4 using same config.json
+            training_args.per_device_train_batch_size *= 2
+    elif torch.cuda.is_available():
+        world_size = torch.cuda.device_count()
+    else:
+        world_size = 1
+
     logger.warning(f"Per device train batch size: {training_args.per_device_train_batch_size}")
     logger.warning(
-        f"Total train batch size: {training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps* xm.xrt_world_size()}"
+        f"Total train batch size: {training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps * world_size}"
     )
 
     setup_logging(training_args)

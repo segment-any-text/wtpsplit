@@ -246,11 +246,7 @@ def load_or_compute_logits(args, eval_data, save_str: str = None):
                     if isinstance(test_sentences[0], list) or args.type == "pairs":
                         if args.type == "pairs":
                             all_pairs = generate_k_mers(
-                                test_sentences,
-                                k=2,
-                                do_lowercase=False,
-                                do_remove_punct=False,
-                                sample_pct=0.5
+                                test_sentences, k=2, do_lowercase=False, do_remove_punct=False, sample_pct=0.5
                             )
                             test_sentences = all_pairs
                         # list of lists: chunk each sublist
@@ -568,10 +564,8 @@ def main(args):
 
     eval_data = torch.load(eval_data_path)
 
-    save_str = (
-        f"{args.model.split('/')[-1]}_k{args.k}_s{args.n_shots}"
-    ).replace("/", "_")
-    
+    save_str = (f"{args.model.split('/')[-1]}_k{args.k}_s{args.n_shots}").replace("/", "_")
+
     if args.max_n_test_sentences < sys.maxsize and args.max_n_test_sentences != -1:
         save_str += f"_n{args.max_n_test_sentences}"
     if args.max_n_test_sentences == -1:

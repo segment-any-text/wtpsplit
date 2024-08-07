@@ -573,7 +573,7 @@ def main():
                 )
                 trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
                 logger.warning(f"Finished training for {lang} {dataset_name}.")
-                
+
                 # only save trained module
                 if training_args.local_rank == 0:
                     if not os.path.exists(os.path.join(training_args.output_dir, dataset_name, lang)):

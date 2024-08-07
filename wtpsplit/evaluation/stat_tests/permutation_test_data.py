@@ -63,7 +63,6 @@ for file in tqdm(DATA_DIR.glob("*IDX.json"), desc="Loading indices"):
                 if isinstance(data_list[0], int):
                     data_list = [data_list]
 
-
                 raw_data[lang][dataset][model + "-" + model_type] = data_list
 
                 true_indices = data[lang][dataset][model_type]["true_indices"]

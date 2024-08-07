@@ -110,12 +110,17 @@ def extract_batched(
     if use_subwords and model.config.model_type == "xlm-roberta":
         # TODO: generalize
         import torch
+
         with torch.no_grad():
-            logits = model.model(
-                input_ids=torch.from_numpy(input_ids).to(model.model.device),
-                attention_mask=torch.from_numpy(attention_mask).to(model.model.device),
-                **kwargs,
-            )["logits"].cpu().numpy()
+            logits = (
+                model.model(
+                    input_ids=torch.from_numpy(input_ids).to(model.model.device),
+                    attention_mask=torch.from_numpy(attention_mask).to(model.model.device),
+                    **kwargs,
+                )["logits"]
+                .cpu()
+                .numpy()
+            )
     else:
         logits = model(
             input_ids=input_ids if use_subwords else None,

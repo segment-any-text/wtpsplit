@@ -61,7 +61,7 @@ if __name__ == "__main__":
                 continue
             results[lang][dataset_name] = {}
             indices[lang][dataset_name] = {}
-            
+
             if "-" in lang:
                 # code-switched data: eval 2x
                 lang_code = lang.split("_")[1].lower()

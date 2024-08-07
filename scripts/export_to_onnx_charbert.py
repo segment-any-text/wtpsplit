@@ -9,6 +9,7 @@ from transformers import AutoModelForTokenClassification, HfArgumentParser
 import wtpsplit  # noqa
 import wtpsplit.models  # noqa
 
+
 @dataclass
 class Args:
     model_name_or_path: str = "benjamin/wtp-bert-mini"
