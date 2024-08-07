@@ -1,4 +1,4 @@
-transformers==4.29.2
+transformers>=4.40.0
 accelerate==0.19.0
 datasets
 pysbd
