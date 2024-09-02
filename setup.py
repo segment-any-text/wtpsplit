@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="wtpsplit",
-    version="2.0.6",
+    version="2.0.7",
     packages=find_packages(),
     description="Universal Robust, Efficient and Adaptable Sentence Segmentation",
     author="Markus Frohmann, Igor Sterner, Benjamin Minixhofer",
