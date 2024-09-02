@@ -24,3 +24,4 @@ cached_property
 tqdm
 skops
 pandas
+protobuf==3.20
