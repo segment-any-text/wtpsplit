@@ -449,7 +449,7 @@ def get_token_spans(tokenizer, offsets_mapping, tokens):
 
 def token_to_char_probs(text, tokens, token_logits, tokenizer, offsets_mapping):
     """Map from token probabalities to character probabilities"""
-    char_probs = np.full((len(text), token_logits.shape[1]), np.min(token_logits))  # Initialize with very low numbers
+    char_probs = np.full((len(text), token_logits.shape[1]), -np.inf)  # Initialize with very low numbers
 
     valid_indices, valid_offsets = get_token_spans(tokenizer, offsets_mapping, tokens)
 
