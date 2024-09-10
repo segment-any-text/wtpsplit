@@ -453,7 +453,9 @@ class SaT:
             else:
                 # no need to load if no ort_providers set
                 if ort_providers is not None:
-                    onnx_path = cached_file(model_name_to_fetch, "model_optimized.onnx", **(from_pretrained_kwargs or {}))
+                    onnx_path = cached_file(
+                        model_name_to_fetch, "model_optimized.onnx", **(from_pretrained_kwargs or {})
+                    )
                 else:
                     onnx_path = None
 
@@ -790,12 +792,3 @@ class SaT:
                     text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
                 )
                 yield sentences
-
-
-if __name__ == "__main__":
-    sat = SaT("sat-3l-lora", ort_providers=["CPUExecutionProvider"])
-    print(sat.split("Hello, World! Next."))
-
-    wtp = WtP("wtp-bert-tiny", ort_providers=["CPUExecutionProvider"])
-    print(wtp.split("Hello, World! Next."))
-    print("DONE!")
