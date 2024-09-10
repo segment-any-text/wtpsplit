@@ -46,6 +46,36 @@ sat_adapted.split("This is a test This is another test.")
 # returns ['This is a test ', 'This is another test']
 ```
 
+## ONNX Support
+🚀 You can now enable even faster ONNX inference for `sat` and `sat-sm` models! 🚀
+
+```python
+sat = SaT("sat-3l-sm", onnx_providers=["CUDAExecutionProvider"])
+```
+
+```python
+>>> from wtpsplit import SaT
+>>> texts = ["This is a sentence. This is another sentence."] * 1000
+
+# PyTorch GPU
+>>> model = SaT("sat-3l-sm")
+>>> model.half().to("cuda")
+>>> %timeit list(model.split(texts))
+138 ms ± 8.41 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+
+# onnxruntime GPU
+>>> model = SaT("sat-3l-sm", ort_providers=["CUDAExecutionProvider"])
+>>> %timeit list(model.split(texts))
+198 ms ± 1.36 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+```
+
+If you wish to use LoRA in combination with an ONNX model:
+- Run `scripts/export_to_onnx_sat.py` with `use_lora: True` and an appropriate `output_dir: <OUTPUT_DIR>`.
+  - If you have a local LoRA module, use `lora_path`.
+  - If you wish to load a LoRA module from the HuggingFace hub, use `style_or_domain` and `language`.
+- Load the ONNX model with merged LoRA weights: 
+`sat = SaT(<OUTPUT_DIR>, onnx_providers=["CUDAExecutionProvider"])`
+
 
 ## Available Models
 

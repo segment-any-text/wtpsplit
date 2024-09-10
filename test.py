@@ -2,11 +2,11 @@
 from wtpsplit import WtP, SaT
 
 
-# def test_split_ort():
-#     sat = SaT("segment-any-text/sat-3l", ort_providers=["CPUExecutionProvider"])
+def test_split_ort():
+    sat = SaT("sat-3l-sm", ort_providers=["CPUExecutionProvider"])
 
-#     splits = sat.split("This is a test sentence This is another test sentence.", threshold=0.005)
-#     assert splits == ["This is a test sentence ", "This is another test sentence."]
+    splits = sat.split("This is a test sentence This is another test sentence.", threshold=0.25)
+    assert splits == ["This is a test sentence ", "This is another test sentence."]
 
 
 def test_split_torch():

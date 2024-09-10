@@ -15,10 +15,10 @@ from huggingface_hub import hf_hub_download
 from transformers import AutoConfig, AutoModelForTokenClassification, AutoTokenizer
 from transformers.utils.hub import cached_file
 
-from wtpsplit.extract import BertCharORTWrapper, PyTorchWrapper, extract
+from wtpsplit.extract import BertCharORTWrapper, SaTORTWrapper, PyTorchWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid, token_to_char_probs
 
-__version__ = "2.0.8"
+__version__ = "2.1.0"
 
 warnings.simplefilter("default", DeprecationWarning)  # show by default
 warnings.simplefilter("ignore", category=FutureWarning)  # for tranformers
@@ -88,8 +88,6 @@ class WtP:
 
                 try:
                     import onnxruntime as ort  # noqa
-
-                    ort.set_default_logger_severity(0)
                 except ModuleNotFoundError:
                     raise ValueError("Please install `onnxruntime` to use WtP with an ONNX model.")
 
@@ -449,38 +447,39 @@ class SaT:
 
             if is_local:
                 model_path = Path(model_name)
-                onnx_path = model_path / "model.onnx"
+                onnx_path = model_path / "model_optimized.onnx"
                 if not onnx_path.exists():
                     onnx_path = None
             else:
                 # no need to load if no ort_providers set
                 if ort_providers is not None:
-                    onnx_path = cached_file(model_name_to_fetch, "model.onnx", **(from_pretrained_kwargs or {}))
+                    onnx_path = cached_file(model_name_to_fetch, "model_optimized.onnx", **(from_pretrained_kwargs or {}))
                 else:
                     onnx_path = None
 
             if ort_providers is not None:
-                raise NotImplementedError("ONNX is not supported for SaT *yet*.")
-                # if onnx_path is None:
-                #     raise ValueError(
-                #         "Could not find an ONNX model in the model directory. Try `use_ort=False` to run with PyTorch."
-                #     )
+                if onnx_path is None:
+                    raise ValueError(
+                        "Could not find an ONNX model in the model directory. Try `use_ort=False` to run with PyTorch."
+                    )
 
-                # try:
-                #     import onnxruntime as ort  # noqa
+                try:
+                    import onnxruntime as ort  # noqa
+                except ModuleNotFoundError:
+                    raise ValueError("Please install `onnxruntime` to use SaT with an ONNX model.")
 
-                #     ort.set_default_logger_severity(0)
-                # except ModuleNotFoundError:
-                #     raise ValueError("Please install `onnxruntime` to use WtP with an ONNX model.")
+                # to register models for AutoConfig
+                import wtpsplit.configs  # noqa
 
-                # # to register models for AutoConfig
-                # import wtpsplit.configs  # noqa
-
-                # # TODO: ONNX integration
-                # self.model = SaTORTWrapper(
-                #     AutoConfig.from_pretrained(model_name_to_fetch, **(from_pretrained_kwargs or {})),
-                #     ort.InferenceSession(str(onnx_path), providers=ort_providers, **(ort_kwargs or {})),
-                # )
+                self.model = SaTORTWrapper(
+                    AutoConfig.from_pretrained(model_name_to_fetch, **(from_pretrained_kwargs or {})),
+                    ort.InferenceSession(str(onnx_path), providers=ort_providers, **(ort_kwargs or {})),
+                )
+                if lora_path:
+                    raise ValueError(
+                        "If using ONNX with LoRA, execute `scripts/export_to_onnx_sat.py` with `use_lora=True`."
+                        "Reference the chosen `output_dir` here for `model_name_or_model`. and set `lora_path=None`."
+                    )
             else:
                 # to register models for AutoConfig
                 try:
@@ -496,7 +495,6 @@ class SaT:
                     )
                 )
             # LoRA LOADING
-            # TODO: LoRA + ONNX ?
             if not lora_path:
                 if (style_or_domain and not language) or (language and not style_or_domain):
                     raise ValueError("Please specify both language and style_or_domain!")
@@ -792,3 +790,12 @@ class SaT:
                     text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
                 )
                 yield sentences
+
+
+if __name__ == "__main__":
+    sat = SaT("sat-3l-lora", ort_providers=["CPUExecutionProvider"])
+    print(sat.split("Hello, World! Next."))
+
+    wtp = WtP("wtp-bert-tiny", ort_providers=["CPUExecutionProvider"])
+    print(wtp.split("Hello, World! Next."))
+    print("DONE!")
