@@ -60,13 +60,13 @@ sat = SaT("sat-3l-sm", onnx_providers=["CUDAExecutionProvider"])
 # PyTorch GPU
 >>> model = SaT("sat-3l-sm")
 >>> model.half().to("cuda")
->>> %timeit list(model.split(texts))
-138 ms ± 8.41 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+>>> list(model.split(texts))
+# quite fast already, but...
 
 # onnxruntime GPU
 >>> model = SaT("sat-3l-sm", ort_providers=["CUDAExecutionProvider"])
 >>> %timeit list(model.split(texts))
-198 ms ± 1.36 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+# ...this should be ~50% faster!
 ```
 
 If you wish to use LoRA in combination with an ONNX model:
