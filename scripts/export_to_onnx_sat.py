@@ -6,7 +6,7 @@ import onnx
 import torch
 from adapters.models import MODEL_MIXIN_MAPPING  # noqa
 from adapters.models.bert.mixin_bert import BertModelAdaptersMixin  # noqa
-from huggingface_hub import hf_hub_download
+from huggingface_hub import hf_hub_download, HfApi
 from onnxruntime.transformers.optimizer import optimize_model  # noqa
 from transformers import AutoModelForTokenClassification, HfArgumentParser
 
@@ -27,6 +27,7 @@ class Args:
     # otherwise, fetch from HF Hub:
     style_or_domain: str = "ud"
     language: str = "en"
+    upload_to_hub: bool = False
 
 
 if __name__ == "__main__":
@@ -88,16 +89,16 @@ if __name__ == "__main__":
     torch.onnx.export(
         model,
         {
+            "input_ids": torch.randint(0, model.config.vocab_size, (1, 1), dtype=torch.int64, device=args.device),
             "attention_mask": torch.randn((1, 1), dtype=torch.float16, device=args.device),
-            "input_ids": torch.randint(0, 250002, (1, 1), dtype=torch.int64, device=args.device),
         },
         output_dir / "model.onnx",
         verbose=True,
-        input_names=["attention_mask", "input_ids"],
+        input_names=["input_ids", "attention_mask"],
         output_names=["logits"],
         dynamic_axes={
-            "attention_mask": {0: "batch", 1: "sequence"},
             "input_ids": {0: "batch", 1: "sequence"},
+            "attention_mask": {0: "batch", 1: "sequence"},
             "logits": {0: "batch", 1: "sequence"},
         },
     )
@@ -117,3 +118,17 @@ if __name__ == "__main__":
 
     onnx_model = onnx.load(output_dir / "model.onnx")
     print(onnx.checker.check_model(onnx_model, full_check=True))
+
+    if args.upload_to_hub:
+        api = HfApi()
+
+        api.upload_file(
+            path_or_fileobj=output_dir / "model_optimized.onnx",
+            path_in_repo="model_optimized.onnx",
+            repo_id=args.model_name_or_path,
+        )
+        api.upload_file(
+            path_or_fileobj=output_dir / "model.onnx",
+            path_in_repo="model.onnx",
+            repo_id=args.model_name_or_path,
+        )

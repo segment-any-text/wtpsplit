@@ -45,8 +45,8 @@ class SaTORTWrapper:
         logits = self.ort_session.run(
             ["logits"],
             {
-                self.ort_session.get_inputs()[0].name: input_ids.astype(np.int64),
-                self.ort_session.get_inputs()[1].name: attention_mask.astype(np.float16),
+                "attention_mask": attention_mask.astype(np.float16),
+                "input_ids": input_ids.astype(np.int64),
             },
         )[0]
 
