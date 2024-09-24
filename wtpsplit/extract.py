@@ -43,11 +43,11 @@ class SaTORTWrapper:
 
     def __call__(self, input_ids, attention_mask):
         logits = self.ort_session.run(
-            output_names=["logits"],
-            input_feed={
-                "attention_mask": attention_mask.astype(np.int64),
-                "input_ids": input_ids.astype(np.float16),
-            },  # .astype(np.int64)},
+            ["logits"],
+            {
+                "attention_mask": attention_mask.astype(np.float16),
+                "input_ids": input_ids.astype(np.int64),
+            },
         )[0]
 
         return {"logits": logits}
