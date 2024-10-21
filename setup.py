@@ -10,6 +10,7 @@ setup(
     install_requires=[
         "onnxruntime>=1.13.1",
         "transformers>=4.22.2",
+        "huggingface-hub==0.25.2",   # see https://github.com/segment-any-text/wtpsplit/issues/135
         "numpy>=1.0",
         "scikit-learn>=1",
         "tqdm",
