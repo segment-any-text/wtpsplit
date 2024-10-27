@@ -175,7 +175,7 @@ sat.predict_proba(text)
 
 ```python
 # import library to register the custom models 
-import wtpsplit
+import wtpsplit.models
 from transformers import AutoModelForTokenClassification
 
 model = AutoModelForTokenClassification.from_pretrained("segment-any-text/sat-3l-sm") # or some other model name; see https://huggingface.co/segment-any-text
@@ -217,6 +217,7 @@ torch.save(
     "dummy-dataset.pth"
 )
 ```
+Note that there should not be any newlines within individual sentences! Your corpus should already be well-split.
 
 Create/adapt config; provide base model via `model_name_or_path` and training data .pth via `text_path`:
 

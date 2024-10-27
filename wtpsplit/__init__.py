@@ -688,7 +688,8 @@ class SaT:
         outer_batch_size=1000,
         paragraph_threshold: float = 0.5,
         strip_whitespace: bool = False,
-        do_paragraph_segmentation=False,
+        do_paragraph_segmentation: bool = False,
+        treat_newline_as_space: bool = False,
         verbose: bool = False,
     ):
         if isinstance(text_or_texts, str):
@@ -705,6 +706,7 @@ class SaT:
                     paragraph_threshold=paragraph_threshold,
                     strip_whitespace=strip_whitespace,
                     do_paragraph_segmentation=do_paragraph_segmentation,
+                    treat_newline_as_space=treat_newline_as_space,
                     verbose=verbose,
                 )
             )
@@ -721,6 +723,7 @@ class SaT:
                 paragraph_threshold=paragraph_threshold,
                 strip_whitespace=strip_whitespace,
                 do_paragraph_segmentation=do_paragraph_segmentation,
+                treat_newline_as_space=treat_newline_as_space,
                 verbose=verbose,
             )
 
@@ -736,6 +739,7 @@ class SaT:
         remove_whitespace_before_inference: bool,
         outer_batch_size: int,
         do_paragraph_segmentation: bool,
+        treat_newline_as_space: bool,
         strip_whitespace: bool,
         verbose: bool,
     ):
@@ -791,4 +795,18 @@ class SaT:
                 sentences = indices_to_sentences(
                     text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
                 )
+                if not treat_newline_as_space:
+                    # within the model, newlines in the text were ignored - they were treated as spaces.
+                    # this is the default behavior: additionally split on newlines as provided in the input
+                    new_sentences = []
+                    for sentence in sentences:
+                        new_sentences.extend(sentence.split("\n"))
+                    sentences = new_sentences
+                else:
+                    warnings.warn(
+                        "treat_newline_as_space=True will lead to newlines in the output "
+                        "if they were present in the input. Within the model, such newlines are "
+                        "treated as spaces. "
+                        "If you want to split on such newlines, set treat_newline_as_space=False."
+                    )
                 yield sentences

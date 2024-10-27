@@ -37,7 +37,7 @@ def compute_f1(pred, true):
 
 def get_metrics(labels, preds, threshold: float = 0.01):
     # Compute precision-recall curve and AUC
-    precision, recall, thresholds = sklearn.metrics.precision_recall_curve(labels, preds)
+    precision, recall, thresholds = sklearn.metrics.precision_recall_curve(labels, sigmoid(preds))
     pr_auc = sklearn.metrics.auc(recall, precision)
 
     # Compute F1 scores for all thresholds

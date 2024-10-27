@@ -37,6 +37,23 @@ def test_strip_whitespace():
     assert splits == ["This is a test sentence", "This is another test sentence."]
 
 
+def test_strip_newline_behaviour():
+    sat = SaT("segment-any-text/sat-3l", hub_prefix=None)
+
+    splits = sat.split(
+        "Yes\nthis is a test sentence. This is another test sentence.",
+    )
+    assert splits == ["Yes", "this is a test sentence. ", "This is another test sentence."]
+    
+def test_strip_newline_behaviour_as_spaces():
+    sat = SaT("segment-any-text/sat-3l", hub_prefix=None)
+
+    splits = sat.split(
+        "Yes\nthis is a test sentence. This is another test sentence.", treat_newline_as_space=True
+    )
+    assert splits == ["Yes\nthis is a test sentence. ", "This is another test sentence."]
+
+
 def test_split_noisy():
     sat = SaT("segment-any-text/sat-12l-sm", hub_prefix=None)
 
