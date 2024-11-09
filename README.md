@@ -363,14 +363,25 @@ For details, please see our [Segment any Text paper](https://arxiv.org/abs/2406.
 
 For the `SaT` models, please kindly cite our paper:
 ```
-@article{frohmann2024segment,
-    title={Segment Any Text: A Universal Approach for Robust, Efficient and Adaptable Sentence Segmentation},
-    author={Frohmann, Markus and Sterner, Igor and Vuli{\'c}, Ivan and Minixhofer, Benjamin and Schedl, Markus},
-    journal={arXiv preprint arXiv:2406.16678},
-    year={2024},
-    doi={10.48550/arXiv.2406.16678},
-    url={https://doi.org/10.48550/arXiv.2406.16678},
+@inproceedings{frohmann-etal-2024-segment,
+    title = "Segment Any Text: A Universal Approach for Robust, Efficient and Adaptable Sentence Segmentation",
+    author = "Frohmann, Markus  and
+      Sterner, Igor  and
+      Vuli{\'c}, Ivan  and
+      Minixhofer, Benjamin  and
+      Schedl, Markus",
+    editor = "Al-Onaizan, Yaser  and
+      Bansal, Mohit  and
+      Chen, Yun-Nung",
+    booktitle = "Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing",
+    month = nov,
+    year = "2024",
+    address = "Miami, Florida, USA",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2024.emnlp-main.665",
+    pages = "11908--11941"
 }
+
 ```
 For the library and the WtP models, please cite:
 ```
