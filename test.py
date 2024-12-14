@@ -103,6 +103,19 @@ Daniel Wroughton Craig CMG (born 2 March 1968) is an English actor who gained in
 
     assert paragraph1.startswith("Text segmentation is")
     assert paragraph2.startswith("Daniel Wroughton Craig CMG (born 2 March 1968) is")
+    
+def test_split_empty_strings():
+    sat = SaT("segment-any-text/sat-3l", hub_prefix=None)
+    
+    text = "   "
+    splits = sat.split(text)
+    assert splits == ["   "]
+    text = "   \n"
+    splits = sat.split(text)
+    assert splits == ["   ", ""]
+    text = ""
+    splits = sat.split(text)
+    assert splits == []
 
 
 def test_split_ort_wtp():

@@ -18,7 +18,7 @@ from transformers.utils.hub import cached_file
 from wtpsplit.extract import BertCharORTWrapper, SaTORTWrapper, PyTorchWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid, token_to_char_probs
 
-__version__ = "2.1.1"
+__version__ = "2.1.2"
 
 warnings.simplefilter("default", DeprecationWarning)  # show by default
 warnings.simplefilter("ignore", category=FutureWarning)  # for tranformers
@@ -233,19 +233,30 @@ class WtP:
 
                 input_texts.append(input_text)
 
-            outer_batch_logits = extract(
-                input_texts,
-                self.model,
-                lang_code=lang_code,
-                stride=stride,
-                max_block_size=block_size,
-                batch_size=batch_size,
-                pad_last_batch=pad_last_batch,
-                verbose=verbose,
-            )[0]
+            empty_string_indices = [i for i, text in enumerate(input_texts) if not text.strip()]
+            # remove empty strings from input_texts
+            input_texts = [text for text in input_texts if text.strip()]
+
+            if input_texts:
+                outer_batch_logits = extract(
+                    input_texts,
+                    self.model,
+                    lang_code=lang_code,
+                    stride=stride,
+                    max_block_size=block_size,
+                    batch_size=batch_size,
+                    pad_last_batch=pad_last_batch,
+                    verbose=verbose,
+                )[0]
+            else:
+                outer_batch_logits = []
 
             def newline_probability_fn(logits):
                 return sigmoid(logits[:, Constants.NEWLINE_INDEX])
+
+            # add back empty strings
+            for i in empty_string_indices:
+                outer_batch_logits.insert(i, np.ones([1, 1]) * -np.inf)
 
             for i, (text, logits) in enumerate(zip(outer_batch_texts, outer_batch_logits)):
                 if style is not None:
@@ -635,28 +646,38 @@ class SaT:
 
                 input_texts.append(input_text)
 
-            outer_batch_logits, _, tokenizer, tokenizer_output = extract(
-                input_texts,
-                self.model,
-                stride=stride,
-                max_block_size=block_size,
-                batch_size=batch_size,
-                pad_last_batch=pad_last_batch,
-                verbose=verbose,
-                tokenizer=self.tokenizer,
-            )
-
-            # convert token probabilities to character probabilities for the entire array
-            outer_batch_logits = [
-                token_to_char_probs(
-                    input_texts[i],
-                    tokenizer_output["input_ids"][i],
-                    outer_batch_logits[i],
-                    tokenizer,
-                    tokenizer_output["offset_mapping"][i],
+            empty_string_indices = [i for i, text in enumerate(input_texts) if not text.strip()]
+            # remove empty strings from input_texts
+            input_texts = [text for text in input_texts if text.strip()]
+            if input_texts:
+                outer_batch_logits, _, tokenizer, tokenizer_output = extract(
+                    input_texts,
+                    self.model,
+                    stride=stride,
+                    max_block_size=block_size,
+                    batch_size=batch_size,
+                    pad_last_batch=pad_last_batch,
+                    verbose=verbose,
+                    tokenizer=self.tokenizer,
                 )
-                for i in range(len(input_texts))
-            ]
+
+                # convert token probabilities to character probabilities for the entire array
+                outer_batch_logits = [
+                    token_to_char_probs(
+                        input_texts[i],
+                        tokenizer_output["input_ids"][i],
+                        outer_batch_logits[i],
+                        tokenizer,
+                        tokenizer_output["offset_mapping"][i],
+                    )
+                    for i in range(len(input_texts))
+                ]
+            else:
+                outer_batch_logits = []
+
+            # add back empty strings
+            for i in empty_string_indices:
+                outer_batch_logits.insert(i, np.ones([1, 1]) * -np.inf)
 
             for i, (text, logits) in enumerate(zip(outer_batch_texts, outer_batch_logits)):
                 sentence_probs = newline_probs = newline_probability_fn(logits)
