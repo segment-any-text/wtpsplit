@@ -1,6 +1,7 @@
 import subprocess
 import unicodedata
 import os
+from typing import Literal
 
 import numpy as np
 import regex as re
@@ -240,6 +241,7 @@ def our_sentencize(
     block_size=512,
     stride=64,
     batch_size=32,
+    weighting: Literal["uniform", "hat"] = "uniform",
 ):
     logits = extract(
         [text],
@@ -249,6 +251,7 @@ def our_sentencize(
         max_block_size=block_size,
         batch_size=batch_size,
         pad_last_batch=False,
+        weighting=weighting,
         use_hidden_states=False,
         verbose=False,
     )[0]

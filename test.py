@@ -1,6 +1,17 @@
 # noqa: E501
 from wtpsplit import WtP, SaT
 
+def test_weighting():
+    sat = SaT("sat-3l-sm", ort_providers=["CPUExecutionProvider"])
+
+    text = "This is a test sentence This is another test sentence."
+    splits_default = sat.split(text, threshold=0.25)
+    splits_uniform = sat.split(text, threshold=0.25, weighting="uniform")
+    splits_hat = sat.split(text, threshold=0.25, weighting="hat")
+    expected_splits = ["This is a test sentence ", "This is another test sentence."] 
+    assert splits_default == splits_uniform == splits_hat == expected_splits
+    assert "".join(splits_default) == text
+
 
 def test_split_ort():
     sat = SaT("sat-3l-sm", ort_providers=["CPUExecutionProvider"])

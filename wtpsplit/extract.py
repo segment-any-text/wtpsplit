@@ -1,6 +1,7 @@
 import math
 import sys
 import logging
+from typing import Literal
 
 import numpy as np
 from tqdm.auto import tqdm
@@ -93,6 +94,7 @@ def extract(
     batch_size,
     lang_code=None,
     pad_last_batch=False,
+    weighting: Literal["uniform", "hat"] = "uniform",
     verbose=False,
     tokenizer=None,
 ):
@@ -202,7 +204,7 @@ def extract(
         for length in text_lengths
     ]
     # container for the number of chunks that any character was part of (to average chunk predictions)
-    all_counts = [np.zeros(length, dtype=np.int16) for length in text_lengths]
+    all_counts = [np.zeros(length, dtype=np.float16) for length in text_lengths]
 
     uses_lang_adapters = getattr(model.config, "language_adapter", "off") == "on"
     if uses_lang_adapters:
@@ -218,6 +220,13 @@ def extract(
         )
     else:
         language_ids = None
+    
+    # compute weights for the given weighting scheme
+    if weighting == "uniform":
+        weights = np.ones(block_size, dtype=np.float16)
+    elif weighting == "hat":
+        x = np.linspace(-(1 - 1 / block_size), 1 - 1 / block_size, block_size, dtype=np.float16)
+        weights = 1 - np.abs(x)
 
     # forward passes through all chunks
     for batch_idx in tqdm(range(n_batches), disable=not verbose):
@@ -255,8 +264,9 @@ def extract(
 
         for i in range(start, end):
             original_idx, start_char_idx, end_char_idx = locs[i]
-            all_logits[original_idx][start_char_idx:end_char_idx] += logits[i - start, : end_char_idx - start_char_idx]
-            all_counts[original_idx][start_char_idx:end_char_idx] += 1
+            n = end_char_idx - start_char_idx
+            all_logits[original_idx][start_char_idx:end_char_idx] += weights[:n, np.newaxis] * logits[i - start, :n]
+            all_counts[original_idx][start_char_idx:end_char_idx] += weights[:n]
 
     # so far, logits are summed, so we average them here
     all_logits = [(logits / counts[:, None]).astype(np.float16) for logits, counts in zip(all_logits, all_counts)]
