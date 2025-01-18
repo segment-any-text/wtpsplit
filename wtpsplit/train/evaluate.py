@@ -1,5 +1,6 @@
 import logging
 import sys
+from typing import Literal
 
 import numpy as np
 import pysbd
@@ -74,6 +75,7 @@ def evaluate_sentence(
     stride,
     block_size,
     batch_size,
+    weighting: Literal["uniform", "hat"] = "uniform",
     use_pysbd=False,
     positive_index=None,
     do_lowercase=False,
@@ -97,6 +99,7 @@ def evaluate_sentence(
         stride=stride,
         max_block_size=block_size,
         batch_size=batch_size,
+        weighting=weighting,
     )
     logits = logits[0]
     if offsets_mapping is not None:
