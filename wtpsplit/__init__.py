@@ -727,9 +727,17 @@ class SaT:
         paragraph_threshold: float = 0.5,
         strip_whitespace: bool = False,
         do_paragraph_segmentation: bool = False,
-        treat_newline_as_space: bool = False,
+        split_on_input_newlines: bool = True,
+        treat_newlines_as_spaces=None,  # Deprecated
         verbose: bool = False,
     ):
+        if treat_newlines_as_spaces is not None:
+            warnings.warn(
+                "treat_newlines_as_spaces is deprecated and will be removed in a future release. "
+                "Use split_on_input_newlines with inverse bools instead.",
+                DeprecationWarning,
+            )
+            split_on_input_newlines = not treat_newlines_as_spaces
         if isinstance(text_or_texts, str):
             return next(
                 self._split(
@@ -745,7 +753,7 @@ class SaT:
                     paragraph_threshold=paragraph_threshold,
                     strip_whitespace=strip_whitespace,
                     do_paragraph_segmentation=do_paragraph_segmentation,
-                    treat_newline_as_space=treat_newline_as_space,
+                    split_on_input_newlines=split_on_input_newlines,
                     verbose=verbose,
                 )
             )
@@ -763,7 +771,7 @@ class SaT:
                 paragraph_threshold=paragraph_threshold,
                 strip_whitespace=strip_whitespace,
                 do_paragraph_segmentation=do_paragraph_segmentation,
-                treat_newline_as_space=treat_newline_as_space,
+                split_on_input_newlines=split_on_input_newlines,
                 verbose=verbose,
             )
 
@@ -780,7 +788,7 @@ class SaT:
         remove_whitespace_before_inference: bool,
         outer_batch_size: int,
         do_paragraph_segmentation: bool,
-        treat_newline_as_space: bool,
+        split_on_input_newlines: bool,
         strip_whitespace: bool,
         verbose: bool,
     ):
@@ -837,7 +845,7 @@ class SaT:
                 sentences = indices_to_sentences(
                     text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
                 )
-                if not treat_newline_as_space:
+                if split_on_input_newlines:
                     # within the model, newlines in the text were ignored - they were treated as spaces.
                     # this is the default behavior: additionally split on newlines as provided in the input
                     new_sentences = []
@@ -846,9 +854,9 @@ class SaT:
                     sentences = new_sentences
                 else:
                     warnings.warn(
-                        "treat_newline_as_space=True will lead to newlines in the output "
+                        "split_on_input_newlines=False will lead to newlines in the output "
                         "if they were present in the input. Within the model, such newlines are "
                         "treated as spaces. "
-                        "If you want to split on such newlines, set treat_newline_as_space=False."
+                        "If you want to split on such newlines, set split_on_input_newlines=False."
                     )
                 yield sentences
