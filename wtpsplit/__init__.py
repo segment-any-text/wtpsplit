@@ -728,16 +728,16 @@ class SaT:
         strip_whitespace: bool = False,
         do_paragraph_segmentation: bool = False,
         split_on_input_newlines: bool = True,
-        treat_newlines_as_spaces=None,  # Deprecated
+        treat_newline_as_space=None,  # Deprecated
         verbose: bool = False,
     ):
-        if treat_newlines_as_spaces is not None:
+        if treat_newline_as_space is not None:
             warnings.warn(
                 "treat_newlines_as_spaces is deprecated and will be removed in a future release. "
                 "Use split_on_input_newlines with inverse bools instead.",
                 DeprecationWarning,
             )
-            split_on_input_newlines = not treat_newlines_as_spaces
+            split_on_input_newlines = not treat_newline_as_space
         if isinstance(text_or_texts, str):
             return next(
                 self._split(
