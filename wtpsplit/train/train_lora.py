@@ -126,6 +126,10 @@ def main():
                 if one_sample_per_line or isinstance(dataset[0], list):
                     processed_dataset = []
                     for chunk in dataset:
+                        if "\n" in chunk:
+                            raise ValueError(
+                                "Newlines in text are not supported! Data needs to be processed as a list of sentences."
+                            )
                         processed_chunk = {}
                         processed_chunk["lang"] = lang
                         processed_chunk["ends_with_punctuation"] = chunk[-1].endswith(
@@ -137,10 +141,15 @@ def main():
                     dataset = datasets.Dataset.from_list(processed_dataset)
 
                 else:
+                    for i, chunk in enumerate(dataset):
+                        if "\n" in chunk:
+                            raise ValueError(
+                                "Newlines in text are not supported! Data needs to be processed as a list of sentences."
+                            )
                     dataset = datasets.Dataset.from_list(
                         [
                             {
-                                args.text_column: sample + "\n" if sample and sample[-1] != "\n" else sample,  # TODO
+                                args.text_column: sample + "\n" if sample and sample[-1] != "\n" else sample,
                                 "lang": lang,
                                 "ends_with_punctuation": sample.endswith(tuple(Constants.PUNCTUATION_CHARS)),
                             }

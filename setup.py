@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="wtpsplit",
-    version="2.1.2",
+    version="2.1.3",
     packages=find_packages(),
     description="Universal Robust, Efficient and Adaptable Sentence Segmentation",
     author="Markus Frohmann, Igor Sterner, Benjamin Minixhofer",
@@ -10,7 +10,7 @@ setup(
     install_requires=[
         "onnxruntime>=1.13.1",
         "transformers>=4.22.2",
-        "huggingface-hub==0.25.2",   # see https://github.com/segment-any-text/wtpsplit/issues/135
+        "huggingface-hub",
         "numpy>=1.0",
         "scikit-learn>=1",
         "tqdm",
@@ -18,7 +18,7 @@ setup(
         "pandas>=1",
         "cached_property",  # for Py37
         "mosestokenizer",
-        "adapters",
+        "adapters>=1.0.1",
     ],
     url="https://github.com/segment-any-text/wtpsplit",
     package_data={"wtpsplit": ["data/*"]},

@@ -19,7 +19,7 @@ from transformers.utils.hub import cached_file
 from wtpsplit.extract import BertCharORTWrapper, SaTORTWrapper, PyTorchWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid, token_to_char_probs
 
-__version__ = "2.1.2"
+__version__ = "2.1.3"
 
 warnings.simplefilter("default", DeprecationWarning)  # show by default
 warnings.simplefilter("ignore", category=FutureWarning)  # for tranformers

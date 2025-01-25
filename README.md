@@ -194,7 +194,7 @@ pip install adapters==0.2.1 --no-dependencies
 cd ..
 ```
 
-Create data in this format:
+1. Create data in this format:
 ```python
 import torch
 
@@ -217,19 +217,22 @@ torch.save(
     "dummy-dataset.pth"
 )
 ```
-Note that there should not be any newlines within individual sentences! Your corpus should already be well-split.
+Note that there should not be any newlines within individual sentences! This now raises an error. Instead, each entry of a list should be a sentence, and there should be no "\n" characters. So your corpus should already be well-split.
 
-Create/adapt config; provide base model via `model_name_or_path` and training data .pth via `text_path`:
+2. Create/adapt config; provide base model via `model_name_or_path` and training data .pth via `text_path`:
 
 
 `configs/lora/lora_dummy_config.json`
 
-Train LoRA:
+We recommend starting using this config, and adapting `model_name_or_path`, `output_dir`, and `text_path` if needed.
+You may also wish to adapt other aspects such as `adapter_config` and batch sizes, but this is more experimental.
+
+3. Train LoRA:
 ```
 python3 wtpsplit/train/train_lora.py configs/lora/lora_dummy_config.json
 ```
 
-Once training is done, provide your saved module's path to SaT:
+4. Once training is done, provide your saved module's path to SaT:
 ```python
 
 sat_lora_adapted = SaT("model-used", lora_path="dummy_lora_path")
