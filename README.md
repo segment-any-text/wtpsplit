@@ -14,8 +14,8 @@ The namesake WtP is maintained for consistency. Our new followup SaT provides ro
 
 ```bash
 pip install wtpsplit
-pip install "git+https://github.com/nguyenvanthanhdat/wtpsplit.git#egg=wtpsplit[onnx-gpu]"
-pip install "git+https://github.com/nguyenvanthanhdat/wtpsplit.git#egg=wtpsplit[onnx-cpu]"
+pip install wtpsplit[onnx-gpu]
+pip install wtpsplit[onnx-cpu]
 ```
 
 ## Usage
