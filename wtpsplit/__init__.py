@@ -19,7 +19,7 @@ from transformers.utils.hub import cached_file
 from wtpsplit.extract import BertCharORTWrapper, SaTORTWrapper, PyTorchWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid, token_to_char_probs
 
-__version__ = "2.1.4"
+__version__ = "2.1.5"
 
 warnings.simplefilter("default", DeprecationWarning)  # show by default
 warnings.simplefilter("ignore", category=FutureWarning)  # for tranformers
@@ -442,6 +442,7 @@ class SaT:
     def __init__(
         self,
         model_name_or_model,
+        tokenizer_name_or_path="facebookAI/xlm-roberta-base",
         from_pretrained_kwargs=None,
         ort_providers=None,
         ort_kwargs=None,
@@ -450,13 +451,20 @@ class SaT:
         lora_path: str = None,  # local
         hub_prefix="segment-any-text",
     ):
+        if not isinstance(model_name_or_model, (str, Path)):
+            raise TypeError(
+                f"`model_name_or_model` must be a string or Path (Hugging Face ID or local directory path), "
+                f"received object of type: {type(model_name_or_model)}. "
+                "For offline ONNX use, please provide the path to the directory containing 'model_optimized.onnx' and 'config.json'."
+            )
+
         self.model_name_or_model = model_name_or_model
         self.ort_providers = ort_providers
         self.ort_kwargs = ort_kwargs
 
         self.use_lora = False
 
-        self.tokenizer = AutoTokenizer.from_pretrained("facebookAI/xlm-roberta-base")
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path)
 
         if isinstance(model_name_or_model, (str, Path)):
             model_name = str(model_name_or_model)
@@ -793,10 +801,16 @@ class SaT:
         verbose: bool,
     ):
         def get_default_threshold(model_str: str):
-            if "sm" in model_str:
-                return 0.25
+            # basic type check for safety
+            if not isinstance(model_str, str):
+                warnings.warn(
+                    f"get_default_threshold received non-string argument: {type(model_str)}. Using base default."
+                )
+                return 0.025  # default fallback
             if self.use_lora:
                 return 0.5
+            if "sm" in model_str:
+                return 0.25
             if "no-limited-lookahead" in model_str and "sm" not in model_str:
                 return 0.01
             return 0.025

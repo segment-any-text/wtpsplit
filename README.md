@@ -14,6 +14,9 @@ The namesake WtP is maintained for consistency. Our new followup SaT provides ro
 
 ```bash
 pip install wtpsplit
+```
+Or one of the following for ONNX support:
+```bash
 pip install wtpsplit[onnx-gpu]
 pip install wtpsplit[onnx-cpu]
 ```
