@@ -465,6 +465,7 @@ class SaT:
         self.use_lora = False
 
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path)
+        self.special_tokens = [self.tokenizer.cls_token, self.tokenizer.sep_token, self.tokenizer.pad_token]
 
         if isinstance(model_name_or_model, (str, Path)):
             model_name = str(model_name_or_model)
@@ -691,7 +692,7 @@ class SaT:
                         input_texts[i],
                         tokenizer_output["input_ids"][i],
                         outer_batch_logits[i],
-                        tokenizer,
+                        self.special_tokens,
                         tokenizer_output["offset_mapping"][i],
                     )
                     for i in range(len(input_texts))
