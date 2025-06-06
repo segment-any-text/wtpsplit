@@ -449,9 +449,7 @@ def token_to_char_probs(text, tokens, token_logits, special_tokens, offsets_mapp
     valid_indices, valid_offsets = get_token_spans(offsets_mapping, tokens, special_tokens)
 
     # Assign the token's probability to the last character of the token
-    for i in range(valid_offsets.shape[0]):
-        start, end = valid_offsets[i]
-        char_probs[end - 1] = token_logits[valid_indices[i]]
+    char_probs[valid_offsets[:, 1] - 1] = token_logits[valid_indices]
 
     return char_probs
 
