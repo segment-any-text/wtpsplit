@@ -88,7 +88,13 @@ def process_logits(text, model, lang_code, args):
             if "xlm" in model.config.model_type:
                 tokens = tokenizer.tokenize(short_seq, verbose=False)
 
-                char_probs = token_to_char_probs(short_seq, tokens, current_logits, tokenizer, current_offsets_mapping)
+                char_probs = token_to_char_probs(
+                    short_seq,
+                    tokens,
+                    current_logits,
+                    [tokenizer.cls_token, tokenizer.sep_token, tokenizer.pad_token],
+                    current_offsets_mapping,
+                )
 
                 current_logits = char_probs
 
