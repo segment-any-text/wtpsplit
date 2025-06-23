@@ -433,30 +433,25 @@ def reconstruct_sentences(text, partial_sentences):
     return fixed_sentences
 
 
-def get_token_spans(tokenizer, offsets_mapping, tokens):
+def get_token_spans(offsets_mapping, tokens, special_tokens):
     # Filter out special tokens and get their character start and end positions
     valid_indices = np.array(
-        [
-            idx
-            for idx, token in enumerate(tokens)
-            if token not in [tokenizer.cls_token, tokenizer.sep_token, tokenizer.pad_token]
-            and idx < len(offsets_mapping)
-        ]
+        [idx for idx, token in enumerate(tokens) if idx < len(offsets_mapping) and token not in special_tokens]
     )
     valid_offsets = np.array(offsets_mapping)[valid_indices]
     return valid_indices, valid_offsets
 
 
-def token_to_char_probs(text, tokens, token_logits, tokenizer, offsets_mapping):
-    """Map from token probabalities to character probabilities"""
+def token_to_char_probs(text, tokens, token_logits, special_tokens, offsets_mapping):
+    """Map from token probabilities to character probabilities"""
     char_probs = np.full((len(text), token_logits.shape[1]), -np.inf)  # Initialize with very low numbers
 
-    valid_indices, valid_offsets = get_token_spans(tokenizer, offsets_mapping, tokens)
+    valid_indices, valid_offsets = get_token_spans(offsets_mapping, tokens, special_tokens)
 
     # Assign the token's probability to the last character of the token
-    for i in range(valid_offsets.shape[0]):
-        start, end = valid_offsets[i]
-        char_probs[end - 1] = token_logits[valid_indices[i]]
+    # Here, `valid_offsets[:, 1] - 1` computes the index of the last character for each token,
+    # and `token_logits[valid_indices]` provides the corresponding probabilities for those tokens.
+    char_probs[valid_offsets[:, 1] - 1] = token_logits[valid_indices]
 
     return char_probs
 

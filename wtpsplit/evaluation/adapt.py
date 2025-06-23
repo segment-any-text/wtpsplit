@@ -88,7 +88,13 @@ def process_logits(text, model, lang_code, args):
             if "xlm" in model.config.model_type:
                 tokens = tokenizer.tokenize(short_seq, verbose=False)
 
-                char_probs = token_to_char_probs(short_seq, tokens, current_logits, tokenizer, current_offsets_mapping)
+                char_probs = token_to_char_probs(
+                    short_seq,
+                    tokens,
+                    current_logits,
+                    [tokenizer.cls_token, tokenizer.sep_token, tokenizer.pad_token],
+                    current_offsets_mapping,
+                )
 
                 current_logits = char_probs
 
@@ -111,8 +117,10 @@ def process_logits(text, model, lang_code, args):
         if "xlm" in model.config.model_type:
             tokens = tokenizer.tokenize(text, verbose=False)
 
+            special_tokens = [tokenizer.cls_token, tokenizer.sep_token, tokenizer.pad_token]
+
             # convert token probabilities to character probabilities for the entire array
-            char_probs = token_to_char_probs(text, tokens, logits, tokenizer, offsets_mapping)
+            char_probs = token_to_char_probs(text, tokens, logits, special_tokens, offsets_mapping)
 
             logits = char_probs
 

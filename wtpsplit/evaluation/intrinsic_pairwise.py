@@ -86,12 +86,14 @@ def process_logits_k_mers(pairs, model, lang_code, block_size, batch_size, verbo
             pad_last_batch=True,
         )
 
+        special_tokens = [tokenizer.cls_token, tokenizer.sep_token, tokenizer.pad_token]
+
         for k_mer, logit, offset_mapping in zip(k_mer_texts, all_logits, offsets_mapping):
             if "xlm" in model.config.model_type:
                 tokens = tokenizer.tokenize(k_mer, verbose=False)
 
                 # padding is also removed here (via offset_mapping)
-                logits = token_to_char_probs(k_mer, tokens, logit, tokenizer, offset_mapping)
+                logits = token_to_char_probs(k_mer, tokens, logit, special_tokens, offset_mapping)
                 logits_list.append(logits)
                 n_tokens_list.append(len(tokens))
             else:
