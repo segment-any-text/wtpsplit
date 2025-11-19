@@ -5,14 +5,6 @@ import warnings
 from pathlib import Path
 from typing import Literal
 
-# suppress docopt syntax warnings (triggered in Python 3.14+)
-warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")
-# suppress torchaudio backend dispatch warning (triggered by skops)
-warnings.filterwarnings("ignore", category=UserWarning, message="Torchaudio's I/O functions now support.*")
-
-warnings.simplefilter("default", DeprecationWarning)  # show by default
-warnings.simplefilter("ignore", category=FutureWarning)  # for tranformers
-
 # avoid the "None of PyTorch, TensorFlow, etc. have been found" warning.
 with contextlib.redirect_stderr(open(os.devnull, "w")):
     import transformers  # noqa
@@ -28,6 +20,14 @@ from wtpsplit.extract import BertCharORTWrapper, SaTORTWrapper, PyTorchWrapper, 
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid, token_to_char_probs
 
 __version__ = "2.1.7"
+
+# suppress docopt syntax warnings (triggered in Python 3.14+)
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")
+# suppress torchaudio backend dispatch warning (triggered by skops)
+warnings.filterwarnings("ignore", category=UserWarning, message="Torchaudio's I/O functions now support.*")
+
+warnings.simplefilter("default", DeprecationWarning)  # show by default
+warnings.simplefilter("ignore", category=FutureWarning)  # for tranformers
 
 class WtP:
     def __init__(
