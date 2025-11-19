@@ -5,6 +5,14 @@ import warnings
 from pathlib import Path
 from typing import Literal
 
+# suppress docopt syntax warnings (triggered in Python 3.14+)
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")
+# suppress torchaudio backend dispatch warning (triggered by skops)
+warnings.filterwarnings("ignore", category=UserWarning, message="Torchaudio's I/O functions now support.*")
+
+warnings.simplefilter("default", DeprecationWarning)  # show by default
+warnings.simplefilter("ignore", category=FutureWarning)  # for tranformers
+
 # avoid the "None of PyTorch, TensorFlow, etc. have been found" warning.
 with contextlib.redirect_stderr(open(os.devnull, "w")):
     import transformers  # noqa
@@ -19,11 +27,7 @@ from transformers.utils.hub import cached_file
 from wtpsplit.extract import BertCharORTWrapper, SaTORTWrapper, PyTorchWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid, token_to_char_probs
 
-__version__ = "2.1.6"
-
-warnings.simplefilter("default", DeprecationWarning)  # show by default
-warnings.simplefilter("ignore", category=FutureWarning)  # for tranformers
-
+__version__ = "2.1.7"
 
 class WtP:
     def __init__(
@@ -450,6 +454,7 @@ class SaT:
         language: str = None,
         lora_path: str = None,  # local
         hub_prefix="segment-any-text",
+        merge_lora: bool = True,
     ):
         if not isinstance(model_name_or_model, (str, Path)):
             raise TypeError(
@@ -569,7 +574,8 @@ class SaT:
                         load_as="sat-lora",
                     )
                     # merge lora weights into transformer for 0 efficiency overhead
-                    self.model.model.merge_adapter("sat-lora")
+                    if merge_lora:
+                        self.model.model.merge_adapter("sat-lora")
                     self.use_lora = True
                 except:  # noqa
                     if lora_path:

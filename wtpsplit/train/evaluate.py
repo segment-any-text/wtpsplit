@@ -60,7 +60,7 @@ def get_metrics(labels, preds, threshold: float = 0.01):
         "precisions": precision,
         "f1_scores": f1_scores,
         "f1_best": best_f1,
-        "threshold_best": sigmoid(best_threshold).item(),
+        "threshold_best": sigmoid(best_threshold).item(),  # TODO: is the 2nd sigmoid a bug? TBD.
         "f1": f1_at_specific_threshold,
         "thresholds": thresholds,
     }

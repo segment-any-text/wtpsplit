@@ -8,3 +8,8 @@ ignore = ["E741"]
 
 [tool.ruff.per-file-ignores]
 "test.py" = ["E501"]
+
+[dependency-groups]
+dev = [
+    "wtpsplit>=2.1.7",
+]
