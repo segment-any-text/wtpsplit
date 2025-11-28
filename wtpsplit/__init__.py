@@ -18,90 +18,22 @@ from transformers.utils.hub import cached_file
 
 from wtpsplit.extract import BertCharORTWrapper, SaTORTWrapper, PyTorchWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid, token_to_char_probs
-from wtpsplit.utils.constraints import constrained_segmentation
+from wtpsplit.utils.constraints import (
+    constrained_segmentation,
+    _enforce_segment_constraints,
+    _enforce_segment_constraints_simple,
+)
 from wtpsplit.utils.priors import create_prior_function
 
-__version__ = "2.1.6"
+__version__ = "2.2.0"
 
-warnings.simplefilter("default", DeprecationWarning)
-warnings.simplefilter("ignore", category=FutureWarning)
+# suppress docopt syntax warnings (triggered in Python 3.14+)
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")
+# suppress torchaudio backend dispatch warning (triggered by skops)
+warnings.filterwarnings("ignore", category=UserWarning, message="Torchaudio's I/O functions now support.*")
 
-
-def _enforce_segment_constraints(sentences, min_length, max_length):
-    """
-    Post-process segments to handle edge cases from whitespace stripping.
-
-    This is a lightweight cleanup layer that handles discrepancies between
-    the algorithm-level constraints (in constrained_segmentation) and the
-    final text segments after indices_to_sentences conversion.
-
-    Args:
-        sentences: List of text segments
-        min_length: Minimum segment length
-        max_length: Maximum segment length (None for no limit)
-
-    Returns:
-        List of segments that respect the constraints
-    """
-    if not sentences:
-        return sentences
-
-    # Filter out empty/whitespace-only segments
-    filtered = [s for s in sentences if s.strip()]
-    if not filtered:
-        return []
-
-    # No constraints - return as-is
-    if min_length == 1 and max_length is None:
-        return filtered
-
-    result = []
-    i = 0
-
-    while i < len(filtered):
-        seg = filtered[i]
-        seg_len = len(seg)
-
-        # Case 1: Segment is too long - split it
-        if max_length is not None and seg_len > max_length:
-            # Split at max_length boundaries
-            for offset in range(0, seg_len, max_length):
-                chunk = seg[offset:offset + max_length]
-                result.append(chunk)
-            i += 1
-
-        # Case 2: Segment is too short - try to merge with next
-        elif seg_len < min_length:
-            merged = seg
-            j = i + 1
-
-            # Accumulate following segments
-            while j < len(filtered) and len(merged) < min_length:
-                next_seg = filtered[j]
-                if max_length is None or len(merged) + len(next_seg) <= max_length:
-                    merged += next_seg
-                    j += 1
-                else:
-                    break
-
-            result.append(merged)
-            i = j
-
-        # Case 3: Segment is valid
-        else:
-            result.append(seg)
-            i += 1
-
-    # Final cleanup: merge last segment if it's too short
-    if len(result) > 1:
-        last = result[-1]
-        if len(last) < min_length:
-            prev = result[-2]
-            if max_length is None or len(prev) + len(last) <= max_length:
-                result[-2] = prev + last
-                result.pop()
-
-    return [s for s in result if s.strip()]
+warnings.simplefilter("default", DeprecationWarning)  # show by default
+warnings.simplefilter("ignore", category=FutureWarning)  # for transformers
 
 
 class WtP:
@@ -318,6 +250,7 @@ class WtP:
                 input_texts.append(input_text)
 
             empty_string_indices = [i for i, text in enumerate(input_texts) if not text.strip()]
+            # remove empty strings from input_texts
             input_texts = [text for text in input_texts if text.strip()]
 
             if input_texts:
@@ -338,6 +271,7 @@ class WtP:
             def newline_probability_fn(logits):
                 return sigmoid(logits[:, Constants.NEWLINE_INDEX])
 
+            # add back empty strings
             for i in empty_string_indices:
                 outer_batch_logits.insert(i, np.ones([1, 1]) * -np.inf)
 
@@ -386,6 +320,22 @@ class WtP:
         prior_kwargs: dict = None,
         algorithm: str = "viterbi",
     ):
+        # Input validation
+        if max_length is not None and min_length > max_length:
+            raise ValueError(
+                f"min_length ({min_length}) cannot be greater than max_length ({max_length})"
+            )
+        if min_length < 1:
+            raise ValueError(f"min_length must be >= 1, got {min_length}")
+        if max_length is not None and max_length < 1:
+            raise ValueError(f"max_length must be >= 1, got {max_length}")
+        valid_priors = ["uniform", "gaussian", "clipped_polynomial"]
+        if prior_type not in valid_priors:
+            raise ValueError(f"Unknown prior_type: '{prior_type}'. Must be one of {valid_priors}")
+        valid_algorithms = ["viterbi", "greedy"]
+        if algorithm not in valid_algorithms:
+            raise ValueError(f"Unknown algorithm: '{algorithm}'. Must be one of {valid_algorithms}")
+        
         if isinstance(text_or_texts, str):
             return next(
                 self._split(
@@ -530,13 +480,9 @@ class WtP:
                         )
                         indices = [b - 1 for b in boundaries]
                         
-                        for sentence in indices_to_sentences(
-                            paragraph,
-                            indices,
-                            strip_whitespace=strip_whitespace,
-                        ):
-                            sentences.append(sentence)
-                        sentences = _enforce_segment_constraints(sentences, min_length, max_length)
+                        sentences = _enforce_segment_constraints(
+                            paragraph, indices, min_length, max_length, strip_whitespace=strip_whitespace
+                        )
                     else:
                         for sentence in indices_to_sentences(
                             paragraph,
@@ -564,8 +510,9 @@ class WtP:
                         probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
                     )
                     indices = [b - 1 for b in boundaries]
-                    sentences = indices_to_sentences(text, indices, strip_whitespace=strip_whitespace)
-                    sentences = _enforce_segment_constraints(sentences, min_length, max_length)
+                    sentences = _enforce_segment_constraints(
+                        text, indices, min_length, max_length, strip_whitespace=strip_whitespace
+                    )
                 else:
                     sentences = indices_to_sentences(
                         text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
@@ -585,6 +532,7 @@ class SaT:
         language: str = None,
         lora_path: str = None,  # local
         hub_prefix="segment-any-text",
+        merge_lora: bool = True,
     ):
         if not isinstance(model_name_or_model, (str, Path)):
             raise TypeError(
@@ -704,7 +652,8 @@ class SaT:
                         load_as="sat-lora",
                     )
                     # merge lora weights into transformer for 0 efficiency overhead
-                    self.model.model.merge_adapter("sat-lora")
+                    if merge_lora:
+                        self.model.model.merge_adapter("sat-lora")
                     self.use_lora = True
                 except:  # noqa
                     if lora_path:
@@ -806,6 +755,7 @@ class SaT:
                 input_texts.append(input_text)
 
             empty_string_indices = [i for i, text in enumerate(input_texts) if not text.strip()]
+            # remove empty strings from input_texts
             input_texts = [text for text in input_texts if text.strip()]
             if input_texts:
                 outer_batch_logits, _, tokenizer, tokenizer_output = extract(
@@ -834,6 +784,7 @@ class SaT:
             else:
                 outer_batch_logits = []
 
+            # add back empty strings
             for i in empty_string_indices:
                 outer_batch_logits.insert(i, np.ones([1, 1]) * -np.inf)
 
@@ -885,6 +836,23 @@ class SaT:
                 DeprecationWarning,
             )
             split_on_input_newlines = not treat_newline_as_space
+        
+        # Input validation
+        if max_length is not None and min_length > max_length:
+            raise ValueError(
+                f"min_length ({min_length}) cannot be greater than max_length ({max_length})"
+            )
+        if min_length < 1:
+            raise ValueError(f"min_length must be >= 1, got {min_length}")
+        if max_length is not None and max_length < 1:
+            raise ValueError(f"max_length must be >= 1, got {max_length}")
+        valid_priors = ["uniform", "gaussian", "clipped_polynomial"]
+        if prior_type not in valid_priors:
+            raise ValueError(f"Unknown prior_type: '{prior_type}'. Must be one of {valid_priors}")
+        valid_algorithms = ["viterbi", "greedy"]
+        if algorithm not in valid_algorithms:
+            raise ValueError(f"Unknown algorithm: '{algorithm}'. Must be one of {valid_algorithms}")
+        
         if isinstance(text_or_texts, str):
             return next(
                 self._split(
@@ -1010,13 +978,9 @@ class SaT:
                         )
                         indices = [b - 1 for b in boundaries]
                         
-                        for sentence in indices_to_sentences(
-                            paragraph,
-                            indices,
-                            strip_whitespace=strip_whitespace,
-                        ):
-                            sentences.append(sentence)
-                        sentences = _enforce_segment_constraints(sentences, min_length, max_length)
+                        sentences = _enforce_segment_constraints(
+                            paragraph, indices, min_length, max_length, strip_whitespace=strip_whitespace
+                        )
                     else:
                         for sentence in indices_to_sentences(
                             paragraph,
@@ -1045,20 +1009,25 @@ class SaT:
                         probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
                     )
                     indices = [b - 1 for b in boundaries]
-                    sentences = indices_to_sentences(text, indices, strip_whitespace=strip_whitespace)
-                    sentences = _enforce_segment_constraints(sentences, min_length, max_length)
+                    sentences = _enforce_segment_constraints(
+                        text, indices, min_length, max_length, strip_whitespace=strip_whitespace
+                    )
                 else:
                     sentences = indices_to_sentences(
                         text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
                     )
                 
                 if split_on_input_newlines:
+                    # within the model, newlines in the text were ignored - they were treated as spaces.
+                    # this is the default behavior: additionally split on newlines as provided in the input
                     new_sentences = []
                     for sentence in sentences:
                         new_sentences.extend(sentence.split("\n"))
                     sentences = new_sentences
                     if max_length is not None or min_length > 1:
-                        sentences = _enforce_segment_constraints(sentences, min_length, max_length)
+                        sentences = _enforce_segment_constraints_simple(
+                            sentences, min_length, max_length, delimiter="\n"
+                        )
                 else:
                     warnings.warn(
                         "split_on_input_newlines=False will lead to newlines in the output "

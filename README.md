@@ -141,6 +141,26 @@ Since SaT are trained to predict newline probablity, they can segment text into 
 sat.split(text, do_paragraph_segmentation=True)
 ```
 
+## Length-Constrained Segmentation
+
+Control segment lengths with `min_length` and `max_length` parameters. This is useful when you need segments within specific size limits (e.g., for storage or downstream processing).
+
+```python
+# segments will be at most 100 characters
+sat.split(text, max_length=100)
+
+# segments will be at least 20 characters (best effort) and at most 100 characters (strict)
+sat.split(text, min_length=20, max_length=100)
+
+# use different algorithms: "viterbi" (optimal, default) or "greedy" (faster)
+sat.split(text, max_length=100, algorithm="greedy")
+
+# use priors to influence segment length distribution: "uniform" (default), "gaussian", "clipped_polynomial"
+sat.split(text, max_length=100, prior_type="gaussian", prior_kwargs={"mu": 50, "sigma": 10})
+```
+
+The Viterbi algorithm finds globally optimal segmentation points that respect both the model's sentence boundary predictions and your length constraints. Text is always preserved exactly.
+
 ## Adaptation
 
 SaT can be domain- and style-adapted via LoRA. We provide trained LoRA modules for Universal Dependencies, OPUS100, Ersatz, and TED (i.e., ASR-style transcribed speecjes) sentence styles in 81 languages for `sat-3l`and `sat-12l`. Additionally, we provide LoRA modules for legal documents (laws and judgements) in 6 languages, code-switching in 4 language pairs, and tweets in 3 languages. For details, we refer to our [paper](https://arxiv.org/abs/2406.16678).
