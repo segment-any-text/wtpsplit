@@ -52,7 +52,7 @@ def show_segments(segments, max_length=None, label=""):
         length = len(seg)
         
         # Check for word cuts (ends with letter preceded by letter)
-        has_cut = len(seg) > 1 and seg[-1].isalpha() and len(seg) > 1 and seg[-2].isalpha()
+        has_cut = len(seg) > 1 and seg[-1].isalpha() and seg[-2].isalpha()
         
         # Status indicator
         if has_cut:
