@@ -302,7 +302,7 @@ class WtP:
         text_or_texts,
         lang_code: str = None,
         style: str = None,
-        threshold: float = None,
+        threshold: float = None,  # ignored when max_length is set
         stride=64,
         block_size: int = 512,
         batch_size=32,
@@ -315,7 +315,7 @@ class WtP:
         do_paragraph_segmentation=False,
         verbose: bool = False,
         min_length: int = 1,
-        max_length: int = None,
+        max_length: int = None,  # when set, threshold is ignored; uses raw probabilities
         prior_type: str = "uniform",
         prior_kwargs: dict = None,
         algorithm: str = "viterbi",
@@ -335,6 +335,13 @@ class WtP:
         valid_algorithms = ["viterbi", "greedy"]
         if algorithm not in valid_algorithms:
             raise ValueError(f"Unknown algorithm: '{algorithm}'. Must be one of {valid_algorithms}")
+        
+        if max_length is not None and threshold is not None:
+            warnings.warn(
+                "Both 'threshold' and 'max_length' are set. When using length-constrained "
+                "segmentation (max_length), the threshold parameter is ignored.",
+                UserWarning,
+            )
         
         if isinstance(text_or_texts, str):
             return next(
@@ -809,7 +816,7 @@ class SaT:
     def split(
         self,
         text_or_texts,
-        threshold: float = None,
+        threshold: float = None,  # ignored when max_length is set
         stride=64,
         block_size: int = 512,
         batch_size=32,
@@ -824,7 +831,7 @@ class SaT:
         treat_newline_as_space=None,  # Deprecated
         verbose: bool = False,
         min_length: int = 1,
-        max_length: int = None,
+        max_length: int = None,  # when set, threshold is ignored; uses raw probabilities
         prior_type: str = "uniform",
         prior_kwargs: dict = None,
         algorithm: str = "viterbi",
@@ -852,6 +859,13 @@ class SaT:
         valid_algorithms = ["viterbi", "greedy"]
         if algorithm not in valid_algorithms:
             raise ValueError(f"Unknown algorithm: '{algorithm}'. Must be one of {valid_algorithms}")
+        
+        if max_length is not None and threshold is not None:
+            warnings.warn(
+                "Both 'threshold' and 'max_length' are set. When using length-constrained "
+                "segmentation (max_length), the threshold parameter is ignored.",
+                UserWarning,
+            )
         
         if isinstance(text_or_texts, str):
             return next(
@@ -1020,8 +1034,13 @@ class SaT:
                 if split_on_input_newlines:
                     # within the model, newlines in the text were ignored - they were treated as spaces.
                     # this is the default behavior: additionally split on newlines as provided in the input
+                    # Note: use "\n".join(segments) to reconstruct text (not "".join())
                     new_sentences = []
-                    for sentence in sentences:
+                    for i, sentence in enumerate(sentences):
+                        # Strip ONE trailing newline from non-final segments to avoid
+                        # duplicate delimiters when joined (but preserve internal newlines)
+                        if i < len(sentences) - 1 and sentence.endswith("\n"):
+                            sentence = sentence[:-1]
                         new_sentences.extend(sentence.split("\n"))
                     sentences = new_sentences
                     if max_length is not None or min_length > 1:

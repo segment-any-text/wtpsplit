@@ -14,6 +14,8 @@ Simply split whenever `probability > threshold`.
 
 ### The Controllable Approach
 
+> **Note**: When using length-constrained segmentation (`max_length` is set), the `threshold` parameter is **ignored**. The algorithms use raw model probabilities directly to find optimal split points.
+
 Define a **prior probability distribution** over chunk lengths, then solve an optimization problem that balances:
 - The model's boundary predictions
 - Your length preferences
@@ -108,7 +110,9 @@ Where j ranges from max(0, i-max_length) to i-min_length
 
 1. **`max_length` is STRICT**: No segment will ever exceed `max_length` characters
 2. **`min_length` is BEST EFFORT**: Segments may be shorter if merging would violate `max_length`
-3. **Text preservation**: `"".join(segments) == original_text` always
+3. **Text preservation**:
+   - Default (`split_on_input_newlines=False` or WtP): `"".join(segments) == original_text`
+   - With `split_on_input_newlines=True` (SaT default): `"\n".join(segments) == original_text`
 
 ## Usage Examples
 

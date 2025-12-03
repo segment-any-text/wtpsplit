@@ -159,7 +159,11 @@ sat.split(text, max_length=100, algorithm="greedy")
 sat.split(text, max_length=100, prior_type="gaussian", prior_kwargs={"mu": 50, "sigma": 10})
 ```
 
-The Viterbi algorithm finds globally optimal segmentation points that respect both the model's sentence boundary predictions and your length constraints. Text is always preserved exactly.
+The Viterbi algorithm finds globally optimal segmentation points that respect both the model's sentence boundary predictions and your length constraints. Text is always preserved exactly:
+- `"".join(segments) == text` (default)
+- `"\n".join(segments) == text` (when `split_on_input_newlines=True`, the SaT default)
+
+> **Note**: When `max_length` is set, the `threshold` parameter is ignored. The Viterbi/greedy algorithms use raw model probabilities directly instead of threshold-based filtering.
 
 ## Adaptation
 

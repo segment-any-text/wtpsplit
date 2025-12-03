@@ -948,6 +948,40 @@ class TestRegressions:
 
         assert all(c == 5 for c in chunks), f"Chunks should all be 5, got {chunks}"
 
+    def test_newline_duplication_with_constraints(self, sat_model):
+        """
+        Regression test: When split_on_input_newlines=True combined with length
+        constraints, text preservation should not create duplicate newlines.
+        
+        Bug: _enforce_segment_constraints includes trailing newlines in segments.
+        When split on '\\n', these create empty strings that cause duplicate 
+        newlines after '\\n'.join().
+        """
+        # Test basic newline
+        text1 = "Hello world.\nGoodbye world."
+        segments1 = sat_model.split(text1, max_length=50)
+        assert "\n".join(segments1) == text1, f"Basic newline failed: {segments1}"
+        
+        # Test trailing newline
+        text2 = "Hello world.\nGoodbye world.\n"
+        segments2 = sat_model.split(text2, max_length=50)
+        assert "\n".join(segments2) == text2, f"Trailing newline failed: {segments2}"
+        
+        # Test consecutive newlines
+        text3 = "Hello.\n\nWorld."
+        segments3 = sat_model.split(text3, max_length=50)
+        assert "\n".join(segments3) == text3, f"Consecutive newlines failed: {segments3}"
+        
+        # Test triple newline
+        text4 = "A.\n\n\nB."
+        segments4 = sat_model.split(text4, max_length=50)
+        assert "\n".join(segments4) == text4, f"Triple newline failed: {segments4}"
+        
+        # Test consecutive + trailing
+        text5 = "Hello.\n\nWorld.\n"
+        segments5 = sat_model.split(text5, max_length=50)
+        assert "\n".join(segments5) == text5, f"Consecutive + trailing failed: {segments5}"
+
 
 # =============================================================================
 # PARAGRAPH SEGMENTATION WITH CONSTRAINTS
