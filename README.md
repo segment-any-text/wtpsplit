@@ -141,9 +141,11 @@ Since SaT are trained to predict newline probablity, they can segment text into 
 sat.split(text, do_paragraph_segmentation=True)
 ```
 
-## Length-Constrained Segmentation
+## (NEW! v2.2+) Length-Constrained Segmentation
 
-Control segment lengths with `min_length` and `max_length` parameters. This is useful when you need segments within specific size limits (e.g., for storage or downstream processing).
+Control segment lengths with `min_length` and `max_length` parameters. This is useful when you need segments within specific size limits (e.g., for embedding models, storage, or downstream processing).
+
+### Basic Usage
 
 ```python
 # segments will be at most 100 characters
@@ -154,16 +156,72 @@ sat.split(text, min_length=20, max_length=100)
 
 # use different algorithms: "viterbi" (optimal, default) or "greedy" (faster)
 sat.split(text, max_length=100, algorithm="greedy")
-
-# use priors to influence segment length distribution: "uniform" (default), "gaussian", "clipped_polynomial"
-sat.split(text, max_length=100, prior_type="gaussian", prior_kwargs={"mu": 50, "sigma": 10})
 ```
 
-The Viterbi algorithm finds globally optimal segmentation points that respect both the model's sentence boundary predictions and your length constraints. Text is always preserved exactly:
-- `"".join(segments) == text` (default)
-- `"\n".join(segments) == text` (when `split_on_input_newlines=True`, the SaT default)
+### Priors for Length Preference
+
+Use priors to influence segment length distribution. Available priors:
+
+| Prior | Best For |
+|-------|----------|
+| `"uniform"` (default) | Just enforce max_length, let model decide |
+| `"gaussian"` | Prefer segments around a target length (intuitive) |
+| `"lognormal"` | Natural-feeling output |
+| `"clipped_polynomial"` | Must be very close to target length |
+
+```python
+# Gaussian prior (recommended): prefer segments around target_length
+sat.split(text, max_length=100, prior_type="gaussian", 
+          prior_kwargs={"target_length": 50, "spread": 10})
+
+# Log-normal prior: better models natural sentence length distribution
+sat.split(text, max_length=100, prior_type="lognormal", 
+          prior_kwargs={"target_length": 70, "spread": 0.5})
+
+# Clipped polynomial: hard cutoff at ±spread from target
+sat.split(text, max_length=100, prior_type="clipped_polynomial", 
+          prior_kwargs={"target_length": 60, "spread": 25})
+```
+
+### Language-Aware Defaults
+
+Pass `lang_code` to use language-specific defaults for `target_length` and `spread`:
+
+```python
+# German has longer average sentences → auto-uses target_length=90, spread=35
+sat.split(text, max_length=150, prior_type="gaussian", 
+          prior_kwargs={"lang_code": "de"})
+
+# Chinese has shorter sentences → auto-uses target_length=45, spread=15
+sat.split(text, max_length=100, prior_type="gaussian", 
+          prior_kwargs={"lang_code": "zh"})
+```
+
+When using LoRA with a language, this happens automatically:
+
+```python
+sat = SaT("sat-3l", style_or_domain="ud", language="de")
+sat.split(text, max_length=150, prior_type="gaussian")  # auto-uses German defaults
+```
+
+### How It Works
+
+The Viterbi algorithm finds globally optimal segmentation points that balance:
+- The model's sentence boundary predictions (where natural splits occur)
+- Your length preferences (via the prior; if provided)
+
+**Text Reconstruction:**
+```python
+# With constraints (max_length or min_length):
+original_text = "".join(segments)
+
+# Without constraints (SaT default):
+original_text = "\n".join(segments)
+```
 
 > **Note**: When `max_length` is set, the `threshold` parameter is ignored. The Viterbi/greedy algorithms use raw model probabilities directly instead of threshold-based filtering.
+
+For more details, see the [Length Constraints Documentation](./docs/LENGTH_CONSTRAINTS.md).
 
 ## Adaptation
 

@@ -160,8 +160,8 @@ EXAMPLES = {
         "text": "One. Two. Three. Four. Five. Six. Seven. Eight. Nine. Ten. Eleven. Twelve.",
         "configs": [
             {"max_length": 100, "prior_type": "uniform"},
-            {"max_length": 100, "prior_type": "gaussian", "prior_kwargs": {"mu": 30, "sigma": 10}},
-            {"max_length": 100, "prior_type": "gaussian", "prior_kwargs": {"mu": 60, "sigma": 15}},
+            {"max_length": 100, "prior_type": "gaussian", "prior_kwargs": {"target_length": 30, "spread": 10}},
+            {"max_length": 100, "prior_type": "gaussian", "prior_kwargs": {"target_length": 60, "spread": 15}},
         ]
     },
     "algorithms": {
@@ -322,9 +322,9 @@ Commands:
             if prior in ["uniform", "gaussian", "polynomial"]:
                 settings["prior_type"] = prior if prior != "polynomial" else "clipped_polynomial"
                 if prior == "gaussian":
-                    settings["prior_kwargs"] = {"mu": settings["max_length"] * 0.7, "sigma": 15}
+                    settings["prior_kwargs"] = {"target_length": settings["max_length"] * 0.7, "spread": 15}
                 elif prior == "polynomial":
-                    settings["prior_kwargs"] = {"mu": settings["max_length"] * 0.7, "alpha": 0.001}
+                    settings["prior_kwargs"] = {"target_length": settings["max_length"] * 0.7, "spread": 30}
                 else:
                     settings["prior_kwargs"] = None
                 print(f"prior = {prior}")

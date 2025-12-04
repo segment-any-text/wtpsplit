@@ -262,9 +262,15 @@ def _enforce_segment_constraints_simple(sentences, min_length, max_length, delim
                 # Find a previous non-empty segment that can accommodate the merge
                 for prev_idx in range(len(result) - 1, -1, -1):
                     if result[prev_idx] and result[prev_idx].strip():
-                        prev_merged = result[prev_idx] + delimiter + merged
+                        # Count empty segments between prev_idx and end of result
+                        # They represent consecutive delimiters that must be preserved
+                        empty_between = len(result) - prev_idx - 1
+                        all_delims = delimiter * (empty_between + 1)
+                        prev_merged = result[prev_idx] + all_delims + merged
                         if max_length is None or len(prev_merged) <= max_length:
                             result[prev_idx] = prev_merged
+                            # Remove all segments after prev_idx (they're now in the merged string)
+                            del result[prev_idx + 1:]
                             merged = None  # Mark as merged into previous
                             break
                         # If this one doesn't fit, try earlier segments
@@ -290,12 +296,16 @@ def _enforce_segment_constraints_simple(sentences, min_length, max_length, delim
         prev = result[prev_idx]
         
         if len(last) < min_length:
-            merged = prev + delimiter + last
+            # Count empty segments between prev and last (they represent delimiters)
+            empty_count = last_idx - prev_idx - 1
+            # Build merge with all intermediate delimiters: prev + (empty_count + 1) delimiters + last
+            all_delims = delimiter * (empty_count + 1)
+            merged = prev + all_delims + last
             # STRICT max_length check
             if max_length is None or len(merged) <= max_length:
                 result[prev_idx] = merged
-                # Remove the merged segment
-                result.pop(last_idx)
+                # Remove all segments from prev_idx+1 to last_idx (inclusive)
+                del result[prev_idx + 1 : last_idx + 1]
     
     return result
 
@@ -421,11 +431,23 @@ def constrained_segmentation(
             if indices and n - indices[-1] < min_length:
                 if len(indices) > 1:
                     prev_split = indices[-2]
+                    # Try to merge with previous: remove last split if result fits max_length
                     if n - prev_split <= max_length:
                         indices.pop()
                     else:
-                        indices[-1] = max(indices[-1], n - max_length)
+                        # Can't merge - try to move split point to satisfy min_length
+                        # New split should give final chunk >= min_length
+                        desired_split = n - min_length
+                        # But previous chunk must stay <= max_length
+                        min_valid_split = prev_split + 1  # at least 1 char in prev chunk after prev_split
+                        # And previous chunk must stay >= min_length (best effort)
+                        adjusted_split = max(desired_split, min_valid_split)
+                        # Ensure we don't exceed max_length for previous chunk
+                        if adjusted_split - prev_split <= max_length:
+                            indices[-1] = adjusted_split
+                        # else: keep current split (best effort - one constraint must give)
                 elif n <= max_length:
+                    # Single split that leaves short final - just remove it
                     return []
             return indices
 
@@ -444,14 +466,27 @@ def constrained_segmentation(
             if last_chunk_len < min_length:
                 if len(result) > 1:
                     prev_split = result[-2]
+                    # Try to merge with previous: remove last split if result fits max_length
                     if n - prev_split <= max_length:
                         result.pop()
                     else:
-                        if result[-1] - result[-2] <= max_length:
-                            result[-1] = max(result[-1], n - max_length)
+                        # Can't merge - try to move split point to satisfy min_length
+                        desired_split = n - min_length
+                        min_valid_split = prev_split + 1
+                        adjusted_split = max(desired_split, min_valid_split)
+                        # Ensure previous chunk doesn't exceed max_length
+                        if adjusted_split - prev_split <= max_length:
+                            result[-1] = adjusted_split
+                        # else: keep current split (best effort)
                 else:
+                    # Single split - try to adjust or remove
                     if n <= max_length:
                         return []
+                    else:
+                        # Try to move split to satisfy min_length for final chunk
+                        desired_split = n - min_length
+                        if desired_split >= min_length:  # first chunk also needs min_length
+                            result[-1] = desired_split
 
         return result
 

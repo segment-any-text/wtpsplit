@@ -42,7 +42,18 @@ In Bayesian terms:
 
 ## Prior Functions
 
-### 1. Uniform Prior
+### Which Prior Should I Use?
+
+| Prior | Recommendation | Best For |
+|-------|---------------|----------|
+| **Uniform** | Default | Just enforce max_length, let model decide split points |
+| **Gaussian** ⭐ | Recommended | Prefer segments around a target length (intuitive, easy to tune) |
+| **Log-Normal** | Advanced | Natural-feeling output that matches real sentence distributions |
+| **Clipped Polynomial** | Special cases | When segments MUST be very close to target length |
+
+**TL;DR**: Use `uniform` (default) if you just need max_length. Use `gaussian` if you want to prefer a specific segment size.
+
+### 1. Uniform Prior (Default)
 
 ```python
 Prior(length) = 1.0 if length ≤ max_length else 0.0
@@ -50,28 +61,40 @@ Prior(length) = 1.0 if length ≤ max_length else 0.0
 
 - All lengths equally good up to `max_length`
 - Hard cutoff at maximum
-- **Use case**: Simple length limiting
+- **Use case**: Simple length limiting — let the model decide optimal splits
 
-### 2. Gaussian Prior
+### 2. Gaussian Prior ⭐ Recommended
 
 ```python
-Prior(length) = exp(-0.5 × ((length - μ) / σ)²)
+Prior(length) = exp(-0.5 × ((length - target_length) / spread)²)
 ```
 
-- Peaks at `μ` (preferred length)
-- Falls off smoothly based on `σ`
-- **Use case**: Prefer specific chunk sizes (e.g., for embeddings)
+- Peaks at `target_length` (preferred length)
+- Falls off smoothly based on `spread` (standard deviation)
+- Symmetric, intuitive parameters
+- **Use case**: Prefer specific chunk sizes (e.g., ~512 chars for embedding models)
 
 ### 3. Clipped Polynomial Prior
 
 ```python
-Prior(length) = max(1 - α × (length - μ)², 0)
+Prior(length) = max(1 - (1/spread²) × (length - target_length)², 0)
 ```
 
-- Peaks at `μ`
-- Quadratic falloff controlled by `α`
-- Clips to zero far from peak
-- **Use case**: Strong preference for target length
+- Peaks at `target_length`
+- Clips to zero at `±spread` characters from target
+- More aggressive than Gaussian
+- **Use case**: Strong enforcement when segments must be close to target
+
+### 4. Log-Normal Prior (Advanced)
+
+```python
+Prior(length) = exp(-0.5 × ((log(length) - μ) / σ)²) / length
+```
+
+- Better models natural sentence length distribution (right-skewed)
+- `target_length` sets the peak (mode)
+- `spread` controls variance (0.3=tight, 0.5=moderate, 0.7=loose)
+- **Use case**: Natural-feeling segmentation for advanced users
 
 ## Algorithms
 
@@ -110,9 +133,20 @@ Where j ranges from max(0, i-max_length) to i-min_length
 
 1. **`max_length` is STRICT**: No segment will ever exceed `max_length` characters
 2. **`min_length` is BEST EFFORT**: Segments may be shorter if merging would violate `max_length`
-3. **Text preservation**:
-   - Default (`split_on_input_newlines=False` or WtP): `"".join(segments) == original_text`
-   - With `split_on_input_newlines=True` (SaT default): `"\n".join(segments) == original_text`
+3. **Text preservation** — use the correct join method:
+
+```python
+# With constraints (max_length or min_length set):
+original_text = "".join(segments)  # ← newlines may be inside segments
+
+# Without constraints (SaT default with split_on_input_newlines=True):
+original_text = "\n".join(segments)
+
+# Without constraints (WtP or split_on_input_newlines=False):
+original_text = "".join(segments)
+```
+
+> **Why the difference?** When constraints force mid-line splits (line > max_length), we can't split exactly at newlines. Newlines stay embedded in segments to preserve text. The algorithm boosts probabilities at newline positions to prefer splitting there when possible.
 
 ## Usage Examples
 
@@ -142,7 +176,7 @@ segments = sat.split(
     text,
     max_length=100,
     prior_type="gaussian",
-    prior_kwargs={"mu": 50, "sigma": 15}
+    prior_kwargs={"target_length": 50, "spread": 15}
 )
 ```
 
@@ -208,18 +242,43 @@ Used after `split("\n")` to re-apply constraints:
 | `min_length` | int | 1 | Minimum segment length (best effort) |
 | `max_length` | int | None | Maximum segment length (strict) |
 | `algorithm` | str | "viterbi" | "viterbi" (optimal) or "greedy" (faster) |
-| `prior_type` | str | "uniform" | "uniform", "gaussian", or "clipped_polynomial" |
+| `prior_type` | str | "uniform" | "uniform", "gaussian", "clipped_polynomial", or "lognormal" |
 | `prior_kwargs` | dict | None | Parameters for prior function |
 
 ### Prior Parameters
 
+**All priors support:**
+- `lang_code`: Optional language code (e.g., "en", "zh", "de") for language-aware defaults
+
 **Gaussian:**
-- `mu`: Mean (preferred length), default 20.0
-- `sigma`: Standard deviation, default 5.0
+- `target_length`: Preferred length in characters (language-aware default if `lang_code` provided)
+- `spread`: Standard deviation in characters (language-aware default if `lang_code` provided)
 
 **Clipped Polynomial:**
-- `mu`: Peak position, default 3.0
-- `alpha`: Falloff rate, default 0.5
+- `target_length`: Peak position in characters (language-aware default if `lang_code` provided)
+- `spread`: Tolerance in characters — clips to zero at ±spread from target (language-aware default if `lang_code` provided)
+
+**Log-Normal:**
+- `target_length`: Peak/mode in characters (language-aware default if `lang_code` provided)
+- `spread`: Variance control (0.3=tight, 0.7=loose), default 0.5
+
+### Language-Aware Defaults
+
+When `lang_code` is provided in `prior_kwargs` but `target_length` is not specified, 
+the prior uses empirically-derived defaults for that language:
+
+```python
+# Uses Chinese defaults: target_length=45, spread=15
+sat.split(text, max_length=100, prior_type="gaussian", 
+          prior_kwargs={"lang_code": "zh"})
+
+# Uses German defaults: target_length=90, spread=35
+sat.split(text, max_length=150, prior_type="gaussian", 
+          prior_kwargs={"lang_code": "de"})
+```
+
+Supported languages include: zh, ja, ko (East Asian), de, en, fr, es, it, pt, ru, ar, and many more.
+See `LANG_SENTENCE_STATS` in `wtpsplit/utils/priors.py` for the full list.
 
 ## See Also
 

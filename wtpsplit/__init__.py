@@ -21,7 +21,6 @@ from wtpsplit.utils import Constants, indices_to_sentences, sigmoid, token_to_ch
 from wtpsplit.utils.constraints import (
     constrained_segmentation,
     _enforce_segment_constraints,
-    _enforce_segment_constraints_simple,
 )
 from wtpsplit.utils.priors import create_prior_function
 
@@ -329,7 +328,7 @@ class WtP:
             raise ValueError(f"min_length must be >= 1, got {min_length}")
         if max_length is not None and max_length < 1:
             raise ValueError(f"max_length must be >= 1, got {max_length}")
-        valid_priors = ["uniform", "gaussian", "clipped_polynomial"]
+        valid_priors = ["uniform", "gaussian", "clipped_polynomial", "lognormal"]
         if prior_type not in valid_priors:
             raise ValueError(f"Unknown prior_type: '{prior_type}'. Must be one of {valid_priors}")
         valid_algorithms = ["viterbi", "greedy"]
@@ -551,6 +550,7 @@ class SaT:
         self.model_name_or_model = model_name_or_model
         self.ort_providers = ort_providers
         self.ort_kwargs = ort_kwargs
+        self.language = language  # Store for language-aware prior defaults
 
         self.use_lora = False
 
@@ -853,7 +853,7 @@ class SaT:
             raise ValueError(f"min_length must be >= 1, got {min_length}")
         if max_length is not None and max_length < 1:
             raise ValueError(f"max_length must be >= 1, got {max_length}")
-        valid_priors = ["uniform", "gaussian", "clipped_polynomial"]
+        valid_priors = ["uniform", "gaussian", "clipped_polynomial", "lognormal"]
         if prior_type not in valid_priors:
             raise ValueError(f"Unknown prior_type: '{prior_type}'. Must be one of {valid_priors}")
         valid_algorithms = ["viterbi", "greedy"]
@@ -986,6 +986,9 @@ class SaT:
                             prior_kwargs = prior_kwargs.copy()
                         if max_length is not None:
                             prior_kwargs["max_length"] = max_length
+                        # Use model's language for prior defaults if not explicitly set
+                        if self.language and "lang_code" not in prior_kwargs and "target_length" not in prior_kwargs:
+                            prior_kwargs["lang_code"] = self.language
                         prior_fn = create_prior_function(prior_type, prior_kwargs)
                         boundaries = constrained_segmentation(
                             paragraph_probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
@@ -1017,41 +1020,50 @@ class SaT:
                         prior_kwargs = prior_kwargs.copy()
                     if max_length is not None:
                         prior_kwargs["max_length"] = max_length
+                    # Use model's language for prior defaults if not explicitly set
+                    if self.language and "lang_code" not in prior_kwargs and "target_length" not in prior_kwargs:
+                        prior_kwargs["lang_code"] = self.language
                     prior_fn = create_prior_function(prior_type, prior_kwargs)
 
+                    # When split_on_input_newlines=True, boost probabilities at newline positions
+                    # so the constraint algorithm prefers to split at natural line boundaries
+                    constraint_probs = probs.copy()
+                    if split_on_input_newlines:
+                        for i, char in enumerate(text):
+                            if char == '\n' and i < len(constraint_probs):
+                                constraint_probs[i] = 1.0  # Strong preference for newline splits
+
                     boundaries = constrained_segmentation(
-                        probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
+                        constraint_probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
                     )
                     indices = [b - 1 for b in boundaries]
                     sentences = _enforce_segment_constraints(
                         text, indices, min_length, max_length, strip_whitespace=strip_whitespace
                     )
+                    # Note: when constraints are used, newlines may appear inside segments.
+                    # Use "".join(segments) == text for reconstruction (not "\n".join()).
                 else:
                     sentences = indices_to_sentences(
                         text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
                     )
                 
-                if split_on_input_newlines:
-                    # within the model, newlines in the text were ignored - they were treated as spaces.
-                    # this is the default behavior: additionally split on newlines as provided in the input
-                    # Note: use "\n".join(segments) to reconstruct text (not "".join())
-                    new_sentences = []
-                    for i, sentence in enumerate(sentences):
-                        # Strip ONE trailing newline from non-final segments to avoid
-                        # duplicate delimiters when joined (but preserve internal newlines)
-                        if i < len(sentences) - 1 and sentence.endswith("\n"):
-                            sentence = sentence[:-1]
-                        new_sentences.extend(sentence.split("\n"))
-                    sentences = new_sentences
-                    if max_length is not None or min_length > 1:
-                        sentences = _enforce_segment_constraints_simple(
-                            sentences, min_length, max_length, delimiter="\n"
+                    if split_on_input_newlines:
+                        # within the model, newlines in the text were ignored - they were treated as spaces.
+                        # this is the default behavior: additionally split on newlines as provided in the input
+                        # Note: use "\n".join(segments) to reconstruct text (not "".join())
+                        new_sentences = []
+                        for i, sentence in enumerate(sentences):
+                            # Strip ONE trailing newline from non-final segments to avoid
+                            # duplicate delimiters when joined (but preserve internal newlines)
+                            if i < len(sentences) - 1 and sentence.endswith("\n"):
+                                sentence = sentence[:-1]
+                            new_sentences.extend(sentence.split("\n"))
+                        sentences = new_sentences
+l                    else:
+                        warnings.warn(
+                            "split_on_input_newlines=False will lead to newlines in the output "
+                            "if they were present in the input. Within the model, such newlines are "
+                            "treated as spaces. "
+                            "If you want to split on such newlines, set split_on_input_newlines=True."
                         )
-                else:
-                    warnings.warn(
-                        "split_on_input_newlines=False will lead to newlines in the output "
-                        "if they were present in the input. Within the model, such newlines are "
-                        "treated as spaces. "
-                        "If you want to split on such newlines, set split_on_input_newlines=False."
-                    )
                 yield sentences

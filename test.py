@@ -316,7 +316,7 @@ def test_gaussian_prior():
         min_length=20,
         max_length=60,
         prior_type="gaussian",
-        prior_kwargs={"mu": 40.0, "sigma": 5.0},
+        prior_kwargs={"target_length": 40.0, "spread": 5.0},
         threshold=0.025
     )
     

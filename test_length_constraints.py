@@ -327,7 +327,7 @@ class TestPriors:
         assert prior_fn(200) == 0.0
 
     def test_gaussian_prior(self):
-        prior_fn = create_prior_function("gaussian", {"mu": 50, "sigma": 10})
+        prior_fn = create_prior_function("gaussian", {"target_length": 50, "spread": 10})
 
         assert prior_fn(50) == pytest.approx(1.0)
         assert prior_fn(30) < prior_fn(50)
@@ -336,29 +336,31 @@ class TestPriors:
         assert prior_fn(40) == pytest.approx(prior_fn(60), rel=1e-5)
 
     def test_polynomial_prior(self):
-        prior_fn = create_prior_function("clipped_polynomial", {"mu": 50, "alpha": 0.01})
+        # spread=20 means tolerance of ±20 chars before clipping to zero
+        prior_fn = create_prior_function("clipped_polynomial", {"target_length": 50, "spread": 20})
 
         assert prior_fn(50) == pytest.approx(1.0)
         assert prior_fn(40) < prior_fn(50)
         assert prior_fn(60) < prior_fn(50)
 
     def test_polynomial_clips_to_zero(self):
-        prior_fn = create_prior_function("clipped_polynomial", {"mu": 50, "alpha": 0.1})
+        # spread=30 means clips to zero at ±30 chars from target
+        prior_fn = create_prior_function("clipped_polynomial", {"target_length": 50, "spread": 30})
 
         assert prior_fn(50) == 1.0
-        assert prior_fn(100) == 0.0  # Clipped
+        assert prior_fn(100) == 0.0  # 50 chars away, definitely clipped
 
     def test_gaussian_affects_segmentation(self, sat_model):
         text = "One. Two. Three. Four. Five. Six. Seven. Eight. Nine. Ten."
 
         segments_small = sat_model.split(
             text, max_length=200, prior_type="gaussian",
-            prior_kwargs={"mu": 20, "sigma": 5}, threshold=0.025
+            prior_kwargs={"target_length": 20, "spread": 5}, threshold=0.025
         )
 
         segments_large = sat_model.split(
             text, max_length=200, prior_type="gaussian",
-            prior_kwargs={"mu": 100, "sigma": 20}, threshold=0.025
+            prior_kwargs={"target_length": 100, "spread": 20}, threshold=0.025
         )
 
         assert "".join(segments_small) == text
@@ -948,39 +950,187 @@ class TestRegressions:
 
         assert all(c == 5 for c in chunks), f"Chunks should all be 5, got {chunks}"
 
-    def test_newline_duplication_with_constraints(self, sat_model):
+    def test_newline_preservation_with_constraints(self, sat_model):
         """
-        Regression test: When split_on_input_newlines=True combined with length
-        constraints, text preservation should not create duplicate newlines.
+        Regression test: When using length constraints, newlines stay embedded
+        in segments and text is preserved with "".join() (not "\\n".join()).
         
-        Bug: _enforce_segment_constraints includes trailing newlines in segments.
-        When split on '\\n', these create empty strings that cause duplicate 
-        newlines after '\\n'.join().
+        With constraints: "".join(segments) == text (newlines embedded)
+        Without constraints: "\\n".join(segments) == text (split on newlines)
         """
         # Test basic newline
         text1 = "Hello world.\nGoodbye world."
         segments1 = sat_model.split(text1, max_length=50)
-        assert "\n".join(segments1) == text1, f"Basic newline failed: {segments1}"
+        assert "".join(segments1) == text1, f"Basic newline failed: {segments1}"
         
         # Test trailing newline
         text2 = "Hello world.\nGoodbye world.\n"
         segments2 = sat_model.split(text2, max_length=50)
-        assert "\n".join(segments2) == text2, f"Trailing newline failed: {segments2}"
+        assert "".join(segments2) == text2, f"Trailing newline failed: {segments2}"
         
         # Test consecutive newlines
         text3 = "Hello.\n\nWorld."
         segments3 = sat_model.split(text3, max_length=50)
-        assert "\n".join(segments3) == text3, f"Consecutive newlines failed: {segments3}"
+        assert "".join(segments3) == text3, f"Consecutive newlines failed: {segments3}"
         
         # Test triple newline
         text4 = "A.\n\n\nB."
         segments4 = sat_model.split(text4, max_length=50)
-        assert "\n".join(segments4) == text4, f"Triple newline failed: {segments4}"
+        assert "".join(segments4) == text4, f"Triple newline failed: {segments4}"
         
         # Test consecutive + trailing
         text5 = "Hello.\n\nWorld.\n"
         segments5 = sat_model.split(text5, max_length=50)
-        assert "\n".join(segments5) == text5, f"Consecutive + trailing failed: {segments5}"
+        assert "".join(segments5) == text5, f"Consecutive + trailing failed: {segments5}"
+
+    def test_empty_segments_backward_merge_text_preservation(self):
+        """
+        Regression test: When merging a short final segment backward,
+        empty segments (representing consecutive delimiters) between
+        the previous non-empty segment and the short segment must be
+        included in the merge, not orphaned.
+        
+        Bug: The backward merge used only one delimiter instead of
+        counting empty segments between prev_idx and current position.
+        This caused empty segments to be orphaned and appear at the
+        wrong position in the output, breaking text preservation.
+        
+        Example failure before fix:
+          Input:  ['LongEnoughTextHere', '', '', 'Hi']
+          Output: ['LongEnoughTextHere\\nHi', '', '']  # WRONG - empties at end
+          Should: ['LongEnoughTextHere\\n\\n\\nHi']    # CORRECT - empties absorbed
+        """
+        # Case 1: Empty segments between prev and short final segment
+        segments = ['LongEnoughTextHere', '', '', 'Hi']
+        result = _enforce_segment_constraints_simple(
+            segments, min_length=5, max_length=100, delimiter='\n'
+        )
+        original = '\n'.join(segments)
+        reconstructed = '\n'.join(result)
+        assert original == reconstructed, \
+            f"Text not preserved! Original: {repr(original)}, Got: {repr(reconstructed)}"
+        
+        # Case 2: Many consecutive empty segments
+        segments2 = ['Hello', '', '', '', '', 'X']
+        result2 = _enforce_segment_constraints_simple(
+            segments2, min_length=3, max_length=100, delimiter='\n'
+        )
+        original2 = '\n'.join(segments2)
+        reconstructed2 = '\n'.join(result2)
+        assert original2 == reconstructed2, \
+            f"Text not preserved! Original: {repr(original2)}, Got: {repr(reconstructed2)}"
+        
+        # Case 3: Single empty segment between
+        segments3 = ['LongText', '', 'Hi']
+        result3 = _enforce_segment_constraints_simple(
+            segments3, min_length=5, max_length=100, delimiter='\n'
+        )
+        original3 = '\n'.join(segments3)
+        reconstructed3 = '\n'.join(result3)
+        assert original3 == reconstructed3, \
+            f"Text not preserved! Original: {repr(original3)}, Got: {repr(reconstructed3)}"
+
+    def test_empty_segments_final_merge_text_preservation(self):
+        """
+        Regression test: The final merge pass (after main loop) must also
+        preserve empty segments between the previous non-empty and last
+        non-empty segments.
+        """
+        # This triggers the final merge logic at the end of the function
+        # when both segments are long enough initially but we still need
+        # to handle the structure correctly
+        segments = ['FirstLong', '', '', 'SecondLong', '', 'X']
+        result = _enforce_segment_constraints_simple(
+            segments, min_length=5, max_length=100, delimiter='\n'
+        )
+        original = '\n'.join(segments)
+        reconstructed = '\n'.join(result)
+        assert original == reconstructed, \
+            f"Text not preserved! Original: {repr(original)}, Got: {repr(reconstructed)}"
+
+    def test_viterbi_min_length_adjustment_when_possible(self):
+        """
+        Regression test: Viterbi algorithm should adjust split points to satisfy
+        min_length when mathematically possible.
+        
+        With 10 chars, min=4, max=6: valid splits exist (e.g., [4,6] or [5,5] or [6,4])
+        The algorithm should find one that satisfies both constraints.
+        """
+        probs = np.array([0.1, 0.1, 0.1, 0.9, 0.1, 0.1, 0.1, 0.9, 0.1, 0.9])
+        prior_fn = create_prior_function("uniform", {"max_length": 6})
+        
+        indices = constrained_segmentation(probs, prior_fn, min_length=4, max_length=6, algorithm="viterbi")
+        
+        # Calculate chunks
+        prev = 0
+        chunks = []
+        for idx in indices:
+            chunks.append(idx - prev)
+            prev = idx
+        if prev < len(probs):
+            chunks.append(len(probs) - prev)
+        
+        # All chunks should satisfy constraints when possible
+        for chunk in chunks:
+            assert chunk <= 6, f"max_length violated: chunk={chunk}"
+            # min_length should be satisfied when mathematically possible
+            assert chunk >= 4, f"min_length violated when valid solution exists: chunks={chunks}"
+
+    def test_viterbi_min_length_best_effort_impossible(self):
+        """
+        Regression test: When min_length cannot be satisfied for all segments
+        (mathematically impossible), the algorithm should still return valid
+        segments with max_length strictly enforced.
+        
+        With 7 chars, min=4, max=5: impossible (needs 4+4=8 chars minimum)
+        Algorithm should return best-effort result with max_length enforced.
+        """
+        probs = np.array([0.1, 0.1, 0.1, 0.1, 0.9, 0.1, 0.9])
+        prior_fn = create_prior_function("uniform", {"max_length": 5})
+        
+        indices = constrained_segmentation(probs, prior_fn, min_length=4, max_length=5, algorithm="viterbi")
+        
+        # Calculate chunks
+        prev = 0
+        chunks = []
+        for idx in indices:
+            chunks.append(idx - prev)
+            prev = idx
+        if prev < len(probs):
+            chunks.append(len(probs) - prev)
+        
+        # max_length must ALWAYS be enforced (strict)
+        for chunk in chunks:
+            assert chunk <= 5, f"max_length violated: chunk={chunk}"
+        
+        # min_length is best-effort - some chunk may be short when impossible
+        # Just verify we got a valid segmentation
+        assert sum(chunks) == 7, f"Total length wrong: {sum(chunks)}"
+
+    def test_viterbi_single_split_adjustment(self):
+        """
+        Regression test: When there's only one split point and the final chunk
+        is too short, the algorithm should try to adjust or remove the split.
+        """
+        # 8 chars with min=3, max=5
+        # Possible valid: [3,5], [4,4], [5,3]
+        probs = np.array([0.1, 0.1, 0.9, 0.1, 0.1, 0.1, 0.1, 0.9])
+        prior_fn = create_prior_function("uniform", {"max_length": 5})
+        
+        indices = constrained_segmentation(probs, prior_fn, min_length=3, max_length=5, algorithm="viterbi")
+        
+        prev = 0
+        chunks = []
+        for idx in indices:
+            chunks.append(idx - prev)
+            prev = idx
+        if prev < len(probs):
+            chunks.append(len(probs) - prev)
+        
+        # Should find a valid solution
+        for chunk in chunks:
+            assert chunk <= 5, f"max_length violated"
+            assert chunk >= 3, f"min_length violated when valid solution exists"
 
 
 # =============================================================================
