@@ -9,7 +9,7 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from cached_property import cached_property
+from functools import cached_property
 from mosestokenizer import MosesTokenizer
 from transformers import AutoTokenizer
 
