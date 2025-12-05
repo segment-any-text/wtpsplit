@@ -172,16 +172,16 @@ def create_prior_function(name, kwargs):
 
     elif name == "lognormal":
         # Log-normal prior - better models natural sentence length distribution
-        # Parameters are intuitive: target_length is the peak, spread controls variance
-        # Use language-aware defaults if lang_code provided and target_length not specified
+        # Use language-aware defaults if lang_code provided
         lang_defaults = get_language_defaults(kwargs.get("lang_code"))
         target_length = kwargs.get("target_length", lang_defaults["target_length"])
-        spread = kwargs.get("spread", 0.5)  # higher = more variance (0.3=tight, 0.7=loose)
+        # spread is in characters (like gaussian/clipped_polynomial) for consistency
+        spread = kwargs.get("spread", lang_defaults["spread"])
         max_length = kwargs.get("max_length")
 
-        # Convert to log-normal parameters: mode = exp(mu - sigma^2)
-        # So mu = ln(target_length) + sigma^2
-        sigma = spread
+        # Convert character-based spread to lognormal sigma
+        # sigma ≈ spread / target_length gives values in sensible 0.3-0.5 range
+        sigma = spread / target_length
         mu = np.log(target_length) + sigma**2
 
         def prior(length):

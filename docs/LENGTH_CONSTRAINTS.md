@@ -93,7 +93,7 @@ Prior(length) = exp(-0.5 × ((log(length) - μ) / σ)²) / length
 
 - Better models natural sentence length distribution (right-skewed)
 - `target_length` sets the peak (mode)
-- `spread` controls variance (0.3=tight, 0.5=moderate, 0.7=loose)
+- `spread` in characters (same as gaussian/clipped_polynomial for consistency)
 - **Use case**: Natural-feeling segmentation for advanced users
 
 ## Algorithms
@@ -260,7 +260,7 @@ Used after `split("\n")` to re-apply constraints:
 
 **Log-Normal:**
 - `target_length`: Peak/mode in characters (language-aware default if `lang_code` provided)
-- `spread`: Variance control (0.3=tight, 0.7=loose), default 0.5
+- `spread`: Tolerance in characters (language-aware default if `lang_code` provided) — same scale as gaussian/clipped_polynomial
 
 ### Language-Aware Defaults
 

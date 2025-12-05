@@ -176,7 +176,7 @@ sat.split(text, max_length=100, prior_type="gaussian",
 
 # Log-normal prior: better models natural sentence length distribution
 sat.split(text, max_length=100, prior_type="lognormal", 
-          prior_kwargs={"target_length": 70, "spread": 0.5})
+          prior_kwargs={"target_length": 70, "spread": 25})
 
 # Clipped polynomial: hard cutoff at ±spread from target
 sat.split(text, max_length=100, prior_type="clipped_polynomial", 
@@ -213,11 +213,13 @@ The Viterbi algorithm finds globally optimal segmentation points that balance:
 **Text Reconstruction:**
 ```python
 # With constraints (max_length or min_length):
-original_text = "".join(segments)
+original_text = "".join(segments)  # segments may contain newlines
 
-# Without constraints (SaT default):
+# Without constraints (SaT default with split_on_input_newlines=True):
 original_text = "\n".join(segments)
 ```
+
+> **Note**: When using length constraints, segments may contain newlines. If you want to remove them, you can just post-process the output.
 
 > **Note**: When `max_length` is set, the `threshold` parameter is ignored. The Viterbi/greedy algorithms use raw model probabilities directly instead of threshold-based filtering.
 

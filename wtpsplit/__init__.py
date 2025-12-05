@@ -47,10 +47,12 @@ class WtP:
         mixtures=None,
         hub_prefix="benjamin",
         ignore_legacy_warning=False,
+        language: str = None,
     ):
         self.model_name_or_model = model_name_or_model
         self.ort_providers = ort_providers
         self.ort_kwargs = ort_kwargs
+        self.language = language  # Store for language-aware prior defaults
 
         mixture_path = None
 
@@ -316,7 +318,7 @@ class WtP:
         do_paragraph_segmentation=False,
         verbose: bool = False,
         min_length: int = 1,
-        max_length: int = None,  # when set, threshold is ignored; uses raw probabilities
+        max_length: int = None,  # when set, segments may contain newlines; use ''.join(segments)
         prior_type: str = "uniform",
         prior_kwargs: dict = None,
         algorithm: str = "viterbi",
@@ -473,13 +475,14 @@ class WtP:
 
                     if max_length is not None or min_length > 1:
                         paragraph_probs = sentence_probs[offset : offset + len(paragraph)]
-                        if prior_kwargs is None:
-                            prior_kwargs = {}
-                        else:
-                            prior_kwargs = prior_kwargs.copy()
+                        # Create fresh copy each iteration to avoid state leakage
+                        local_prior_kwargs = {} if prior_kwargs is None else prior_kwargs.copy()
                         if max_length is not None:
-                            prior_kwargs["max_length"] = max_length
-                        prior_fn = create_prior_function(prior_type, prior_kwargs)
+                            local_prior_kwargs["max_length"] = max_length
+                        # Use model's language for prior defaults if not explicitly set
+                        if self.language and "lang_code" not in local_prior_kwargs and "target_length" not in local_prior_kwargs:
+                            local_prior_kwargs["lang_code"] = self.language
+                        prior_fn = create_prior_function(prior_type, local_prior_kwargs)
 
                         boundaries = constrained_segmentation(
                             paragraph_probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
@@ -505,13 +508,14 @@ class WtP:
                 yield paragraphs
             else:
                 if max_length is not None or min_length > 1:
-                    if prior_kwargs is None:
-                        prior_kwargs = {}
-                    else:
-                        prior_kwargs = prior_kwargs.copy()
+                    # Create fresh copy each iteration to avoid state leakage
+                    local_prior_kwargs = {} if prior_kwargs is None else prior_kwargs.copy()
                     if max_length is not None:
-                        prior_kwargs["max_length"] = max_length
-                    prior_fn = create_prior_function(prior_type, prior_kwargs)
+                        local_prior_kwargs["max_length"] = max_length
+                    # Use model's language for prior defaults if not explicitly set
+                    if self.language and "lang_code" not in local_prior_kwargs and "target_length" not in local_prior_kwargs:
+                        local_prior_kwargs["lang_code"] = self.language
+                    prior_fn = create_prior_function(prior_type, local_prior_kwargs)
                     boundaries = constrained_segmentation(
                         probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
                     )
@@ -827,11 +831,11 @@ class SaT:
         paragraph_threshold: float = 0.5,
         strip_whitespace: bool = False,
         do_paragraph_segmentation: bool = False,
-        split_on_input_newlines: bool = True,
+        split_on_input_newlines: bool = True,  # only applies when max_length is not set
         treat_newline_as_space=None,  # Deprecated
         verbose: bool = False,
         min_length: int = 1,
-        max_length: int = None,  # when set, threshold is ignored; uses raw probabilities
+        max_length: int = None,  # when set, segments may contain newlines; use ''.join(segments)
         prior_type: str = "uniform",
         prior_kwargs: dict = None,
         algorithm: str = "viterbi",
@@ -862,6 +866,14 @@ class SaT:
             warnings.warn(
                 "Both 'threshold' and 'max_length' are set. When using length-constrained "
                 "segmentation (max_length), the threshold parameter is ignored.",
+                UserWarning,
+            )
+
+        if (max_length is not None or min_length > 1) and split_on_input_newlines:
+            warnings.warn(
+                "When using length constraints (max_length/min_length), segments may contain newlines. "
+                "split_on_input_newlines is ignored; use ''.join(segments) to reconstruct the original text. "
+                "To split at newlines with constraints, pre-split your text at newlines and process each line.",
                 UserWarning,
             )
 
@@ -978,16 +990,15 @@ class SaT:
 
                     if max_length is not None or min_length > 1:
                         paragraph_probs = sentence_probs[offset : offset + len(paragraph)]
-                        if prior_kwargs is None:
-                            prior_kwargs = {}
-                        else:
-                            prior_kwargs = prior_kwargs.copy()
+                        # Create fresh copy each iteration to avoid state leakage
+                        local_prior_kwargs = {} if prior_kwargs is None else prior_kwargs.copy()
                         if max_length is not None:
-                            prior_kwargs["max_length"] = max_length
+                            local_prior_kwargs["max_length"] = max_length
                         # Use model's language for prior defaults if not explicitly set
-                        if self.language and "lang_code" not in prior_kwargs and "target_length" not in prior_kwargs:
-                            prior_kwargs["lang_code"] = self.language
-                        prior_fn = create_prior_function(prior_type, prior_kwargs)
+                        if self.language and "lang_code" not in local_prior_kwargs and "target_length" not in local_prior_kwargs:
+                            local_prior_kwargs["lang_code"] = self.language
+                        prior_fn = create_prior_function(prior_type, local_prior_kwargs)
+
                         boundaries = constrained_segmentation(
                             paragraph_probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
                         )
@@ -1012,27 +1023,17 @@ class SaT:
                 yield paragraphs
             else:
                 if max_length is not None or min_length > 1:
-                    if prior_kwargs is None:
-                        prior_kwargs = {}
-                    else:
-                        prior_kwargs = prior_kwargs.copy()
+                    # Create fresh copy each iteration to avoid state leakage
+                    local_prior_kwargs = {} if prior_kwargs is None else prior_kwargs.copy()
                     if max_length is not None:
-                        prior_kwargs["max_length"] = max_length
+                        local_prior_kwargs["max_length"] = max_length
                     # Use model's language for prior defaults if not explicitly set
-                    if self.language and "lang_code" not in prior_kwargs and "target_length" not in prior_kwargs:
-                        prior_kwargs["lang_code"] = self.language
-                    prior_fn = create_prior_function(prior_type, prior_kwargs)
-
-                    # When split_on_input_newlines=True, boost probabilities at newline positions
-                    # so the constraint algorithm prefers to split at natural line boundaries
-                    constraint_probs = probs.copy()
-                    if split_on_input_newlines:
-                        for i, char in enumerate(text):
-                            if char == "\n" and i < len(constraint_probs):
-                                constraint_probs[i] = 1.0  # Strong preference for newline splits
+                    if self.language and "lang_code" not in local_prior_kwargs and "target_length" not in local_prior_kwargs:
+                        local_prior_kwargs["lang_code"] = self.language
+                    prior_fn = create_prior_function(prior_type, local_prior_kwargs)
 
                     boundaries = constrained_segmentation(
-                        constraint_probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
+                        probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
                     )
                     indices = [b - 1 for b in boundaries]
                     sentences = _enforce_segment_constraints(
