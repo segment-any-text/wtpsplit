@@ -405,9 +405,9 @@ class WtP:
     def _split(
         self,
         texts,
-        lang_code: str,
-        style: str,
-        threshold: float,
+        lang_code: str | None,
+        style: str | None,
+        threshold: float | None,
         stride: int,
         block_size: int,
         batch_size: int,
@@ -420,9 +420,9 @@ class WtP:
         strip_whitespace: bool,
         verbose: bool,
         min_length: int,
-        max_length: int,
+        max_length: int | None,
         prior_type: str,
-        prior_kwargs: dict,
+        prior_kwargs: dict | None,
         algorithm: str,
     ):
         if style is not None:
@@ -917,7 +917,7 @@ class SaT:
     def _split(
         self,
         texts,
-        threshold: float,
+        threshold: float | None,
         stride: int,
         block_size: int,
         batch_size: int,
@@ -929,11 +929,11 @@ class SaT:
         do_paragraph_segmentation: bool,
         split_on_input_newlines: bool,
         min_length: int,
-        max_length: int,
+        max_length: int | None,
         strip_whitespace: bool,
         verbose: bool,
         prior_type: str,
-        prior_kwargs: dict,
+        prior_kwargs: dict | None,
         algorithm: str,
     ):
         def get_default_threshold(model_str: str):
@@ -1059,7 +1059,7 @@ class SaT:
                                 sentence = sentence[:-1]
                             new_sentences.extend(sentence.split("\n"))
                         sentences = new_sentences
-l                    else:
+                    else:
                         warnings.warn(
                             "split_on_input_newlines=False will lead to newlines in the output "
                             "if they were present in the input. Within the model, such newlines are "
