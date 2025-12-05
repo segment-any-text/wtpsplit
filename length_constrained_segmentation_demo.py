@@ -210,7 +210,7 @@ def run_example(sat, name, example):
 def run_all_examples(sat):
     """Run all examples."""
     print(f"\n{C.CYAN}{'=' * 70}")
-    print(f"  LENGTH-CONSTRAINED SEGMENTATION EXAMPLES")
+    print("  LENGTH-CONSTRAINED SEGMENTATION EXAMPLES")
     print(f"{'=' * 70}{C.RESET}")
 
     for name, example in EXAMPLES.items():
@@ -229,7 +229,7 @@ def run_all_examples(sat):
 def interactive_mode(sat):
     """Interactive segmentation playground."""
     print(f"\n{C.CYAN}{'=' * 70}")
-    print(f"  INTERACTIVE MODE")
+    print("  INTERACTIVE MODE")
     print(f"{'=' * 70}{C.RESET}")
 
     print("""
@@ -372,7 +372,7 @@ Commands:
 def show_probabilities(sat):
     """Visualize model probabilities for a sample text."""
     print(f"\n{C.CYAN}{'=' * 70}")
-    print(f"  PROBABILITY VISUALIZATION")
+    print("  PROBABILITY VISUALIZATION")
     print(f"{'=' * 70}{C.RESET}")
 
     text = "The quick brown fox jumps. Pack my box with jugs. How vexingly quick!"

@@ -480,7 +480,11 @@ class WtP:
                         if max_length is not None:
                             local_prior_kwargs["max_length"] = max_length
                         # Use model's language for prior defaults if not explicitly set
-                        if self.language and "lang_code" not in local_prior_kwargs and "target_length" not in local_prior_kwargs:
+                        if (
+                            self.language
+                            and "lang_code" not in local_prior_kwargs
+                            and "target_length" not in local_prior_kwargs
+                        ):
                             local_prior_kwargs["lang_code"] = self.language
                         prior_fn = create_prior_function(prior_type, local_prior_kwargs)
 
@@ -513,7 +517,11 @@ class WtP:
                     if max_length is not None:
                         local_prior_kwargs["max_length"] = max_length
                     # Use model's language for prior defaults if not explicitly set
-                    if self.language and "lang_code" not in local_prior_kwargs and "target_length" not in local_prior_kwargs:
+                    if (
+                        self.language
+                        and "lang_code" not in local_prior_kwargs
+                        and "target_length" not in local_prior_kwargs
+                    ):
                         local_prior_kwargs["lang_code"] = self.language
                     prior_fn = create_prior_function(prior_type, local_prior_kwargs)
                     boundaries = constrained_segmentation(
@@ -995,7 +1003,11 @@ class SaT:
                         if max_length is not None:
                             local_prior_kwargs["max_length"] = max_length
                         # Use model's language for prior defaults if not explicitly set
-                        if self.language and "lang_code" not in local_prior_kwargs and "target_length" not in local_prior_kwargs:
+                        if (
+                            self.language
+                            and "lang_code" not in local_prior_kwargs
+                            and "target_length" not in local_prior_kwargs
+                        ):
                             local_prior_kwargs["lang_code"] = self.language
                         prior_fn = create_prior_function(prior_type, local_prior_kwargs)
 
@@ -1028,7 +1040,11 @@ class SaT:
                     if max_length is not None:
                         local_prior_kwargs["max_length"] = max_length
                     # Use model's language for prior defaults if not explicitly set
-                    if self.language and "lang_code" not in local_prior_kwargs and "target_length" not in local_prior_kwargs:
+                    if (
+                        self.language
+                        and "lang_code" not in local_prior_kwargs
+                        and "target_length" not in local_prior_kwargs
+                    ):
                         local_prior_kwargs["lang_code"] = self.language
                     prior_fn = create_prior_function(prior_type, local_prior_kwargs)
 

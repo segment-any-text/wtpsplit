@@ -21,7 +21,6 @@ import numpy as np
 from wtpsplit import WtP, SaT
 from wtpsplit.utils.constraints import (
     constrained_segmentation,
-    _enforce_segment_constraints,
     _enforce_segment_constraints_simple,
 )
 from wtpsplit.utils.priors import create_prior_function
@@ -1136,8 +1135,8 @@ class TestRegressions:
 
         # Should find a valid solution
         for chunk in chunks:
-            assert chunk <= 5, f"max_length violated"
-            assert chunk >= 3, f"min_length violated when valid solution exists"
+            assert chunk <= 5, "max_length violated"
+            assert chunk >= 3, "min_length violated when valid solution exists"
 
 
 # =============================================================================
