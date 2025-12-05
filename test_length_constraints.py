@@ -31,6 +31,7 @@ from wtpsplit.utils.priors import create_prior_function
 # FIXTURES
 # =============================================================================
 
+
 @pytest.fixture(scope="module")
 def sat_model():
     """Load SaT model once for all tests."""
@@ -46,6 +47,7 @@ def wtp_model():
 # =============================================================================
 # BASIC CONSTRAINT ENFORCEMENT (Low-level)
 # =============================================================================
+
 
 class TestBasicConstraints:
     """Test basic constraint enforcement at the algorithm level."""
@@ -130,6 +132,7 @@ class TestBasicConstraints:
 # TEXT PRESERVATION TESTS
 # =============================================================================
 
+
 class TestTextPreservation:
     """Verify that segmentation preserves original text exactly."""
 
@@ -173,6 +176,7 @@ class TestTextPreservation:
 # MAX_LENGTH TESTS
 # =============================================================================
 
+
 class TestMaxLength:
     """Verify strict max_length enforcement."""
 
@@ -214,6 +218,7 @@ class TestMaxLength:
 # MIN_LENGTH TESTS
 # =============================================================================
 
+
 class TestMinLength:
     """Verify min_length best-effort behavior."""
 
@@ -253,26 +258,21 @@ class TestMinLength:
 # ALGORITHM TESTS
 # =============================================================================
 
+
 class TestAlgorithms:
     """Test Viterbi and greedy algorithms."""
 
     def test_viterbi_deterministic(self, sat_model):
         text = "The quick brown fox. Pack my box. How vexingly quick!"
 
-        results = [
-            sat_model.split(text, max_length=80, algorithm="viterbi", threshold=0.025)
-            for _ in range(3)
-        ]
+        results = [sat_model.split(text, max_length=80, algorithm="viterbi", threshold=0.025) for _ in range(3)]
 
         assert all(r == results[0] for r in results)
 
     def test_greedy_deterministic(self, sat_model):
         text = "The quick brown fox. Pack my box. How vexingly quick!"
 
-        results = [
-            sat_model.split(text, max_length=80, algorithm="greedy", threshold=0.025)
-            for _ in range(3)
-        ]
+        results = [sat_model.split(text, max_length=80, algorithm="greedy", threshold=0.025) for _ in range(3)]
 
         assert all(r == results[0] for r in results)
 
@@ -315,6 +315,7 @@ class TestAlgorithms:
 # PRIOR FUNCTION TESTS
 # =============================================================================
 
+
 class TestPriors:
     """Test prior functions behavior."""
 
@@ -354,13 +355,19 @@ class TestPriors:
         text = "One. Two. Three. Four. Five. Six. Seven. Eight. Nine. Ten."
 
         segments_small = sat_model.split(
-            text, max_length=200, prior_type="gaussian",
-            prior_kwargs={"target_length": 20, "spread": 5}, threshold=0.025
+            text,
+            max_length=200,
+            prior_type="gaussian",
+            prior_kwargs={"target_length": 20, "spread": 5},
+            threshold=0.025,
         )
 
         segments_large = sat_model.split(
-            text, max_length=200, prior_type="gaussian",
-            prior_kwargs={"target_length": 100, "spread": 20}, threshold=0.025
+            text,
+            max_length=200,
+            prior_type="gaussian",
+            prior_kwargs={"target_length": 100, "spread": 20},
+            threshold=0.025,
         )
 
         assert "".join(segments_small) == text
@@ -370,6 +377,7 @@ class TestPriors:
 # =============================================================================
 # INPUT VALIDATION TESTS
 # =============================================================================
+
 
 class TestInputValidation:
     """Test input parameter validation."""
@@ -394,6 +402,7 @@ class TestInputValidation:
 # =============================================================================
 # EDGE CASES
 # =============================================================================
+
 
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
@@ -449,6 +458,7 @@ class TestEdgeCases:
 # BOTH MODELS TEST
 # =============================================================================
 
+
 class TestBothModels:
     """Test that both WtP and SaT work with constraints."""
 
@@ -491,6 +501,7 @@ class TestBothModels:
 # BATCH PROCESSING TESTS
 # =============================================================================
 
+
 class TestBatchProcessing:
     """Test batch processing with constraints."""
 
@@ -520,6 +531,7 @@ class TestBatchProcessing:
 # =============================================================================
 # WHITESPACE HANDLING TESTS
 # =============================================================================
+
 
 class TestWhitespaceHandling:
     """Comprehensive whitespace handling tests."""
@@ -568,6 +580,7 @@ class TestWhitespaceHandling:
 # =============================================================================
 # REAL-WORLD TEXT TESTS
 # =============================================================================
+
 
 class TestRealWorldText:
     """Tests with realistic text content."""
@@ -618,6 +631,7 @@ class TestRealWorldText:
 # STRESS TESTS
 # =============================================================================
 
+
 class TestStress:
     """Stress tests for edge conditions and performance."""
 
@@ -628,7 +642,12 @@ class TestStress:
         assert "".join(segments) == text
 
     def test_alternating_long_short(self, sat_model):
-        text = "Short. " + "This is a much longer sentence with many words. " * 5 + "Short again. " + "Another very long sentence. " * 3
+        text = (
+            "Short. "
+            + "This is a much longer sentence with many words. " * 5
+            + "Short again. "
+            + "Another very long sentence. " * 3
+        )
 
         segments = sat_model.split(text, max_length=100, threshold=0.025)
         assert "".join(segments) == text
@@ -689,6 +708,7 @@ class TestStress:
 # CONSTRAINT COMBINATION TESTS
 # =============================================================================
 
+
 class TestConstraintCombinations:
     """Test various combinations of constraints."""
 
@@ -727,6 +747,7 @@ class TestConstraintCombinations:
 # =============================================================================
 # UNICODE AND INTERNATIONALIZATION TESTS
 # =============================================================================
+
 
 class TestUnicodeAndI18n:
     """Tests for unicode and international text."""
@@ -772,6 +793,7 @@ class TestUnicodeAndI18n:
 # =============================================================================
 # CONSTRAINED SEGMENTATION ALGORITHM TESTS
 # =============================================================================
+
 
 class TestConstrainedSegmentationAlgorithm:
     """Direct tests of the constrained_segmentation function."""
@@ -819,6 +841,7 @@ class TestConstrainedSegmentationAlgorithm:
 # REGRESSION TESTS
 # =============================================================================
 
+
 class TestRegressions:
     """Regression tests for previously fixed bugs."""
 
@@ -830,7 +853,7 @@ class TestRegressions:
         for segment in segments:
             if segment.strip():
                 last_char = segment.rstrip()[-1]
-                assert last_char in '.!?,;:\'"' or segment[-1].isspace() or segment == segments[-1]
+                assert last_char in ".!?,;:'\"" or segment[-1].isspace() or segment == segments[-1]
 
     def test_trailing_whitespace_preserved(self, sat_model):
         text = "Sentence one.  Sentence two.   End."
@@ -876,9 +899,7 @@ class TestRegressions:
 
         prior_fn = create_prior_function("uniform", {"max_length": 60})
 
-        boundaries = constrained_segmentation(
-            probs, prior_fn, min_length=1, max_length=60, algorithm="viterbi"
-        )
+        boundaries = constrained_segmentation(probs, prior_fn, min_length=1, max_length=60, algorithm="viterbi")
 
         assert 50 in boundaries, f"Viterbi should find boundary at 50, got {boundaries}"
 
@@ -892,9 +913,7 @@ class TestRegressions:
 
         prior_fn = create_prior_function("uniform", {"max_length": 40})
 
-        boundaries = constrained_segmentation(
-            probs, prior_fn, min_length=20, max_length=40, algorithm="greedy"
-        )
+        boundaries = constrained_segmentation(probs, prior_fn, min_length=20, max_length=40, algorithm="greedy")
 
         prev = 0
         for b in boundaries + [100]:
@@ -906,25 +925,21 @@ class TestRegressions:
         """
         Regression test for empty string filtering bug.
         """
-        sentences = ['Hello.', '', '', 'World.']
+        sentences = ["Hello.", "", "", "World."]
 
-        result = _enforce_segment_constraints_simple(
-            sentences, min_length=1, max_length=100, delimiter="\n"
-        )
+        result = _enforce_segment_constraints_simple(sentences, min_length=1, max_length=100, delimiter="\n")
 
-        assert '' in result or len([s for s in result if not s]) > 0
+        assert "" in result or len([s for s in result if not s]) > 0
 
         content = [s for s in result if s.strip()]
-        assert content == ['Hello.', 'World.']
+        assert content == ["Hello.", "World."]
 
     def test_min_length_backward_merge(self):
         """
         Regression test for min_length backward merge.
         """
-        sentences = ['First segment here', 'Hi', 'Another long segment']
-        result = _enforce_segment_constraints_simple(
-            sentences, min_length=10, max_length=30, delimiter=" "
-        )
+        sentences = ["First segment here", "Hi", "Another long segment"]
+        result = _enforce_segment_constraints_simple(sentences, min_length=10, max_length=30, delimiter=" ")
 
         for seg in result:
             if seg.strip():
@@ -954,7 +969,7 @@ class TestRegressions:
         """
         Regression test: When using length constraints, newlines stay embedded
         in segments and text is preserved with "".join() (not "\\n".join()).
-        
+
         With constraints: "".join(segments) == text (newlines embedded)
         Without constraints: "\\n".join(segments) == text (split on newlines)
         """
@@ -962,22 +977,22 @@ class TestRegressions:
         text1 = "Hello world.\nGoodbye world."
         segments1 = sat_model.split(text1, max_length=50)
         assert "".join(segments1) == text1, f"Basic newline failed: {segments1}"
-        
+
         # Test trailing newline
         text2 = "Hello world.\nGoodbye world.\n"
         segments2 = sat_model.split(text2, max_length=50)
         assert "".join(segments2) == text2, f"Trailing newline failed: {segments2}"
-        
+
         # Test consecutive newlines
         text3 = "Hello.\n\nWorld."
         segments3 = sat_model.split(text3, max_length=50)
         assert "".join(segments3) == text3, f"Consecutive newlines failed: {segments3}"
-        
+
         # Test triple newline
         text4 = "A.\n\n\nB."
         segments4 = sat_model.split(text4, max_length=50)
         assert "".join(segments4) == text4, f"Triple newline failed: {segments4}"
-        
+
         # Test consecutive + trailing
         text5 = "Hello.\n\nWorld.\n"
         segments5 = sat_model.split(text5, max_length=50)
@@ -989,46 +1004,41 @@ class TestRegressions:
         empty segments (representing consecutive delimiters) between
         the previous non-empty segment and the short segment must be
         included in the merge, not orphaned.
-        
+
         Bug: The backward merge used only one delimiter instead of
         counting empty segments between prev_idx and current position.
         This caused empty segments to be orphaned and appear at the
         wrong position in the output, breaking text preservation.
-        
+
         Example failure before fix:
           Input:  ['LongEnoughTextHere', '', '', 'Hi']
           Output: ['LongEnoughTextHere\\nHi', '', '']  # WRONG - empties at end
           Should: ['LongEnoughTextHere\\n\\n\\nHi']    # CORRECT - empties absorbed
         """
         # Case 1: Empty segments between prev and short final segment
-        segments = ['LongEnoughTextHere', '', '', 'Hi']
-        result = _enforce_segment_constraints_simple(
-            segments, min_length=5, max_length=100, delimiter='\n'
-        )
-        original = '\n'.join(segments)
-        reconstructed = '\n'.join(result)
-        assert original == reconstructed, \
-            f"Text not preserved! Original: {repr(original)}, Got: {repr(reconstructed)}"
-        
+        segments = ["LongEnoughTextHere", "", "", "Hi"]
+        result = _enforce_segment_constraints_simple(segments, min_length=5, max_length=100, delimiter="\n")
+        original = "\n".join(segments)
+        reconstructed = "\n".join(result)
+        assert original == reconstructed, f"Text not preserved! Original: {repr(original)}, Got: {repr(reconstructed)}"
+
         # Case 2: Many consecutive empty segments
-        segments2 = ['Hello', '', '', '', '', 'X']
-        result2 = _enforce_segment_constraints_simple(
-            segments2, min_length=3, max_length=100, delimiter='\n'
-        )
-        original2 = '\n'.join(segments2)
-        reconstructed2 = '\n'.join(result2)
-        assert original2 == reconstructed2, \
+        segments2 = ["Hello", "", "", "", "", "X"]
+        result2 = _enforce_segment_constraints_simple(segments2, min_length=3, max_length=100, delimiter="\n")
+        original2 = "\n".join(segments2)
+        reconstructed2 = "\n".join(result2)
+        assert original2 == reconstructed2, (
             f"Text not preserved! Original: {repr(original2)}, Got: {repr(reconstructed2)}"
-        
-        # Case 3: Single empty segment between
-        segments3 = ['LongText', '', 'Hi']
-        result3 = _enforce_segment_constraints_simple(
-            segments3, min_length=5, max_length=100, delimiter='\n'
         )
-        original3 = '\n'.join(segments3)
-        reconstructed3 = '\n'.join(result3)
-        assert original3 == reconstructed3, \
+
+        # Case 3: Single empty segment between
+        segments3 = ["LongText", "", "Hi"]
+        result3 = _enforce_segment_constraints_simple(segments3, min_length=5, max_length=100, delimiter="\n")
+        original3 = "\n".join(segments3)
+        reconstructed3 = "\n".join(result3)
+        assert original3 == reconstructed3, (
             f"Text not preserved! Original: {repr(original3)}, Got: {repr(reconstructed3)}"
+        )
 
     def test_empty_segments_final_merge_text_preservation(self):
         """
@@ -1039,28 +1049,25 @@ class TestRegressions:
         # This triggers the final merge logic at the end of the function
         # when both segments are long enough initially but we still need
         # to handle the structure correctly
-        segments = ['FirstLong', '', '', 'SecondLong', '', 'X']
-        result = _enforce_segment_constraints_simple(
-            segments, min_length=5, max_length=100, delimiter='\n'
-        )
-        original = '\n'.join(segments)
-        reconstructed = '\n'.join(result)
-        assert original == reconstructed, \
-            f"Text not preserved! Original: {repr(original)}, Got: {repr(reconstructed)}"
+        segments = ["FirstLong", "", "", "SecondLong", "", "X"]
+        result = _enforce_segment_constraints_simple(segments, min_length=5, max_length=100, delimiter="\n")
+        original = "\n".join(segments)
+        reconstructed = "\n".join(result)
+        assert original == reconstructed, f"Text not preserved! Original: {repr(original)}, Got: {repr(reconstructed)}"
 
     def test_viterbi_min_length_adjustment_when_possible(self):
         """
         Regression test: Viterbi algorithm should adjust split points to satisfy
         min_length when mathematically possible.
-        
+
         With 10 chars, min=4, max=6: valid splits exist (e.g., [4,6] or [5,5] or [6,4])
         The algorithm should find one that satisfies both constraints.
         """
         probs = np.array([0.1, 0.1, 0.1, 0.9, 0.1, 0.1, 0.1, 0.9, 0.1, 0.9])
         prior_fn = create_prior_function("uniform", {"max_length": 6})
-        
+
         indices = constrained_segmentation(probs, prior_fn, min_length=4, max_length=6, algorithm="viterbi")
-        
+
         # Calculate chunks
         prev = 0
         chunks = []
@@ -1069,7 +1076,7 @@ class TestRegressions:
             prev = idx
         if prev < len(probs):
             chunks.append(len(probs) - prev)
-        
+
         # All chunks should satisfy constraints when possible
         for chunk in chunks:
             assert chunk <= 6, f"max_length violated: chunk={chunk}"
@@ -1081,15 +1088,15 @@ class TestRegressions:
         Regression test: When min_length cannot be satisfied for all segments
         (mathematically impossible), the algorithm should still return valid
         segments with max_length strictly enforced.
-        
+
         With 7 chars, min=4, max=5: impossible (needs 4+4=8 chars minimum)
         Algorithm should return best-effort result with max_length enforced.
         """
         probs = np.array([0.1, 0.1, 0.1, 0.1, 0.9, 0.1, 0.9])
         prior_fn = create_prior_function("uniform", {"max_length": 5})
-        
+
         indices = constrained_segmentation(probs, prior_fn, min_length=4, max_length=5, algorithm="viterbi")
-        
+
         # Calculate chunks
         prev = 0
         chunks = []
@@ -1098,11 +1105,11 @@ class TestRegressions:
             prev = idx
         if prev < len(probs):
             chunks.append(len(probs) - prev)
-        
+
         # max_length must ALWAYS be enforced (strict)
         for chunk in chunks:
             assert chunk <= 5, f"max_length violated: chunk={chunk}"
-        
+
         # min_length is best-effort - some chunk may be short when impossible
         # Just verify we got a valid segmentation
         assert sum(chunks) == 7, f"Total length wrong: {sum(chunks)}"
@@ -1116,9 +1123,9 @@ class TestRegressions:
         # Possible valid: [3,5], [4,4], [5,3]
         probs = np.array([0.1, 0.1, 0.9, 0.1, 0.1, 0.1, 0.1, 0.9])
         prior_fn = create_prior_function("uniform", {"max_length": 5})
-        
+
         indices = constrained_segmentation(probs, prior_fn, min_length=3, max_length=5, algorithm="viterbi")
-        
+
         prev = 0
         chunks = []
         for idx in indices:
@@ -1126,7 +1133,7 @@ class TestRegressions:
             prev = idx
         if prev < len(probs):
             chunks.append(len(probs) - prev)
-        
+
         # Should find a valid solution
         for chunk in chunks:
             assert chunk <= 5, f"max_length violated"
@@ -1136,6 +1143,7 @@ class TestRegressions:
 # =============================================================================
 # PARAGRAPH SEGMENTATION WITH CONSTRAINTS
 # =============================================================================
+
 
 class TestParagraphSegmentation:
     """Test nested paragraph and sentence segmentation with constraints."""

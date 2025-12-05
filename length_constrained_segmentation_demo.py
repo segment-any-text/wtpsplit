@@ -18,9 +18,11 @@ import sys
 # SETUP
 # =============================================================================
 
+
 def load_model():
     """Load SaT model."""
     from wtpsplit import SaT
+
     print("Loading model...", end=" ", flush=True)
     sat = SaT("sat-3l-sm", ort_providers=["CPUExecutionProvider"])
     print("✓")
@@ -28,11 +30,13 @@ def load_model():
 
 
 # =============================================================================
-# DISPLAY UTILITIES  
+# DISPLAY UTILITIES
 # =============================================================================
+
 
 class C:
     """ANSI colors."""
+
     RESET = "\033[0m"
     BOLD = "\033[1m"
     RED = "\033[91m"
@@ -47,13 +51,13 @@ def show_segments(segments, max_length=None, label=""):
     """Display segments with length info and quality indicators."""
     if label:
         print(f"\n{C.BOLD}{label}{C.RESET}")
-    
+
     for i, seg in enumerate(segments, 1):
         length = len(seg)
-        
+
         # Check for word cuts (ends with letter preceded by letter)
         has_cut = len(seg) > 1 and seg[-1].isalpha() and seg[-2].isalpha()
-        
+
         # Status indicator
         if has_cut:
             status = f"{C.YELLOW}~{C.RESET}"  # Word cut
@@ -61,16 +65,16 @@ def show_segments(segments, max_length=None, label=""):
             status = f"{C.RED}!{C.RESET}"  # Exceeds max
         else:
             status = f"{C.GREEN}✓{C.RESET}"  # OK
-        
+
         # Length display
         if max_length:
             len_str = f"[{length:3d}/{max_length}]"
         else:
             len_str = f"[{length:3d}]"
-        
+
         # Truncate for display
         display = repr(seg[:50]) + ("..." if len(seg) > 50 else "")
-        
+
         print(f"  {status} {len_str} {display}")
 
 
@@ -99,7 +103,7 @@ EXAMPLES = {
             {"max_length": 50},
             {"max_length": 80},
             {"min_length": 30, "max_length": 100},
-        ]
+        ],
     },
     "news": {
         "name": "News Article",
@@ -108,7 +112,7 @@ EXAMPLES = {
             {"max_length": 100},
             {"max_length": 150},
             {"max_length": 200},
-        ]
+        ],
     },
     "legal": {
         "name": "Legal Text (Long Sentences)",
@@ -117,7 +121,7 @@ EXAMPLES = {
             {"max_length": 100},
             {"max_length": 150},
             {"max_length": 250},
-        ]
+        ],
     },
     "technical": {
         "name": "Technical Documentation",
@@ -126,7 +130,7 @@ EXAMPLES = {
             {"max_length": 80},
             {"max_length": 120},
             {"min_length": 50, "max_length": 150},
-        ]
+        ],
     },
     "stream": {
         "name": "Stream of Consciousness (No Punctuation)",
@@ -135,7 +139,7 @@ EXAMPLES = {
             {"max_length": 60},
             {"max_length": 100},
             {"max_length": 150},
-        ]
+        ],
     },
     "dialogue": {
         "name": "Dialogue with Quotes",
@@ -144,7 +148,7 @@ EXAMPLES = {
             {"max_length": 50},
             {"max_length": 80},
             {"max_length": 120},
-        ]
+        ],
     },
     "mixed": {
         "name": "Mixed Content (Numbers, Abbreviations)",
@@ -153,7 +157,7 @@ EXAMPLES = {
             {"max_length": 80},
             {"max_length": 120},
             {"min_length": 40, "max_length": 160},
-        ]
+        ],
     },
     "priors": {
         "name": "Prior Functions Comparison",
@@ -162,7 +166,7 @@ EXAMPLES = {
             {"max_length": 100, "prior_type": "uniform"},
             {"max_length": 100, "prior_type": "gaussian", "prior_kwargs": {"target_length": 30, "spread": 10}},
             {"max_length": 100, "prior_type": "gaussian", "prior_kwargs": {"target_length": 60, "spread": 15}},
-        ]
+        ],
     },
     "algorithms": {
         "name": "Algorithm Comparison (Viterbi vs Greedy)",
@@ -170,19 +174,19 @@ EXAMPLES = {
         "configs": [
             {"max_length": 80, "algorithm": "viterbi"},
             {"max_length": 80, "algorithm": "greedy"},
-        ]
+        ],
     },
 }
 
 
 def run_example(sat, name, example):
     """Run a single example."""
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"{C.BOLD}{example['name']}{C.RESET}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
     print(f"\n{C.GRAY}Text ({len(example['text'])} chars):{C.RESET}")
-    print(f"  \"{example['text'][:80]}{'...' if len(example['text']) > 80 else ''}\"")
-    
+    print(f'  "{example["text"][:80]}{"..." if len(example["text"]) > 80 else ""}"')
+
     for config in example["configs"]:
         # Build label
         parts = []
@@ -195,28 +199,24 @@ def run_example(sat, name, example):
         if config.get("prior_type") and config["prior_type"] != "uniform":
             parts.append(f"prior={config['prior_type']}")
         label = ", ".join(parts)
-        
+
         # Run segmentation
-        segments = sat.split(
-            example["text"],
-            threshold=0.025,
-            **config
-        )
-        
+        segments = sat.split(example["text"], threshold=0.025, **config)
+
         show_segments(segments, config.get("max_length"), label)
         verify_preservation(example["text"], segments)
 
 
 def run_all_examples(sat):
     """Run all examples."""
-    print(f"\n{C.CYAN}{'='*70}")
+    print(f"\n{C.CYAN}{'=' * 70}")
     print(f"  LENGTH-CONSTRAINED SEGMENTATION EXAMPLES")
-    print(f"{'='*70}{C.RESET}")
-    
+    print(f"{'=' * 70}{C.RESET}")
+
     for name, example in EXAMPLES.items():
         run_example(sat, name, example)
-    
-    print(f"\n{C.CYAN}{'='*70}{C.RESET}")
+
+    print(f"\n{C.CYAN}{'=' * 70}{C.RESET}")
     print(f"\nFor interactive mode: {C.BOLD}python {sys.argv[0]} --interactive{C.RESET}")
     print(f"For documentation: {C.BOLD}see docs/LENGTH_CONSTRAINTS.md{C.RESET}")
 
@@ -225,12 +225,13 @@ def run_all_examples(sat):
 # INTERACTIVE MODE
 # =============================================================================
 
+
 def interactive_mode(sat):
     """Interactive segmentation playground."""
-    print(f"\n{C.CYAN}{'='*70}")
+    print(f"\n{C.CYAN}{'=' * 70}")
     print(f"  INTERACTIVE MODE")
-    print(f"{'='*70}{C.RESET}")
-    
+    print(f"{'=' * 70}{C.RESET}")
+
     print("""
 Commands:
   <text>     - Segment the text
@@ -243,7 +244,7 @@ Commands:
   run NAME   - Run an example
   q          - Quit
 """)
-    
+
     # Settings
     settings = {
         "max_length": 100,
@@ -252,46 +253,53 @@ Commands:
         "prior_type": "uniform",
         "prior_kwargs": None,
     }
-    
+
     while True:
         # Show current settings
-        print(f"\n{C.GRAY}[max={settings['max_length']}, min={settings['min_length']}, "
-              f"algo={settings['algorithm']}, prior={settings['prior_type']}]{C.RESET}")
-        
+        print(
+            f"\n{C.GRAY}[max={settings['max_length']}, min={settings['min_length']}, "
+            f"algo={settings['algorithm']}, prior={settings['prior_type']}]{C.RESET}"
+        )
+
         try:
             user_input = input(f"{C.BOLD}> {C.RESET}").strip()
         except (EOFError, KeyboardInterrupt):
             print("\nGoodbye!")
             break
-        
+
         if not user_input:
             continue
-        
+
         # Commands
-        if user_input.lower() == 'q':
+        if user_input.lower() == "q":
             print("Goodbye!")
             break
-        
-        if user_input.lower() == 'reset':
-            settings = {"max_length": 100, "min_length": 1, "algorithm": "viterbi",
-                       "prior_type": "uniform", "prior_kwargs": None}
+
+        if user_input.lower() == "reset":
+            settings = {
+                "max_length": 100,
+                "min_length": 1,
+                "algorithm": "viterbi",
+                "prior_type": "uniform",
+                "prior_kwargs": None,
+            }
             print("Settings reset.")
             continue
-        
-        if user_input.lower() == 'examples':
+
+        if user_input.lower() == "examples":
             print("\nAvailable examples:")
             for name, ex in EXAMPLES.items():
                 print(f"  {name:12s} - {ex['name']}")
             continue
-        
-        if user_input.lower().startswith('run '):
+
+        if user_input.lower().startswith("run "):
             name = user_input[4:].strip()
             if name in EXAMPLES:
                 run_example(sat, name, EXAMPLES[name])
             else:
                 print(f"Unknown example: {name}")
             continue
-        
+
         if user_input.startswith("max="):
             try:
                 settings["max_length"] = int(user_input[4:])
@@ -299,7 +307,7 @@ Commands:
             except ValueError:
                 print("Invalid number")
             continue
-        
+
         if user_input.startswith("min="):
             try:
                 settings["min_length"] = int(user_input[4:])
@@ -307,7 +315,7 @@ Commands:
             except ValueError:
                 print("Invalid number")
             continue
-        
+
         if user_input.startswith("algo="):
             algo = user_input[5:].strip()
             if algo in ["viterbi", "greedy"]:
@@ -316,7 +324,7 @@ Commands:
             else:
                 print("Unknown algorithm (use: viterbi, greedy)")
             continue
-        
+
         if user_input.startswith("prior="):
             prior = user_input[6:].strip()
             if prior in ["uniform", "gaussian", "polynomial"]:
@@ -331,10 +339,10 @@ Commands:
             else:
                 print("Unknown prior (use: uniform, gaussian, polynomial)")
             continue
-        
+
         # Treat as text to segment
         text = user_input
-        
+
         try:
             kwargs = {
                 "threshold": 0.025,
@@ -345,13 +353,13 @@ Commands:
             }
             if settings["prior_kwargs"]:
                 kwargs["prior_kwargs"] = settings["prior_kwargs"]
-            
+
             segments = sat.split(text, **kwargs)
-            
+
             print(f"\n{C.BOLD}Result: {len(segments)} segments{C.RESET}")
             show_segments(segments, settings["max_length"])
             verify_preservation(text, segments)
-            
+
         except Exception as e:
             print(f"{C.RED}Error: {e}{C.RESET}")
 
@@ -360,19 +368,20 @@ Commands:
 # PROBABILITY VISUALIZATION
 # =============================================================================
 
+
 def show_probabilities(sat):
     """Visualize model probabilities for a sample text."""
-    print(f"\n{C.CYAN}{'='*70}")
+    print(f"\n{C.CYAN}{'=' * 70}")
     print(f"  PROBABILITY VISUALIZATION")
-    print(f"{'='*70}{C.RESET}")
-    
+    print(f"{'=' * 70}{C.RESET}")
+
     text = "The quick brown fox jumps. Pack my box with jugs. How vexingly quick!"
-    
-    print(f"\n{C.BOLD}Text:{C.RESET} \"{text}\"")
-    
+
+    print(f'\n{C.BOLD}Text:{C.RESET} "{text}"')
+
     # Get probabilities
     probs = list(sat.predict_proba([text]))[0]
-    
+
     # Build visualization
     viz = ""
     for p in probs:
@@ -384,23 +393,26 @@ def show_probabilities(sat):
             viz += f"{C.GRAY}▒{C.RESET}"
         else:
             viz += f"{C.GRAY}░{C.RESET}"
-    
+
     print(f"\n{C.BOLD}Probabilities:{C.RESET}")
     print(f"  {text}")
     print(f"  {viz}")
-    print(f"\n  Legend: {C.GREEN}█{C.RESET}>0.9  {C.YELLOW}▓{C.RESET}>0.5  {C.GRAY}▒{C.RESET}>0.1  {C.GRAY}░{C.RESET}≤0.1")
-    
+    print(
+        f"\n  Legend: {C.GREEN}█{C.RESET}>0.9  {C.YELLOW}▓{C.RESET}>0.5  {C.GRAY}▒{C.RESET}>0.1  {C.GRAY}░{C.RESET}≤0.1"
+    )
+
     # Show high-probability positions
     print(f"\n{C.BOLD}Detected boundaries (prob > 0.5):{C.RESET}")
     for i, p in enumerate(probs):
         if p > 0.5:
-            ctx = text[max(0, i-5):i+3]
-            print(f"  Position {i:2d}: p={p:.3f}  \"...{ctx}...\"")
+            ctx = text[max(0, i - 5) : i + 3]
+            print(f'  Position {i:2d}: p={p:.3f}  "...{ctx}..."')
 
 
 # =============================================================================
 # MAIN
 # =============================================================================
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -413,19 +425,17 @@ Examples:
   python %(prog)s --example news     # Run specific example
   python %(prog)s --probs            # Show probability visualization
 
-Available examples: """ + ", ".join(EXAMPLES.keys())
+Available examples: """
+        + ", ".join(EXAMPLES.keys()),
     )
-    parser.add_argument("-i", "--interactive", action="store_true",
-                       help="Interactive mode")
-    parser.add_argument("-e", "--example", choices=list(EXAMPLES.keys()),
-                       help="Run specific example")
-    parser.add_argument("-p", "--probs", action="store_true",
-                       help="Show probability visualization")
-    
+    parser.add_argument("-i", "--interactive", action="store_true", help="Interactive mode")
+    parser.add_argument("-e", "--example", choices=list(EXAMPLES.keys()), help="Run specific example")
+    parser.add_argument("-p", "--probs", action="store_true", help="Show probability visualization")
+
     args = parser.parse_args()
-    
+
     sat = load_model()
-    
+
     if args.interactive:
         interactive_mode(sat)
     elif args.example:

@@ -6,7 +6,7 @@ from wtpsplit.utils import indices_to_sentences
 def _enforce_segment_constraints(text, indices, min_length, max_length, strip_whitespace=False):
     """
     Extract segments from text using indices, enforcing STRICT length constraints.
-    
+
     Guarantees:
     - All segments are strictly <= max_length characters
     - All segments are >= min_length characters (best effort)
@@ -24,20 +24,20 @@ def _enforce_segment_constraints(text, indices, min_length, max_length, strip_wh
     """
     if not text:
         return []
-    
+
     # For whitespace-only text, return empty if strip_whitespace, otherwise preserve
     if not text.strip():
         if strip_whitespace:
             return []
         # Text is whitespace-only but we need to preserve it
         if max_length is not None and len(text) > max_length:
-            return [text[i:i+max_length] for i in range(0, len(text), max_length)]
+            return [text[i : i + max_length] for i in range(0, len(text), max_length)]
         return [text]
-    
+
     # No constraints - use standard extraction
     if min_length <= 1 and max_length is None:
         return indices_to_sentences(text, indices, strip_whitespace=strip_whitespace)
-    
+
     # Build initial segment boundaries from indices
     boundaries = []
     offset = 0
@@ -52,29 +52,29 @@ def _enforce_segment_constraints(text, indices, min_length, max_length, strip_wh
     # Add final segment
     if offset < len(text):
         boundaries.append((offset, len(text)))
-    
+
     if not boundaries:
         seg = text.strip() if strip_whitespace else text
         if max_length is not None and len(seg) > max_length:
             # Force split - only filter whitespace-only chunks if strip_whitespace is True
-            chunks = [seg[i:i+max_length] for i in range(0, len(seg), max_length)]
+            chunks = [seg[i : i + max_length] for i in range(0, len(seg), max_length)]
             if strip_whitespace:
                 chunks = [c for c in chunks if c.strip()]
             else:
                 chunks = [c for c in chunks if c]  # Only filter truly empty strings
             return chunks
         return [seg] if seg else []
-    
+
     # Process boundaries to enforce strict max_length while preserving text
     result = []
     pending_prefix = ""  # Whitespace to prepend to next segment
     i = 0
-    
+
     while i < len(boundaries):
         start, end = boundaries[i]
         segment = pending_prefix + text[start:end]
         pending_prefix = ""
-        
+
         # STRICT max_length enforcement
         if max_length is not None and len(segment) > max_length:
             # Split this segment to fit max_length
@@ -86,15 +86,15 @@ def _enforce_segment_constraints(text, indices, min_length, max_length, strip_wh
                     if segment[j].isspace():
                         split_at = j + 1
                         break
-                
+
                 chunk = segment[:split_at]
                 segment = segment[split_at:]
-                
+
                 if strip_whitespace:
                     chunk = chunk.strip()
                 if chunk:
                     result.append(chunk)
-            
+
             # Handle remaining part
             if segment:
                 # Check if remaining can be merged with next segment
@@ -107,28 +107,28 @@ def _enforce_segment_constraints(text, indices, min_length, max_length, strip_wh
                         result.append(segment)
             i += 1
             continue
-        
+
         # Check min_length - merge with next if too short
         seg_len = len(segment.strip()) if strip_whitespace else len(segment)
         if seg_len < min_length and i + 1 < len(boundaries):
             # Try to merge with next segment
             j = i + 1
-            
+
             while j < len(boundaries) and seg_len < min_length:
                 _, next_end = boundaries[j]
                 # Merge by appending text from current end to next boundary
                 merged = segment + text[end:next_end] if segment else text[start:next_end]
                 merged_len = len(merged.strip()) if strip_whitespace else len(merged)
-                
+
                 # Check strict max_length
                 if max_length is not None and merged_len > max_length:
                     break
-                
+
                 segment = merged
                 end = next_end  # Update end to track where we've merged up to
                 seg_len = merged_len
                 j += 1
-            
+
             if strip_whitespace:
                 segment = segment.strip()
             if segment:
@@ -136,14 +136,14 @@ def _enforce_segment_constraints(text, indices, min_length, max_length, strip_wh
             i = j
             pending_prefix = ""
             continue
-        
+
         # Segment is valid
         if strip_whitespace:
             segment = segment.strip()
         if segment:
             result.append(segment)
         i += 1
-    
+
     # Handle any remaining prefix
     if pending_prefix:
         if result:
@@ -156,7 +156,7 @@ def _enforce_segment_constraints(text, indices, min_length, max_length, strip_wh
                 result.append(pending_prefix.strip() if strip_whitespace else pending_prefix)
         else:
             result.append(pending_prefix.strip() if strip_whitespace else pending_prefix)
-    
+
     # Final cleanup: merge last segment if too short
     if len(result) > 1:
         last = result[-1]
@@ -167,7 +167,7 @@ def _enforce_segment_constraints(text, indices, min_length, max_length, strip_wh
             if max_length is None or len(merged) <= max_length:
                 result[-2] = merged
                 result.pop()
-    
+
     # Return all segments to preserve text (don't filter whitespace-only)
     return result
 
@@ -175,88 +175,88 @@ def _enforce_segment_constraints(text, indices, min_length, max_length, strip_wh
 def _enforce_segment_constraints_simple(sentences, min_length, max_length, delimiter=" "):
     """
     Simple constraint enforcement for already-extracted segments.
-    
+
     Used when we know the delimiter between segments (e.g., after split("\\n")).
     Merges segments using the specified delimiter to preserve text structure.
-    
+
     Guarantees:
     - All segments are strictly <= max_length characters (STRICT)
     - All segments are >= min_length characters (BEST EFFORT - may not be achievable
       if merging would violate max_length or if segment is inherently too short)
     - delimiter.join(segments) preserves text structure
-    
+
     Args:
         sentences: List of text segments
         min_length: Minimum segment length (best effort)
         max_length: Maximum segment length (None for no limit, strictly enforced)
         delimiter: Delimiter to use when merging segments
-    
+
     Returns:
         List of segments with constraints applied (max_length always respected,
         min_length satisfied where possible)
     """
     if not sentences:
         return sentences
-    
+
     # Preserve structure: keep empty strings (they represent consecutive delimiters/newlines)
     # This matches baseline behavior when split_on_input_newlines=True
     if min_length <= 1 and max_length is None:
         return sentences
-    
+
     # Process only non-empty segments, but track indices to preserve empty ones
     result = []
     i = 0
-    
+
     while i < len(sentences):
         seg = sentences[i]
-        
+
         # Preserve empty strings (consecutive delimiter markers)
         if not seg or not seg.strip():
             result.append(seg)
             i += 1
             continue
-        
+
         seg_len = len(seg)
-        
+
         # STRICT max_length enforcement - split if too long
         if max_length is not None and seg_len > max_length:
             for offset in range(0, seg_len, max_length):
-                chunk = seg[offset:offset + max_length]
+                chunk = seg[offset : offset + max_length]
                 if chunk:
                     result.append(chunk)
             i += 1
             continue
-        
+
         # Segment too short - merge with next non-empty using delimiter
         if seg_len < min_length:
             merged = seg
             j = i + 1
             pending_delimiters = ""  # Track delimiters from empty segments
             trailing_empty = []  # Track empty segments after last successful merge
-            
+
             while j < len(sentences) and len(merged) < min_length:
                 next_seg = sentences[j]
-                
+
                 # Empty segments represent consecutive delimiters - accumulate them
                 if not next_seg or not next_seg.strip():
                     pending_delimiters += delimiter  # Each empty = one more delimiter
                     trailing_empty.append(next_seg)
                     j += 1
                     continue
-                
+
                 # Build merged string: base delimiter + any accumulated from empty segments
                 all_delims = delimiter + pending_delimiters
                 new_merged = merged + all_delims + next_seg
-                
+
                 # STRICT max_length check
                 if max_length is not None and len(new_merged) > max_length:
                     break
-                
+
                 merged = new_merged
                 pending_delimiters = ""  # Reset after successful merge
                 trailing_empty = []  # Clear since they're absorbed
                 j += 1
-            
+
             # If still too short, try merging with previous non-empty segment
             if len(merged) < min_length and result:
                 # Find a previous non-empty segment that can accommodate the merge
@@ -270,23 +270,23 @@ def _enforce_segment_constraints_simple(sentences, min_length, max_length, delim
                         if max_length is None or len(prev_merged) <= max_length:
                             result[prev_idx] = prev_merged
                             # Remove all segments after prev_idx (they're now in the merged string)
-                            del result[prev_idx + 1:]
+                            del result[prev_idx + 1 :]
                             merged = None  # Mark as merged into previous
                             break
                         # If this one doesn't fit, try earlier segments
-            
+
             if merged is not None:
                 result.append(merged)
-            
+
             # Preserve any trailing empty segments that weren't absorbed
             result.extend(trailing_empty)
-            
+
             i = j
             continue
-        
+
         result.append(seg)
         i += 1
-    
+
     # Merge last non-empty segment if too short
     non_empty_indices = [i for i, s in enumerate(result) if s and s.strip()]
     if len(non_empty_indices) >= 2:
@@ -294,7 +294,7 @@ def _enforce_segment_constraints_simple(sentences, min_length, max_length, delim
         prev_idx = non_empty_indices[-2]
         last = result[last_idx]
         prev = result[prev_idx]
-        
+
         if len(last) < min_length:
             # Count empty segments between prev and last (they represent delimiters)
             empty_count = last_idx - prev_idx - 1
@@ -306,7 +306,7 @@ def _enforce_segment_constraints_simple(sentences, min_length, max_length, delim
                 result[prev_idx] = merged
                 # Remove all segments from prev_idx+1 to last_idx (inclusive)
                 del result[prev_idx + 1 : last_idx + 1]
-    
+
     return result
 
 
@@ -341,7 +341,7 @@ def constrained_segmentation(
         while current_idx < n:
             best_score = -float("inf")
             best_end = -1
-            
+
             start_search = current_idx + min_length
             end_search = min(current_idx + max_length + 1, n + 1)
 
@@ -390,7 +390,7 @@ def constrained_segmentation(
         dp[0] = 0.0
         backpointers = np.zeros(n + 1, dtype=int)
 
-        with np.errstate(divide='ignore'):
+        with np.errstate(divide="ignore"):
             log_probs = np.log(probs)
 
         for i in range(1, n + 1):
@@ -410,7 +410,7 @@ def constrained_segmentation(
                 current_score = dp[j] + log_prior
 
                 if i < n:
-                    current_score += log_probs[i-1]
+                    current_score += log_probs[i - 1]
 
                 if current_score > dp[i]:
                     dp[i] = current_score

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 import math
 import os
@@ -321,9 +323,7 @@ class WtP:
     ):
         # Input validation
         if max_length is not None and min_length > max_length:
-            raise ValueError(
-                f"min_length ({min_length}) cannot be greater than max_length ({max_length})"
-            )
+            raise ValueError(f"min_length ({min_length}) cannot be greater than max_length ({max_length})")
         if min_length < 1:
             raise ValueError(f"min_length must be >= 1, got {min_length}")
         if max_length is not None and max_length < 1:
@@ -334,14 +334,14 @@ class WtP:
         valid_algorithms = ["viterbi", "greedy"]
         if algorithm not in valid_algorithms:
             raise ValueError(f"Unknown algorithm: '{algorithm}'. Must be one of {valid_algorithms}")
-        
+
         if max_length is not None and threshold is not None:
             warnings.warn(
                 "Both 'threshold' and 'max_length' are set. When using length-constrained "
                 "segmentation (max_length), the threshold parameter is ignored.",
                 UserWarning,
             )
-        
+
         if isinstance(text_or_texts, str):
             return next(
                 self._split(
@@ -485,7 +485,7 @@ class WtP:
                             paragraph_probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
                         )
                         indices = [b - 1 for b in boundaries]
-                        
+
                         sentences = _enforce_segment_constraints(
                             paragraph, indices, min_length, max_length, strip_whitespace=strip_whitespace
                         )
@@ -843,12 +843,10 @@ class SaT:
                 DeprecationWarning,
             )
             split_on_input_newlines = not treat_newline_as_space
-        
+
         # Input validation
         if max_length is not None and min_length > max_length:
-            raise ValueError(
-                f"min_length ({min_length}) cannot be greater than max_length ({max_length})"
-            )
+            raise ValueError(f"min_length ({min_length}) cannot be greater than max_length ({max_length})")
         if min_length < 1:
             raise ValueError(f"min_length must be >= 1, got {min_length}")
         if max_length is not None and max_length < 1:
@@ -859,14 +857,14 @@ class SaT:
         valid_algorithms = ["viterbi", "greedy"]
         if algorithm not in valid_algorithms:
             raise ValueError(f"Unknown algorithm: '{algorithm}'. Must be one of {valid_algorithms}")
-        
+
         if max_length is not None and threshold is not None:
             warnings.warn(
                 "Both 'threshold' and 'max_length' are set. When using length-constrained "
                 "segmentation (max_length), the threshold parameter is ignored.",
                 UserWarning,
             )
-        
+
         if isinstance(text_or_texts, str):
             return next(
                 self._split(
@@ -994,7 +992,7 @@ class SaT:
                             paragraph_probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
                         )
                         indices = [b - 1 for b in boundaries]
-                        
+
                         sentences = _enforce_segment_constraints(
                             paragraph, indices, min_length, max_length, strip_whitespace=strip_whitespace
                         )
@@ -1030,7 +1028,7 @@ class SaT:
                     constraint_probs = probs.copy()
                     if split_on_input_newlines:
                         for i, char in enumerate(text):
-                            if char == '\n' and i < len(constraint_probs):
+                            if char == "\n" and i < len(constraint_probs):
                                 constraint_probs[i] = 1.0  # Strong preference for newline splits
 
                     boundaries = constrained_segmentation(
@@ -1046,7 +1044,7 @@ class SaT:
                     sentences = indices_to_sentences(
                         text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
                     )
-                
+
                     if split_on_input_newlines:
                         # within the model, newlines in the text were ignored - they were treated as spaces.
                         # this is the default behavior: additionally split on newlines as provided in the input
