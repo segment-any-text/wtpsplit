@@ -1,0 +1,76 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (leave empty to use setup.py version)'
+        required: false
+        type: string
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for trusted publishing
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for versioning
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build setuptools wheel twine
+      
+      - name: Extract version from tag
+        if: github.event_name == 'release'
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "VERSION=$TAG_VERSION" >> $GITHUB_ENV
+          echo "Extracted version from tag: $TAG_VERSION"
+      
+      - name: Use manual version
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.version != ''
+        run: |
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          echo "Using manual version: ${{ github.event.inputs.version }}"
+      
+      - name: Update version in setup.py
+        if: env.VERSION != ''
+        run: |
+          sed -i "s/version=\"[0-9.]*\"/version=\"${VERSION}\"/" setup.py
+          echo "Updated setup.py to version: ${VERSION}"
+          grep "version=" setup.py
+      
+      - name: Build package
+        run: |
+          python -m build
+          echo "Built packages:"
+          ls -lh dist/
+      
+      - name: Verify package
+        run: |
+          twine check dist/*
+      
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+          verbose: true
+      
+      - name: Create GitHub Release Assets
+        if: github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.ref_name }} dist/* --clobber

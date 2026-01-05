@@ -13,3 +13,45 @@ ignore = ["E741"]
 dev = [
     "wtpsplit>=2.1.7",
 ]
+
+[tool.semantic_release]
+version_toml = [
+    "pyproject.toml:project.version",
+]
+version_variables = [
+    "setup.py:version",
+]
+branch = "main"
+upload_to_repository = false
+upload_to_release = true
+build_command = "pip install build && python -m build"
+
+[tool.semantic_release.changelog]
+template_dir = "templates"
+changelog_file = "CHANGELOG.md"
+
+[tool.semantic_release.changelog.environment]
+block_start_string = "{%"
+block_end_string = "%}"
+variable_start_string = "{{"
+variable_end_string = "}}"
+
+[tool.semantic_release.branches.main]
+match = "(main|master)"
+prerelease = false
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = [
+    "feat",
+    "fix",
+    "docs",
+    "style",
+    "refactor",
+    "perf",
+    "test",
+    "build",
+    "ci",
+    "chore",
+]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]

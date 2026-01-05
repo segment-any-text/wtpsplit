@@ -1,12 +1,12 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="wtpsplit",
+    name="wtpsplit-triton",
     version="2.1.7",
     packages=find_packages(),
-    description="Universal Robust, Efficient and Adaptable Sentence Segmentation",
-    author="Markus Frohmann, Igor Sterner, Benjamin Minixhofer",
-    author_email="markus.frohmann@gmail.com",
+    description="Universal Robust, Efficient and Adaptable Sentence Segmentation with NVIDIA Triton Support",
+    author="Markus Frohmann, Igor Sterner, Benjamin Minixhofer , Sai Sanjay",
+    author_email="saisanjay7660@gmail.com",
     install_requires=[
         # "onnxruntime>=1.13.1", # can make conflicts between onnxruntime and onnxruntime-gpu
         "transformers>=4.22.2",
