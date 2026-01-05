@@ -73,10 +73,10 @@ class SaTTritonWrapper:
         # Prepare inputs for Triton
         inputs = []
         inputs.append(grpcclient.InferInput("input_ids", input_ids.shape, "INT64"))
-        inputs.append(grpcclient.InferInput("attention_mask", attention_mask.shape, "FP16"))
+        inputs.append(grpcclient.InferInput("attention_mask", attention_mask.shape, "INT64"))
 
         inputs[0].set_data_from_numpy(input_ids.astype(np.int64))
-        inputs[1].set_data_from_numpy(attention_mask.astype(np.float16))
+        inputs[1].set_data_from_numpy(attention_mask.astype(np.int64))
 
         # Prepare outputs
         outputs = []

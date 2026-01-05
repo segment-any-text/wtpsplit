@@ -66,7 +66,7 @@ input [
   }},
   {{
     name: "attention_mask"
-    data_type: TYPE_FP16
+    data_type: TYPE_INT64
     dims: [{input_shape}]
   }}
 ]
@@ -74,7 +74,7 @@ input [
 output [
   {{
     name: "logits"
-    data_type: TYPE_FP32
+    data_type: TYPE_FP16
     dims: [{output_shape}]
   }}
 ]
@@ -171,7 +171,16 @@ if __name__ == "__main__":
             "attention_mask": {0: "batch", 1: "sequence"},
             "logits": {0: "batch", 1: "sequence"},
         },
+        opset_version=17,  # Use opset 17 for compatibility with Triton's ONNX Runtime
+        dynamo=False,  # Disable dynamo to ensure dynamic_axes are respected
     )
+    
+    # Downgrade IR version for Triton compatibility (Triton 24.03 supports max IR version 9)
+    onnx_model_tmp = onnx.load(onnx_path)
+    if onnx_model_tmp.ir_version > 9:
+        print(f"Downgrading ONNX IR version from {onnx_model_tmp.ir_version} to 9 for Triton compatibility")
+        onnx_model_tmp.ir_version = 9
+        onnx.save(onnx_model_tmp, onnx_path)
 
     # Optimize ONNX model
     print("Optimizing ONNX model...")
@@ -224,7 +233,7 @@ if __name__ == "__main__":
         model_name=args.triton_model_name,
         max_batch_size=args.max_batch_size,
         input_shape="-1",  # Dynamic sequence length
-        output_shape="-1, 2",  # Dynamic sequence length, 2 output classes
+        output_shape="-1, 1",  # Dynamic sequence length, 1 output class (binary segmentation)
     )
     
     with open(config_path, "w") as f:

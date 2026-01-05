@@ -60,7 +60,8 @@ class WtP:
             model_name = str(model_name_or_model)
             is_local = os.path.isdir(model_name)
 
-            if not is_local and hub_prefix is not None:
+            # Only add hub_prefix if model_name doesn't already include it
+            if not is_local and hub_prefix is not None and not model_name.startswith(f"{hub_prefix}/"):
                 model_name_to_fetch = f"{hub_prefix}/{model_name}"
             else:
                 model_name_to_fetch = model_name
@@ -480,7 +481,8 @@ class SaT:
             model_name = str(model_name_or_model)
             is_local = os.path.isdir(model_name)
 
-            if not is_local and hub_prefix is not None:
+            # Only add hub_prefix if model_name doesn't already include it (e.g., "segment-any-text/sat-3l-sm")
+            if not is_local and hub_prefix is not None and not model_name.startswith(f"{hub_prefix}/"):
                 model_name_to_fetch = f"{hub_prefix}/{model_name}"
             else:
                 model_name_to_fetch = model_name
