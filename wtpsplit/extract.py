@@ -54,6 +54,46 @@ class SaTORTWrapper:
         return {"logits": logits}
 
 
+class SaTTritonWrapper:
+    def __init__(self, config, triton_client, model_name):
+        self.config = config
+        self.triton_client = triton_client
+        self.model_name = model_name
+
+    def __getattr__(self, name):
+        assert hasattr(self, "triton_client")
+        return getattr(self.triton_client, name)
+
+    def __call__(self, input_ids, attention_mask):
+        try:
+            import tritonclient.grpc as grpcclient
+        except ImportError:
+            raise ImportError("`tritonclient[grpc]` must be installed to use Triton inference!")
+
+        # Prepare inputs for Triton
+        inputs = []
+        inputs.append(grpcclient.InferInput("input_ids", input_ids.shape, "INT64"))
+        inputs.append(grpcclient.InferInput("attention_mask", attention_mask.shape, "FP16"))
+
+        inputs[0].set_data_from_numpy(input_ids.astype(np.int64))
+        inputs[1].set_data_from_numpy(attention_mask.astype(np.float16))
+
+        # Prepare outputs
+        outputs = []
+        outputs.append(grpcclient.InferRequestedOutput("logits"))
+
+        # Execute inference
+        response = self.triton_client.infer(
+            model_name=self.model_name,
+            inputs=inputs,
+            outputs=outputs,
+        )
+
+        logits = response.as_numpy("logits")
+
+        return {"logits": logits}
+
+
 class PyTorchWrapper:
     def __init__(self, model):
         self.model = model

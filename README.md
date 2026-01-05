@@ -15,10 +15,11 @@ The namesake WtP is maintained for consistency. Our new followup SaT provides ro
 ```bash
 pip install wtpsplit
 ```
-Or one of the following for ONNX support:
+Or one of the following for ONNX or Triton support:
 ```bash
 pip install wtpsplit[onnx-gpu]
 pip install wtpsplit[onnx-cpu]
+pip install wtpsplit[triton]
 ```
 
 ## Usage
@@ -84,6 +85,63 @@ If you wish to use LoRA in combination with an ONNX model:
   - If you wish to load a LoRA module from the HuggingFace hub, use `style_or_domain` and `language`.
 - Load the ONNX model with merged LoRA weights:
   `sat = SaT(<OUTPUT_DIR>, onnx_providers=["CUDAExecutionProvider", "CPUExecutionProvider"])`
+
+## NVIDIA Triton Inference Server Support
+
+🚀 For production deployments, you can use NVIDIA Triton Inference Server for optimized, scalable inference! 🚀
+
+### Setup
+
+First, install the Triton client:
+```bash
+pip install wtpsplit[triton]
+```
+
+### Export Model to Triton Format
+
+Export your model to Triton-compatible format:
+```bash
+python scripts/export_to_triton.py \
+    --model_name_or_path segment-any-text/sat-3l-sm \
+    --output_dir triton_models/sat-3l-sm \
+    --triton_model_name sat_3l_sm
+```
+
+This creates a Triton model repository with the necessary `config.pbtxt` and ONNX model files.
+
+### Deploy to Triton Server
+
+Start Triton Inference Server with your model repository:
+```bash
+docker run --gpus=1 --rm -p 8000:8000 -p 8001:8001 -p 8002:8002 \
+    -v /path/to/triton_models:/models \
+    nvcr.io/nvidia/tritonserver:23.10-py3 \
+    tritonserver --model-repository=/models
+```
+
+### Use Triton for Inference
+
+```python
+from wtpsplit import SaT
+
+# Connect to Triton server
+sat = SaT(
+    "sat-3l-sm",
+    triton_url="localhost:8001",
+    triton_model_name="sat_3l_sm"
+)
+
+# Use normally
+sat.split("This is a test. This is another sentence.")
+# returns ["This is a test. ", "This is another sentence."]
+```
+
+Benefits of using Triton:
+- **Scalability**: Handle multiple concurrent requests efficiently
+- **Multi-model serving**: Deploy multiple models on the same infrastructure
+- **Dynamic batching**: Automatically batch requests for better throughput
+- **Model versioning**: Easy A/B testing and rollback
+- **Production-ready**: Built for enterprise deployments with monitoring and metrics
 
 ## Available Models
 

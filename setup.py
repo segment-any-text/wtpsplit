@@ -23,6 +23,7 @@ setup(
     extras_require={
         'onnx-gpu': ['onnxruntime-gpu>=1.13.1'],
         'onnx-cpu': ['onnxruntime>=1.13.1'],
+        'triton': ['tritonclient[grpc]>=2.20.0'],
     },
     url="https://github.com/segment-any-text/wtpsplit",
     package_data={"wtpsplit": ["data/*"]},

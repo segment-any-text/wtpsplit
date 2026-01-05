@@ -16,7 +16,7 @@ from huggingface_hub import hf_hub_download
 from transformers import AutoConfig, AutoModelForTokenClassification, AutoTokenizer
 from transformers.utils.hub import cached_file
 
-from wtpsplit.extract import BertCharORTWrapper, SaTORTWrapper, PyTorchWrapper, extract
+from wtpsplit.extract import BertCharORTWrapper, SaTORTWrapper, SaTTritonWrapper, PyTorchWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid, token_to_char_probs
 
 __version__ = "2.1.7"
@@ -450,6 +450,8 @@ class SaT:
         from_pretrained_kwargs=None,
         ort_providers=None,
         ort_kwargs=None,
+        triton_url: str = None,
+        triton_model_name: str = None,
         style_or_domain: str = None,
         language: str = None,
         lora_path: str = None,  # local
@@ -466,6 +468,8 @@ class SaT:
         self.model_name_or_model = model_name_or_model
         self.ort_providers = ort_providers
         self.ort_kwargs = ort_kwargs
+        self.triton_url = triton_url
+        self.triton_model_name = triton_model_name
 
         self.use_lora = False
 
@@ -495,7 +499,37 @@ class SaT:
                 else:
                     onnx_path = None
 
-            if ort_providers is not None:
+            if triton_url is not None:
+                if triton_model_name is None:
+                    raise ValueError(
+                        "Please specify a `triton_model_name` when using Triton inference."
+                    )
+
+                try:
+                    import tritonclient.grpc as grpcclient
+                except ModuleNotFoundError:
+                    raise ValueError("Please install `tritonclient[grpc]` to use SaT with Triton inference.")
+
+                # to register models for AutoConfig
+                import wtpsplit.configs  # noqa
+
+                triton_client = grpcclient.InferenceServerClient(url=triton_url)
+                
+                # Check if model is ready
+                if not triton_client.is_model_ready(triton_model_name):
+                    raise ValueError(f"Model '{triton_model_name}' is not ready on Triton server at {triton_url}")
+
+                self.model = SaTTritonWrapper(
+                    AutoConfig.from_pretrained(model_name_to_fetch, **(from_pretrained_kwargs or {})),
+                    triton_client,
+                    triton_model_name,
+                )
+                if lora_path:
+                    raise ValueError(
+                        "LoRA is not supported with Triton inference. "
+                        "Please merge LoRA weights into the model before deploying to Triton."
+                    )
+            elif ort_providers is not None:
                 if onnx_path is None:
                     raise ValueError(
                         "Could not find an ONNX model in the model directory. Try `use_ort=False` to run with PyTorch."
