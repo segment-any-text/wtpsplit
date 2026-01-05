@@ -86,12 +86,14 @@ if __name__ == "__main__":
 
     model = model.half()
 
+    dummy_inputs = (
+        torch.randint(0, model.config.vocab_size, (1, 1), dtype=torch.int64, device=args.device),
+        torch.ones((1, 1), dtype=torch.int64, device=args.device),
+    )
+
     torch.onnx.export(
         model,
-        {
-            "input_ids": torch.randint(0, model.config.vocab_size, (1, 1), dtype=torch.int64, device=args.device),
-            "attention_mask": torch.randn((1, 1), dtype=torch.float16, device=args.device),
-        },
+        dummy_inputs,
         output_dir / "model.onnx",
         verbose=True,
         input_names=["input_ids", "attention_mask"],

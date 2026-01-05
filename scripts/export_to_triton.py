@@ -154,12 +154,14 @@ if __name__ == "__main__":
     onnx_path = model_repo_dir / "model.onnx"
     print(f"Exporting model to ONNX at {onnx_path}")
     
+    dummy_inputs = (
+        torch.randint(0, model.config.vocab_size, (1, 512), dtype=torch.int64, device=args.device),
+        torch.ones((1, 512), dtype=torch.int64, device=args.device),
+    )
+
     torch.onnx.export(
         model,
-        {
-            "input_ids": torch.randint(0, model.config.vocab_size, (1, 512), dtype=torch.int64, device=args.device),
-            "attention_mask": torch.randn((1, 512), dtype=torch.float16, device=args.device),
-        },
+        dummy_inputs,
         onnx_path,
         verbose=True,
         input_names=["input_ids", "attention_mask"],
