@@ -374,6 +374,12 @@ Ensure to install packages from `requirements.txt` beforehand.
 
 For details, please see our [Segment any Text paper](https://arxiv.org/abs/2406.16678).
 
+## Community Ports
+
+- **Rust**: [wtsplit-rs](https://github.com/19h/wtsplit-rs) by [@19h](https://github.com/19h)
+
+*Note: Community ports are independently maintained and may have different feature sets or update schedules.*
+
 ## Citations
 
 For the `SaT` models, please kindly cite our paper:
