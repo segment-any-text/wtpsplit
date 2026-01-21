@@ -665,7 +665,9 @@ class SaT:
                         lora_load_path = str(lora_path)
                         lora_dir = Path(lora_load_path)
                         if not lora_dir.is_dir():
-                            raise FileNotFoundError(f"`lora_path` must be a directory, but got: {lora_load_path}")
+                            raise FileNotFoundError(
+                                f"`lora_path` must be a directory, but got: {lora_load_path}"
+                            )
 
                         expected_files = [
                             "adapter_config.json",
@@ -694,12 +696,29 @@ class SaT:
                     # merge lora weights into transformer for 0 efficiency overhead
                     if merge_lora:
                         self.model.model.merge_adapter("sat-lora")
-                    self.use_lora = True
-                except:  # noqa
-                    if lora_path:
-                        print(f"LoRA at {lora_path} not found, using base model...")
+                        # After merging, keeping the adapter around can trigger confusing warnings
+                        # ("adapters available but none activated") in some adapters versions.
+                        try:
+                            self.model.model.delete_adapter("sat-lora")
+                        except Exception:
+                            pass
                     else:
-                        print(f"LoRA {style_or_domain}/{language} not found, using base model...")
+                        # Some adapters versions ignore `set_active=True` on load; ensure activation.
+                        try:
+                            self.model.model.set_active_adapters("sat-lora")
+                        except Exception:
+                            pass
+                    self.use_lora = True
+                except Exception as e:  # noqa
+                    if lora_path:
+                        raise RuntimeError(
+                            "Failed to load the local LoRA adapter provided via `lora_path`.\n"
+                            f"- lora_path: {lora_path}\n"
+                            "Tip: `lora_path` must point to the adapter folder containing "
+                            "`adapter_config.json`, `pytorch_adapter.bin` (and if trained with head: "
+                            "`head_config.json`, `pytorch_model_head.bin`)."
+                        ) from e
+                    print(f"LoRA {style_or_domain}/{language} not found, using base model...")
         else:
             if ort_providers is not None:
                 raise ValueError("You can only use onnxruntime with a model directory, not a model object.")

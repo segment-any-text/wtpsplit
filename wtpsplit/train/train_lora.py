@@ -334,6 +334,13 @@ def main():
                         for i in range(0, best_length - args.block_size, args.block_size)
                     ]
 
+                # Filter out leading newline tokens that corrupt_training can't handle
+                # (the label function shifts by 1, so a newline at position 0 is never labeled/removed)
+                for i in range(len(blocks)):
+                    while blocks[i] and blocks[i][0] == custom_token_id:
+                        blocks[i] = blocks[i][1:]
+                        block_ids[i] = block_ids[i][1:]
+
                 block_langs = [current_lang] * len(blocks)
 
                 all_input_blocks.extend(blocks)
