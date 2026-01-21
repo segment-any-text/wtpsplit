@@ -166,7 +166,7 @@ Use priors to influence segment length distribution. Available priors:
 |-------|----------|
 | `"uniform"` (default) | Just enforce max_length, let model decide |
 | `"gaussian"` | Prefer segments around a target length (intuitive) |
-| `"lognormal"` | Natural-feeling output |
+| `"lognormal"` | Right-skewed preference (more tolerant of longer segments) |
 | `"clipped_polynomial"` | Must be very close to target length |
 
 ```python
@@ -174,7 +174,7 @@ Use priors to influence segment length distribution. Available priors:
 sat.split(text, max_length=100, prior_type="gaussian", 
           prior_kwargs={"target_length": 50, "spread": 10})
 
-# Log-normal prior: better models natural sentence length distribution
+# Log-normal prior: right-skewed (more tolerant of longer segments)
 sat.split(text, max_length=100, prior_type="lognormal", 
           prior_kwargs={"target_length": 70, "spread": 25})
 

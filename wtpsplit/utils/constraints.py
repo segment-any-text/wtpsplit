@@ -7,6 +7,10 @@ def _enforce_segment_constraints(text, indices, min_length, max_length, strip_wh
     """
     Extract segments from text using indices, enforcing STRICT length constraints.
 
+    NOTE: This post-processing is necessary because Viterbi operates on raw character
+    indices, but text extraction extends segments to include trailing whitespace (which
+    can exceed max_length) and optionally strips whitespace (which can go below min_length).
+
     Guarantees:
     - All segments are strictly <= max_length characters
     - All segments are >= min_length characters (best effort)
@@ -169,144 +173,6 @@ def _enforce_segment_constraints(text, indices, min_length, max_length, strip_wh
                 result.pop()
 
     # Return all segments to preserve text (don't filter whitespace-only)
-    return result
-
-
-def _enforce_segment_constraints_simple(sentences, min_length, max_length, delimiter=" "):
-    """
-    Simple constraint enforcement for already-extracted segments.
-
-    Used when we know the delimiter between segments (e.g., after split("\\n")).
-    Merges segments using the specified delimiter to preserve text structure.
-
-    Guarantees:
-    - All segments are strictly <= max_length characters (STRICT)
-    - All segments are >= min_length characters (BEST EFFORT - may not be achievable
-      if merging would violate max_length or if segment is inherently too short)
-    - delimiter.join(segments) preserves text structure
-
-    Args:
-        sentences: List of text segments
-        min_length: Minimum segment length (best effort)
-        max_length: Maximum segment length (None for no limit, strictly enforced)
-        delimiter: Delimiter to use when merging segments
-
-    Returns:
-        List of segments with constraints applied (max_length always respected,
-        min_length satisfied where possible)
-    """
-    if not sentences:
-        return sentences
-
-    # Preserve structure: keep empty strings (they represent consecutive delimiters/newlines)
-    # This matches baseline behavior when split_on_input_newlines=True
-    if min_length <= 1 and max_length is None:
-        return sentences
-
-    # Process only non-empty segments, but track indices to preserve empty ones
-    result = []
-    i = 0
-
-    while i < len(sentences):
-        seg = sentences[i]
-
-        # Preserve empty strings (consecutive delimiter markers)
-        if not seg or not seg.strip():
-            result.append(seg)
-            i += 1
-            continue
-
-        seg_len = len(seg)
-
-        # STRICT max_length enforcement - split if too long
-        if max_length is not None and seg_len > max_length:
-            for offset in range(0, seg_len, max_length):
-                chunk = seg[offset : offset + max_length]
-                if chunk:
-                    result.append(chunk)
-            i += 1
-            continue
-
-        # Segment too short - merge with next non-empty using delimiter
-        if seg_len < min_length:
-            merged = seg
-            j = i + 1
-            pending_delimiters = ""  # Track delimiters from empty segments
-            trailing_empty = []  # Track empty segments after last successful merge
-
-            while j < len(sentences) and len(merged) < min_length:
-                next_seg = sentences[j]
-
-                # Empty segments represent consecutive delimiters - accumulate them
-                if not next_seg or not next_seg.strip():
-                    pending_delimiters += delimiter  # Each empty = one more delimiter
-                    trailing_empty.append(next_seg)
-                    j += 1
-                    continue
-
-                # Build merged string: base delimiter + any accumulated from empty segments
-                all_delims = delimiter + pending_delimiters
-                new_merged = merged + all_delims + next_seg
-
-                # STRICT max_length check
-                if max_length is not None and len(new_merged) > max_length:
-                    break
-
-                merged = new_merged
-                pending_delimiters = ""  # Reset after successful merge
-                trailing_empty = []  # Clear since they're absorbed
-                j += 1
-
-            # If still too short, try merging with previous non-empty segment
-            if len(merged) < min_length and result:
-                # Find a previous non-empty segment that can accommodate the merge
-                for prev_idx in range(len(result) - 1, -1, -1):
-                    if result[prev_idx] and result[prev_idx].strip():
-                        # Count empty segments between prev_idx and end of result
-                        # They represent consecutive delimiters that must be preserved
-                        empty_between = len(result) - prev_idx - 1
-                        all_delims = delimiter * (empty_between + 1)
-                        prev_merged = result[prev_idx] + all_delims + merged
-                        if max_length is None or len(prev_merged) <= max_length:
-                            result[prev_idx] = prev_merged
-                            # Remove all segments after prev_idx (they're now in the merged string)
-                            del result[prev_idx + 1 :]
-                            merged = None  # Mark as merged into previous
-                            break
-                        # If this one doesn't fit, try earlier segments
-
-            if merged is not None:
-                result.append(merged)
-
-            # Preserve any trailing empty segments that weren't absorbed
-            result.extend(trailing_empty)
-
-            i = j
-            continue
-
-        result.append(seg)
-        i += 1
-
-    # Merge last non-empty segment if too short
-    non_empty_indices = [i for i, s in enumerate(result) if s and s.strip()]
-    if len(non_empty_indices) >= 2:
-        last_idx = non_empty_indices[-1]
-        prev_idx = non_empty_indices[-2]
-        last = result[last_idx]
-        prev = result[prev_idx]
-
-        if len(last) < min_length:
-            # Count empty segments between prev and last (they represent delimiters)
-            empty_count = last_idx - prev_idx - 1
-            # Build merge with all intermediate delimiters: prev + (empty_count + 1) delimiters + last
-            all_delims = delimiter * (empty_count + 1)
-            merged = prev + all_delims + last
-            # STRICT max_length check
-            if max_length is None or len(merged) <= max_length:
-                result[prev_idx] = merged
-                # Remove all segments from prev_idx+1 to last_idx (inclusive)
-                del result[prev_idx + 1 : last_idx + 1]
-
     return result
 
 

@@ -20,7 +20,7 @@ Define a **prior probability distribution** over chunk lengths, then solve an op
 - The model's boundary predictions
 - Your length preferences
 
-## The Mathematics
+## The Maths
 
 We view segmentation as selecting a subset of positions C = {C₁, C₂, ..., Cₖ} where each Cᵢ marks the end of a chunk.
 
@@ -48,10 +48,22 @@ In Bayesian terms:
 |-------|---------------|----------|
 | **Uniform** | Default | Just enforce max_length, let model decide split points |
 | **Gaussian** ⭐ | Recommended | Prefer segments around a target length (intuitive, easy to tune) |
-| **Log-Normal** | Advanced | Natural-feeling output that matches real sentence distributions |
+| **Log-Normal** | Advanced | Right-skewed preference (more tolerant of longer segments) |
 | **Clipped Polynomial** | Special cases | When segments MUST be very close to target length |
 
 **TL;DR**: Use `uniform` (default) if you just need max_length. Use `gaussian` if you want to prefer a specific segment size.
+
+### Prior Visualization
+
+The figure below shows how each prior behaves with `target_length=50`, `spread=15`, and `max_length=100`:
+
+![Prior Functions Comparison](prior_functions.png)
+
+**Key differences:**
+- **Uniform**: Flat until max_length, then drops to zero
+- **Gaussian**: Symmetric bell curve centered at target_length
+- **Clipped Polynomial**: Parabola that clips to exactly zero at ±spread from target
+- **Log-Normal**: Asymmetric (right-skewed) — more tolerant of longer segments, stricter on shorter ones
 
 ### 1. Uniform Prior (Default)
 
@@ -71,7 +83,7 @@ Prior(length) = exp(-0.5 × ((length - target_length) / spread)²)
 
 - Peaks at `target_length` (preferred length)
 - Falls off smoothly based on `spread` (standard deviation)
-- Symmetric, intuitive parameters
+- Symmetric around target
 - **Use case**: Prefer specific chunk sizes (e.g., ~512 chars for embedding models)
 
 ### 3. Clipped Polynomial Prior
@@ -81,20 +93,22 @@ Prior(length) = max(1 - (1/spread²) × (length - target_length)², 0)
 ```
 
 - Peaks at `target_length`
-- Clips to zero at `±spread` characters from target
-- More aggressive than Gaussian
+- Clips to exactly zero at `±spread` characters from target
+- More aggressive than Gaussian — creates a "hard window" around target
 - **Use case**: Strong enforcement when segments must be close to target
 
-### 4. Log-Normal Prior (Advanced)
+### 4. Log-Normal Prior
 
 ```python
 Prior(length) = exp(-0.5 × ((log(length) - μ) / σ)²) / length
 ```
 
-- Better models natural sentence length distribution (right-skewed)
+- Right-skewed distribution (asymmetric around target)
+- More tolerant of segments longer than target (long right tail)
+- Drops off faster for segments shorter than target
 - `target_length` sets the peak (mode)
-- `spread` in characters (same as gaussian/clipped_polynomial for consistency)
-- **Use case**: Natural-feeling segmentation for advanced users
+- `spread` in characters (same scale as other priors for consistency)
+- **Use case**: When you want to be more lenient with longer segments while preferring target length
 
 ## Algorithms
 
@@ -227,13 +241,6 @@ After the algorithm finds split points, post-processing ensures:
 - Segments don't exceed `max_length` (force-splits if needed)
 - Short segments are merged when possible
 - All whitespace is preserved
-
-### Simple Constraints (`_enforce_segment_constraints_simple`)
-
-Used after `split("\n")` to re-apply constraints:
-- Merges short segments with delimiter
-- Preserves empty strings (consecutive newlines)
-- Best-effort `min_length`, strict `max_length`
 
 ## Parameters Reference
 

@@ -18,12 +18,11 @@ Run with: pytest test_length_constraints.py -v
 
 import pytest
 import numpy as np
+import warnings
+
 from wtpsplit import WtP, SaT
-from wtpsplit.utils.constraints import (
-    constrained_segmentation,
-    _enforce_segment_constraints_simple,
-)
-from wtpsplit.utils.priors import create_prior_function
+from wtpsplit.utils.constraints import constrained_segmentation
+from wtpsplit.utils.priors import create_prior_function, get_language_defaults, LANG_SENTENCE_STATS
 
 
 # =============================================================================
@@ -371,6 +370,46 @@ class TestPriors:
 
         assert "".join(segments_small) == text
         assert "".join(segments_large) == text
+
+    def test_language_stats_loaded_from_json(self):
+        """Verify sentence stats are loaded from JSON file."""
+        # Should have loaded stats for common languages
+        assert len(LANG_SENTENCE_STATS) > 50, "Expected stats for 50+ languages"
+        # Check a few known languages
+        assert "en" in LANG_SENTENCE_STATS
+        assert "de" in LANG_SENTENCE_STATS
+        assert "zh" in LANG_SENTENCE_STATS
+
+    def test_get_language_defaults_known_language(self):
+        """Test getting defaults for a known language."""
+        defaults = get_language_defaults("en")
+        assert "target_length" in defaults
+        assert "spread" in defaults
+        assert isinstance(defaults["target_length"], int)
+        assert isinstance(defaults["spread"], int)
+
+    def test_get_language_defaults_unknown_language_warns(self):
+        """Test that unknown language triggers a warning."""
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            defaults = get_language_defaults("xyz_unknown")
+            assert len(w) == 1
+            assert "No sentence statistics" in str(w[0].message)
+            assert defaults["target_length"] == 70  # default
+            assert defaults["spread"] == 25  # default
+
+    def test_get_language_defaults_none(self):
+        """Test getting defaults with no language code."""
+        defaults = get_language_defaults(None)
+        assert defaults["target_length"] == 70
+        assert defaults["spread"] == 25
+
+    def test_prior_with_lang_code(self):
+        """Test creating prior with lang_code parameter."""
+        prior_fn = create_prior_function("gaussian", {"lang_code": "en"})
+        # Should use English defaults, peak should be near English target_length
+        en_defaults = get_language_defaults("en")
+        assert prior_fn(en_defaults["target_length"]) == pytest.approx(1.0)
 
 
 # =============================================================================
@@ -920,30 +959,6 @@ class TestRegressions:
             assert seg_len <= 40, f"Segment [{prev}:{b}] length {seg_len} exceeds max_length=40"
             prev = b
 
-    def test_empty_strings_preserved_with_constraints(self):
-        """
-        Regression test for empty string filtering bug.
-        """
-        sentences = ["Hello.", "", "", "World."]
-
-        result = _enforce_segment_constraints_simple(sentences, min_length=1, max_length=100, delimiter="\n")
-
-        assert "" in result or len([s for s in result if not s]) > 0
-
-        content = [s for s in result if s.strip()]
-        assert content == ["Hello.", "World."]
-
-    def test_min_length_backward_merge(self):
-        """
-        Regression test for min_length backward merge.
-        """
-        sentences = ["First segment here", "Hi", "Another long segment"]
-        result = _enforce_segment_constraints_simple(sentences, min_length=10, max_length=30, delimiter=" ")
-
-        for seg in result:
-            if seg.strip():
-                assert len(seg) >= 10 or len(seg) <= 2
-
     def test_equal_min_max_viterbi_fallback(self):
         """
         Regression test: When min_length == max_length and DP fails,
@@ -996,63 +1011,6 @@ class TestRegressions:
         text5 = "Hello.\n\nWorld.\n"
         segments5 = sat_model.split(text5, max_length=50)
         assert "".join(segments5) == text5, f"Consecutive + trailing failed: {segments5}"
-
-    def test_empty_segments_backward_merge_text_preservation(self):
-        """
-        Regression test: When merging a short final segment backward,
-        empty segments (representing consecutive delimiters) between
-        the previous non-empty segment and the short segment must be
-        included in the merge, not orphaned.
-
-        Bug: The backward merge used only one delimiter instead of
-        counting empty segments between prev_idx and current position.
-        This caused empty segments to be orphaned and appear at the
-        wrong position in the output, breaking text preservation.
-
-        Example failure before fix:
-          Input:  ['LongEnoughTextHere', '', '', 'Hi']
-          Output: ['LongEnoughTextHere\\nHi', '', '']  # WRONG - empties at end
-          Should: ['LongEnoughTextHere\\n\\n\\nHi']    # CORRECT - empties absorbed
-        """
-        # Case 1: Empty segments between prev and short final segment
-        segments = ["LongEnoughTextHere", "", "", "Hi"]
-        result = _enforce_segment_constraints_simple(segments, min_length=5, max_length=100, delimiter="\n")
-        original = "\n".join(segments)
-        reconstructed = "\n".join(result)
-        assert original == reconstructed, f"Text not preserved! Original: {repr(original)}, Got: {repr(reconstructed)}"
-
-        # Case 2: Many consecutive empty segments
-        segments2 = ["Hello", "", "", "", "", "X"]
-        result2 = _enforce_segment_constraints_simple(segments2, min_length=3, max_length=100, delimiter="\n")
-        original2 = "\n".join(segments2)
-        reconstructed2 = "\n".join(result2)
-        assert original2 == reconstructed2, (
-            f"Text not preserved! Original: {repr(original2)}, Got: {repr(reconstructed2)}"
-        )
-
-        # Case 3: Single empty segment between
-        segments3 = ["LongText", "", "Hi"]
-        result3 = _enforce_segment_constraints_simple(segments3, min_length=5, max_length=100, delimiter="\n")
-        original3 = "\n".join(segments3)
-        reconstructed3 = "\n".join(result3)
-        assert original3 == reconstructed3, (
-            f"Text not preserved! Original: {repr(original3)}, Got: {repr(reconstructed3)}"
-        )
-
-    def test_empty_segments_final_merge_text_preservation(self):
-        """
-        Regression test: The final merge pass (after main loop) must also
-        preserve empty segments between the previous non-empty and last
-        non-empty segments.
-        """
-        # This triggers the final merge logic at the end of the function
-        # when both segments are long enough initially but we still need
-        # to handle the structure correctly
-        segments = ["FirstLong", "", "", "SecondLong", "", "X"]
-        result = _enforce_segment_constraints_simple(segments, min_length=5, max_length=100, delimiter="\n")
-        original = "\n".join(segments)
-        reconstructed = "\n".join(result)
-        assert original == reconstructed, f"Text not preserved! Original: {repr(original)}, Got: {repr(reconstructed)}"
 
     def test_viterbi_min_length_adjustment_when_possible(self):
         """

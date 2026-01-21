@@ -662,7 +662,28 @@ class SaT:
                             )
                         lora_load_path = str(Constants.CACHE_DIR / "loras" / style_or_domain / language)
                     else:
-                        lora_load_path = lora_path
+                        lora_load_path = str(lora_path)
+                        lora_dir = Path(lora_load_path)
+                        if not lora_dir.is_dir():
+                            raise FileNotFoundError(f"`lora_path` must be a directory, but got: {lora_load_path}")
+
+                        expected_files = [
+                            "adapter_config.json",
+                            "pytorch_adapter.bin",
+                        ]
+                        if True:  # keep in sync with load_adapter(with_head=True)
+                            expected_files.extend(["head_config.json", "pytorch_model_head.bin"])
+
+                        missing = [f for f in expected_files if not (lora_dir / f).exists()]
+                        if missing:
+                            raise FileNotFoundError(
+                                "Could not load LoRA adapter from `lora_path` because required files are missing.\n"
+                                f"- lora_path: {lora_load_path}\n"
+                                f"- missing: {missing}\n"
+                                "If you trained via `wtpsplit/train/train_lora.py`, the adapter is saved under:\n"
+                                "  <output_dir>/<dataset_name>/<language_code>/\n"
+                                "and that folder should contain the files listed above."
+                            )
 
                     self.model.model.load_adapter(
                         lora_load_path,
