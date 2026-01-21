@@ -104,7 +104,7 @@ if __name__ == "__main__":
     json.dump(
         results,
         open(
-            Constants.CACHE_DIR / "extrinsic" / f"iwslt_{args.model_path.replace('/','_')}_{args.lang}.json",
+            Constants.CACHE_DIR / "extrinsic" / f"iwslt_{args.model_path.replace('/', '_')}_{args.lang}.json",
             "w",
         ),
     )

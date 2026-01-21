@@ -52,9 +52,9 @@ def evaluate_subtask1(splits, langs, prediction_dir: str, supervisions, include_
                         rows = [line.split("\t") for line in lines]
                         pred_labels = [row[1] for row in rows]
 
-                    assert (
-                        len(gt_labels) == len(pred_labels)
-                    ), f"unequal no. of labels for files {gt_tsv_file} and {os.path.join(prediction_dir,  lang_code, split, basename)}"
+                    assert len(gt_labels) == len(pred_labels), (
+                        f"unequal no. of labels for files {gt_tsv_file} and {os.path.join(prediction_dir, lang_code, split, basename)}"
+                    )
                     all_gt_labels.extend(gt_labels)
                     all_predicted_labels.extend(pred_labels)
 

@@ -141,9 +141,93 @@ Since SaT are trained to predict newline probablity, they can segment text into 
 sat.split(text, do_paragraph_segmentation=True)
 ```
 
+## (NEW! v2.2+) Length-Constrained Segmentation
+
+Control segment lengths with `min_length` and `max_length` parameters. This is useful when you need segments within specific size limits (e.g., for embedding models, storage, or downstream processing).
+
+### Basic Usage
+
+```python
+# segments will be at most 100 characters
+sat.split(text, max_length=100)
+
+# segments will be at least 20 characters (best effort) and at most 100 characters (strict)
+sat.split(text, min_length=20, max_length=100)
+
+# use different algorithms: "viterbi" (optimal, default) or "greedy" (faster)
+sat.split(text, max_length=100, algorithm="greedy")
+```
+
+### Priors for Length Preference
+
+Use priors to influence segment length distribution. Available priors:
+
+| Prior | Best For |
+|-------|----------|
+| `"uniform"` (default) | Just enforce max_length, let model decide |
+| `"gaussian"` | Prefer segments around a target length (intuitive) |
+| `"lognormal"` | Right-skewed preference (more tolerant of longer segments) |
+| `"clipped_polynomial"` | Must be very close to target length |
+
+```python
+# Gaussian prior (recommended): prefer segments around target_length
+sat.split(text, max_length=100, prior_type="gaussian", 
+          prior_kwargs={"target_length": 50, "spread": 10})
+
+# Log-normal prior: right-skewed (more tolerant of longer segments)
+sat.split(text, max_length=100, prior_type="lognormal", 
+          prior_kwargs={"target_length": 70, "spread": 25})
+
+# Clipped polynomial: hard cutoff at ±spread from target
+sat.split(text, max_length=100, prior_type="clipped_polynomial", 
+          prior_kwargs={"target_length": 60, "spread": 25})
+```
+
+### Language-Aware Defaults
+
+Pass `lang_code` to use language-specific defaults for `target_length` and `spread`:
+
+```python
+# German has longer average sentences → auto-uses target_length=90, spread=35
+sat.split(text, max_length=150, prior_type="gaussian", 
+          prior_kwargs={"lang_code": "de"})
+
+# Chinese has shorter sentences → auto-uses target_length=45, spread=15
+sat.split(text, max_length=100, prior_type="gaussian", 
+          prior_kwargs={"lang_code": "zh"})
+```
+
+When using LoRA with a language, this happens automatically:
+
+```python
+sat = SaT("sat-3l", style_or_domain="ud", language="de")
+sat.split(text, max_length=150, prior_type="gaussian")  # auto-uses German defaults
+```
+
+### How It Works
+
+The Viterbi algorithm finds globally optimal segmentation points that balance:
+- The model's sentence boundary predictions (where natural splits occur)
+- Your length preferences (via the prior; if provided)
+
+**Text Reconstruction:**
+```python
+# With constraints (max_length or min_length):
+original_text = "".join(segments)  # segments may contain newlines
+
+# Without constraints (SaT default with split_on_input_newlines=True):
+original_text = "\n".join(segments)
+```
+
+> **Note**: When using length constraints, segments may contain newlines. If you want to remove them, you can just post-process the output.
+
+> **Note**: When `max_length` is set, the `threshold` parameter is ignored. The Viterbi/greedy algorithms use raw model probabilities directly instead of threshold-based filtering.
+
+For more details, see the [Length Constraints Documentation](./docs/LENGTH_CONSTRAINTS.md).
+
 ## Adaptation
 
-SaT can be domain- and style-adapted via LoRA. We provide trained LoRA modules for Universal Dependencies, OPUS100, Ersatz, and TED (i.e., ASR-style transcribed speecjes) sentence styles in 81 languages for `sat-3l`and `sat-12l`. Additionally, we provide LoRA modules for legal documents (laws and judgements) in 6 languages, code-switching in 4 language pairs, and tweets in 3 languages. For details, we refer to our [paper](https://arxiv.org/abs/2406.16678).
+SaT can be domain- and style-adapted via LoRA. We provide trained LoRA modules for Universal Dependencies, OPUS100, Ersatz, and TED (i.e., ASR-style transcribed speeches) sentence styles in 81 languages for `sat-3l`and `sat-12l`. Additionally, we provide LoRA modules for legal documents (laws and judgements) in 6 languages, code-switching in 4 language pairs, and tweets in 3 languages. For details, we refer to our [paper](https://arxiv.org/abs/2406.16678).
 
 We also provided verse segmentation modules for 16 genres for `sat-12-no-limited-lookahead`.
 

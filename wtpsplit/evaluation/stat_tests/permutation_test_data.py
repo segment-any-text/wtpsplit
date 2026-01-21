@@ -85,9 +85,9 @@ for file in tqdm(DATA_DIR.glob("*IDX.json"), desc="Loading indices"):
                     data_lengths = [data_lengths]
 
                 if "lengths" in raw_data[lang][dataset]:
-                    assert (
-                        raw_data[lang][dataset]["lengths"] == data_lengths
-                    ), f"{lang}, {dataset}, {model_type}... [lengths assertion] before: {raw_data[lang][dataset]['lengths']} after: {data_lengths}"
+                    assert raw_data[lang][dataset]["lengths"] == data_lengths, (
+                        f"{lang}, {dataset}, {model_type}... [lengths assertion] before: {raw_data[lang][dataset]['lengths']} after: {data_lengths}"
+                    )
                 else:
                     raw_data[lang][dataset]["lengths"] = data_lengths
 
@@ -212,16 +212,16 @@ for lang in raw_data.keys():
         raw_data[lang]["main_table_mean"][system] = preds_main_results_indicies
 
         if "true_indices" in raw_data[lang]["main_table_mean"]:
-            assert (
-                raw_data[lang]["main_table_mean"]["true_indices"] == trues_main_results_indicies
-            ), f"{lang} {system}, {[len(i) for i in trues_main_results_indicies]}, {[len(i) for i in raw_data[lang]['main_table_mean']['true_indices']]}"
+            assert raw_data[lang]["main_table_mean"]["true_indices"] == trues_main_results_indicies, (
+                f"{lang} {system}, {[len(i) for i in trues_main_results_indicies]}, {[len(i) for i in raw_data[lang]['main_table_mean']['true_indices']]}"
+            )
         else:
             raw_data[lang]["main_table_mean"]["true_indices"] = trues_main_results_indicies
 
         if "lengths" in raw_data[lang]["main_table_mean"]:
-            assert (
-                raw_data[lang]["main_table_mean"]["lengths"] == lengths_main_results
-            ), f"{lang} {system} {raw_data[lang]['main_table_mean']['lengths']} {lengths_main_results}"
+            assert raw_data[lang]["main_table_mean"]["lengths"] == lengths_main_results, (
+                f"{lang} {system} {raw_data[lang]['main_table_mean']['lengths']} {lengths_main_results}"
+            )
         else:
             raw_data[lang]["main_table_mean"]["lengths"] = lengths_main_results
 

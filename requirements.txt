@@ -19,7 +19,6 @@ replicate
 onnx
 onnxruntime
 mosestokenizer
-cached_property
 tqdm
 skops
 pandas
