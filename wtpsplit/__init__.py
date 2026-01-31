@@ -529,24 +529,50 @@ class SaT:
 
                 # Check if lora_path has a head with different num_labels than the base model.
                 # This is needed because sm models have num_labels=1 but LoRA training uses num_labels=111+.
+                # Note: This auto-detection only works for local lora_path. Hub-hosted adapters
+                # (via style_or_domain/language) are downloaded after model loading, so they must
+                # have matching num_labels or the user must provide from_pretrained_kwargs manually.
                 effective_kwargs = dict(from_pretrained_kwargs or {})
                 if lora_path:
                     import json
 
                     lora_dir = Path(lora_path)
                     head_config_path = lora_dir / "head_config.json"
-                    if head_config_path.exists():
-                        with open(head_config_path) as f:
-                            head_config = json.load(f)
-                        adapter_num_labels = head_config.get("num_labels")
-                        if adapter_num_labels is not None:
-                            # Get base model's num_labels
-                            base_config = AutoConfig.from_pretrained(model_name_to_fetch)
-                            base_num_labels = getattr(base_config, "num_labels", None)
-                            if base_num_labels != adapter_num_labels:
-                                # Override to match adapter's head
-                                effective_kwargs["num_labels"] = adapter_num_labels
-                                effective_kwargs["ignore_mismatched_sizes"] = True
+                    try:
+                        if head_config_path.exists():
+                            with open(head_config_path) as f:
+                                head_config = json.load(f)
+                            adapter_num_labels = head_config.get("num_labels")
+                            if adapter_num_labels is not None:
+                                # Get base model's num_labels
+                                base_config = AutoConfig.from_pretrained(model_name_to_fetch)
+                                base_num_labels = getattr(base_config, "num_labels", None)
+                                if base_num_labels != adapter_num_labels:
+                                    # Warn if overriding user-provided values
+                                    user_num_labels = effective_kwargs.get("num_labels")
+                                    if user_num_labels is not None and user_num_labels != adapter_num_labels:
+                                        warnings.warn(
+                                            f"`num_labels` provided in `from_pretrained_kwargs` "
+                                            f"({user_num_labels}) is being overridden to "
+                                            f"{adapter_num_labels} to match the LoRA adapter head.",
+                                            UserWarning,
+                                        )
+                                    user_ignore = effective_kwargs.get("ignore_mismatched_sizes")
+                                    if user_ignore is not None and not user_ignore:
+                                        warnings.warn(
+                                            "`ignore_mismatched_sizes` provided in `from_pretrained_kwargs` "
+                                            "is being overridden to True to allow loading a LoRA adapter "
+                                            "with a different classification head size.",
+                                            UserWarning,
+                                        )
+                                    # Override to match adapter's head
+                                    effective_kwargs["num_labels"] = adapter_num_labels
+                                    effective_kwargs["ignore_mismatched_sizes"] = True
+                    except (OSError, json.JSONDecodeError, ValueError) as e:
+                        raise RuntimeError(
+                            f"Failed to auto-detect 'num_labels' from LoRA head configuration at "
+                            f"'{head_config_path}': {e}"
+                        ) from e
 
                 self.model = PyTorchWrapper(
                     AutoModelForTokenClassification.from_pretrained(
