@@ -8,12 +8,10 @@ torch.save(
                     "meta": {
                         "train_data": ["train sentence 1", "train sentence 2"],
                     },
-                    "data": [
-                        "train sentence 1", "train sentence 2"
-                    ]
+                    "data": ["train sentence 1", "train sentence 2"],
                 }
             }
         }
     },
-    "dummy-dataset.pth"
+    "dummy-dataset.pth",
 )

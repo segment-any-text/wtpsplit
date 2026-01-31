@@ -1,6 +1,7 @@
 # noqa: E501
 from wtpsplit import WtP, SaT
 
+
 def test_weighting():
     sat = SaT("sat-3l-sm", ort_providers=["CPUExecutionProvider"])
 
@@ -8,7 +9,7 @@ def test_weighting():
     splits_default = sat.split(text, threshold=0.25)
     splits_uniform = sat.split(text, threshold=0.25, weighting="uniform")
     splits_hat = sat.split(text, threshold=0.25, weighting="hat")
-    expected_splits = ["This is a test sentence ", "This is another test sentence."] 
+    expected_splits = ["This is a test sentence ", "This is another test sentence."]
     assert splits_default == splits_uniform == splits_hat == expected_splits
     assert "".join(splits_default) == text
 
@@ -55,13 +56,12 @@ def test_strip_newline_behaviour():
         "Yes\nthis is a test sentence. This is another test sentence.",
     )
     assert splits == ["Yes", "this is a test sentence. ", "This is another test sentence."]
-    
+
+
 def test_strip_newline_behaviour_as_spaces():
     sat = SaT("segment-any-text/sat-3l", hub_prefix=None)
 
-    splits = sat.split(
-        "Yes\nthis is a test sentence. This is another test sentence.", treat_newline_as_space=True
-    )
+    splits = sat.split("Yes\nthis is a test sentence. This is another test sentence.", treat_newline_as_space=True)
     assert splits == ["Yes\nthis is a test sentence. ", "This is another test sentence."]
 
 
@@ -114,10 +114,11 @@ Daniel Wroughton Craig CMG (born 2 March 1968) is an English actor who gained in
 
     assert paragraph1.startswith("Text segmentation is")
     assert paragraph2.startswith("Daniel Wroughton Craig CMG (born 2 March 1968) is")
-    
+
+
 def test_split_empty_strings():
     sat = SaT("segment-any-text/sat-3l", hub_prefix=None)
-    
+
     text = "   "
     splits = sat.split(text)
     assert splits == ["   "]
@@ -255,9 +256,10 @@ def test_split_threshold_wtp():
     # space might still be included in a character split
     assert splits[:3] == list("Thi")
 
+
 def test_lora_num_labels_auto_detection():
     """Test that LoRA adapters with different num_labels can load on sm models.
-    
+
     This tests the fix for issue #168: sm models have num_labels=1 but LoRA training
     produces adapters with num_labels=111. The fix auto-detects num_labels from
     the adapter's head_config.json and loads the model with matching dimensions.
@@ -266,28 +268,31 @@ def test_lora_num_labels_auto_detection():
     import tempfile
     import torch
     from pathlib import Path
-    
+
     # Create a mock LoRA adapter with num_labels=111 (simulating training output)
     with tempfile.TemporaryDirectory() as tmpdir:
         adapter_dir = Path(tmpdir)
-        
+
         # head_config.json with num_labels=111
         head_config = {"head_type": "tagging", "num_labels": 111, "layers": 1}
         with open(adapter_dir / "head_config.json", "w") as f:
             json.dump(head_config, f)
-        
+
         # Minimal adapter_config.json
         adapter_config = {"architecture": "lora", "config": {"r": 16, "alpha": 32}}
         with open(adapter_dir / "adapter_config.json", "w") as f:
             json.dump(adapter_config, f)
-        
+
         # Mock weight files (will fail at load_adapter but we're testing num_labels detection)
         torch.save({}, adapter_dir / "pytorch_adapter.bin")
-        torch.save({
-            "heads.sat-lora.1.weight": torch.randn(111, 768),
-            "heads.sat-lora.1.bias": torch.randn(111),
-        }, adapter_dir / "pytorch_model_head.bin")
-        
+        torch.save(
+            {
+                "heads.sat-lora.1.weight": torch.randn(111, 768),
+                "heads.sat-lora.1.bias": torch.randn(111),
+            },
+            adapter_dir / "pytorch_model_head.bin",
+        )
+
         # This should detect num_labels=111 and load model with that config
         # It will fail at the actual adapter loading (mock files) but that's OK -
         # we're testing that num_labels detection works
@@ -309,22 +314,22 @@ def test_lora_num_labels_malformed_head_config():
     """Test that malformed head_config.json produces a clear error."""
     import tempfile
     from pathlib import Path
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         adapter_dir = Path(tmpdir)
-        
+
         # Create malformed head_config.json
         with open(adapter_dir / "head_config.json", "w") as f:
             f.write("not valid json {")
-        
+
         # Other required files
         with open(adapter_dir / "adapter_config.json", "w") as f:
             f.write("{}")
         Path(adapter_dir / "pytorch_adapter.bin").touch()
         Path(adapter_dir / "pytorch_model_head.bin").touch()
-        
+
         try:
-            sat = SaT("sat-12l-sm", lora_path=str(adapter_dir))
+            SaT("sat-12l-sm", lora_path=str(adapter_dir))
             assert False, "Should have raised RuntimeError"
         except RuntimeError as e:
             assert "Failed to auto-detect 'num_labels'" in str(e)

@@ -312,7 +312,7 @@ def main(args):
     save_model_path = args.model_path
     if args.adapter_path:
         save_model_path = args.adapter_path
-    save_str = f"{save_model_path.replace('/','_')}_b{args.block_size}_s{args.stride}"
+    save_str = f"{save_model_path.replace('/', '_')}_b{args.block_size}_s{args.stride}"
 
     eval_data = torch.load(args.eval_data_path)
     if "canine" in args.model_path and "no-adapters" not in args.model_path:

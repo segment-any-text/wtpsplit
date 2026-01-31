@@ -29,6 +29,7 @@ warnings.filterwarnings("ignore", category=UserWarning, message="Torchaudio's I/
 warnings.simplefilter("default", DeprecationWarning)  # show by default
 warnings.simplefilter("ignore", category=FutureWarning)  # for tranformers
 
+
 class WtP:
     def __init__(
         self,
@@ -527,57 +528,76 @@ class SaT:
 
                 import wtpsplit.models  # noqa
 
-                # Check if lora_path has a head with different num_labels than the base model.
+                # Check if LoRA adapter has a head with different num_labels than the base model.
                 # This is needed because sm models have num_labels=1 but LoRA training uses num_labels=111+.
-                # Note: This auto-detection only works for local lora_path. Hub-hosted adapters
-                # (via style_or_domain/language) are downloaded after model loading, so they must
-                # have matching num_labels or the user must provide from_pretrained_kwargs manually.
+                # We check BEFORE loading the model so we can load with the correct num_labels.
                 effective_kwargs = dict(from_pretrained_kwargs or {})
-                if lora_path:
+                if lora_path or (style_or_domain and language):
                     import json
 
-                    lora_dir = Path(lora_path)
-                    head_config_path = lora_dir / "head_config.json"
+                    head_config_path = None
+                    adapter_num_labels = None
+
                     try:
-                        if head_config_path.exists():
-                            with open(head_config_path) as f:
-                                head_config = json.load(f)
-                            adapter_num_labels = head_config.get("num_labels")
-                            if adapter_num_labels is not None:
-                                # Get base model's num_labels
-                                base_config = AutoConfig.from_pretrained(model_name_to_fetch)
-                                base_num_labels = getattr(base_config, "num_labels", None)
-                                if base_num_labels != adapter_num_labels:
-                                    # Warn if overriding user-provided values
-                                    user_num_labels = effective_kwargs.get("num_labels")
-                                    if user_num_labels is not None and user_num_labels != adapter_num_labels:
-                                        warnings.warn(
-                                            f"`num_labels` provided in `from_pretrained_kwargs` "
-                                            f"({user_num_labels}) is being overridden to "
-                                            f"{adapter_num_labels} to match the LoRA adapter head.",
-                                            UserWarning,
-                                        )
-                                    user_ignore = effective_kwargs.get("ignore_mismatched_sizes")
-                                    if user_ignore is not None and not user_ignore:
-                                        warnings.warn(
-                                            "`ignore_mismatched_sizes` provided in `from_pretrained_kwargs` "
-                                            "is being overridden to True to allow loading a LoRA adapter "
-                                            "with a different classification head size.",
-                                            UserWarning,
-                                        )
-                                    # Override to match adapter's head
-                                    effective_kwargs["num_labels"] = adapter_num_labels
-                                    effective_kwargs["ignore_mismatched_sizes"] = True
+                        if lora_path:
+                            # Local adapter: read head_config.json directly
+                            lora_dir = Path(lora_path)
+                            head_config_path = lora_dir / "head_config.json"
+                            if head_config_path.exists():
+                                with open(head_config_path) as f:
+                                    head_config = json.load(f)
+                                adapter_num_labels = head_config.get("num_labels")
+                        else:
+                            # Hub adapter: fetch head_config.json first to check num_labels
+                            try:
+                                head_config_file = hf_hub_download(
+                                    repo_id=model_name_to_fetch,
+                                    subfolder=f"loras/{style_or_domain}/{language}",
+                                    filename="head_config.json",
+                                    local_dir=Constants.CACHE_DIR,
+                                )
+                                head_config_path = Path(head_config_file)
+                                with open(head_config_path) as f:
+                                    head_config = json.load(f)
+                                adapter_num_labels = head_config.get("num_labels")
+                            except Exception:
+                                # If head_config.json doesn't exist or download fails,
+                                # proceed without num_labels detection (will fail later if mismatch)
+                                pass
+
+                        if adapter_num_labels is not None:
+                            # Get base model's num_labels
+                            base_config = AutoConfig.from_pretrained(model_name_to_fetch)
+                            base_num_labels = getattr(base_config, "num_labels", None)
+                            if base_num_labels != adapter_num_labels:
+                                # Warn if overriding user-provided values
+                                user_num_labels = effective_kwargs.get("num_labels")
+                                if user_num_labels is not None and user_num_labels != adapter_num_labels:
+                                    warnings.warn(
+                                        f"`num_labels` provided in `from_pretrained_kwargs` "
+                                        f"({user_num_labels}) is being overridden to "
+                                        f"{adapter_num_labels} to match the LoRA adapter head.",
+                                        UserWarning,
+                                    )
+                                user_ignore = effective_kwargs.get("ignore_mismatched_sizes")
+                                if user_ignore is not None and not user_ignore:
+                                    warnings.warn(
+                                        "`ignore_mismatched_sizes` provided in `from_pretrained_kwargs` "
+                                        "is being overridden to True to allow loading a LoRA adapter "
+                                        "with a different classification head size.",
+                                        UserWarning,
+                                    )
+                                # Override to match adapter's head
+                                effective_kwargs["num_labels"] = adapter_num_labels
+                                effective_kwargs["ignore_mismatched_sizes"] = True
                     except (OSError, json.JSONDecodeError, ValueError) as e:
                         raise RuntimeError(
-                            f"Failed to auto-detect 'num_labels' from LoRA head configuration at "
-                            f"'{head_config_path}': {e}"
+                            f"Failed to auto-detect 'num_labels' from LoRA head configuration"
+                            f"{f' at {head_config_path}' if head_config_path else ''}: {e}"
                         ) from e
 
                 self.model = PyTorchWrapper(
-                    AutoModelForTokenClassification.from_pretrained(
-                        model_name_to_fetch, **effective_kwargs
-                    )
+                    AutoModelForTokenClassification.from_pretrained(model_name_to_fetch, **effective_kwargs)
                 )
             # LoRA LOADING
             if not lora_path:
@@ -615,9 +635,7 @@ class SaT:
                         lora_load_path = str(lora_path)
                         lora_dir = Path(lora_load_path)
                         if not lora_dir.is_dir():
-                            raise FileNotFoundError(
-                                f"`lora_path` must be a directory, but got: {lora_load_path}"
-                            )
+                            raise FileNotFoundError(f"`lora_path` must be a directory, but got: {lora_load_path}")
 
                         expected_files = [
                             "adapter_config.json",
@@ -669,9 +687,7 @@ class SaT:
                             "`head_config.json`, `pytorch_model_head.bin`).\n"
                             "Note: Adapters are model-variant specific (e.g. sat-12l-sm vs sat-12l)."
                         ) from e
-                    raise RuntimeError(
-                        f"LoRA {style_or_domain}/{language} not found or failed to load."
-                    ) from e
+                    raise RuntimeError(f"LoRA {style_or_domain}/{language} not found or failed to load.") from e
         else:
             if ort_providers is not None:
                 raise ValueError("You can only use onnxruntime with a model directory, not a model object.")

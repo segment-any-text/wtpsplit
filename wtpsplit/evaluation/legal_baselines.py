@@ -173,7 +173,7 @@ def compute_statistics(values):
 
 def main(args):
     save_model_path = f"rcds/distilbert-SBD-{args.lang_support}-{args.type}_s{args.stride}"
-    save_str = f"{save_model_path.replace('/','_')}"
+    save_str = f"{save_model_path.replace('/', '_')}"
 
     eval_data = torch.load(args.eval_data_path)
 
