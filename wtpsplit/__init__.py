@@ -687,7 +687,20 @@ class SaT:
                             "`head_config.json`, `pytorch_model_head.bin`).\n"
                             "Note: Adapters are model-variant specific (e.g. sat-12l-sm vs sat-12l)."
                         ) from e
-                    raise RuntimeError(f"LoRA {style_or_domain}/{language} not found or failed to load.") from e
+                    raise RuntimeError(
+                        "Failed to load the LoRA adapter from the Hugging Face Hub.\n"
+                        f"- style_or_domain: {style_or_domain!r}\n"
+                        f"- language: {language!r}\n"
+                        "Troubleshooting tips:\n"
+                        "- Ensure that an adapter with this (style_or_domain, language) combination "
+                        "exists on the Hub.\n"
+                        "- Check for typos and that both `style_or_domain` and `language` are "
+                        "supported values.\n"
+                        "- Verify that you have an active internet connection and, for private "
+                        "repositories, are logged in.\n"
+                        "- If you intended to load a local adapter instead, provide its directory "
+                        "via `lora_path`."
+                    ) from e
         else:
             if ort_providers is not None:
                 raise ValueError("You can only use onnxruntime with a model directory, not a model object.")
