@@ -527,9 +527,30 @@ class SaT:
 
                 import wtpsplit.models  # noqa
 
+                # Check if lora_path has a head with different num_labels than the base model.
+                # This is needed because sm models have num_labels=1 but LoRA training uses num_labels=111+.
+                effective_kwargs = dict(from_pretrained_kwargs or {})
+                if lora_path:
+                    import json
+
+                    lora_dir = Path(lora_path)
+                    head_config_path = lora_dir / "head_config.json"
+                    if head_config_path.exists():
+                        with open(head_config_path) as f:
+                            head_config = json.load(f)
+                        adapter_num_labels = head_config.get("num_labels")
+                        if adapter_num_labels is not None:
+                            # Get base model's num_labels
+                            base_config = AutoConfig.from_pretrained(model_name_to_fetch)
+                            base_num_labels = getattr(base_config, "num_labels", None)
+                            if base_num_labels != adapter_num_labels:
+                                # Override to match adapter's head
+                                effective_kwargs["num_labels"] = adapter_num_labels
+                                effective_kwargs["ignore_mismatched_sizes"] = True
+
                 self.model = PyTorchWrapper(
                     AutoModelForTokenClassification.from_pretrained(
-                        model_name_to_fetch, **(from_pretrained_kwargs or {})
+                        model_name_to_fetch, **effective_kwargs
                     )
                 )
             # LoRA LOADING
@@ -619,9 +640,12 @@ class SaT:
                             f"- lora_path: {lora_path}\n"
                             "Tip: `lora_path` must point to the adapter folder containing "
                             "`adapter_config.json`, `pytorch_adapter.bin` (and if trained with head: "
-                            "`head_config.json`, `pytorch_model_head.bin`)."
+                            "`head_config.json`, `pytorch_model_head.bin`).\n"
+                            "Note: Adapters are model-variant specific (e.g. sat-12l-sm vs sat-12l)."
                         ) from e
-                    print(f"LoRA {style_or_domain}/{language} not found, using base model...")
+                    raise RuntimeError(
+                        f"LoRA {style_or_domain}/{language} not found or failed to load."
+                    ) from e
         else:
             if ort_providers is not None:
                 raise ValueError("You can only use onnxruntime with a model directory, not a model object.")
