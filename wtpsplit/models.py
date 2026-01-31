@@ -70,9 +70,9 @@ class LACanineEmbeddings(CanineEmbeddings):
         num_hashes = self.config.num_hash_functions
         num_buckets = self.config.num_hash_buckets
 
-        assert (input_ids is None) + (
-            hashed_ids is None
-        ) == 1, "Either `input_ids` or `hashed_ids` must be provided (and not both!)."
+        assert (input_ids is None) + (hashed_ids is None) == 1, (
+            "Either `input_ids` or `hashed_ids` must be provided (and not both!)."
+        )
 
         """Converts IDs (e.g. codepoints) into embeddings via multiple hashing."""
         if embedding_size % num_hashes != 0:

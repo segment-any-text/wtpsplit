@@ -115,9 +115,9 @@ for dataset in raw_data[args.lang].keys():
 
         _, _, f1 = compute_prf(y_true, y_pred, num_docs)
 
-        assert np.allclose(
-            f1, val_results[args.lang][dataset][model]
-        ), f" MISMATCH! {args.lang} {dataset} {model} F1: {f1} intrinsic_py_out: {val_results[args.lang][dataset][model]}"
+        assert np.allclose(f1, val_results[args.lang][dataset][model]), (
+            f" MISMATCH! {args.lang} {dataset} {model} F1: {f1} intrinsic_py_out: {val_results[args.lang][dataset][model]}"
+        )
 
     for i in range(num_systems):
         for j in range(i + 1, num_systems):

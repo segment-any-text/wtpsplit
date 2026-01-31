@@ -21,8 +21,8 @@ setup(
         "adapters>=1.0.1",
     ],
     extras_require={
-        'onnx-gpu': ['onnxruntime-gpu>=1.13.1'],
-        'onnx-cpu': ['onnxruntime>=1.13.1'],
+        "onnx-gpu": ["onnxruntime-gpu>=1.13.1"],
+        "onnx-cpu": ["onnxruntime>=1.13.1"],
     },
     url="https://github.com/segment-any-text/wtpsplit",
     package_data={"wtpsplit": ["data/*"]},

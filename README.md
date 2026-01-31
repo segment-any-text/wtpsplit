@@ -250,6 +250,8 @@ sat_lora_adapted = SaT("model-used", lora_path="dummy_lora_path")
 sat_lora_adapted.split("Some domains-specific or styled text")
 ```
 
+**Important:** Use the **same model variant** for inference as for training (e.g. `sat-12l-sm` and `sat-12l` have different configs; an adapter trained on one cannot be loaded on the other).
+
 Adjust the dataset name, language and model in the above to your needs.
 
 ## Reproducing the paper

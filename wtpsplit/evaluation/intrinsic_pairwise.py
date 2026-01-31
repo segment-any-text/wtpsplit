@@ -286,7 +286,7 @@ def main(args):
     save_model_path = args.model_path
     if args.adapter_path:
         save_model_path = args.adapter_path
-    save_str = f"{save_model_path.replace('/','_')}_b{args.block_size}_k{args.k}{args.save_suffix}"
+    save_str = f"{save_model_path.replace('/', '_')}_b{args.block_size}_k{args.k}{args.save_suffix}"
 
     print(save_str)
     eval_data = torch.load(args.eval_data_path)

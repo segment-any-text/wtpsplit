@@ -220,7 +220,7 @@ def extract(
         )
     else:
         language_ids = None
-    
+
     # compute weights for the given weighting scheme
     if weighting == "uniform":
         weights = np.ones(block_size, dtype=np.float16)
