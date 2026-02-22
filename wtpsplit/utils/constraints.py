@@ -176,6 +176,82 @@ def _enforce_segment_constraints(text, indices, min_length, max_length, strip_wh
     return result
 
 
+def _handle_short_final_segment(indices, n, min_length, max_length):
+    """
+    Handle final segment that is too short by merging or adjusting split points.
+
+    This helper eliminates duplication between fallback and post-processing logic.
+
+    Args:
+        indices: List of split positions (modified in-place if needed)
+        n: Total length
+        min_length: Minimum segment length
+        max_length: Maximum segment length
+
+    Returns:
+        Modified indices list
+    """
+    if not indices:
+        return indices
+
+    last_chunk_len = n - indices[-1]
+    if last_chunk_len >= min_length:
+        return indices
+
+    # Final segment is too short
+    if len(indices) > 1:
+        prev_split = indices[-2]
+        # Try to merge with previous: remove last split if result fits max_length
+        if n - prev_split <= max_length:
+            indices.pop()
+        else:
+            # Can't merge - try to move split point to satisfy min_length
+            desired_split = n - min_length
+            min_valid_split = prev_split + 1
+            adjusted_split = max(desired_split, min_valid_split)
+            # Ensure previous chunk doesn't exceed max_length
+            if adjusted_split - prev_split <= max_length:
+                indices[-1] = adjusted_split
+    else:
+        # Single split - try to adjust or remove
+        if n <= max_length:
+            return []
+        else:
+            # Try to move split to satisfy min_length for final chunk
+            desired_split = n - min_length
+            if desired_split >= min_length:  # first chunk also needs min_length
+                indices[-1] = desired_split
+
+    return indices
+
+
+def _fallback_greedy_segmentation(n, min_length, max_length):
+    """
+    Generate greedy segmentation when DP fails (fallback).
+
+    Used when Viterbi DP table cannot reach the end position.
+
+    Args:
+        n: Total length
+        min_length: Minimum segment length
+        max_length: Maximum segment length
+
+    Returns:
+        List of split positions
+    """
+    indices = []
+    curr_idx = 0
+
+    while curr_idx < n:
+        next_split = min(curr_idx + max_length, n)
+        # Use >= to handle min_length == max_length case
+        if next_split >= curr_idx + min_length:
+            indices.append(next_split)
+        curr_idx = next_split
+
+    return _handle_short_final_segment(indices, n, min_length, max_length)
+
+
 def constrained_segmentation(
     probs,
     prior_fn,
@@ -184,7 +260,25 @@ def constrained_segmentation(
     algorithm="viterbi",
 ):
     """
-    Segments text based on probabilities and length constraints.
+    Segment text with explicit length constraints using dynamic programming.
+
+    The optimization objective for split positions C = {c1, ..., ck} is:
+
+        argmax_C  sum_i [ log prior(ci - c{i-1}) + log p(ci) ]
+
+    where c0 = 0 and p(ci) is omitted for the terminal boundary ci = n
+    (there is no split probability at end-of-text).
+
+    Viterbi state definition:
+        dp[i] = best log-score for segmenting prefix [0:i]
+    Transition:
+        dp[i] = max_j dp[j] + log prior(i-j) + log probs[i-1]   (i < n)
+        dp[n] = max_j dp[j] + log prior(n-j)
+    with j constrained so each segment length (i-j) satisfies
+    min_length <= (i-j) <= max_length.
+
+    This function returns boundary positions as 1-based end indices in [1, n).
+    Callers convert to 0-based split indices for text extraction.
 
     Args:
         probs: Array of probabilities (scores) for each unit.
@@ -194,7 +288,7 @@ def constrained_segmentation(
         algorithm: "viterbi" or "greedy".
 
     Returns:
-        List of indices where splits occur (end of chunk).
+        List[int]: split boundary end-positions (excluding n).
     """
     n = len(probs)
     if max_length is None:
@@ -252,109 +346,110 @@ def constrained_segmentation(
         return indices
 
     elif algorithm == "viterbi":
+        # ============================================================================
+        # VITERBI DYNAMIC PROGRAMMING ALGORITHM
+        # ============================================================================
+        # Goal: Find optimal segmentation that maximizes:
+        #   Score = ∏ Prior(segment_length) × P(boundary)
+        # In log-space (to prevent underflow):
+        #   Log-Score = ∑ log(Prior(length)) + ∑ log(P(boundary))
+        #
+        # dp[current_pos] = best log-score to segment text[0:current_pos]
+        # backpointers[current_pos] = where the last segment started (for reconstruction)
+        # ============================================================================
+
+        # Initialize DP table: all positions unreachable except start
         dp = np.full(n + 1, -float("inf"))
-        dp[0] = 0.0
+        dp[0] = 0.0  # Base case: no text segmented = score of 1, log(1) = 0
         backpointers = np.zeros(n + 1, dtype=int)
 
+        # Convert boundary probabilities to log-space for numerical stability
+        # log(a × b) = log(a) + log(b) prevents underflow from multiplying small numbers
         with np.errstate(divide="ignore"):
             log_probs = np.log(probs)
 
-        for i in range(1, n + 1):
-            start_j = max(0, i - max_length)
-            end_j = i - min_length
+        # Fill DP table: for each position (potential segment endpoint)
+        for current_pos in range(1, n + 1):
+            # ========================================================================
+            # Find valid segment start positions that satisfy length constraints
+            # ========================================================================
+            # Segment from segment_start to current_pos has length (current_pos - segment_start)
+            # Must satisfy: min_length ≤ segment_length ≤ max_length
+            #
+            # Rearranging:
+            #   segment_length ≤ max_length
+            #   → current_pos - segment_start ≤ max_length
+            #   → segment_start ≥ current_pos - max_length
+            #   → earliest_start = max(0, current_pos - max_length)
+            #
+            #   segment_length ≥ min_length
+            #   → current_pos - segment_start ≥ min_length
+            #   → segment_start ≤ current_pos - min_length
+            #   → latest_start = current_pos - min_length
+            # ========================================================================
 
-            if end_j < start_j:
+            earliest_start = max(0, current_pos - max_length)  # Can't exceed max_length
+            latest_start = current_pos - min_length  # Must meet min_length
+
+            # If no valid segment lengths exist (e.g., current_pos=5, min_length=10), skip
+            if latest_start < earliest_start:
                 continue
 
-            for j in range(start_j, end_j + 1):
-                length = i - j
-                prior = prior_fn(length)
-                if prior <= 0:
-                    continue
+            # Try all valid segment start positions
+            for segment_start in range(earliest_start, latest_start + 1):
+                segment_length = current_pos - segment_start
 
-                log_prior = np.log(prior)
-                current_score = dp[j] + log_prior
+                # Check if this segment length is allowed by the prior distribution
+                prior_probability = prior_fn(segment_length)
+                if prior_probability <= 0:
+                    continue  # This length is forbidden (zero probability)
 
-                if i < n:
-                    current_score += log_probs[i - 1]
+                log_prior = np.log(prior_probability)
 
-                if current_score > dp[i]:
-                    dp[i] = current_score
-                    backpointers[i] = j
+                # ====================================================================
+                # Calculate score for this segmentation choice
+                # ====================================================================
+                # Score = (best score to reach segment_start)
+                #       + (log-prior for this segment length)
+                #       + (log-probability of boundary at current_pos, if not at end)
+                # ====================================================================
+                candidate_score = dp[segment_start] + log_prior
 
-        indices = []
-        curr = n
+                # Add boundary probability only for real boundaries (not the final position)
+                if current_pos < n:
+                    # Model's prediction for splitting at this position
+                    # probs[0] = boundary after char 0, so probs[current_pos-1] = boundary at current_pos
+                    boundary_prob_index = current_pos - 1
+                    candidate_score += log_probs[boundary_prob_index]
+                # Note: At current_pos == n (end of text), no boundary probability is added
+                # because the end is always a boundary (no model prediction needed)
 
+                # Update DP table if this is the best way to reach current_pos
+                if candidate_score > dp[current_pos]:
+                    dp[current_pos] = candidate_score
+                    backpointers[current_pos] = segment_start
+
+        # Handle DP failure: if we can't reach the end, use greedy fallback
         if dp[n] == -float("inf"):
-            curr_idx = 0
-            while curr_idx < n:
-                next_split = min(curr_idx + max_length, n)
-                # Use >= to handle min_length == max_length case
-                if next_split >= curr_idx + min_length:
-                    indices.append(next_split)
-                curr_idx = next_split
+            return _fallback_greedy_segmentation(n, min_length, max_length)
 
-            if indices and n - indices[-1] < min_length:
-                if len(indices) > 1:
-                    prev_split = indices[-2]
-                    # Try to merge with previous: remove last split if result fits max_length
-                    if n - prev_split <= max_length:
-                        indices.pop()
-                    else:
-                        # Can't merge - try to move split point to satisfy min_length
-                        # New split should give final chunk >= min_length
-                        desired_split = n - min_length
-                        # But previous chunk must stay <= max_length
-                        min_valid_split = prev_split + 1  # at least 1 char in prev chunk after prev_split
-                        # And previous chunk must stay >= min_length (best effort)
-                        adjusted_split = max(desired_split, min_valid_split)
-                        # Ensure we don't exceed max_length for previous chunk
-                        if adjusted_split - prev_split <= max_length:
-                            indices[-1] = adjusted_split
-                        # else: keep current split (best effort - one constraint must give)
-                elif n <= max_length:
-                    # Single split that leaves short final - just remove it
-                    return []
-            return indices
+        # Reconstruct path from backpointers
+        indices = []
+        current_pos = n
+        while current_pos > 0:
+            prev_pos = backpointers[current_pos]
+            indices.append(current_pos)
+            current_pos = prev_pos
 
-        while curr > 0:
-            prev = backpointers[curr]
-            indices.append(curr)
-            curr = prev
-
+        # Reverse to get forward order
         result = indices[::-1]
 
+        # Remove terminal boundary (n is always a boundary, not a split)
         if result and result[-1] == n:
             result = result[:-1]
 
-        if result:
-            last_chunk_len = n - result[-1]
-            if last_chunk_len < min_length:
-                if len(result) > 1:
-                    prev_split = result[-2]
-                    # Try to merge with previous: remove last split if result fits max_length
-                    if n - prev_split <= max_length:
-                        result.pop()
-                    else:
-                        # Can't merge - try to move split point to satisfy min_length
-                        desired_split = n - min_length
-                        min_valid_split = prev_split + 1
-                        adjusted_split = max(desired_split, min_valid_split)
-                        # Ensure previous chunk doesn't exceed max_length
-                        if adjusted_split - prev_split <= max_length:
-                            result[-1] = adjusted_split
-                        # else: keep current split (best effort)
-                else:
-                    # Single split - try to adjust or remove
-                    if n <= max_length:
-                        return []
-                    else:
-                        # Try to move split to satisfy min_length for final chunk
-                        desired_split = n - min_length
-                        if desired_split >= min_length:  # first chunk also needs min_length
-                            result[-1] = desired_split
-
-        return result
+        # Handle short final segment
+        return _handle_short_final_segment(result, n, min_length, max_length)
 
     else:
         raise ValueError(f"Unknown algorithm: {algorithm}")
