@@ -43,11 +43,26 @@ def _manual_lora_merge(model, lora_load_path):
     lora_dir = Path(lora_load_path)
 
     # --- read adapter config for LoRA hyper-parameters ---
-    with open(lora_dir / "adapter_config.json") as f:
+    config_path = lora_dir / "adapter_config.json"
+    with open(config_path) as f:
         adapter_cfg = json.load(f)
-    lora_r = adapter_cfg["config"]["r"]
-    lora_alpha = adapter_cfg["config"]["alpha"]
-    scaling = lora_alpha / lora_r
+    try:
+        config_section = adapter_cfg["config"]
+        lora_r = config_section["r"]
+        lora_alpha = config_section["alpha"]
+        scaling = lora_alpha / lora_r
+    except KeyError as e:
+        raise ValueError(
+            f"Invalid LoRA adapter configuration in '{config_path}': "
+            f"missing required key {e!r}. Expected keys: 'config' with 'r' and 'alpha'."
+        ) from e
+    except TypeError as e:
+        raise ValueError(
+            f"Invalid LoRA adapter configuration in '{config_path}': "
+            "unexpected structure; expected a JSON object with a 'config' mapping containing 'r' and 'alpha'."
+        ) from e
+    except ZeroDivisionError as e:
+        raise ValueError(f"Invalid LoRA adapter configuration in '{config_path}': 'r' must be a non-zero value.") from e
 
     # --- merge LoRA weight deltas into the base model ---
     adapter_weights = torch.load(lora_dir / "pytorch_adapter.bin", map_location="cpu", weights_only=True)
@@ -66,6 +81,11 @@ def _manual_lora_merge(model, lora_load_path):
 
     model_params = dict(model.named_parameters())
     for base_key, pair in lora_pairs.items():
+        if "A" not in pair or "B" not in pair:
+            raise ValueError(
+                f"Incomplete LoRA pair for '{base_key}' in '{lora_dir / 'pytorch_adapter.bin'}': "
+                "each module must have both lora_A and lora_B weights."
+            )
         param_key = base_key + ".weight"
         if param_key not in model_params:
             raise KeyError(f"LoRA target parameter '{param_key}' not found in model.")

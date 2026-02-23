@@ -45,12 +45,6 @@ def main():
     # Fixed inputs
     short = "This is a test sentence. This is another test sentence."
     batch = ["Paragraph-A Paragraph-B", "Paragraph-C100 Paragraph-D"]
-    long_para = " ".join(
-        "Text segmentation is the process of dividing written text into meaningful units. "
-        "The term applies both to mental processes and to artificial processes. "
-        "Daniel Wroughton Craig CMG is an English actor who gained international fame.".split()
-    )
-
     timings = []
 
     # --- SaT (no adapter) ---

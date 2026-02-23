@@ -77,7 +77,11 @@ class LACanineEmbeddings(CanineEmbeddings):
         # transformers 5 made position_ids non-persistent, which causes garbage
         # values after from_pretrained meta-device loading.  Re-register as persistent
         # so the buffer is loaded from the checkpoint (or properly initialized).
-        self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
+        self.register_buffer(
+            "position_ids",
+            torch.arange(config.max_position_embeddings).expand((1, -1)),
+            persistent=True,
+        )
 
         self.ngram_order = getattr(config, "ngram_order", 1)
         if self.ngram_order > 1:
@@ -469,6 +473,8 @@ class LACanineLayer(CanineLayer):
             attend_to_chunk_width,
             attend_to_chunk_stride,
         )
+        # tf5 removed head_mask from CanineAttention.forward(); detect once at init.
+        self._attention_accepts_head_mask = "head_mask" in self.attention.forward.__code__.co_varnames
         self.intermediate = CanineIntermediate(config)
         self.output = LACanineOutput(config)
 
@@ -480,12 +486,15 @@ class LACanineLayer(CanineLayer):
         head_mask: Optional[torch.FloatTensor] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[torch.FloatTensor, Optional[torch.FloatTensor]]:
-        # tf5 removed head_mask from CanineAttention.forward(); use keyword args for compat
-        self_attention_outputs = self.attention(
-            hidden_states,
-            attention_mask=attention_mask,
-            output_attentions=output_attentions,
-        )
+        # tf5 removed head_mask from CanineAttention.forward(); only pass when accepted (tf4).
+        if self._attention_accepts_head_mask:
+            self_attention_outputs = self.attention(
+                hidden_states, attention_mask=attention_mask, head_mask=head_mask, output_attentions=output_attentions
+            )
+        else:
+            self_attention_outputs = self.attention(
+                hidden_states, attention_mask=attention_mask, output_attentions=output_attentions
+            )
         attention_output = self_attention_outputs[0]
 
         outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
@@ -1126,6 +1135,7 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        cache_position: Optional[torch.Tensor] = None,
     ) -> Union[Tuple[torch.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
         encoder_hidden_states  (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
@@ -1171,7 +1181,7 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
         device = input_ids.device if input_ids is not None else inputs_embeds.device
 
         # past_key_values_length
-        past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
+        past_key_values_length = past_key_values[0][0].shape[2] if past_key_values else 0
 
         if attention_mask is None:
             attention_mask = torch.ones(((batch_size, seq_length + past_key_values_length)), device=device)
@@ -1212,9 +1222,6 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
             self.config, attention_mask, input_shape, self.effective_lookahead, device, self.dtype
         )
 
-        cache_position = torch.arange(
-            past_key_values_length, past_key_values_length + seq_length, device=device, dtype=torch.long
-        )
         encoder_outputs = self.encoder(
             embedding_output,
             attention_mask=extended_attention_mask,
@@ -1283,8 +1290,9 @@ def get_extended_attention_mask(
         # - if the model is a decoder, apply a causal mask in addition to the padding mask
         # - if the model is an encoder, make the mask broadcastable to [batch_size, num_heads, seq_length, seq_length]
         if config.is_decoder:
+            # tf5 removed device param; omit for both tf4/tf5 (tf4 accepts device=None).
             extended_attention_mask = ModuleUtilsMixin.create_extended_attention_mask_for_decoder(
-                input_shape, attention_mask, device
+                input_shape, attention_mask
             )
         if lookahead is not None:
             # lookahead mask of shape [batch_size, 1, seq_length, seq_length]
@@ -1298,8 +1306,9 @@ def get_extended_attention_mask(
             # Combine the attention mask with the lookahead mask
             extended_attention_mask = attention_mask[:, None, None, :] * lookahead_mask
         else:
-            # [batch, 1, seq, seq] for compatibility with transformers 5+ SDPA
-            extended_attention_mask = attention_mask[:, None, :, None] * attention_mask[:, None, None, :]
+            # [batch, 1, seq, seq] for compatibility with transformers 5+ SDPA; semantics
+            # equivalent to [batch, 1, 1, seq] broadcast (mask depends only on key positions).
+            extended_attention_mask = attention_mask[:, None, None, :].expand(-1, 1, attention_mask.size(1), -1)
     else:
         raise ValueError(
             f"Wrong shape for input_ids (shape {input_shape}) or attention_mask (shape {attention_mask.shape})"
@@ -1322,6 +1331,10 @@ class SubwordXLMRobertaEncoder(nn.Module):
         self.config = config
         self.layer = nn.ModuleList([XLMRobertaLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
+        # tf5 renamed past_key_value → past_key_values and added cache_position; detect once.
+        _fwd_vars = self.layer[0].forward.__code__.co_varnames
+        self._tf5_layer = "cache_position" in _fwd_vars
+        self._past_kv_key = "past_key_values" if self._tf5_layer else "past_key_value"
 
     def forward(
         self,
@@ -1350,13 +1363,10 @@ class SubwordXLMRobertaEncoder(nn.Module):
 
         next_decoder_cache = () if use_cache else None
 
-        # Detect tf4 vs tf5 layer signature once (tf5 renamed past_key_value →
-        # past_key_values and added cache_position; tf5 also has **kwargs).
-        import inspect
-
-        _layer_params = inspect.signature(self.layer[0].forward).parameters
-        _tf5_layer = "cache_position" in _layer_params
-        _past_kv_key = "past_key_values" if _tf5_layer else "past_key_value"
+        if self._tf5_layer and cache_position is None:
+            _pkv_len = past_key_values[0][0].shape[2] if past_key_values else 0
+            _seq_len = hidden_states.size(1)
+            cache_position = torch.arange(_pkv_len, _pkv_len + _seq_len, device=hidden_states.device, dtype=torch.long)
 
         for i, layer_module in enumerate(self.layer):
             # MODIFIED: if lookahead_split_layers is given, use causal mask starting from that layer
@@ -1370,7 +1380,7 @@ class SubwordXLMRobertaEncoder(nn.Module):
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
             layer_head_mask = head_mask[i] if head_mask is not None else None
-            past_key_value = past_key_values[i] if past_key_values is not None else None
+            past_key_value = past_key_values[i] if past_key_values else None
 
             # Build layer kwargs that work for both tf4 and tf5
             layer_kwargs = dict(
@@ -1380,37 +1390,49 @@ class SubwordXLMRobertaEncoder(nn.Module):
                 output_attentions=output_attentions,
                 head_mask=layer_head_mask,
             )
-            layer_kwargs[_past_kv_key] = past_key_value
-            if _tf5_layer:
+            layer_kwargs[self._past_kv_key] = past_key_value
+            if self._tf5_layer:
                 layer_kwargs["cache_position"] = cache_position
 
             if self.gradient_checkpointing and self.training:
 
-                def create_custom_forward(module, **fwd_kwargs):
+                def create_custom_forward(module, tf5_layer, **fwd_kwargs):
                     def custom_forward(*inputs):
-                        return module(
-                            inputs[0],
-                            attention_mask=inputs[1],
-                            encoder_hidden_states=inputs[2],
-                            encoder_attention_mask=inputs[3],
-                            **{
-                                k: v
-                                for k, v in fwd_kwargs.items()
-                                if k not in ("attention_mask", "encoder_hidden_states", "encoder_attention_mask")
-                            },
-                        )
+                        extra = {
+                            k: v
+                            for k, v in fwd_kwargs.items()
+                            if k not in ("attention_mask", "encoder_hidden_states", "encoder_attention_mask")
+                        }
+                        if tf5_layer:
+                            return module(
+                                inputs[0],
+                                attention_mask=inputs[1],
+                                encoder_hidden_states=inputs[2],
+                                encoder_attention_mask=inputs[3],
+                                **extra,
+                            )
+                        else:
+                            # tf4: pass attention_mask positionally so adapters' pre_hook
+                            # (adjust_tensors_for_parallel_) sees (hidden_states, attention_mask).
+                            return module(
+                                inputs[0],
+                                inputs[1],
+                                encoder_hidden_states=inputs[2],
+                                encoder_attention_mask=inputs[3],
+                                **extra,
+                            )
 
                     return custom_forward
 
                 layer_outputs = torch.utils.checkpoint.checkpoint(
-                    create_custom_forward(layer_module, **layer_kwargs),
+                    create_custom_forward(layer_module, self._tf5_layer, **layer_kwargs),
                     hidden_states,
                     attention_mask,
                     encoder_hidden_states,
                     encoder_attention_mask,
                 )
             else:
-                if _tf5_layer:
+                if self._tf5_layer:
                     layer_outputs = layer_module(hidden_states, **layer_kwargs)
                 else:
                     # tf4: pass attention_mask as second positional so adapters' layer pre_hook
