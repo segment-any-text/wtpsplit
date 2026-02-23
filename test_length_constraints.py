@@ -1096,6 +1096,33 @@ class TestRegressions:
             assert chunk <= 5, "max_length violated"
             assert chunk >= 3, "min_length violated when valid solution exists"
 
+    def test_viterbi_fallback_respects_min_length_with_sparse_prior(self):
+        """
+        Regression test: In fallback mode, Viterbi should still honor min_length
+        when a valid min/max-only segmentation exists, even with sparse priors.
+        """
+        probs = np.array([0.115138, 0.818739, 0.353214, 0.983067, 0.883825, 1.0, 0.356253])
+
+        # Lengths congruent to 1 mod 3 are disallowed to force DP failure.
+        # The fallback must still return chunks that satisfy min/max constraints.
+        def prior_fn(length):
+            return 0.0 if length % 3 == 1 else 1.0
+
+        indices = constrained_segmentation(probs, prior_fn, min_length=3, max_length=5, algorithm="viterbi")
+
+        prev = 0
+        chunks = []
+        for idx in indices:
+            chunks.append(idx - prev)
+            prev = idx
+        if prev < len(probs):
+            chunks.append(len(probs) - prev)
+
+        assert sum(chunks) == len(probs), f"Total length wrong: {sum(chunks)}"
+        for chunk in chunks:
+            assert chunk <= 5, f"max_length violated: chunk={chunk}"
+            assert chunk >= 3, f"min_length violated with valid solution available: chunks={chunks}"
+
 
 # =============================================================================
 # PARAGRAPH SEGMENTATION WITH CONSTRAINTS

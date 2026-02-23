@@ -378,9 +378,10 @@ def test_constraints_preserved_in_batched():
     results = list(sat.split(texts, min_length=25, max_length=55, threshold=0.025))
 
     assert len(results) == 2
-    for splits in results:
+    for text, splits in zip(texts, results):
         for segment in splits:
             assert 25 <= len(segment) <= 55
+        assert "".join(splits) == text
 
 
 def test_constraint_low_level():

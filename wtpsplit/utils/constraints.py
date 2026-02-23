@@ -157,9 +157,19 @@ def _enforce_segment_constraints(text, indices, min_length, max_length, strip_wh
             if max_length is None or len(merged) <= max_length:
                 result[-1] = merged
             else:
-                result.append(pending_prefix.strip() if strip_whitespace else pending_prefix)
+                if strip_whitespace:
+                    pending_prefix_stripped = pending_prefix.strip()
+                    if pending_prefix_stripped:
+                        result.append(pending_prefix_stripped)
+                else:
+                    result.append(pending_prefix)
         else:
-            result.append(pending_prefix.strip() if strip_whitespace else pending_prefix)
+            if strip_whitespace:
+                pending_prefix_stripped = pending_prefix.strip()
+                if pending_prefix_stripped:
+                    result.append(pending_prefix_stripped)
+            else:
+                result.append(pending_prefix)
 
     # Final cleanup: merge last segment if too short
     if len(result) > 1:
