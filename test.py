@@ -1,4 +1,6 @@
 # noqa: E501
+import pytest
+
 from wtpsplit import WtP, SaT
 
 

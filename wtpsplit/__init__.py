@@ -19,7 +19,7 @@ from transformers.utils.hub import cached_file
 from wtpsplit.extract import BertCharORTWrapper, SaTORTWrapper, PyTorchWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid, token_to_char_probs
 
-__version__ = "2.1.7"
+__version__ = "2.2.0""
 
 # suppress docopt syntax warnings (triggered in Python 3.14+)
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")
@@ -28,6 +28,63 @@ warnings.filterwarnings("ignore", category=UserWarning, message="Torchaudio's I/
 
 warnings.simplefilter("default", DeprecationWarning)  # show by default
 warnings.simplefilter("ignore", category=FutureWarning)  # for tranformers
+
+
+def _manual_lora_merge(model, lora_load_path):
+    """Merge LoRA adapter weights directly into a model's parameters.
+
+    Lightweight alternative to ``adapters`` library that only
+    supports the ``merge_lora=True`` path (the default). Reads the
+    adapter‐hub file format produced by ``wtpsplit/train/train_lora.py``.
+    """
+    import json
+    import torch
+
+    lora_dir = Path(lora_load_path)
+
+    # --- read adapter config for LoRA hyper-parameters ---
+    with open(lora_dir / "adapter_config.json") as f:
+        adapter_cfg = json.load(f)
+    lora_r = adapter_cfg["config"]["r"]
+    lora_alpha = adapter_cfg["config"]["alpha"]
+    scaling = lora_alpha / lora_r
+
+    # --- merge LoRA weight deltas into the base model ---
+    adapter_weights = torch.load(lora_dir / "pytorch_adapter.bin", map_location="cpu", weights_only=True)
+
+    # Group lora_A / lora_B pairs by their target module.
+    # Key pattern: ``<module_path>.loras.<adapter_name>.lora_A``
+    lora_pairs: dict = {}
+    for key, tensor in adapter_weights.items():
+        if ".loras." not in key:
+            continue
+        base_key = key.rsplit(".loras.", 1)[0]
+        if key.endswith(".lora_A"):
+            lora_pairs.setdefault(base_key, {})["A"] = tensor
+        elif key.endswith(".lora_B"):
+            lora_pairs.setdefault(base_key, {})["B"] = tensor
+
+    model_params = dict(model.named_parameters())
+    for base_key, pair in lora_pairs.items():
+        param_key = base_key + ".weight"
+        if param_key not in model_params:
+            raise KeyError(f"LoRA target parameter '{param_key}' not found in model.")
+        param = model_params[param_key]
+        # LoRA merge: W_new = W + (alpha / r) * B @ A
+        delta = pair["B"] @ pair["A"]
+        with torch.no_grad():
+            param.add_(scaling * delta.to(device=param.device, dtype=param.dtype))
+
+    # --- load classification-head weights ---
+    head_path = lora_dir / "pytorch_model_head.bin"
+    if head_path.exists():
+        head_weights = torch.load(head_path, map_location="cpu", weights_only=True)
+        for key, tensor in head_weights.items():
+            if key in model_params:
+                with torch.no_grad():
+                    model_params[key].data.copy_(
+                        tensor.to(device=model_params[key].device, dtype=model_params[key].dtype)
+                    )
 
 
 class WtP:
@@ -604,19 +661,8 @@ class SaT:
                 if (style_or_domain and not language) or (language and not style_or_domain):
                     raise ValueError("Please specify both language and style_or_domain!")
             if (style_or_domain and language) or lora_path:
-                import adapters  # noqa
-                from adapters.models import MODEL_MIXIN_MAPPING  # noqa
-                from adapters.models.bert.mixin_bert import BertModelAdaptersMixin  # noqa
-
-                # monkey patch mixin to avoid forking whole adapters library
-                MODEL_MIXIN_MAPPING["SubwordXLMRobertaModel"] = BertModelAdaptersMixin
-                model_type = self.model.model.config.model_type
-                # adapters need xlm-roberta as model type.
-                self.model.model.config.model_type = "xlm-roberta"
-                adapters.init(self.model.model)
-                # reset model type (used later)
-                self.model.model.config.model_type = model_type
                 try:
+                    # 1. Locate / download adapter files
                     if not lora_path:
                         for file in [
                             "adapter_config.json",
@@ -655,27 +701,58 @@ class SaT:
                                 "and that folder should contain the files listed above."
                             )
 
-                    self.model.model.load_adapter(
-                        lora_load_path,
-                        set_active=True,
-                        with_head=True,
-                        load_as="sat-lora",
-                    )
-                    # merge lora weights into transformer for 0 efficiency overhead
-                    if merge_lora:
-                        self.model.model.merge_adapter("sat-lora")
-                        # After merging, keeping the adapter around can trigger confusing warnings
-                        # ("adapters available but none activated") in some adapters versions.
-                        try:
-                            self.model.model.delete_adapter("sat-lora")
-                        except Exception:
-                            pass
+                    # 2. Load adapter – prefer `adapters` library, fall back to manual merge
+                    _has_adapters_lib = False
+                    try:
+                        import adapters  # noqa
+
+                        _has_adapters_lib = True
+                    except ImportError:
+                        pass
+
+                    if _has_adapters_lib:
+                        from adapters.models import MODEL_MIXIN_MAPPING  # noqa
+                        from adapters.models.bert.mixin_bert import BertModelAdaptersMixin  # noqa
+
+                        # monkey patch mixin to avoid forking whole adapters library
+                        MODEL_MIXIN_MAPPING["SubwordXLMRobertaModel"] = BertModelAdaptersMixin
+                        model_type = self.model.model.config.model_type
+                        # adapters need xlm-roberta as model type.
+                        self.model.model.config.model_type = "xlm-roberta"
+                        adapters.init(self.model.model)
+                        # reset model type (used later)
+                        self.model.model.config.model_type = model_type
+                        self.model.model.load_adapter(
+                            lora_load_path,
+                            set_active=True,
+                            with_head=True,
+                            load_as="sat-lora",
+                        )
+                        # merge lora weights into transformer for 0 efficiency overhead
+                        if merge_lora:
+                            self.model.model.merge_adapter("sat-lora")
+                            # After merging, keeping the adapter around can trigger confusing warnings
+                            # ("adapters available but none activated") in some adapters versions.
+                            try:
+                                self.model.model.delete_adapter("sat-lora")
+                            except Exception:
+                                pass
+                        else:
+                            # Some adapters versions ignore `set_active=True` on load; ensure activation.
+                            try:
+                                self.model.model.set_active_adapters("sat-lora")
+                            except Exception:
+                                pass
                     else:
-                        # Some adapters versions ignore `set_active=True` on load; ensure activation.
-                        try:
-                            self.model.model.set_active_adapters("sat-lora")
-                        except Exception:
-                            pass
+                        # Manual LoRA merge – works without the `adapters` library.
+                        if not merge_lora:
+                            raise RuntimeError(
+                                "merge_lora=False requires the 'adapters' library which is not "
+                                "installed.\nInstall it with: pip install adapters\n"
+                                "Or use merge_lora=True (the default) which works without it."
+                            )
+                        _manual_lora_merge(self.model.model, lora_load_path)
+
                     self.use_lora = True
                 except Exception as e:  # noqa
                     if lora_path:
