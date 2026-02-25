@@ -4,12 +4,12 @@ import os
 import random
 from collections import defaultdict
 from dataclasses import dataclass, field
+from functools import cached_property
 from pathlib import Path
 from typing import List
 
 import numpy as np
 import pandas as pd
-from cached_property import cached_property
 from mosestokenizer import MosesTokenizer
 from transformers import AutoTokenizer
 

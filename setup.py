@@ -16,11 +16,10 @@ setup(
         "tqdm",
         "skops",
         "pandas>=1",
-        "cached_property",  # for Py37
         "mosestokenizer",
-        "adapters>=1.0.1",
     ],
     extras_require={
+        "adapters": ["adapters>=1.0.1"],
         "onnx-gpu": ["onnxruntime-gpu>=1.13.1"],
         "onnx-cpu": ["onnxruntime>=1.13.1"],
     },
