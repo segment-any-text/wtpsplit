@@ -148,14 +148,37 @@ Control segment lengths with `min_length` and `max_length` parameters. This is u
 ### Basic Usage
 
 ```python
-# segments will be at most 100 characters
-sat.split(text, max_length=100)
+from wtpsplit import SaT
 
-# segments will be at least 20 characters (best effort) and at most 100 characters (strict)
-sat.split(text, min_length=20, max_length=100)
+sat = SaT("sat-3l-sm")
 
-# use different algorithms: "viterbi" (optimal, default) or "greedy" (faster)
-sat.split(text, max_length=100, algorithm="greedy")
+text = (
+    "In the beginning God created the heaven and the earth. "
+    "And the earth was without form, and void; and darkness was upon the face of the deep. "
+    "And the Spirit of God moved upon the face of the waters. "
+    "And God said, Let there be light: and there was light. "
+    "And God saw the light, that it was good: and God divided the light from the darkness. "
+    "And God called the light Day, and the darkness he called Night. "
+    "And the evening and the morning were the first day."
+)
+
+# Split with a maximum segment length of 120 characters
+segments = sat.split(text, max_length=120)
+for i, s in enumerate(segments):
+    print(f"[{len(s):3d} chars] {s}")
+# [ 55 chars] In the beginning God created the heaven and the earth. 
+# [ 86 chars] And the earth was without form, and void; and darkness was upon the face of the deep. 
+# [112 chars] And the Spirit of God moved upon the face of the waters. And God said, Let there be light: and there was light. 
+# [ 86 chars] And God saw the light, that it was good: and God divided the light from the darkness. 
+# [115 chars] And God called the light Day, and the darkness he called Night. And the evening and the morning were the first day.
+
+assert "".join(segments) == text  # text is perfectly preserved
+
+# Enforce both min and max length
+sat.split(text, min_length=80, max_length=200)
+
+# Use the greedy algorithm for minimally faster (but less optimal) results
+sat.split(text, max_length=120, algorithm="greedy")
 ```
 
 ### Priors for Length Preference
@@ -185,7 +208,7 @@ sat.split(text, max_length=100, prior_type="clipped_polynomial",
 
 ### Language-Aware Defaults
 
-Pass `lang_code` to use language-specific defaults for `target_length` and `spread`:
+Pass `lang_code` to use language-specific defaults for `target_length` and `spread` (based on language-specific corpus statistics):
 
 ```python
 # German has longer average sentences → auto-uses target_length=90, spread=35
