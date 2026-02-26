@@ -30,4 +30,4 @@ jobs:
           ruff check --output-format=github --target-version=py39 .
       - name: Test with pytest
         run: |
-          pytest test.py
+          pytest test.py test_length_constraints.py
