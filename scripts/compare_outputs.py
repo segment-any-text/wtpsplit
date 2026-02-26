@@ -22,7 +22,7 @@ def _compare_float_lists(a, b, path="", rtol=RTOL, atol=ATOL):
         if abs(a - b) > atol + rtol * abs(b):
             errs.append(f"{path}: {a} vs {b}")
     else:
-        if type(a) != type(b) or a != b:
+        if type(a) is not type(b) or a != b:
             errs.append(f"{path}: type or value mismatch {type(a).__name__} {a!r} vs {type(b).__name__} {b!r}")
     return errs
 
