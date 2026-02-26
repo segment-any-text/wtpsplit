@@ -7,10 +7,11 @@ setup(
     description="Universal Robust, Efficient and Adaptable Sentence Segmentation",
     author="Markus Frohmann, Igor Sterner, Benjamin Minixhofer",
     author_email="markus.frohmann@gmail.com",
+    python_requires=">=3.9",
     install_requires=[
         # "onnxruntime>=1.13.1", # can make conflicts between onnxruntime and onnxruntime-gpu
         "transformers>=4.22.2",
-        "huggingface-hub",
+        "huggingface-hub<1.0",  # v1.0 has breaking changes (HfFolder removed)
         "numpy>=1.0",
         "scikit-learn>=1",
         "tqdm",

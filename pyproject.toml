@@ -1,12 +1,12 @@
 [tool.black]
 line-length = 120
-target-version = ["py38", "py39", "py310"]
+target-version = ["py39", "py310", "py311", "py312"]
 
 [tool.ruff]
 line-length = 120
-ignore = ["E741"]
+lint.ignore = ["E741"]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "test.py" = ["E501"]
 
 [dependency-groups]

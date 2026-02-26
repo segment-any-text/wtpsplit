@@ -22,3 +22,4 @@ data_subset/**
 *.log
 xlmr-*/**
 **/checkpoint-*/**
+.venv/

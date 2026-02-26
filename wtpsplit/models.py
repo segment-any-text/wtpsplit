@@ -1346,7 +1346,9 @@ class SubwordXLMRobertaEncoder(nn.Module):
         # tf5 renamed past_key_value → past_key_values and added cache_position; detect once.
         _layer_forward = self.layer[0].forward
         self._tf5_layer = _supports_kwarg(_layer_forward, "cache_position")
-        self._past_kv_key = "past_key_values" if _supports_kwarg(_layer_forward, "past_key_values") else "past_key_value"
+        self._past_kv_key = (
+            "past_key_values" if _supports_kwarg(_layer_forward, "past_key_values") else "past_key_value"
+        )
 
     def forward(
         self,
