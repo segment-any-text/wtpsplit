@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 import math
 import os
@@ -18,8 +20,13 @@ from transformers.utils.hub import cached_file
 
 from wtpsplit.extract import BertCharORTWrapper, SaTORTWrapper, PyTorchWrapper, extract
 from wtpsplit.utils import Constants, indices_to_sentences, sigmoid, token_to_char_probs
+from wtpsplit.utils.constraints import (
+    constrained_segmentation,
+    _enforce_segment_constraints,
+)
+from wtpsplit.utils.priors import create_prior_function
 
-__version__ = "2.1.7"
+__version__ = "2.2.0"
 
 # suppress docopt syntax warnings (triggered in Python 3.14+)
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")
@@ -27,7 +34,84 @@ warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")
 warnings.filterwarnings("ignore", category=UserWarning, message="Torchaudio's I/O functions now support.*")
 
 warnings.simplefilter("default", DeprecationWarning)  # show by default
-warnings.simplefilter("ignore", category=FutureWarning)  # for tranformers
+warnings.simplefilter("ignore", category=FutureWarning)  # for transformers
+
+
+def _manual_lora_merge(model, lora_load_path):
+    """Merge LoRA adapter weights directly into a model's parameters.
+
+    Lightweight alternative to ``adapters`` library that only
+    supports the ``merge_lora=True`` path (the default). Reads the
+    adapter‐hub file format produced by ``wtpsplit/train/train_lora.py``.
+    """
+    import json
+    import torch
+
+    lora_dir = Path(lora_load_path)
+
+    # --- read adapter config for LoRA hyper-parameters ---
+    config_path = lora_dir / "adapter_config.json"
+    with open(config_path) as f:
+        adapter_cfg = json.load(f)
+    try:
+        config_section = adapter_cfg["config"]
+        lora_r = config_section["r"]
+        lora_alpha = config_section["alpha"]
+        scaling = lora_alpha / lora_r
+    except KeyError as e:
+        raise ValueError(
+            f"Invalid LoRA adapter configuration in '{config_path}': "
+            f"missing required key {e!r}. Expected keys: 'config' with 'r' and 'alpha'."
+        ) from e
+    except TypeError as e:
+        raise ValueError(
+            f"Invalid LoRA adapter configuration in '{config_path}': "
+            "unexpected structure; expected a JSON object with a 'config' mapping containing 'r' and 'alpha'."
+        ) from e
+    except ZeroDivisionError as e:
+        raise ValueError(f"Invalid LoRA adapter configuration in '{config_path}': 'r' must be a non-zero value.") from e
+
+    # --- merge LoRA weight deltas into the base model ---
+    adapter_weights = torch.load(lora_dir / "pytorch_adapter.bin", map_location="cpu", weights_only=True)
+
+    # Group lora_A / lora_B pairs by their target module.
+    # Key pattern: ``<module_path>.loras.<adapter_name>.lora_A``
+    lora_pairs: dict = {}
+    for key, tensor in adapter_weights.items():
+        if ".loras." not in key:
+            continue
+        base_key = key.rsplit(".loras.", 1)[0]
+        if key.endswith(".lora_A"):
+            lora_pairs.setdefault(base_key, {})["A"] = tensor
+        elif key.endswith(".lora_B"):
+            lora_pairs.setdefault(base_key, {})["B"] = tensor
+
+    model_params = dict(model.named_parameters())
+    for base_key, pair in lora_pairs.items():
+        if "A" not in pair or "B" not in pair:
+            raise ValueError(
+                f"Incomplete LoRA pair for '{base_key}' in '{lora_dir / 'pytorch_adapter.bin'}': "
+                "each module must have both lora_A and lora_B weights."
+            )
+        param_key = base_key + ".weight"
+        if param_key not in model_params:
+            raise KeyError(f"LoRA target parameter '{param_key}' not found in model.")
+        param = model_params[param_key]
+        # LoRA merge: W_new = W + (alpha / r) * B @ A
+        delta = pair["B"] @ pair["A"]
+        with torch.no_grad():
+            param.add_(scaling * delta.to(device=param.device, dtype=param.dtype))
+
+    # --- load classification-head weights ---
+    head_path = lora_dir / "pytorch_model_head.bin"
+    if head_path.exists():
+        head_weights = torch.load(head_path, map_location="cpu", weights_only=True)
+        for key, tensor in head_weights.items():
+            if key in model_params:
+                with torch.no_grad():
+                    model_params[key].data.copy_(
+                        tensor.to(device=model_params[key].device, dtype=model_params[key].dtype)
+                    )
 
 
 class WtP:
@@ -40,10 +124,12 @@ class WtP:
         mixtures=None,
         hub_prefix="benjamin",
         ignore_legacy_warning=False,
+        language: str = None,
     ):
         self.model_name_or_model = model_name_or_model
         self.ort_providers = ort_providers
         self.ort_kwargs = ort_kwargs
+        self.language = language  # Store for language-aware prior defaults
 
         mixture_path = None
 
@@ -296,7 +382,7 @@ class WtP:
         text_or_texts,
         lang_code: str = None,
         style: str = None,
-        threshold: float = None,
+        threshold: float = None,  # ignored when max_length is set
         stride=64,
         block_size: int = 512,
         batch_size=32,
@@ -308,7 +394,33 @@ class WtP:
         strip_whitespace: bool = False,
         do_paragraph_segmentation=False,
         verbose: bool = False,
+        min_length: int = 1,
+        max_length: int = None,  # when set, segments may contain newlines; use ''.join(segments)
+        prior_type: str = "uniform",
+        prior_kwargs: dict = None,
+        algorithm: str = "viterbi",
     ):
+        # Input validation
+        if max_length is not None and min_length > max_length:
+            raise ValueError(f"min_length ({min_length}) cannot be greater than max_length ({max_length})")
+        if min_length < 1:
+            raise ValueError(f"min_length must be >= 1, got {min_length}")
+        if max_length is not None and max_length < 1:
+            raise ValueError(f"max_length must be >= 1, got {max_length}")
+        valid_priors = ["uniform", "gaussian", "clipped_polynomial", "lognormal"]
+        if prior_type not in valid_priors:
+            raise ValueError(f"Unknown prior_type: '{prior_type}'. Must be one of {valid_priors}")
+        valid_algorithms = ["viterbi", "greedy"]
+        if algorithm not in valid_algorithms:
+            raise ValueError(f"Unknown algorithm: '{algorithm}'. Must be one of {valid_algorithms}")
+
+        if max_length is not None and threshold is not None:
+            warnings.warn(
+                "Both 'threshold' and 'max_length' are set. When using length-constrained "
+                "segmentation (max_length), the threshold parameter is ignored.",
+                UserWarning,
+            )
+
         if isinstance(text_or_texts, str):
             return next(
                 self._split(
@@ -327,6 +439,11 @@ class WtP:
                     strip_whitespace=strip_whitespace,
                     do_paragraph_segmentation=do_paragraph_segmentation,
                     verbose=verbose,
+                    min_length=min_length,
+                    max_length=max_length,
+                    prior_type=prior_type,
+                    prior_kwargs=prior_kwargs,
+                    algorithm=algorithm,
                 )
             )
         else:
@@ -346,6 +463,11 @@ class WtP:
                 strip_whitespace=strip_whitespace,
                 do_paragraph_segmentation=do_paragraph_segmentation,
                 verbose=verbose,
+                min_length=min_length,
+                max_length=max_length,
+                prior_type=prior_type,
+                prior_kwargs=prior_kwargs,
+                algorithm=algorithm,
             )
 
     def get_threshold(self, lang_code: str, style: str, return_punctuation_threshold: bool = False):
@@ -362,9 +484,9 @@ class WtP:
     def _split(
         self,
         texts,
-        lang_code: str,
-        style: str,
-        threshold: float,
+        lang_code: str | None,
+        style: str | None,
+        threshold: float | None,
         stride: int,
         block_size: int,
         batch_size: int,
@@ -376,6 +498,11 @@ class WtP:
         do_paragraph_segmentation: bool,
         strip_whitespace: bool,
         verbose: bool,
+        min_length: int,
+        max_length: int | None,
+        prior_type: str,
+        prior_kwargs: dict | None,
+        algorithm: str,
     ):
         if style is not None:
             if lang_code is None:
@@ -423,23 +550,68 @@ class WtP:
                 for paragraph in indices_to_sentences(text, np.where(newline_probs > paragraph_threshold)[0]):
                     sentences = []
 
-                    for sentence in indices_to_sentences(
-                        paragraph,
-                        np.where(
-                            sentence_probs[offset : offset + len(paragraph)] > sentence_threshold,
-                        )[0],
-                        strip_whitespace=strip_whitespace,
-                    ):
-                        sentences.append(sentence)
+                    if max_length is not None or min_length > 1:
+                        paragraph_probs = sentence_probs[offset : offset + len(paragraph)]
+                        # Create fresh copy each iteration to avoid state leakage
+                        local_prior_kwargs = {} if prior_kwargs is None else prior_kwargs.copy()
+                        if max_length is not None:
+                            local_prior_kwargs["max_length"] = max_length
+                        # Use model's language for prior defaults if not explicitly set
+                        if (
+                            self.language
+                            and "lang_code" not in local_prior_kwargs
+                            and "target_length" not in local_prior_kwargs
+                        ):
+                            local_prior_kwargs["lang_code"] = self.language
+                        prior_fn = create_prior_function(prior_type, local_prior_kwargs)
+
+                        boundaries = constrained_segmentation(
+                            paragraph_probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
+                        )
+                        indices = [b - 1 for b in boundaries]
+
+                        sentences = _enforce_segment_constraints(
+                            paragraph, indices, min_length, max_length, strip_whitespace=strip_whitespace
+                        )
+                    else:
+                        for sentence in indices_to_sentences(
+                            paragraph,
+                            np.where(
+                                sentence_probs[offset : offset + len(paragraph)] > sentence_threshold,
+                            )[0],
+                            strip_whitespace=strip_whitespace,
+                        ):
+                            sentences.append(sentence)
 
                     paragraphs.append(sentences)
                     offset += len(paragraph)
 
                 yield paragraphs
             else:
-                sentences = indices_to_sentences(
-                    text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
-                )
+                if max_length is not None or min_length > 1:
+                    # Create fresh copy each iteration to avoid state leakage
+                    local_prior_kwargs = {} if prior_kwargs is None else prior_kwargs.copy()
+                    if max_length is not None:
+                        local_prior_kwargs["max_length"] = max_length
+                    # Use model's language for prior defaults if not explicitly set
+                    if (
+                        self.language
+                        and "lang_code" not in local_prior_kwargs
+                        and "target_length" not in local_prior_kwargs
+                    ):
+                        local_prior_kwargs["lang_code"] = self.language
+                    prior_fn = create_prior_function(prior_type, local_prior_kwargs)
+                    boundaries = constrained_segmentation(
+                        probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
+                    )
+                    indices = [b - 1 for b in boundaries]
+                    sentences = _enforce_segment_constraints(
+                        text, indices, min_length, max_length, strip_whitespace=strip_whitespace
+                    )
+                else:
+                    sentences = indices_to_sentences(
+                        text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
+                    )
                 yield sentences
 
 
@@ -467,6 +639,7 @@ class SaT:
         self.model_name_or_model = model_name_or_model
         self.ort_providers = ort_providers
         self.ort_kwargs = ort_kwargs
+        self.language = language  # Store for language-aware prior defaults
 
         self.use_lora = False
 
@@ -604,19 +777,8 @@ class SaT:
                 if (style_or_domain and not language) or (language and not style_or_domain):
                     raise ValueError("Please specify both language and style_or_domain!")
             if (style_or_domain and language) or lora_path:
-                import adapters  # noqa
-                from adapters.models import MODEL_MIXIN_MAPPING  # noqa
-                from adapters.models.bert.mixin_bert import BertModelAdaptersMixin  # noqa
-
-                # monkey patch mixin to avoid forking whole adapters library
-                MODEL_MIXIN_MAPPING["SubwordXLMRobertaModel"] = BertModelAdaptersMixin
-                model_type = self.model.model.config.model_type
-                # adapters need xlm-roberta as model type.
-                self.model.model.config.model_type = "xlm-roberta"
-                adapters.init(self.model.model)
-                # reset model type (used later)
-                self.model.model.config.model_type = model_type
                 try:
+                    # 1. Locate / download adapter files
                     if not lora_path:
                         for file in [
                             "adapter_config.json",
@@ -655,27 +817,58 @@ class SaT:
                                 "and that folder should contain the files listed above."
                             )
 
-                    self.model.model.load_adapter(
-                        lora_load_path,
-                        set_active=True,
-                        with_head=True,
-                        load_as="sat-lora",
-                    )
-                    # merge lora weights into transformer for 0 efficiency overhead
-                    if merge_lora:
-                        self.model.model.merge_adapter("sat-lora")
-                        # After merging, keeping the adapter around can trigger confusing warnings
-                        # ("adapters available but none activated") in some adapters versions.
-                        try:
-                            self.model.model.delete_adapter("sat-lora")
-                        except Exception:
-                            pass
+                    # 2. Load adapter – prefer `adapters` library, fall back to manual merge
+                    _has_adapters_lib = False
+                    try:
+                        import adapters  # noqa
+
+                        _has_adapters_lib = True
+                    except ImportError:
+                        pass
+
+                    if _has_adapters_lib:
+                        from adapters.models import MODEL_MIXIN_MAPPING  # noqa
+                        from adapters.models.bert.mixin_bert import BertModelAdaptersMixin  # noqa
+
+                        # monkey patch mixin to avoid forking whole adapters library
+                        MODEL_MIXIN_MAPPING["SubwordXLMRobertaModel"] = BertModelAdaptersMixin
+                        model_type = self.model.model.config.model_type
+                        # adapters need xlm-roberta as model type.
+                        self.model.model.config.model_type = "xlm-roberta"
+                        adapters.init(self.model.model)
+                        # reset model type (used later)
+                        self.model.model.config.model_type = model_type
+                        self.model.model.load_adapter(
+                            lora_load_path,
+                            set_active=True,
+                            with_head=True,
+                            load_as="sat-lora",
+                        )
+                        # merge lora weights into transformer for 0 efficiency overhead
+                        if merge_lora:
+                            self.model.model.merge_adapter("sat-lora")
+                            # After merging, keeping the adapter around can trigger confusing warnings
+                            # ("adapters available but none activated") in some adapters versions.
+                            try:
+                                self.model.model.delete_adapter("sat-lora")
+                            except Exception:
+                                pass
+                        else:
+                            # Some adapters versions ignore `set_active=True` on load; ensure activation.
+                            try:
+                                self.model.model.set_active_adapters("sat-lora")
+                            except Exception:
+                                pass
                     else:
-                        # Some adapters versions ignore `set_active=True` on load; ensure activation.
-                        try:
-                            self.model.model.set_active_adapters("sat-lora")
-                        except Exception:
-                            pass
+                        # Manual LoRA merge – works without the `adapters` library.
+                        if not merge_lora:
+                            raise RuntimeError(
+                                "merge_lora=False requires the 'adapters' library which is not "
+                                "installed.\nInstall it with: pip install adapters\n"
+                                "Or use merge_lora=True (the default) which works without it."
+                            )
+                        _manual_lora_merge(self.model.model, lora_load_path)
+
                     self.use_lora = True
                 except Exception as e:  # noqa
                     if lora_path:
@@ -850,7 +1043,7 @@ class SaT:
     def split(
         self,
         text_or_texts,
-        threshold: float = None,
+        threshold: float = None,  # ignored when max_length is set
         stride=64,
         block_size: int = 512,
         batch_size=32,
@@ -861,9 +1054,14 @@ class SaT:
         paragraph_threshold: float = 0.5,
         strip_whitespace: bool = False,
         do_paragraph_segmentation: bool = False,
-        split_on_input_newlines: bool = True,
+        split_on_input_newlines: bool = True,  # only applies when max_length is not set
         treat_newline_as_space=None,  # Deprecated
         verbose: bool = False,
+        min_length: int = 1,
+        max_length: int = None,  # when set, segments may contain newlines; use ''.join(segments)
+        prior_type: str = "uniform",
+        prior_kwargs: dict = None,
+        algorithm: str = "viterbi",
     ):
         if treat_newline_as_space is not None:
             warnings.warn(
@@ -872,6 +1070,36 @@ class SaT:
                 DeprecationWarning,
             )
             split_on_input_newlines = not treat_newline_as_space
+
+        # Input validation
+        if max_length is not None and min_length > max_length:
+            raise ValueError(f"min_length ({min_length}) cannot be greater than max_length ({max_length})")
+        if min_length < 1:
+            raise ValueError(f"min_length must be >= 1, got {min_length}")
+        if max_length is not None and max_length < 1:
+            raise ValueError(f"max_length must be >= 1, got {max_length}")
+        valid_priors = ["uniform", "gaussian", "clipped_polynomial", "lognormal"]
+        if prior_type not in valid_priors:
+            raise ValueError(f"Unknown prior_type: '{prior_type}'. Must be one of {valid_priors}")
+        valid_algorithms = ["viterbi", "greedy"]
+        if algorithm not in valid_algorithms:
+            raise ValueError(f"Unknown algorithm: '{algorithm}'. Must be one of {valid_algorithms}")
+
+        if max_length is not None and threshold is not None:
+            warnings.warn(
+                "Both 'threshold' and 'max_length' are set. When using length-constrained "
+                "segmentation (max_length), the threshold parameter is ignored.",
+                UserWarning,
+            )
+
+        if (max_length is not None or min_length > 1) and split_on_input_newlines:
+            warnings.warn(
+                "When using length constraints (max_length/min_length), segments may contain newlines. "
+                "split_on_input_newlines is ignored; use ''.join(segments) to reconstruct the original text. "
+                "To split at newlines with constraints, pre-split your text at newlines and process each line.",
+                UserWarning,
+            )
+
         if isinstance(text_or_texts, str):
             return next(
                 self._split(
@@ -889,6 +1117,11 @@ class SaT:
                     do_paragraph_segmentation=do_paragraph_segmentation,
                     split_on_input_newlines=split_on_input_newlines,
                     verbose=verbose,
+                    min_length=min_length,
+                    max_length=max_length,
+                    prior_type=prior_type,
+                    prior_kwargs=prior_kwargs,
+                    algorithm=algorithm,
                 )
             )
         else:
@@ -907,12 +1140,17 @@ class SaT:
                 do_paragraph_segmentation=do_paragraph_segmentation,
                 split_on_input_newlines=split_on_input_newlines,
                 verbose=verbose,
+                min_length=min_length,
+                max_length=max_length,
+                prior_type=prior_type,
+                prior_kwargs=prior_kwargs,
+                algorithm=algorithm,
             )
 
     def _split(
         self,
         texts,
-        threshold: float,
+        threshold: float | None,
         stride: int,
         block_size: int,
         batch_size: int,
@@ -923,8 +1161,13 @@ class SaT:
         outer_batch_size: int,
         do_paragraph_segmentation: bool,
         split_on_input_newlines: bool,
+        min_length: int,
+        max_length: int | None,
         strip_whitespace: bool,
         verbose: bool,
+        prior_type: str,
+        prior_kwargs: dict | None,
+        algorithm: str,
     ):
         def get_default_threshold(model_str: str):
             # basic type check for safety
@@ -968,35 +1211,89 @@ class SaT:
                 for paragraph in indices_to_sentences(text, np.where(newline_probs > paragraph_threshold)[0]):
                     sentences = []
 
-                    for sentence in indices_to_sentences(
-                        paragraph,
-                        np.where(
-                            sentence_probs[offset : offset + len(paragraph)] > sentence_threshold,
-                        )[0],
-                        strip_whitespace=strip_whitespace,
-                    ):
-                        sentences.append(sentence)
+                    if max_length is not None or min_length > 1:
+                        paragraph_probs = sentence_probs[offset : offset + len(paragraph)]
+                        # Create fresh copy each iteration to avoid state leakage
+                        local_prior_kwargs = {} if prior_kwargs is None else prior_kwargs.copy()
+                        if max_length is not None:
+                            local_prior_kwargs["max_length"] = max_length
+                        # Use model's language for prior defaults if not explicitly set
+                        if (
+                            self.language
+                            and "lang_code" not in local_prior_kwargs
+                            and "target_length" not in local_prior_kwargs
+                        ):
+                            local_prior_kwargs["lang_code"] = self.language
+                        prior_fn = create_prior_function(prior_type, local_prior_kwargs)
+
+                        boundaries = constrained_segmentation(
+                            paragraph_probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
+                        )
+                        indices = [b - 1 for b in boundaries]
+
+                        sentences = _enforce_segment_constraints(
+                            paragraph, indices, min_length, max_length, strip_whitespace=strip_whitespace
+                        )
+                    else:
+                        for sentence in indices_to_sentences(
+                            paragraph,
+                            np.where(
+                                sentence_probs[offset : offset + len(paragraph)] > sentence_threshold,
+                            )[0],
+                            strip_whitespace=strip_whitespace,
+                        ):
+                            sentences.append(sentence)
 
                     paragraphs.append(sentences)
                     offset += len(paragraph)
 
                 yield paragraphs
             else:
-                sentences = indices_to_sentences(
-                    text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
-                )
-                if split_on_input_newlines:
-                    # within the model, newlines in the text were ignored - they were treated as spaces.
-                    # this is the default behavior: additionally split on newlines as provided in the input
-                    new_sentences = []
-                    for sentence in sentences:
-                        new_sentences.extend(sentence.split("\n"))
-                    sentences = new_sentences
-                else:
-                    warnings.warn(
-                        "split_on_input_newlines=False will lead to newlines in the output "
-                        "if they were present in the input. Within the model, such newlines are "
-                        "treated as spaces. "
-                        "If you want to split on such newlines, set split_on_input_newlines=False."
+                if max_length is not None or min_length > 1:
+                    # Create fresh copy each iteration to avoid state leakage
+                    local_prior_kwargs = {} if prior_kwargs is None else prior_kwargs.copy()
+                    if max_length is not None:
+                        local_prior_kwargs["max_length"] = max_length
+                    # Use model's language for prior defaults if not explicitly set
+                    if (
+                        self.language
+                        and "lang_code" not in local_prior_kwargs
+                        and "target_length" not in local_prior_kwargs
+                    ):
+                        local_prior_kwargs["lang_code"] = self.language
+                    prior_fn = create_prior_function(prior_type, local_prior_kwargs)
+
+                    boundaries = constrained_segmentation(
+                        probs, prior_fn, min_length=min_length, max_length=max_length, algorithm=algorithm
                     )
+                    indices = [b - 1 for b in boundaries]
+                    sentences = _enforce_segment_constraints(
+                        text, indices, min_length, max_length, strip_whitespace=strip_whitespace
+                    )
+                    # Note: when constraints are used, newlines may appear inside segments.
+                    # Use "".join(segments) == text for reconstruction (not "\n".join()).
+                else:
+                    sentences = indices_to_sentences(
+                        text, np.where(probs > sentence_threshold)[0], strip_whitespace=strip_whitespace
+                    )
+
+                    if split_on_input_newlines:
+                        # within the model, newlines in the text were ignored - they were treated as spaces.
+                        # this is the default behavior: additionally split on newlines as provided in the input
+                        # Note: use "\n".join(segments) to reconstruct text (not "".join())
+                        new_sentences = []
+                        for i, sentence in enumerate(sentences):
+                            # Strip ONE trailing newline from non-final segments to avoid
+                            # duplicate delimiters when joined (but preserve internal newlines)
+                            if i < len(sentences) - 1 and sentence.endswith("\n"):
+                                sentence = sentence[:-1]
+                            new_sentences.extend(sentence.split("\n"))
+                        sentences = new_sentences
+                    else:
+                        warnings.warn(
+                            "split_on_input_newlines=False will lead to newlines in the output "
+                            "if they were present in the input. Within the model, such newlines are "
+                            "treated as spaces. "
+                            "If you want to split on such newlines, set split_on_input_newlines=True."
+                        )
                 yield sentences

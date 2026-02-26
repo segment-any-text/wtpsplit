@@ -1,0 +1,576 @@
+{
+  "metadata": {
+    "source": "Universal Dependencies v2.14",
+    "generated_at": "2026-01-21T12:19:34.907700Z"
+  },
+  "stats": {
+    "ab": {
+      "target_length": 48,
+      "spread": 22
+    },
+    "af": {
+      "target_length": 132,
+      "spread": 70
+    },
+    "ajp": {
+      "target_length": 27,
+      "spread": 14
+    },
+    "akk": {
+      "target_length": 51,
+      "spread": 36
+    },
+    "aln": {
+      "target_length": 67,
+      "spread": 35
+    },
+    "am": {
+      "target_length": 18,
+      "spread": 10
+    },
+    "apu": {
+      "target_length": 30,
+      "spread": 12
+    },
+    "aqz": {
+      "target_length": 16,
+      "spread": 10
+    },
+    "ar": {
+      "target_length": 67,
+      "spread": 55
+    },
+    "arr": {
+      "target_length": 16,
+      "spread": 10
+    },
+    "az": {
+      "target_length": 29,
+      "spread": 14
+    },
+    "azz": {
+      "target_length": 30,
+      "spread": 28
+    },
+    "bar": {
+      "target_length": 51,
+      "spread": 40
+    },
+    "be": {
+      "target_length": 58,
+      "spread": 48
+    },
+    "bej": {
+      "target_length": 58,
+      "spread": 46
+    },
+    "bg": {
+      "target_length": 66,
+      "spread": 46
+    },
+    "bho": {
+      "target_length": 72,
+      "spread": 42
+    },
+    "bm": {
+      "target_length": 38,
+      "spread": 22
+    },
+    "bor": {
+      "target_length": 29,
+      "spread": 22
+    },
+    "br": {
+      "target_length": 42,
+      "spread": 33
+    },
+    "bxr": {
+      "target_length": 55,
+      "spread": 37
+    },
+    "ca": {
+      "target_length": 151,
+      "spread": 85
+    },
+    "ceb": {
+      "target_length": 27,
+      "spread": 13
+    },
+    "ckt": {
+      "target_length": 34,
+      "spread": 19
+    },
+    "cop": {
+      "target_length": 70,
+      "spread": 42
+    },
+    "cpg": {
+      "target_length": 40,
+      "spread": 28
+    },
+    "cs": {
+      "target_length": 86,
+      "spread": 62
+    },
+    "cu": {
+      "target_length": 39,
+      "spread": 29
+    },
+    "cy": {
+      "target_length": 82,
+      "spread": 62
+    },
+    "da": {
+      "target_length": 82,
+      "spread": 61
+    },
+    "de": {
+      "target_length": 111,
+      "spread": 61
+    },
+    "egy": {
+      "target_length": 29,
+      "spread": 16
+    },
+    "el": {
+      "target_length": 94,
+      "spread": 74
+    },
+    "eme": {
+      "target_length": 19,
+      "spread": 11
+    },
+    "en": {
+      "target_length": 63,
+      "spread": 53
+    },
+    "es": {
+      "target_length": 135,
+      "spread": 87
+    },
+    "ess": {
+      "target_length": 29,
+      "spread": 11
+    },
+    "et": {
+      "target_length": 74,
+      "spread": 55
+    },
+    "eu": {
+      "target_length": 79,
+      "spread": 45
+    },
+    "fa": {
+      "target_length": 72,
+      "spread": 48
+    },
+    "fi": {
+      "target_length": 63,
+      "spread": 47
+    },
+    "fo": {
+      "target_length": 63,
+      "spread": 48
+    },
+    "fr": {
+      "target_length": 90,
+      "spread": 65
+    },
+    "frm": {
+      "target_length": 87,
+      "spread": 66
+    },
+    "fro": {
+      "target_length": 37,
+      "spread": 25
+    },
+    "ga": {
+      "target_length": 111,
+      "spread": 54
+    },
+    "gd": {
+      "target_length": 66,
+      "spread": 72
+    },
+    "gl": {
+      "target_length": 160,
+      "spread": 57
+    },
+    "got": {
+      "target_length": 49,
+      "spread": 37
+    },
+    "grc": {
+      "target_length": 66,
+      "spread": 48
+    },
+    "gsw": {
+      "target_length": 73,
+      "spread": 25
+    },
+    "gu": {
+      "target_length": 36,
+      "spread": 26
+    },
+    "gub": {
+      "target_length": 33,
+      "spread": 16
+    },
+    "gun": {
+      "target_length": 20,
+      "spread": 11
+    },
+    "gv": {
+      "target_length": 26,
+      "spread": 10
+    },
+    "ha": {
+      "target_length": 29,
+      "spread": 24
+    },
+    "hbo": {
+      "target_length": 118,
+      "spread": 45
+    },
+    "he": {
+      "target_length": 86,
+      "spread": 48
+    },
+    "hi": {
+      "target_length": 93,
+      "spread": 45
+    },
+    "hit": {
+      "target_length": 67,
+      "spread": 37
+    },
+    "hr": {
+      "target_length": 118,
+      "spread": 68
+    },
+    "hsb": {
+      "target_length": 86,
+      "spread": 48
+    },
+    "ht": {
+      "target_length": 89,
+      "spread": 47
+    },
+    "hu": {
+      "target_length": 138,
+      "spread": 79
+    },
+    "hy": {
+      "target_length": 91,
+      "spread": 77
+    },
+    "hyw": {
+      "target_length": 88,
+      "spread": 69
+    },
+    "id": {
+      "target_length": 117,
+      "spread": 64
+    },
+    "is": {
+      "target_length": 87,
+      "spread": 64
+    },
+    "it": {
+      "target_length": 108,
+      "spread": 62
+    },
+    "ja": {
+      "target_length": 18,
+      "spread": 15
+    },
+    "jv": {
+      "target_length": 69,
+      "spread": 38
+    },
+    "ka": {
+      "target_length": 85,
+      "spread": 60
+    },
+    "kk": {
+      "target_length": 52,
+      "spread": 28
+    },
+    "kmr": {
+      "target_length": 57,
+      "spread": 21
+    },
+    "ko": {
+      "target_length": 44,
+      "spread": 22
+    },
+    "koi": {
+      "target_length": 34,
+      "spread": 20
+    },
+    "kpv": {
+      "target_length": 51,
+      "spread": 36
+    },
+    "krl": {
+      "target_length": 73,
+      "spread": 40
+    },
+    "ky": {
+      "target_length": 58,
+      "spread": 25
+    },
+    "la": {
+      "target_length": 73,
+      "spread": 58
+    },
+    "lij": {
+      "target_length": 55,
+      "spread": 49
+    },
+    "lt": {
+      "target_length": 102,
+      "spread": 74
+    },
+    "lv": {
+      "target_length": 84,
+      "spread": 62
+    },
+    "lzh": {
+      "target_length": 5,
+      "spread": 10
+    },
+    "mdf": {
+      "target_length": 49,
+      "spread": 22
+    },
+    "mk": {
+      "target_length": 37,
+      "spread": 14
+    },
+    "ml": {
+      "target_length": 69,
+      "spread": 47
+    },
+    "mr": {
+      "target_length": 32,
+      "spread": 17
+    },
+    "mt": {
+      "target_length": 98,
+      "spread": 75
+    },
+    "myu": {
+      "target_length": 25,
+      "spread": 14
+    },
+    "myv": {
+      "target_length": 46,
+      "spread": 31
+    },
+    "nds": {
+      "target_length": 80,
+      "spread": 59
+    },
+    "nhi": {
+      "target_length": 47,
+      "spread": 31
+    },
+    "nl": {
+      "target_length": 79,
+      "spread": 62
+    },
+    "no": {
+      "target_length": 77,
+      "spread": 54
+    },
+    "olo": {
+      "target_length": 70,
+      "spread": 41
+    },
+    "orv": {
+      "target_length": 43,
+      "spread": 38
+    },
+    "ota": {
+      "target_length": 82,
+      "spread": 69
+    },
+    "pad": {
+      "target_length": 26,
+      "spread": 13
+    },
+    "pcm": {
+      "target_length": 46,
+      "spread": 37
+    },
+    "pl": {
+      "target_length": 55,
+      "spread": 42
+    },
+    "pt": {
+      "target_length": 74,
+      "spread": 57
+    },
+    "qaf": {
+      "target_length": 68,
+      "spread": 39
+    },
+    "qfn": {
+      "target_length": 47,
+      "spread": 18
+    },
+    "qpm": {
+      "target_length": 61,
+      "spread": 40
+    },
+    "qtd": {
+      "target_length": 79,
+      "spread": 45
+    },
+    "quc": {
+      "target_length": 26,
+      "spread": 10
+    },
+    "ro": {
+      "target_length": 102,
+      "spread": 60
+    },
+    "ru": {
+      "target_length": 79,
+      "spread": 60
+    },
+    "sa": {
+      "target_length": 37,
+      "spread": 27
+    },
+    "sah": {
+      "target_length": 25,
+      "spread": 10
+    },
+    "say": {
+      "target_length": 32,
+      "spread": 25
+    },
+    "si": {
+      "target_length": 44,
+      "spread": 10
+    },
+    "sjo": {
+      "target_length": 62,
+      "spread": 59
+    },
+    "sk": {
+      "target_length": 44,
+      "spread": 31
+    },
+    "sl": {
+      "target_length": 79,
+      "spread": 64
+    },
+    "sme": {
+      "target_length": 41,
+      "spread": 29
+    },
+    "sms": {
+      "target_length": 51,
+      "spread": 30
+    },
+    "sr": {
+      "target_length": 120,
+      "spread": 62
+    },
+    "sv": {
+      "target_length": 83,
+      "spread": 53
+    },
+    "swl": {
+      "target_length": 66,
+      "spread": 46
+    },
+    "ta": {
+      "target_length": 52,
+      "spread": 58
+    },
+    "te": {
+      "target_length": 25,
+      "spread": 10
+    },
+    "th": {
+      "target_length": 95,
+      "spread": 40
+    },
+    "tl": {
+      "target_length": 34,
+      "spread": 21
+    },
+    "tpn": {
+      "target_length": 38,
+      "spread": 23
+    },
+    "tr": {
+      "target_length": 49,
+      "spread": 37
+    },
+    "tt": {
+      "target_length": 93,
+      "spread": 44
+    },
+    "ug": {
+      "target_length": 63,
+      "spread": 35
+    },
+    "uk": {
+      "target_length": 75,
+      "spread": 59
+    },
+    "ur": {
+      "target_length": 108,
+      "spread": 59
+    },
+    "vep": {
+      "target_length": 69,
+      "spread": 36
+    },
+    "vi": {
+      "target_length": 80,
+      "spread": 40
+    },
+    "wo": {
+      "target_length": 78,
+      "spread": 48
+    },
+    "xav": {
+      "target_length": 42,
+      "spread": 25
+    },
+    "xcl": {
+      "target_length": 73,
+      "spread": 42
+    },
+    "xnr": {
+      "target_length": 35,
+      "spread": 14
+    },
+    "xum": {
+      "target_length": 26,
+      "spread": 26
+    },
+    "yo": {
+      "target_length": 96,
+      "spread": 45
+    },
+    "yrl": {
+      "target_length": 38,
+      "spread": 30
+    },
+    "yue": {
+      "target_length": 13,
+      "spread": 14
+    },
+    "zh": {
+      "target_length": 29,
+      "spread": 19
+    }
+  }
+}
