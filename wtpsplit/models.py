@@ -46,6 +46,18 @@ from wtpsplit.configs import BertCharConfig, LACanineConfig, SubwordXLMConfig
 from wtpsplit.utils import Constants
 
 
+def _supports_kwarg(func, kwarg_name: str) -> bool:
+    """
+    Return whether `func` accepts `kwarg_name`.
+
+    Some transformers versions wrap forward methods (e.g. deprecate_kwarg), so we
+    inspect the wrapped function when available.
+    """
+    inner = getattr(func, "__wrapped__", None)
+    target = inner if inner is not None else func
+    return kwarg_name in target.__code__.co_varnames
+
+
 def _get_head_mask(
     head_mask: Optional[Tensor],
     num_hidden_layers: int,
@@ -474,7 +486,7 @@ class LACanineLayer(CanineLayer):
             attend_to_chunk_stride,
         )
         # tf5 removed head_mask from CanineAttention.forward(); detect once at init.
-        self._attention_accepts_head_mask = "head_mask" in self.attention.forward.__code__.co_varnames
+        self._attention_accepts_head_mask = _supports_kwarg(self.attention.forward, "head_mask")
         self.intermediate = CanineIntermediate(config)
         self.output = LACanineOutput(config)
 
@@ -1332,9 +1344,9 @@ class SubwordXLMRobertaEncoder(nn.Module):
         self.layer = nn.ModuleList([XLMRobertaLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
         # tf5 renamed past_key_value → past_key_values and added cache_position; detect once.
-        _fwd_vars = self.layer[0].forward.__code__.co_varnames
-        self._tf5_layer = "cache_position" in _fwd_vars
-        self._past_kv_key = "past_key_values" if self._tf5_layer else "past_key_value"
+        _layer_forward = self.layer[0].forward
+        self._tf5_layer = _supports_kwarg(_layer_forward, "cache_position")
+        self._past_kv_key = "past_key_values" if _supports_kwarg(_layer_forward, "past_key_values") else "past_key_value"
 
     def forward(
         self,
