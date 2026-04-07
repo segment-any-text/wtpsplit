@@ -7,12 +7,16 @@ import warnings
 from pathlib import Path
 from typing import Literal
 
+import numpy as np
+
+# Import skops before transformers: skops enumerates trusted types at import time
+# and can otherwise trigger transformers' lazy vision submodules (torchvision), which
+# wtpsplit does not use for segmentation.
+import skops.io as sio
+
 # avoid the "None of PyTorch, TensorFlow, etc. have been found" warning.
 with contextlib.redirect_stderr(open(os.devnull, "w")):
     import transformers  # noqa
-
-import numpy as np
-import skops.io as sio
 
 from huggingface_hub import hf_hub_download
 from transformers import AutoConfig, AutoModelForTokenClassification, AutoTokenizer
