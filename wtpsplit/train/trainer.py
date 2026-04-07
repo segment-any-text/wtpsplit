@@ -1,5 +1,5 @@
 import os
-from typing import Dict
+from typing import Dict, List, Optional
 
 import numpy as np
 import torch
@@ -7,30 +7,27 @@ import transformers
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 from transformers import PreTrainedModel
-from transformers.trainer import (
+
+from wtpsplit.train.hf_compat import is_torch_tpu_available
+from wtpsplit.train.transformers_trainer_imports import (
     ALL_LAYERNORM_LAYERS,
-    TRAINING_ARGS_NAME,
-    WEIGHTS_NAME,
     DataLoader,
     EvalLoopOutput,
     IterableDatasetShard,
-    List,
-    Optional,
-    ShardedDDPOption,
+    TRAINING_ARGS_NAME,
+    WEIGHTS_NAME,
     deepspeed_init,
     denumpify_detensorize,
     find_batch_size,
     get_parameter_names,
     has_length,
     is_sagemaker_mp_enabled,
-    is_torch_tpu_available,
     logger,
     nested_concat,
     nested_numpify,
     nested_truncate,
+    unwrap_model,
 )
-from transformers.modeling_utils import unwrap_model
-
 from wtpsplit.train.utils import Model
 
 if is_torch_tpu_available(check_device=False):
@@ -108,19 +105,19 @@ class Trainer(transformers.Trainer):
 
             optimizer_cls, optimizer_kwargs = Trainer.get_optimizer_cls_and_kwargs(self.args)
 
-            if self.sharded_ddp == ShardedDDPOption.SIMPLE:
+            _sharded = getattr(self, "sharded_ddp", None)
+            if _sharded is not None and getattr(_sharded, "name", str(_sharded)) == "SIMPLE":
                 raise NotImplementedError()
-            else:
-                self.optimizer = optimizer_cls(optimizer_grouped_parameters, **optimizer_kwargs)
-                if optimizer_cls.__name__ == "Adam8bit":
-                    import bitsandbytes
+            self.optimizer = optimizer_cls(optimizer_grouped_parameters, **optimizer_kwargs)
+            if optimizer_cls.__name__ == "Adam8bit":
+                import bitsandbytes
 
-                    manager = bitsandbytes.optim.GlobalOptimManager.get_instance()
+                manager = bitsandbytes.optim.GlobalOptimManager.get_instance()
 
-                    for module in opt_model.modules():
-                        if isinstance(module, nn.Embedding):
-                            manager.register_module_override(module, "weight", {"optim_bits": 32})
-                            logger.debug(f"bitsandbytes: will optimize {module} in fp32")
+                for module in opt_model.modules():
+                    if isinstance(module, nn.Embedding):
+                        manager.register_module_override(module, "weight", {"optim_bits": 32})
+                        logger.debug(f"bitsandbytes: will optimize {module} in fp32")
 
         if is_sagemaker_mp_enabled():
             raise NotImplementedError()
@@ -226,9 +223,7 @@ class Trainer(transformers.Trainer):
         if args.deepspeed and not self.deepspeed:
             # XXX: eval doesn't have `resume_from_checkpoint` arg but we should be able to do eval
             # from the checkpoint eventually
-            deepspeed_engine, _, _ = deepspeed_init(
-                self, num_training_steps=0, resume_from_checkpoint=None, inference=True
-            )
+            deepspeed_engine, _, _ = deepspeed_init(self, num_training_steps=0, inference=True)
             self.model = deepspeed_engine.module
             self.model_wrapped = deepspeed_engine
             self.deepspeed = deepspeed_engine

@@ -1,45 +1,14 @@
 import os
-from typing import Dict
+import re
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
-from torch import nn
-
-from transformers import PreTrainedModel
-from transformers.modeling_utils import unwrap_model
-from transformers.trainer import (
-    ALL_LAYERNORM_LAYERS,
-    WEIGHTS_NAME,
-    DataLoader,
-    EvalLoopOutput,
-    IterableDatasetShard,
-    List,
-    Optional,
-    deepspeed_init,
-    denumpify_detensorize,
-    find_batch_size,
-    get_parameter_names,
-    has_length,
-    is_sagemaker_mp_enabled,
-    is_torch_tpu_available,
-    nested_concat,
-    nested_numpify,
-    nested_truncate,
-)
-
-from wtpsplit.train.utils import Model
-
-if is_torch_tpu_available(check_device=False):
-    import torch_xla.core.xla_model as xm  # noqa: F401
-    import torch_xla.debug.metrics as met  # noqa: F401
-    import torch_xla.distributed.parallel_loader as pl  # noqa: F401
-
-import re
-from typing import Callable, Tuple, Union
-
 from packaging import version
+from torch import nn
 from torch.utils.data import Dataset
-from transformers import Trainer, __version__
+
+from transformers import PreTrainedModel, Trainer, __version__
 from transformers.configuration_utils import PretrainedConfig
 from transformers.data.data_collator import DataCollator
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
@@ -48,19 +17,39 @@ from transformers.trainer_callback import (
     TrainerControl,
     TrainerState,
 )
-from transformers.trainer_utils import (
-    EvalPrediction,
-)
+from transformers.trainer_utils import EvalPrediction
 from transformers.training_args import TrainingArguments
 from transformers.utils import (
     CONFIG_NAME,
     is_accelerate_available,
     is_apex_available,
-    is_torch_tpu_available,
     logging,
 )
 
-from adapters.composition import AdapterCompositionBlock, Fuse
+from wtpsplit.train.hf_compat import is_torch_tpu_available
+from wtpsplit.train.transformers_trainer_imports import (
+    ALL_LAYERNORM_LAYERS,
+    DataLoader,
+    EvalLoopOutput,
+    IterableDatasetShard,
+    WEIGHTS_NAME,
+    deepspeed_init,
+    denumpify_detensorize,
+    find_batch_size,
+    get_parameter_names,
+    has_length,
+    is_sagemaker_mp_enabled,
+    nested_concat,
+    nested_numpify,
+    nested_truncate,
+    unwrap_model,
+)
+from wtpsplit.train.utils import Model
+
+if is_torch_tpu_available(check_device=False):
+    import torch_xla.core.xla_model as xm  # noqa: F401
+    import torch_xla.debug.metrics as met  # noqa: F401
+    import torch_xla.distributed.parallel_loader as pl  # noqa: F401
 
 if is_apex_available():
     pass
@@ -74,6 +63,7 @@ if is_accelerate_available():
 
     if version.parse(accelerate_version) >= version.parse("0.16"):
         pass
+
 logger = logging.get_logger(__name__)
 
 TRAINING_ARGS_NAME = "training_args.bin"
@@ -121,8 +111,12 @@ class AdapterTrainer(Trainer):
             model_frozen = getattr(self.model.backbone.base_model, "model_frozen", False)
         else:
             model_frozen = False
+        # Default: same as pre-lazy-import behaviour when `model_frozen` is False (e.g. full finetune path).
+        self.train_adapter_fusion = False
         if model_frozen and self.model.backbone.active_adapters:
-            # Check if training AdapterFusion
+            # Check if training AdapterFusion (requires optional `adapters` package)
+            from adapters.composition import AdapterCompositionBlock, Fuse
+
             self.train_adapter_fusion = (
                 isinstance(self.model.backbone.active_adapters, Fuse)
                 or isinstance(self.model.backbone.active_adapters, AdapterCompositionBlock)
@@ -304,9 +298,7 @@ class AdapterTrainer(Trainer):
         if args.deepspeed and not self.deepspeed:
             # XXX: eval doesn't have `resume_from_checkpoint` arg but we should be able to do eval
             # from the checkpoint eventually
-            deepspeed_engine, _, _ = deepspeed_init(
-                self, num_training_steps=0, resume_from_checkpoint=None, inference=True
-            )
+            deepspeed_engine, _, _ = deepspeed_init(self, num_training_steps=0, inference=True)
             self.model = deepspeed_engine.module
             self.model_wrapped = deepspeed_engine
             self.deepspeed = deepspeed_engine
