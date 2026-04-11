@@ -50,6 +50,9 @@ class Model(nn.Module):
             else:
                 reduced_attention_mask = (input_ids != 0).to(torch.long)
 
+        # Transformers 4.51+ Trainer may pass this; HF models ignore it, custom backbones must not receive it.
+        kwargs.pop("num_items_in_batch", None)
+
         output = dict(
             self.backbone.forward(
                 input_ids=input_ids,

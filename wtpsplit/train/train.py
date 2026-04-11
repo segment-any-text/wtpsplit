@@ -23,7 +23,8 @@ from tokenizers import AddedToken
 from torchinfo import summary
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments, set_seed
-from transformers.trainer import is_torch_tpu_available
+
+from wtpsplit.train.hf_compat import is_torch_tpu_available
 
 import wandb
 from wtpsplit.models import (

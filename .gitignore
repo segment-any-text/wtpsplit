@@ -1,4 +1,5 @@
-.venv
+.venv/
+.venv-*/
 build
 dist
 wandb
@@ -24,4 +25,3 @@ data_subset/**
 *.log
 xlmr-*/**
 **/checkpoint-*/**
-.venv/
