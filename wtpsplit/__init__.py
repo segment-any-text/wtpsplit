@@ -30,7 +30,7 @@ from wtpsplit.utils.constraints import (
 )
 from wtpsplit.utils.priors import create_prior_function
 
-__version__ = "2.2.0"
+__version__ = "2.2.1"
 
 # suppress docopt syntax warnings (triggered in Python 3.14+)
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")

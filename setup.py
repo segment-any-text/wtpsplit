@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="wtpsplit",
-    version="2.2.0",
+    version="2.2.1",
     packages=find_packages(),
     description="Universal Robust, Efficient and Adaptable Sentence Segmentation",
     long_description=open("README.md", encoding="utf-8").read(),
