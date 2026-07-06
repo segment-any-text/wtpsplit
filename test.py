@@ -1,6 +1,16 @@
 # noqa: E501
+import pytest
+
 from wtpsplit import WtP, SaT
 import numpy as np
+
+
+def _aitune_import_error():
+    try:
+        import aitune.torch  # noqa: F401
+    except ImportError as e:
+        return e
+    return None
 
 
 def test_weighting():
@@ -25,6 +35,88 @@ def test_split_ort():
 def test_split_torch():
     sat = SaT("segment-any-text/sat-3l", hub_prefix=None)
 
+    splits = sat.split("This is a test sentence This is another test sentence.", threshold=0.025)
+    assert splits == ["This is a test sentence ", "This is another test sentence."]
+
+
+def test_optimize_torch_inductor():
+    import torch
+
+    if not hasattr(torch, "compile"):
+        pytest.skip("torch.compile requires PyTorch 2.0+")
+
+    sat = SaT("segment-any-text/sat-3l", hub_prefix=None)
+    sat.optimize(backend="inductor")
+    splits = sat.split("This is a test sentence This is another test sentence.", threshold=0.025)
+    assert splits == ["This is a test sentence ", "This is another test sentence."]
+
+
+def test_optimize_rejects_onnx():
+    sat = SaT("sat-3l-sm", ort_providers=["CPUExecutionProvider"])
+    with pytest.raises(ValueError, match="optimize"):
+        sat.optimize()
+
+
+def test_optimize_aitune_requires_extra():
+    if _aitune_import_error() is None:
+        pytest.skip("aitune is installed")
+
+    import torch
+
+    if not hasattr(torch, "compile"):
+        pytest.skip("torch.compile requires PyTorch 2.0+")
+
+    sat = SaT("segment-any-text/sat-3l", hub_prefix=None)
+    with pytest.raises(ImportError, match="aitune"):
+        sat.optimize(backend="aitune")
+
+
+def test_optimize_aitune_cuda():
+    import torch
+
+    aitune_error = _aitune_import_error()
+    if aitune_error is not None:
+        pytest.skip(f"aitune not importable (pip install wtpsplit[aitune]): {aitune_error}")
+    if not torch.cuda.is_available():
+        pytest.skip("CUDA required for AITune")
+    if not hasattr(torch, "compile"):
+        pytest.skip("torch.compile requires PyTorch 2.0+")
+
+    sat = SaT("segment-any-text/sat-3l", hub_prefix=None)
+    sat.to("cuda")
+    sat.optimize(backend="aitune", aitune_strategy="inductor_only", aitune_max_batches=2)
+    splits = sat.split("This is a test sentence This is another test sentence.", threshold=0.025)
+    assert splits == ["This is a test sentence ", "This is another test sentence."]
+
+
+def test_optimize_wtp_torch_inductor():
+    import torch
+
+    if not hasattr(torch, "compile"):
+        pytest.skip("torch.compile requires PyTorch 2.0+")
+
+    wtp = WtP("benjamin/wtp-bert-mini", hub_prefix=None, ignore_legacy_warning=True)
+    wtp.optimize(backend="inductor")
+    splits = wtp.split("This is a test sentence This is another test sentence.", threshold=0.005)
+    assert splits == ["This is a test sentence ", "This is another test sentence."]
+
+
+def test_optimize_rejects_onnx_wtp():
+    wtp = WtP("wtp-bert-mini", ort_providers=["CPUExecutionProvider"], ignore_legacy_warning=True)
+    with pytest.raises(ValueError, match="optimize"):
+        wtp.optimize()
+
+
+def test_optimize_returns_self_and_is_idempotent():
+    import torch
+
+    if not hasattr(torch, "compile"):
+        pytest.skip("torch.compile requires PyTorch 2.0+")
+
+    sat = SaT("segment-any-text/sat-3l", hub_prefix=None)
+    assert sat.optimize(backend="inductor") is sat
+    assert sat.model._torch_compiled is True
+    sat.optimize(backend="inductor")
     splits = sat.split("This is a test sentence This is another test sentence.", threshold=0.025)
     assert splits == ["This is a test sentence ", "This is another test sentence."]
 

@@ -7,6 +7,7 @@ import numpy as np
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 
+from wtpsplit.aitune_integration import apply_aitune, pop_aitune_kwargs
 from wtpsplit.utils import Constants, hash_encode
 
 logger = logging.getLogger(__name__)
@@ -58,10 +59,77 @@ class PyTorchWrapper:
     def __init__(self, model):
         self.model = model
         self.config = model.config
+        self._torch_compiled = False
 
     def __getattr__(self, name):
         assert hasattr(self, "model")
         return getattr(self.model, name)
+
+    def optimize(
+        self,
+        *,
+        backend: str = "inductor",
+        mode: str = "reduce-overhead",
+        fullgraph: bool = False,
+        dynamic: bool = True,
+        **compile_kwargs,
+    ):
+        """Compile the underlying Hugging Face model with :func:`torch.compile` (TorchInductor by default).
+
+        Call after moving the model to the target device and changing dtype (e.g. ``half()``), so the
+        compiled graph matches inference.
+
+        Performance notes (outside this method): on CUDA, ``torch.set_float32_matmul_precision("high")``
+        enables TF32 for matmuls (Ampere+), which is often faster with minimal accuracy impact for
+        inference. Larger ``batch_size`` in ``split`` / ``predict_proba`` improves GPU utilization until
+        memory-bound. Expect a slow first forward after compile (graph build); warm up before benchmarking.
+
+        Args:
+            backend: ``"inductor"`` for TorchInductor (aliases: ``"torchinductor"``, ``"torch_inductor"``),
+                or ``"aitune"`` for NVIDIA AITune (CUDA only; requires ``pip install wtpsplit[aitune]``).
+            mode: Compilation mode (e.g. ``"reduce-overhead"``, ``"max-autotune"``).
+            fullgraph: Passed to :func:`torch.compile`.
+            dynamic: If ``True`` (default), allow varying sequence lengths across chunks.
+            **compile_kwargs: For ``inductor``, passed to :func:`torch.compile`. For ``aitune``, optional:
+                ``aitune_strategy`` (``"first_wins"``, ``"inductor_only"``, ``"highest_throughput"``),
+                ``aitune_batch_sizes``, ``aitune_max_batches``, ``aitune_calibration``, ``aitune_dry_run``.
+        """
+        try:
+            import torch
+        except ImportError:
+            raise ImportError("`torch` must be installed to use optimize().") from None
+
+        if self._torch_compiled:
+            return self
+
+        key = (backend or "inductor").lower().replace("-", "_")
+
+        if key in ("aitune", "ai_tune"):
+            aitune_kwargs = pop_aitune_kwargs(compile_kwargs)
+            if compile_kwargs:
+                raise TypeError(f"Unexpected keyword arguments for backend='aitune': {sorted(compile_kwargs)}")
+            self.model = apply_aitune(self.model, **aitune_kwargs)
+            self._torch_compiled = True
+            return self
+
+        if not hasattr(torch, "compile"):
+            raise RuntimeError("torch.compile requires PyTorch 2.0 or newer.")
+
+        if key in ("torch_inductor", "torchinductor"):
+            key = "inductor"
+
+        compile_backend = None if key in ("default", "none") else key
+
+        self.model = torch.compile(
+            self.model,
+            backend=compile_backend,
+            mode=mode,
+            fullgraph=fullgraph,
+            dynamic=dynamic,
+            **compile_kwargs,
+        )
+        self._torch_compiled = True
+        return self
 
     def __call__(self, attention_mask, hashed_ids=None, language_ids=None, input_ids=None):
         try:
@@ -69,19 +137,20 @@ class PyTorchWrapper:
         except ImportError:
             raise ImportError("`torch` must be installed to use PyTorch models!")
 
-        with torch.no_grad():
-            logits = (
-                self.model(
-                    input_ids=torch.from_numpy(input_ids).to(self.model.device) if input_ids is not None else None,
-                    hashed_ids=torch.from_numpy(hashed_ids).to(self.model.device) if hashed_ids is not None else None,
-                    attention_mask=torch.from_numpy(attention_mask).to(self.model.device),
-                    language_ids=(
-                        torch.from_numpy(language_ids).to(self.model.device) if language_ids is not None else None
-                    ),
-                )["logits"]
-                .cpu()
-                .numpy()
-            )
+        # inference_mode: stricter than no_grad(); best default for token-classification inference only.
+        with torch.inference_mode():
+            device = self.model.device
+            forward_kwargs = {
+                "attention_mask": torch.from_numpy(attention_mask).to(device),
+            }
+            if input_ids is not None:
+                forward_kwargs["input_ids"] = torch.from_numpy(input_ids).to(device)
+            if hashed_ids is not None:
+                forward_kwargs["hashed_ids"] = torch.from_numpy(hashed_ids).to(device)
+            if language_ids is not None:
+                forward_kwargs["language_ids"] = torch.from_numpy(language_ids).to(device)
+
+            logits = self.model(**forward_kwargs)["logits"].cpu().numpy()
 
         return {"logits": logits}
 

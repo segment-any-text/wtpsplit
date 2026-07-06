@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="wtpsplit",
-    version="2.2.1",
+    version="2.2.2",
     packages=find_packages(),
     description="Universal Robust, Efficient and Adaptable Sentence Segmentation",
     long_description=open("README.md", encoding="utf-8").read(),
@@ -25,6 +25,7 @@ setup(
         "adapters": ["adapters>=1.0.1"],
         "onnx-gpu": ["onnxruntime-gpu>=1.13.1"],
         "onnx-cpu": ["onnxruntime>=1.13.1"],
+        "aitune": ["aitune>=0.3.0", "requests"],
     },
     url="https://github.com/segment-any-text/wtpsplit",
     package_data={"wtpsplit": ["data/*"]},
