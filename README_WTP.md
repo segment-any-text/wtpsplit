@@ -2,6 +2,16 @@
 
 This doc details how to use the old `WtP` models. You should probably use [SaT](./README.md) instead.
 
+WtP is an optional, deprecated compatibility API retained for reproducing the
+ACL 2023 paper. Install its dependencies explicitly:
+The v3 API uses the same `language` and `domain` names as SaT; the old `lang_code` and `style` keywords remain deprecated aliases.
+
+```bash
+pip install "wtpsplit[legacy]"
+# source checkout:
+uv sync --locked --extra legacy --extra onnx-cpu
+```
+
 ## Usage
 
 ```python
@@ -15,16 +25,17 @@ wtp.half().to("cuda")
 # returns ["Hello ", "This is a test."]
 wtp.split("Hello This is a test.")
 
-# returns an iterator yielding a lists of sentences for every text
+# returns a list containing one sentence list per text
+# pass lazy=True to return an iterator for very large batches
 # do this instead of calling wtp.split on every text individually for much better performance
 wtp.split(["Hello This is a test.", "And some more texts..."])
 
-# if you're using a model with language adapters, also pass a `lang_code`
-wtp.split("Hello This is a test.", lang_code="en")
+# if you're using a model with language adapters, also pass a `language`
+wtp.split("Hello This is a test.", language="en")
 
 # depending on your usecase, adaptation to e.g. the Universal Dependencies style may give better results
 # this always requires a language code
-wtp.split("Hello This is a test.", lang_code="en", style="ud")
+wtp.split("Hello This is a test.", language="en", domain="ud")
 ```
 
 ## ONNX support
@@ -32,30 +43,30 @@ wtp.split("Hello This is a test.", lang_code="en", style="ud")
 You can enable ONNX inference for the `wtp-bert-*` models:
 
 ```python
-wtp = WtP("wtp-bert-mini", onnx_providers=["CUDAExecutionProvider"])
+wtp = WtP("wtp-bert-mini", ort_providers=["CUDAExecutionProvider"])
 ```
 
-This requires `onnxruntime` and `onnxruntime-gpu`. It should give a good speedup on GPU!
+Install either `wtpsplit[onnx-cpu]` or `wtpsplit[onnx-gpu]` for ONNX inference.
 
 ```python
->>> from wtpsplit import WtP
->>> texts = ["This is a sentence. This is another sentence."] * 1000
+from wtpsplit import WtP
+texts = ["This is a sentence. This is another sentence."] * 1000
 
 # PyTorch GPU
->>> model = WtP("wtp-bert-mini")
->>> model.half().to("cuda")
->>> %timeit list(model.split(texts))
-272 ms ± 16.1 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+model = WtP("wtp-bert-mini")
+model.half().to("cuda")
+# In IPython: %timeit list(model.split(texts))
+# 272 ms ± 16.1 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
 
 # onnxruntime GPU
->>> model = WtP("wtp-bert-mini", ort_providers=["CUDAExecutionProvider"])
->>> %timeit list(model.split(texts))
-198 ms ± 1.36 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+model = WtP("wtp-bert-mini", ort_providers=["CUDAExecutionProvider"])
+# In IPython: %timeit list(model.split(texts))
+# 198 ms ± 1.36 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
 ```
 
 Notes:
 - The `wtp-canine-*` models are currently not supported with ONNX because the pooling done by CANINE is not trivial to export. Ideas to solve this are very welcome!
-- This does not work with Python 3.7 because `onnxruntime` does not support the opset we need for py37.
+- wtpsplit requires Python 3.10 or newer.
 
 
 ## Available Models
@@ -106,15 +117,15 @@ WtP can adapt to the Universal Dependencies, OPUS100 or Ersatz corpus segmentati
 #### Punctuation Adaptation
 
 ```python
-# this requires a `lang_code`
+# this requires a `language`
 # check the paper or `wtp.mixtures` for supported styles
-wtp.split(text, lang_code="en", style="ud")
+wtp.split(text, language="en", domain="ud")
 ```
 
 This also allows changing the threshold, but inherently has higher thresholds values since it is not newline probablity anymore being thresholded:
 
 ```python
-wtp.split(text, lang_code="en", style="ud", threshold=0.7)
+wtp.split(text, language="en", domain="ud", threshold=0.7)
 ```
 
 To get the default threshold for a style:
@@ -138,15 +149,15 @@ __Get the newline or sentence boundary probabilities for a text:__
 wtp.predict_proba(text)
 
 # returns sentence boundary probabilities for the given style
-wtp.predict_proba(text, lang_code="en", style="ud")
+wtp.predict_proba(text, language="en", domain="ud")
 ```
 
 __Load a WtP model in [HuggingFace `transformers`](https://github.com/huggingface/transformers):__
 
 ```python
-# import wtpsplit.models to register the custom models 
+# import the legacy model module to register the custom models
 # (character-level BERT w/ hash embeddings and canine with language adapters)
-import wtpsplit.models
+import wtpsplit.legacy.models
 from transformers import AutoModelForTokenClassification
 
 model = AutoModelForTokenClassification.from_pretrained("benjamin/wtp-bert-mini") # or some other model name
@@ -159,6 +170,7 @@ Clone the repository:
 ```
 git clone https://github.com/bminixhofer/wtpsplit
 cd wtpsplit
+uv sync --locked --group research --extra legacy
 ```
 
 Create your data:
@@ -188,7 +200,7 @@ torch.save(
 Run adaptation:
 
 ```
-python3 wtpsplit/evaluation/adapt.py --model_path=benjamin/wtp-bert-mini --eval_data_path dummy-dataset.pth --include_langs=en
+uv run python wtpsplit/evaluation/adapt.py --model_path=benjamin/wtp-bert-mini --eval_data_path dummy-dataset.pth --include_langs=en
 ```
 
 This should print something like 
@@ -214,7 +226,7 @@ wtp = WtP(
     ),
 )
 
-wtp.split("your text here", lang_code="en", style="dummy-dataset")
+wtp.split("your text here", language="en", domain="dummy-dataset")
 ```
 
 ... and adjust the dataset name, language and model in the above to your needs.
@@ -224,7 +236,7 @@ wtp.split("your text here", lang_code="en", style="dummy-dataset")
 `configs/` contains the configs for the runs from the paper. We trained on a TPUv3-8. Launch training like this:
 
 ```
-python wtpsplit/train/train.py configs/<config_name>.json
+uv run python wtpsplit/train/train.py configs/your_config.json
 ```
 
 In addition:

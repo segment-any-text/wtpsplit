@@ -59,6 +59,10 @@ def _compare_case(ca, cb, case_name):
             errs.extend(_compare_splits(va, vb, f"{case_name}.{k}"))
         elif k == "proba":
             errs.extend(_compare_float_lists(va, vb, f"{case_name}.proba"))
+        elif k == "error" and isinstance(va, str) and isinstance(vb, str):
+            # Public v3 terminology changed without changing the underlying failure.
+            if va.replace("style_or_domain", "domain") != vb.replace("style_or_domain", "domain"):
+                errs.append(f"{case_name}.{k}: {va!r} != {vb!r}")
         else:
             if va != vb:
                 errs.append(f"{case_name}.{k}: {va!r} != {vb!r}")

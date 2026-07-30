@@ -4,8 +4,11 @@ build
 dist
 wandb
 output*
-data
-!data/iwslt_2012
+# Anchored to the repository root. Unanchored `data` also matched `wtpsplit/data`,
+# which made the `!wtpsplit/data/*.txt` negation below a no-op: git does not descend
+# into an excluded directory, so files inside it cannot be re-included.
+/data
+!/data/iwslt_2012
 .vscode
 __pycache__
 .ipynb_checkpoints
@@ -22,6 +25,16 @@ data_subset/**
 *.csv
 *.png
 *.txt
+!wtpsplit/data/*.txt
 *.log
 xlmr-*/**
 **/checkpoint-*/**
+
+# Keep small, reproducible research manifests under version control while
+# continuing to ignore corpora, model artifacts, and other generated data.
+!/data/
+/data/*
+!/data/manifests/
+/data/manifests/*
+!/data/manifests/*.csv
+!/data/manifests/*.json

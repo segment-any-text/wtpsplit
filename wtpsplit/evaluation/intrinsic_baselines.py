@@ -46,7 +46,7 @@ class Args:
 if __name__ == "__main__":
     (args,) = HfArgumentParser([Args]).parse_args_into_dataclasses()
 
-    eval_data = torch.load(args.eval_data_path)
+    eval_data = torch.load(args.eval_data_path, weights_only=True)
     eval_data = split_language_data(eval_data)
     results = {}
     indices = {}

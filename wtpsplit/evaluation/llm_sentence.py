@@ -562,7 +562,7 @@ def main(args):
 
     assert len(args.gap_char) == len(args.label_delimiter) == 1
 
-    eval_data = torch.load(eval_data_path)
+    eval_data = torch.load(eval_data_path, weights_only=True)
 
     save_str = (f"{args.model.split('/')[-1]}_k{args.k}_s{args.n_shots}").replace("/", "_")
 

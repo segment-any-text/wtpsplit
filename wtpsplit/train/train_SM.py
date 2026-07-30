@@ -1,9 +1,12 @@
+import gc
+import json
 import math
 import random
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from itertools import cycle
+from pathlib import Path
 from typing import Iterable, List, Sequence, Tuple
 
 import numpy as np
@@ -12,10 +15,20 @@ import transformers
 from datasets import Dataset
 from torch.utils.data import BatchSampler, ConcatDataset, DataLoader, SubsetRandomSampler
 from tqdm import tqdm
-from transformers import AutoTokenizer, HfArgumentParser, Trainer, TrainerCallback, TrainingArguments
+from transformers import (
+    AutoTokenizer,
+    HfArgumentParser,
+    Trainer,
+    TrainerCallback,
+    TrainingArguments,
+)
 
 import wandb
+from wtpsplit.char_head import CharacterDataCollator
+from wtpsplit.evaluation.diagnostics.boundary_ceiling import dominant_script, separator_for
 from wtpsplit.models import SubwordXLMForTokenClassification
+from wtpsplit.train.backbones import resolve_backbone
+from wtpsplit.train.sm_data import prepare_sentence_datasets
 from wtpsplit.utils import Constants
 
 
@@ -26,6 +39,33 @@ class Args:
     lim_lookahead: bool = False  # our "Lookahead" ablation
     without_pretraining: bool = False  # our "No pre-training" ablation
     no_sm_corruption: bool = False  # our "Only clean text" ablation
+    use_character_head: bool = False
+    balance_character_loss: bool = True
+    # Identity preserves a trained token classifier; raw encoders should use random.
+    character_head_init: str = "identity"
+    run_final_evaluation: bool = False
+    evaluation_only: bool = False
+    # Comma-separated optimizer steps to retain as model-only learning-curve
+    # checkpoints. This avoids saving every short interval during long pilots.
+    checkpoint_milestones: str = None
+    # Set these to train a backbone other than SaT/XLM-R (e.g. mmBERT for SaT 2). When
+    # `model_name_or_path` is given it overrides the stage-1 checkpoint that would
+    # otherwise be derived from `num_layers` and `lim_lookahead`.
+    model_name_or_path: str = None
+    tokenizer_name_or_path: str = None
+    data_path: str = "data/all_data_11_05-all.pth"
+    # Stage 2 configs should set this to "projected". The default preserves the
+    # Stage 3 priority ud -> opus100 -> nllb, with projected as a final fallback.
+    training_dataset: str = None
+    # Optional bounded-data controls for smoke tests. Production defaults retain every
+    # language and every training sentence.
+    languages: str = None  # comma-separated language codes
+    max_train_sentences_per_dataset: int = None
+    max_eval_instances_per_dataset: int = 200
+    # Total lookahead budget, divided across layers (see SubwordXLMConfig.lookahead).
+    # Only applies on the `model_name_or_path` route; the SaT checkpoints below already
+    # bake their lookahead setting into the pretrained weights.
+    lookahead: int = None
 
 
 # Parsing command line arguments or JSON config files as needed
@@ -36,92 +76,89 @@ if len(sys.argv) > 1 and sys.argv[1].endswith(".json"):
 else:
     args, training_args = parser.parse_args_into_dataclasses()
 
-data_path = "data/all_data_11_05-all.pth"
-all_data = torch.load(data_path)
+# Model/head initialisation happens before Trainer is constructed, so Trainer's
+# internal seed setup is too late for raw-backbone comparisons. Seed every RNG
+# before loading the model and before stochastic sentence packing.
+if training_args.full_determinism:
+    transformers.enable_full_determinism(training_args.seed)
+else:
+    transformers.set_seed(training_args.seed)
+
+data_path = args.data_path
+all_data = torch.load(data_path, weights_only=True)
 
 block_size = args.block_size
+selected_languages = set(args.languages.split(",")) if args.languages else None
 
-train_sentences = defaultdict(lambda: defaultdict(list))
-test_sentences = defaultdict(lambda: defaultdict(list))
+if args.max_train_sentences_per_dataset is not None and args.max_train_sentences_per_dataset < 1:
+    raise ValueError("`max_train_sentences_per_dataset` must be at least 1.")
+if args.max_eval_instances_per_dataset < 1:
+    raise ValueError("`max_eval_instances_per_dataset` must be at least 1.")
+
+checkpoint_milestones = (
+    {int(step) for step in args.checkpoint_milestones.split(",")}
+    if args.checkpoint_milestones
+    else set()
+)
+if any(step < 1 for step in checkpoint_milestones):
+    raise ValueError("`checkpoint_milestones` must contain positive optimizer steps.")
+if checkpoint_milestones and max(checkpoint_milestones) > training_args.max_steps:
+    raise ValueError("`checkpoint_milestones` cannot exceed `max_steps`.")
+
 
 punct_chars = set(Constants.PUNCTUATION_CHARS)
 
-
-for lang_code in tqdm(all_data, desc="Loading data"):
-    if "-" in lang_code or "_" in lang_code:
-        # we only train on monolingual data in SM, so no "en-de" code-switching for example!
-        pass
-    elif (
-        "ud" in all_data[lang_code]["sentence"]
-        and all_data[lang_code]["sentence"]["ud"]["meta"]["train_data"] is not None
-    ):
-        train_data = all_data[lang_code]["sentence"]["ud"]["meta"]["train_data"]
-
-        if len(train_data) < 10000:
-            # some languages have an insufficient number of sentences to fill a single batch
-            # this is just a quick way to upsample these so we don't run into problems later
-            # later we will use a uniform round-robin sampler for all languages
-            train_data = train_data * (10000 // len(train_data) + 1)
-
-        train_sentences[lang_code]["uncorrupted"].extend(train_data)
-
-        if not args.no_sm_corruption:
-            train_data = all_data[lang_code]["sentence"]["ud-corrupted-asr"]["meta"]["train_data"]
-
-            if len(train_data) < 5000:
-                # some languages have an insufficient number of sentences to fill a single batch
-                # this is just a quick way to upsample these so we don't run into problems later
-                # later we will use a uniform round-robin sampler for all languages
-                train_data = train_data * (10000 // len(train_data) + 1)
-
-            train_sentences[lang_code]["corrupted-asr"].extend(train_data)
-
-            train_data = all_data[lang_code]["sentence"]["ud-corrupted-social-media"]["meta"]["train_data"]
-
-            if len(train_data) < 5000:
-                # some languages have an insufficient number of sentences to fill a single batch
-                # this is just a quick way to upsample these so we don't run into problems later
-                # later we will use a uniform round-robin sampler for all languages
-                train_data = train_data * (10000 // len(train_data) + 1)
-
-            train_sentences[lang_code]["corrupted-social-media"].extend(train_data)
-
-    elif (
-        "opus100" in all_data[lang_code]["sentence"]
-        and all_data[lang_code]["sentence"]["opus100"]["meta"]["train_data"] is not None
-    ):
-        train_data = all_data[lang_code]["sentence"]["opus100"]["meta"]["train_data"]
-        train_sentences[lang_code]["uncorrupted"].extend(train_data)
-
-        if not args.no_sm_corruption:
-            train_data = all_data[lang_code]["sentence"]["opus100-corrupted-asr"]["meta"]["train_data"]
-            train_sentences[lang_code]["corrupted-asr"].extend(train_data)
-
-            train_data = all_data[lang_code]["sentence"]["opus100-corrupted-social-media"]["meta"]["train_data"]
-            train_sentences[lang_code]["corrupted-social-media"].extend(train_data)
-    else:
-        train_data = all_data[lang_code]["sentence"]["nllb"]["meta"]["train_data"]
-        train_sentences[lang_code]["uncorrupted"].extend(train_data)
-
-        if not args.no_sm_corruption:
-            train_data = all_data[lang_code]["sentence"]["nllb-corrupted-asr"]["meta"]["train_data"]
-            train_sentences[lang_code]["corrupted-asr"].extend(train_data)
-
-            train_data = all_data[lang_code]["sentence"]["nllb-corrupted-social-media"]["meta"]["train_data"]
-            train_sentences[lang_code]["corrupted-social-media"].extend(train_data)
-
-    for dataset in all_data[lang_code]["sentence"]:
-        if any(dataset.startswith(x) for x in ["short-sequences", "legal"]):
-            continue
-
-        test_data = all_data[lang_code]["sentence"][dataset]["data"]
-        test_sentences[lang_code][dataset].extend(test_data[:200])
+train_sentences, test_sentences = prepare_sentence_datasets(
+    all_data,
+    selected_languages=selected_languages,
+    requested_training_dataset=args.training_dataset,
+    no_sm_corruption=args.no_sm_corruption,
+    max_train_sentences_per_dataset=args.max_train_sentences_per_dataset,
+    max_eval_instances_per_dataset=args.max_eval_instances_per_dataset,
+)
 
 
-tokenizer_checkpoint = "xlm-roberta-base"
+def evaluation_script_sample(datasets, limit=2000):
+    """Collect enough raw evaluation text to classify a language's script."""
 
-if args.without_pretraining:
-    model_checkpoint = "xlm-roberta-base"
+    parts = []
+    length = 0
+    for instances in datasets.values():
+        for instance in instances:
+            sentences = [instance] if isinstance(instance, str) else instance
+            for sentence in sentences:
+                if not isinstance(sentence, str):
+                    continue
+                parts.append(sentence)
+                length += len(sentence)
+                if length >= limit:
+                    return "".join(parts)[:limit]
+    return "".join(parts)
+
+
+# Token-head Arrow datasets omit raw text, while character-head datasets retain
+# it for collation. Resolve scripts before packing so the final report has the
+# same language/script grouping for every 2x2 arm.
+evaluation_scripts = {
+    lang_code: dominant_script(evaluation_script_sample(datasets))
+    for lang_code, datasets in test_sentences.items()
+}
+
+# The serialized corpus is large and every selected sentence is now referenced by the
+# bounded train/test dictionaries. Release the original nested dictionary before building
+# token blocks so smoke runs do not retain an unnecessary 843 MB object graph.
+del all_data
+gc.collect()
+
+
+tokenizer_checkpoint = args.tokenizer_name_or_path or "facebookAI/xlm-roberta-base"
+
+if args.model_name_or_path:
+    # Explicit checkpoint wins; this is the path used for non-XLM-R backbones, where the
+    # SaT stage-1 checkpoint names below do not apply.
+    model_checkpoint = args.model_name_or_path
+elif args.without_pretraining:
+    model_checkpoint = "facebookAI/xlm-roberta-base"
 elif args.num_layers == 1:
     if not args.lim_lookahead:
         model_checkpoint = "segment-any-text/sat-1l-no-limited-lookahead"
@@ -155,24 +192,50 @@ print(model_checkpoint)
 tokenizer = AutoTokenizer.from_pretrained(tokenizer_checkpoint)
 assert isinstance(tokenizer, transformers.PreTrainedTokenizerFast)
 
-if args.num_layers == 3 and args.without_pretraining:
+if args.model_name_or_path:
+    # Non-SaT backbone (e.g. mmBERT). Pick the wrapper that understands lookahead rather
+    # than letting Auto* hand back the stock transformers class, and trim the pretrained
+    # stack to the requested depth the same way the SaT ladder is built from XLM-R.
+    _, model_class, _ = resolve_backbone(model_checkpoint)
+    model = model_class.from_pretrained(
+        model_checkpoint,
+        num_labels=1,
+        ignore_mismatched_sizes=True,
+        num_hidden_layers=args.num_layers,
+        lookahead=args.lookahead,
+        use_character_head=args.use_character_head,
+        balance_character_loss=args.balance_character_loss,
+        character_head_init=args.character_head_init,
+    )
+elif args.num_layers == 3 and args.without_pretraining:
     # special case for one of our ablations, where we trim XLM-R (without any of our newline pretraining) to 3 layers
     model = SubwordXLMForTokenClassification.from_pretrained(
         model_checkpoint,
         num_labels=1,
         ignore_mismatched_sizes=True,
         num_hidden_layers=3,
+        use_character_head=args.use_character_head,
+        balance_character_loss=args.balance_character_loss,
+        character_head_init=args.character_head_init,
     )
 else:
     model = SubwordXLMForTokenClassification.from_pretrained(
         model_checkpoint,
         num_labels=1,
         ignore_mismatched_sizes=True,
+        use_character_head=args.use_character_head,
+        balance_character_loss=args.balance_character_loss,
+        character_head_init=args.character_head_init,
     )
 
 
 def tokenize_and_get_labels(sentences, lang_code, dataset_name):
-    separator = Constants.SEPARATORS.get(lang_code, " ")
+    # Stage 2 uses ISO language/script identifiers (for example `zho_Hans` and
+    # `bod_Tibt`) that are absent from the legacy 89-language separator table.
+    # Resolve their ISO-639-1/macrolanguage where possible and use the observed
+    # script only as a fallback. This preserves Thai's sentence-boundary spaces
+    # while avoiding artificial spaces for CJK, Khmer, Myanmar, and Tibetan.
+    separator = separator_for(lang_code, dominant_script("".join(sentences)))
 
     joined_sentence = ""
     sentence_start_positions = []
@@ -202,28 +265,64 @@ def tokenize_and_get_labels(sentences, lang_code, dataset_name):
         truncation=False,
     )
 
-    tokens = tokenized_input.tokens()
     offsets = tokenized_input["offset_mapping"]
-    sentence_ending_labels = [0] * len(tokens)
+    if args.use_character_head:
+        # The final split is free because decoding always appends the document tail.
+        labels = [0] * len(joined_sentence)
+        for position in sentence_start_positions[:-1]:
+            labels[position] = 1
+    else:
+        tokens = tokenized_input.tokens()
+        labels = [0] * len(tokens)
+        labels[-1] = 1
+        sentence_index = 0
 
-    sentence_ending_labels[-1] = 1
-    sentence_index = 0
+        for i in range(len(offsets)):
+            if offsets[i][0] > sentence_start_positions[sentence_index]:
+                labels[i - 1] = 1
+                sentence_index += 1
 
-    for i in range(len(offsets)):
-        if offsets[i][0] > sentence_start_positions[sentence_index]:
-            sentence_ending_labels[i - 1] = 1
-            sentence_index += 1
+    # Derived from the tokenizer, not hardcoded: XLM-R uses cls=0/sep=2 but mmBERT uses
+    # cls=2/sep=1, so literals here would mislabel every chunk without raising.
+    input_ids = [tokenizer.cls_token_id] + tokenized_input["input_ids"] + [tokenizer.sep_token_id]
+    if not args.use_character_head:
+        labels = [0] + labels + [0]
 
-    input_ids = [0] + tokenized_input["input_ids"] + [2]
-    labels = [0] + sentence_ending_labels + [0]
-
-    return input_ids, labels
+    return input_ids, labels, joined_sentence, offsets
 
 
-def pack_sentences(input_data_dict, block_size):
-    packed_data = defaultdict(lambda: defaultdict(lambda: {"input_ids": [], "attention_mask": [], "labels": []}))
+def pack_sentences(input_data_dict, block_size, *, show_progress=True):
+    def empty_columns():
+        columns = {"input_ids": [], "attention_mask": [], "labels": []}
+        if args.use_character_head:
+            columns.update({"text": [], "offset_mapping": []})
+        return columns
 
-    for lang_code in tqdm(input_data_dict):
+    packed_data = defaultdict(lambda: defaultdict(empty_columns))
+
+    def append_block(lang_code, dataset_name, sentences):
+        input_ids, labels, text, offsets = tokenize_and_get_labels(sentences, lang_code, dataset_name)
+        num_to_pad = block_size - len(input_ids)
+        attention_mask = [1] * len(input_ids) + [0] * num_to_pad
+        input_ids += [tokenizer.pad_token_id] * num_to_pad
+        if not args.use_character_head:
+            labels += [-100] * num_to_pad
+
+        assert len(input_ids) == block_size, len(input_ids)
+        if not args.use_character_head:
+            assert len(input_ids) == len(labels), (len(input_ids), len(labels))
+        else:
+            assert len(labels) == len(text), (len(labels), len(text))
+
+        columns = packed_data[lang_code][dataset_name]
+        columns["input_ids"].append(input_ids)
+        columns["attention_mask"].append(attention_mask)
+        columns["labels"].append(labels)
+        if args.use_character_head:
+            columns["text"].append(text)
+            columns["offset_mapping"].append(offsets)
+
+    for lang_code in tqdm(input_data_dict, disable=not show_progress):
         for dataset_name, sentences in input_data_dict[lang_code].items():
             if dataset_name == "corrupted-social-media":
                 p_add_to_block = 0.5
@@ -245,22 +344,7 @@ def pack_sentences(input_data_dict, block_size):
                     token_count += num_sentence_tokens
                 else:
                     if one_block_sentences:
-                        input_ids, labels = tokenize_and_get_labels(one_block_sentences, lang_code, dataset_name)
-
-                        num_to_pad = block_size - len(input_ids)
-                        attention_mask = [1] * len(input_ids) + [0] * num_to_pad
-                        input_ids += [tokenizer.pad_token_id] * num_to_pad
-                        labels += [-100] * num_to_pad
-
-                        assert len(input_ids) == block_size, len(input_ids)
-                        assert len(input_ids) == len(labels), (
-                            len(input_ids),
-                            len(labels),
-                        )
-
-                        packed_data[lang_code][dataset_name]["input_ids"].append(input_ids)
-                        packed_data[lang_code][dataset_name]["attention_mask"].append(attention_mask)
-                        packed_data[lang_code][dataset_name]["labels"].append(labels)
+                        append_block(lang_code, dataset_name, one_block_sentences)
 
                     if num_sentence_tokens > block_size - 4:
                         one_block_sentences = []
@@ -270,19 +354,7 @@ def pack_sentences(input_data_dict, block_size):
                         token_count = num_sentence_tokens
 
             if one_block_sentences:
-                input_ids, labels = tokenize_and_get_labels(one_block_sentences, lang_code, dataset_name)
-
-                num_to_pad = block_size - len(input_ids)
-                attention_mask = [1] * len(input_ids) + [0] * num_to_pad
-                input_ids += [tokenizer.pad_token_id] * num_to_pad
-                labels += [-100] * num_to_pad
-
-                assert len(input_ids) == block_size, len(input_ids)
-                assert len(input_ids) == len(labels), (len(input_ids), len(labels))
-
-                packed_data[lang_code][dataset_name]["input_ids"].append(input_ids)
-                packed_data[lang_code][dataset_name]["attention_mask"].append(attention_mask)
-                packed_data[lang_code][dataset_name]["labels"].append(labels)
+                append_block(lang_code, dataset_name, one_block_sentences)
 
             assert len(packed_data[lang_code][dataset_name]["input_ids"]) == len(
                 packed_data[lang_code][dataset_name]["labels"]
@@ -291,20 +363,64 @@ def pack_sentences(input_data_dict, block_size):
     return packed_data
 
 
-packed_train_data = pack_sentences(train_sentences, block_size)
-packed_test_data = pack_sentences(test_sentences, block_size)
-test_dataset = {lang_code: defaultdict(dict) for lang_code in packed_test_data}
+def pack_language_datasets(input_data_dict, block_size, *, description):
+    """Pack and Arrow-convert one language at a time to bound Python-object overlap."""
+    datasets_by_language = {}
+    for lang_code in tqdm(list(input_data_dict), desc=description):
+        language_sentences = input_data_dict.pop(lang_code)
+        packed_language = pack_sentences(
+            {lang_code: language_sentences},
+            block_size,
+            show_progress=False,
+        )[lang_code]
+        datasets_by_language[lang_code] = {
+            dataset_name: Dataset.from_dict(columns)
+            for dataset_name, columns in packed_language.items()
+        }
+        del language_sentences, packed_language
+        gc.collect()
+    return datasets_by_language
 
-for lang_code in packed_test_data:
-    for dataset_name in packed_test_data[lang_code]:
-        test_dataset[lang_code][dataset_name] = Dataset.from_dict(packed_test_data[lang_code][dataset_name])
+
+if args.evaluation_only:
+    train_dataset_by_language = {}
+    del train_sentences
+    gc.collect()
+else:
+    train_dataset_by_language = pack_language_datasets(
+        train_sentences,
+        block_size,
+        description="Packing train languages",
+    )
+    del train_sentences
+    gc.collect()
+
+# Final evaluation is intentionally packed after training. Keeping the full packed
+# train and evaluation corpora alive together pushed this workstation to roughly
+# 7 GB RSS and left too little headroom while Transformers serialized a checkpoint.
+# W&B's during-training callback still needs eager evaluation datasets.
+use_wandb = "wandb" in training_args.report_to
+needs_training_evaluation = use_wandb and not args.evaluation_only
+if needs_training_evaluation:
+    test_dataset = pack_language_datasets(
+        test_sentences,
+        block_size,
+        description="Packing evaluation languages",
+    )
+    del test_sentences
+    gc.collect()
+    print("dataset_lifecycle evaluation_packing=eager")
+else:
+    test_dataset = None
+    print("dataset_lifecycle evaluation_packing=deferred")
+    if not args.run_final_evaluation:
+        del test_sentences
+        gc.collect()
 
 experiment_name = model_checkpoint.split("/")[-1]
 
 if args.no_sm_corruption:
     experiment_name += "-no-corruption"
-
-training_args.output_dir = experiment_name
 
 
 def compute_prf(true_values, predicted_values):
@@ -320,7 +436,9 @@ def compute_prf(true_values, predicted_values):
 
 
 def sigmoid_array(x):
-    return 1 / (1 + np.exp(-x))
+    # Extreme masked-BCE logits are expected after training. Clipping only
+    # changes values that already round to 0/1 while avoiding exp overflow.
+    return 1 / (1 + np.exp(-np.clip(x, -80, 80)))
 
 
 def compute_metrics(p):
@@ -370,20 +488,36 @@ class MultiDatasetEvalCallback(TrainerCallback):
                         )
 
 
-multi_dataset_eval_callback = MultiDatasetEvalCallback(test_dataset)
+class MilestoneSaveCallback(TrainerCallback):
+    """Request checkpoints only at explicitly selected optimizer steps."""
 
-train_datasets = []
+    def __init__(self, milestones):
+        self.milestones = frozenset(milestones)
 
-for lang_code in packed_train_data:
-    for dataset_name in packed_train_data[lang_code]:
-        train_datasets.append(Dataset.from_dict(packed_train_data[lang_code][dataset_name]))
+    def on_step_end(self, args, state, control, **kwargs):
+        if state.global_step in self.milestones:
+            control.should_save = True
+        return control
 
-random.shuffle(train_datasets)
 
-train_datasets = ConcatDataset(train_datasets)
+if args.evaluation_only:
+    train_datasets = None
+else:
+    train_datasets = []
+    for language_data in train_dataset_by_language.values():
+        train_datasets.extend(language_data.values())
+    random.shuffle(train_datasets)
+    train_datasets = ConcatDataset(train_datasets)
+del train_dataset_by_language
+gc.collect()
 
-run = wandb.init(project="sentence")
-wandb.run.name = experiment_name
+run = wandb.init(project="sentence") if use_wandb else None
+if run is not None:
+    run.name = experiment_name
+if args.use_character_head:
+    # The collator consumes raw text and offset mappings before the batch reaches the
+    # model; Trainer must not discard those non-forward columns first.
+    training_args.remove_unused_columns = False
 
 # args = TrainingArguments(
 #     output_dir=experiment_name,
@@ -480,6 +614,13 @@ class DistributedRoundRobinBatchSampler:
 
 
 class CustomTrainer(Trainer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The SaT wrappers accept ``**kwargs`` to support backbone-specific inputs, but
+        # they do not consume Transformers 5's loss-normalisation kwarg. If left at the
+        # inferred default, Trainer forwards it through the wrapper into the backbone.
+        self.model_accepts_loss_kwargs = False
+
     def get_train_dataloader(self) -> DataLoader:
         dataset = self.train_dataset
 
@@ -512,8 +653,171 @@ trainer = CustomTrainer(
     train_dataset=train_datasets,
     eval_dataset=None,
     compute_metrics=compute_metrics,
-    tokenizer=tokenizer,
-    callbacks=[multi_dataset_eval_callback],
+    data_collator=CharacterDataCollator() if args.use_character_head else None,
+    processing_class=tokenizer,
+    callbacks=[
+        *([MultiDatasetEvalCallback(test_dataset)] if needs_training_evaluation else []),
+        *([MilestoneSaveCallback(checkpoint_milestones)] if checkpoint_milestones else []),
+    ],
 )
 
-trainer.train()
+if not args.evaluation_only:
+    trainer.train()
+    # Checkpointing is complete. Final prediction needs only the model and collator,
+    # so release the full training corpus and optimizer before packing held-out data.
+    trainer.train_dataset = None
+    trainer.optimizer = None
+    trainer.lr_scheduler = None
+    train_datasets = None
+    model.zero_grad(set_to_none=True)
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    print("dataset_lifecycle training_state=released")
+
+if torch.cuda.is_available():
+    gib = 1024**3
+    print(
+        "cuda_peak_memory "
+        f"allocated={torch.cuda.max_memory_allocated() / gib:.3f}GiB "
+        f"reserved={torch.cuda.max_memory_reserved() / gib:.3f}GiB"
+    )
+
+if args.run_final_evaluation:
+    if test_dataset is None:
+        test_dataset = pack_language_datasets(
+            test_sentences,
+            block_size,
+            description="Packing evaluation languages",
+        )
+        del test_sentences
+        gc.collect()
+        print("dataset_lifecycle evaluation_packing=materialized")
+
+    all_probabilities = []
+    all_labels = []
+    language_probabilities = defaultdict(list)
+    language_labels = defaultdict(list)
+    language_scripts = defaultdict(Counter)
+    dataset_count = 0
+    for lang_code in test_dataset:
+        for eval_dataset in test_dataset[lang_code].values():
+            prediction = trainer.predict(eval_dataset)
+            logits = np.asarray(prediction.predictions).reshape(-1)
+            labels = np.asarray(prediction.label_ids).reshape(-1)
+            keep = labels != -100
+            kept_probabilities = sigmoid_array(logits[keep])
+            kept_labels = labels[keep]
+            all_probabilities.append(kept_probabilities)
+            all_labels.append(kept_labels)
+            language_probabilities[lang_code].append(kept_probabilities)
+            language_labels[lang_code].append(kept_labels)
+            language_scripts[lang_code][evaluation_scripts[lang_code]] += len(kept_labels)
+            dataset_count += 1
+
+    probabilities = np.concatenate(all_probabilities)
+    labels = np.concatenate(all_labels)
+
+    def metrics_at(group_probabilities, group_labels, threshold):
+        precision, recall, f1 = compute_prf(
+            group_labels,
+            (group_probabilities > threshold).astype(int),
+        )
+        return {
+            "threshold": float(threshold),
+            "precision": float(precision),
+            "recall": float(recall),
+            "f1": float(f1),
+        }
+
+    thresholds = np.unique(
+        np.concatenate(
+            [
+                np.geomspace(1e-4, 1e-2, 20),
+                np.linspace(0.01, 0.99, 99),
+            ]
+        )
+    )
+
+    def summarize_group(group_probabilities, group_labels):
+        swept = [
+            metrics_at(group_probabilities, group_labels, threshold)
+            for threshold in thresholds
+        ]
+        return {
+            "positions": int(group_labels.size),
+            "positives": int(group_labels.sum()),
+            "fixed_0.25": metrics_at(group_probabilities, group_labels, 0.25),
+            "best": max(swept, key=lambda result: result["f1"]),
+        }
+
+    global_metrics = summarize_group(probabilities, labels)
+    global_threshold = global_metrics["best"]["threshold"]
+    languages = {}
+    script_probabilities = defaultdict(list)
+    script_labels = defaultdict(list)
+    for lang_code in sorted(language_probabilities):
+        lang_probabilities = np.concatenate(language_probabilities[lang_code])
+        lang_labels = np.concatenate(language_labels[lang_code])
+        script = (
+            language_scripts[lang_code].most_common(1)[0][0]
+            if language_scripts[lang_code]
+            else "UNKNOWN"
+        )
+        languages[lang_code] = {
+            "script": script,
+            **summarize_group(lang_probabilities, lang_labels),
+            "at_global_best": metrics_at(
+                lang_probabilities,
+                lang_labels,
+                global_threshold,
+            ),
+        }
+        script_probabilities[script].append(lang_probabilities)
+        script_labels[script].append(lang_labels)
+
+    scripts = {}
+    for script in sorted(script_probabilities):
+        group_probabilities = np.concatenate(script_probabilities[script])
+        group_labels = np.concatenate(script_labels[script])
+        scripts[script] = {
+            **summarize_group(group_probabilities, group_labels),
+            "at_global_best": metrics_at(
+                group_probabilities,
+                group_labels,
+                global_threshold,
+            ),
+        }
+
+    language_scores = [
+        result["at_global_best"]
+        for result in languages.values()
+        if result["positives"] > 0
+    ]
+    macro_language_at_global_best = {
+        metric: float(np.mean([score[metric] for score in language_scores]))
+        for metric in ("precision", "recall", "f1")
+    }
+    macro_language_at_global_best["threshold"] = global_threshold
+
+    detailed_summary = {
+        "datasets": dataset_count,
+        **global_metrics,
+        "macro_language_at_global_best": macro_language_at_global_best,
+        "scripts": scripts,
+        "languages": languages,
+    }
+    output_path = Path(training_args.output_dir) / "final_eval.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(detailed_summary, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    summary = {
+        key: value
+        for key, value in detailed_summary.items()
+        if key != "languages"
+    }
+    summary["languages"] = len(languages)
+    summary["details_path"] = str(output_path)
+    print(f"final_eval {json.dumps(summary, sort_keys=True)}")

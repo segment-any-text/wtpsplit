@@ -19,7 +19,7 @@ import adapters
 import wtpsplit.models  # noqa: F401
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture
 from wtpsplit.evaluation.intrinsic_baselines import split_language_data
-from wtpsplit.extract import PyTorchWrapper, extract
+from wtpsplit.extract import PyTorchWrapper, extract, outputs_character_logits
 from wtpsplit.models import SubwordXLMConfig, SubwordXLMForTokenClassification
 from wtpsplit.utils import Constants, token_to_char_probs
 
@@ -85,7 +85,7 @@ def process_logits(text, model, lang_code, args):
             if current_offsets_mapping is not None:
                 current_offsets_mapping = current_offsets_mapping[0]
 
-            if "xlm" in model.config.model_type:
+            if not outputs_character_logits(model.config):
                 tokens = tokenizer.tokenize(short_seq, verbose=False)
 
                 char_probs = token_to_char_probs(
@@ -114,7 +114,7 @@ def process_logits(text, model, lang_code, args):
         if offsets_mapping is not None:
             offsets_mapping = offsets_mapping[0]
 
-        if "xlm" in model.config.model_type:
+        if not outputs_character_logits(model.config):
             tokens = tokenizer.tokenize(text, verbose=False)
 
             special_tokens = [tokenizer.cls_token, tokenizer.sep_token, tokenizer.pad_token]
@@ -314,7 +314,7 @@ def main(args):
         save_model_path = args.adapter_path
     save_str = f"{save_model_path.replace('/', '_')}_b{args.block_size}_s{args.stride}"
 
-    eval_data = torch.load(args.eval_data_path)
+    eval_data = torch.load(args.eval_data_path, weights_only=True)
     if "canine" in args.model_path and "no-adapters" not in args.model_path:
         eval_data = split_language_data(eval_data)
     if args.valid_text_path is not None:

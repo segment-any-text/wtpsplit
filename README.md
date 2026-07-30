@@ -27,26 +27,28 @@ pip install wtpsplit[onnx-cpu]
 from wtpsplit import SaT
 
 sat = SaT("sat-3l")
-# optionally run on GPU for better performance
-# also supports TPUs via e.g. sat.to("xla:0"), in that case pass `pad_last_batch=True` to sat.split
-sat.half().to("cuda")
+# Select a PyTorch device at construction time:
+# sat = SaT("sat-3l", device="cuda")
+# sat = SaT("sat-3l", device="mps")  # Apple Silicon
 
 sat.split("This is a test This is another test.")
 # returns ["This is a test ", "This is another test."]
 
+result = sat.segment("This is a test This is another test.")
+# result.sentences, result.spans, result.probabilities, and result.confidences are available
+
 # do this instead of calling sat.split on every text individually for much better performance
 sat.split(["This is a test This is another test.", "And some more texts..."])
-# returns an iterator yielding lists of sentences for every text
+# returns a list containing one sentence list per text
+# pass lazy=True to return an iterator for very large batches
 
 # use our '-sm' models for general sentence segmentation tasks
 sat_sm = SaT("sat-3l-sm")
-sat_sm.half().to("cuda") # optional, see above
 sat_sm.split("this is a test this is another test")
 # returns ["this is a test ", "this is another test"]
 
 # use trained lora modules for strong adaptation to language & domain/style
-sat_adapted = SaT("sat-3l", style_or_domain="ud", language="en")
-sat_adapted.half().to("cuda") # optional, see above
+sat_adapted = SaT("sat-3l", domain="ud", language="en")
 sat_adapted.split("This is a test This is another test.")
 # returns ['This is a test ', 'This is another test']
 ```
@@ -60,19 +62,19 @@ sat = SaT("sat-3l-sm", ort_providers=["CUDAExecutionProvider", "CPUExecutionProv
 ```
 
 ```python
->>> from wtpsplit import SaT
->>> texts = ["This is a sentence. This is another sentence."] * 1000
+from wtpsplit import SaT
+texts = ["This is a sentence. This is another sentence."] * 1000
 
 # PyTorch GPU
->>> model_pytorch = SaT("sat-3l-sm")
->>> model_pytorch.half().to("cuda");
->>> %timeit list(model_pytorch.split(texts))
+model_pytorch = SaT("sat-3l-sm")
+model_pytorch.half().to("cuda")
+# In IPython: %timeit model_pytorch.split(texts)
 # 144 ms ± 252 μs per loop (mean ± std. dev. of 7 runs, 10 loops each)
 # quite fast already, but...
 
 # onnxruntime GPU
->>> model_ort = SaT("sat-3l-sm", ort_providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
->>> %timeit list(model_ort.split(texts))
+model_ort = SaT("sat-3l-sm", ort_providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
+# In IPython: %timeit model_ort.split(texts)
 # 94.9 ms ± 165 μs per loop (mean ± std. dev. of 7 runs, 10 loops each
 # ...this should be ~50% faster! (tested on RTX 3090)
 ```
@@ -81,9 +83,9 @@ If you wish to use LoRA in combination with an ONNX model:
 
 - Run `scripts/export_to_onnx_sat.py` with `use_lora: True` and an appropriate `output_dir: <OUTPUT_DIR>`.
   - If you have a local LoRA module, use `lora_path`.
-  - If you wish to load a LoRA module from the HuggingFace hub, use `style_or_domain` and `language`.
+  - If you wish to load a LoRA module from the HuggingFace hub, use `domain` and `language`.
 - Load the ONNX model with merged LoRA weights:
-  `sat = SaT(<OUTPUT_DIR>, onnx_providers=["CUDAExecutionProvider", "CPUExecutionProvider"])`
+  `sat = SaT(<OUTPUT_DIR>, ort_providers=["CUDAExecutionProvider", "CPUExecutionProvider"])`
 
 ## Available Models
 
@@ -118,8 +120,7 @@ For comparison, here the English scores of some other tools:
 | Punkt (`nltk.sent_tokenize`)                           |          92.2 |
 | [WtP (3l)](https://huggingface.co/benjamin/wtp-canine-s-3l) |          93.9 |
 
-Note that this library also supports previous [`WtP`](https://arxiv.org/abs/2305.18893) models.
-You can use them in essentially the same way as `SaT`models:
+The legacy [`WtP`](https://arxiv.org/abs/2305.18893) models remain available for reproducibility. Install them with `pip install "wtpsplit[legacy]"`, then use them in essentially the same way as `SaT` models:
 
 ```python
 from wtpsplit import WtP
@@ -223,7 +224,7 @@ sat.split(text, max_length=100, prior_type="gaussian",
 When using LoRA with a language, this happens automatically:
 
 ```python
-sat = SaT("sat-3l", style_or_domain="ud", language="de")
+sat = SaT("sat-3l", domain="ud", language="de")
 sat.split(text, max_length=150, prior_type="gaussian")  # auto-uses German defaults
 ```
 
@@ -258,12 +259,12 @@ Load LoRA modules like this:
 
 ```python
 
-# requires both lang_code and style_or_domain
+# requires both language and domain
 # for available ones, check the <model_repository>/loras folder
-sat_lora = SaT("sat-3l", style_or_domain="ud", language="en")
+sat_lora = SaT("sat-3l", domain="ud", language="en")
 sat_lora.split("Hello this is a test But this is different now Now the next one starts looool")
 # now for a highly distinct domain
-sat_lora_distinct = SaT("sat-12l", style_or_domain="code-switching", language="es-en")
+sat_lora_distinct = SaT("sat-12l", domain="code-switching", language="es-en")
 sat_lora_distinct.split("in the morning over there cada vez que yo decía algo él me decía algo")
 ```
 
@@ -295,87 +296,92 @@ from transformers import AutoModelForTokenClassification
 model = AutoModelForTokenClassification.from_pretrained("segment-any-text/sat-3l-sm") # or some other model name; see https://huggingface.co/segment-any-text
 ```
 
-### Adapt to your own corpus via LoRA
+### Local and in-process LoRA adapters
 
-Our models can be efficiently adapted via LoRA in a powerful way. Only 10-100 training segmented training sentences should already improve performance considerably. To do so:
-
-Clone the repository and install requirements:
-
-```
-git clone https://github.com/segment-any-text/wtpsplit
-cd wtpsplit
-pip install -r requirements.txt
-pip install adapters==0.2.1 --no-dependencies
-cd ..
-```
-
-1. Create data in this format:
+Pretrained LoRA adapters can be selected with `domain` and `language`, or loaded from a local adapter directory with `lora_path`. wtpsplit 3 merges these weights directly into the model, so inference does not require AdapterHub.
 
 ```python
-import torch
+sat_adapted = SaT("sat-3l", domain="ud", language="en")
+sat_adapted.split("This is a test This is another test.")
+```
 
-torch.save(
-    {
-        "language_code": {
-            "sentence": {
-                "dummy-dataset": {
-                    "meta": {
-                        "train_data": ["train sentence 1", "train sentence 2"],
-                    },
-                    "data": [
-                        "test sentence 1",
-                        "test sentence 2",
-                    ]
-                }
-            }
-        }
-    },
-    "dummy-dataset.pth"
+To adapt a PyTorch model to your own segmentation style, pass one gold sentence
+per list item. Adaptation mutates and returns the same model, stays entirely
+in memory, and works on CPU, CUDA, and MPS:
+
+```python
+few_shot = SaT("sat-3l-sm", device="cpu")
+few_shot.adapt(
+    [
+        "A gold sentence.",
+        "Another sentence using the desired style.",
+        "A third example.",
+    ],
+    language="en",
 )
+few_shot.split("A gold sentence. Another sentence using the desired style.")
+
+# Optional: write an adapter compatible with `lora_path`.
+few_shot.save_adapter("./my-adapter")
+reloaded = SaT("sat-3l-sm", lora_path="./my-adapter")
 ```
 
-Note that there should not be any newlines within individual sentences! This now raises an error. Instead, each entry of a list should be a sentence, and there should be no "\n" characters. So your corpus should already be well-split.
+The defaults reproduce the paper-era LoRA setup (`r=16`, `alpha=32`, 30
+epochs). Pass `epochs`, `learning_rate`, `batch_size`, or `block_size` to tune
+the short in-process run. Construct a fresh base model before training another
+adapter; adapting an already merged or compiled model is rejected.
 
-2. Create/adapt config; provide base model via `model_name_or_path` and training data .pth via `text_path`:
+On macOS 15.6 arm64 with PyTorch 2.13, `sat-3l-sm` adapted to 100 repetitive
+generated sentences for the default 30 epochs in 6.51 seconds on CPU (model
+loading excluded). Those sentences pack into six token blocks and one batch per
+epoch, so this measurement covers only 30 optimizer steps; diverse or longer
+data and larger models will take longer. Reproduce it with
+`scripts/benchmark_adapt.py`.
 
-`configs/lora/lora_dummy_config.json`
+Held-out quality was measured on 200 German BOUQuET sentences, grouped into 20
+ten-sentence documents. The unadapted `sat-3l-sm` macro F1 was 0.9129; after 30
+epochs it was 0.9268 with 10 adaptation sentences (`+0.0139`), 0.9224 with 50
+(`+0.0095`), and 0.9211 with 100 (`+0.0082`). More examples did not improve
+this small same-corpus experiment, so treat the shot count as a hyperparameter
+rather than assuming monotonic gains. Reproduce it with
+`scripts/evaluate_adaptation.py`.
 
-We recommend starting using this config, and adapting `model_name_or_path`, `output_dir`, and `text_path` if needed.
-You may also wish to adapt other aspects such as `adapter_config` and batch sizes, but this is more experimental.
+### Devices and `torch.compile`
 
-3. Train LoRA:
-
-```
-python3 wtpsplit/train/train_lora.py configs/lora/lora_dummy_config.json
-```
-
-4. Once training is done, provide your saved module's path to SaT:
+Use `device=` for PyTorch inference. ONNX devices continue to be selected with
+`ort_providers=`. Compilation is opt-in and accepts either `True` or keyword
+arguments forwarded to `torch.compile`:
 
 ```python
-
-sat_lora_adapted = SaT("model-used", lora_path="dummy_lora_path")
-sat_lora_adapted.split("Some domains-specific or styled text")
+sat = SaT("sat-3l-sm", device="cuda", compile=True)
+# For example: compile={"mode": "reduce-overhead", "dynamic": True}
 ```
 
-**Important:** Use the **same model variant** for inference as for training (e.g. `sat-12l-sm` and `sat-12l` have different configs; an adapter trained on one cannot be loaded on the other).
+MPS is supported and covered by a device test when available. Compilation is
+workload- and backend-dependent, so benchmark before enabling it. Using
+`scripts/benchmark_compile.py` with `sat-3l-sm`, a batch of eight repeated
+paragraphs, PyTorch 2.13, and macOS 15.6 arm64:
 
-Adjust the dataset name, language and model in the above to your needs.
+- CPU: 62.69 ms eager, 54.83 ms compiled (`1.14x` speedup).
+- MPS: 21.48 ms eager, 78.24 ms compiled (`0.27x`; compilation was slower).
 
 ## Reproducing the paper
 
-`configs/` contains the configs for the runs from the paper for base and sm models as well as LoRA modules. Launch training for each of them like this:
+Research modules are available from a source checkout using the environment
+documented in [`RESEARCH.md`](RESEARCH.md). Cluster operator steps are in
+[`docs/OPERATOR.md`](docs/OPERATOR.md):
 
-```
-python3 wtpsplit/train/train.py configs/<config_name>.json
-python3 wtpsplit/train/train_sm.py configs/<config_name>.json
-python3 wtpsplit/train/train_lora.py configs/<config_name>.json
+```bash
+uv sync --locked --group research --extra legacy
+uv run python wtpsplit/train/train.py configs/your_config.json
+uv run python wtpsplit/train/train_SM.py configs/your_config.json
 ```
 
 In addition:
 
 - `wtpsplit/data_acquisition` contains the code for obtaining evaluation data and raw text from the mC4 corpus.
 - `wtpsplit/evaluation` contains the code for:
-  - evaluation (i.e. sentence segmentation results) via `intrinsic.py`.
+  - evaluation (i.e. sentence segmentation results) via `adapt.py`.
   - short-sequence evaluation (i.e. sentence segmentation results for pairs/k-mers of sentences) via `intrinsic_pairwise.py`.
   - LLM baseline evaluation (`llm_sentence.py`), legal baseline evaluation (`legal_baselines.py`)
   - baseline (PySBD, nltk, etc.) evaluation results in `intrinsic_baselines.py` and `intrinsic_baselines_multi.py`
@@ -383,8 +389,6 @@ In addition:
   - Statistical significane testing code and results ara in `stat_tests/`
   - punctuation annotation experiments in `punct_annotation.py` and `punct_annotation_wtp.py` (WtP only)
   - extrinsic evaluation on Machine Translation in `extrinsic.py` (WtP only)
-
-Ensure to install packages from `requirements.txt` beforehand.
 
 ## Supported Languages
 

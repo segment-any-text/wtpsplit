@@ -1,15 +1,127 @@
-[tool.black]
-line-length = 120
-target-version = ["py39", "py310", "py311", "py312"]
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12"]
+build-backend = "uv_build"
 
-[tool.ruff]
-line-length = 120
-lint.ignore = ["E741"]
+[project]
+name = "wtpsplit"
+version = "3.0.0"
+description = "Universal Robust, Efficient and Adaptable Sentence Segmentation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Markus Frohmann", email = "markus.frohmann@gmail.com" },
+    { name = "Igor Sterner" },
+    { name = "Benjamin Minixhofer" },
+]
+keywords = [
+    "nlp",
+    "sentence-segmentation",
+    "text-segmentation",
+    "multilingual",
+    "tokenization",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+]
+dependencies = [
+    "transformers>=5,<6",
+    "huggingface-hub>=1,<2",
+    "numpy>=1.21,<3",
+    "torch>=2.4,<3",
+    "tqdm>=4.60,<5",
+]
 
-[tool.ruff.lint.per-file-ignores]
-"test.py" = ["E501"]
+[project.urls]
+Homepage = "https://github.com/segment-any-text/wtpsplit"
+Repository = "https://github.com/segment-any-text/wtpsplit"
+Paper = "https://arxiv.org/abs/2406.16678"
+
+[project.optional-dependencies]
+onnx-cpu = [
+    "onnxruntime>=1.13.1,<1.24; python_version < '3.11'",
+    "onnxruntime>=1.13.1; python_version >= '3.11'",
+]
+onnx-gpu = [
+    "onnxruntime-gpu>=1.13.1,<1.24; python_version < '3.11'",
+    "onnxruntime-gpu>=1.13.1; python_version >= '3.11'",
+]
+legacy = ["scikit-learn>=1", "skops"]
 
 [dependency-groups]
 dev = [
-    "wtpsplit>=2.1.7",
+    "mypy>=1.11",
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.6",
+    "tomli>=2; python_version < '3.11'",
 ]
+research = [
+    "accelerate",
+    "conllu",
+    "datasets",
+    "ersatz",
+    "h5py",
+    "iso-639",
+    "mosestokenizer",
+    "nltk",
+    "pandarallel",
+    "pandas>=1",
+    "pysbd",
+    "regex",
+    "scikit-learn>=1",
+    "spacy",
+    "torchinfo",
+    "wandb",
+]
+
+[tool.uv]
+conflicts = [[{ extra = "onnx-cpu" }, { extra = "onnx-gpu" }]]
+
+[tool.uv.build-backend]
+module-root = ""
+wheel-exclude = [
+    "wtpsplit/.cache/**",
+    "wtpsplit/train/**",
+    "wtpsplit/evaluation/**",
+    "wtpsplit/data_acquisition/**",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test.py", "test_*.py"]
+
+[tool.coverage.run]
+source = ["wtpsplit"]
+omit = [
+    "wtpsplit/train/**",
+    "wtpsplit/evaluation/**",
+    "wtpsplit/data_acquisition/**",
+]
+
+[tool.black]
+line-length = 120
+target-version = ["py310", "py311", "py312", "py313"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+# Pinned explicitly: ruff's implicit defaults have widened over time, and an
+# unpinned selection turns every ruff upgrade into a CI break.
+select = ["E4", "E7", "E9", "F"]
+ignore = ["E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/test.py" = ["E501"]

@@ -290,6 +290,6 @@ See `LANG_SENTENCE_STATS` in `wtpsplit/utils/priors.py` for the full list.
 ## See Also
 
 - [Interactive Demo](../length_constrained_segmentation_demo.py) - Run examples and experiment
-- [Test Suite](../test_length_constraints.py) - Comprehensive tests
+- [Test Suite](../tests/test_length_constraints.py) - Comprehensive tests
 - [README](../README.md) - Quick start guide
 

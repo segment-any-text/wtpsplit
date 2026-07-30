@@ -26,27 +26,23 @@ from transformers.utils import (
     logging,
 )
 
-from wtpsplit.train.hf_compat import is_torch_tpu_available
-from wtpsplit.train.transformers_trainer_imports import (
-    ALL_LAYERNORM_LAYERS,
-    DataLoader,
-    EvalLoopOutput,
-    IterableDatasetShard,
-    WEIGHTS_NAME,
-    deepspeed_init,
-    denumpify_detensorize,
+from transformers.utils.import_utils import is_torch_xla_available
+from transformers.integrations.deepspeed import deepspeed_init
+from transformers.modeling_utils import unwrap_model
+from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
+from transformers.trainer import DataLoader, EvalLoopOutput, IterableDatasetShard, WEIGHTS_NAME
+from transformers.trainer_pt_utils import (
     find_batch_size,
     get_parameter_names,
-    has_length,
-    is_sagemaker_mp_enabled,
     nested_concat,
     nested_numpify,
     nested_truncate,
-    unwrap_model,
 )
+from transformers.trainer_utils import denumpify_detensorize, has_length
+from transformers.utils import is_sagemaker_mp_enabled
 from wtpsplit.train.utils import Model
 
-if is_torch_tpu_available(check_device=False):
+if is_torch_xla_available():
     import torch_xla.core.xla_model as xm  # noqa: F401
     import torch_xla.debug.metrics as met  # noqa: F401
     import torch_xla.distributed.parallel_loader as pl  # noqa: F401
@@ -330,7 +326,7 @@ class AdapterTrainer(Trainer):
             eval_dataset = getattr(dataloader, "dataset", None)
 
             # MODIFIED: not necessary.
-            if is_torch_tpu_available():
+            if is_torch_xla_available(check_is_tpu=True):
                 dataloader = pl.MpDeviceLoader(dataloader, args.device)  # .per_device_loader(args.device)
 
             if args.past_index >= 0:
@@ -368,7 +364,7 @@ class AdapterTrainer(Trainer):
                 inputs_decode = self._prepare_input(inputs["input_ids"]) if args.include_inputs_for_metrics else None
 
                 # MODIFIED: not necessary.
-                if is_torch_tpu_available():
+                if is_torch_xla_available(check_is_tpu=True):
                     xm.mark_step()
 
                 # Update containers on host
@@ -477,12 +473,12 @@ class AdapterTrainer(Trainer):
             if all_inputs is not None:
                 all_inputs = nested_truncate(all_inputs, num_samples)
         else:
-            if is_torch_tpu_available():
+            if is_torch_xla_available(check_is_tpu=True):
                 xm.rendezvous("eval_metrics")
             all_losses, all_preds, all_labels, all_inputs, num_samples = None, None, None, None, 0
 
         # Metrics!
-        if is_torch_tpu_available():
+        if is_torch_xla_available(check_is_tpu=True):
             xm.rendezvous("eval_metrics")
         # MODIFIED: always compute metrics
         if self.compute_metrics is not None:

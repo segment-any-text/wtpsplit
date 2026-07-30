@@ -85,6 +85,8 @@ class Args:
 
 def process_logits_and_tokens(text, model, lang_code, args):
     # variation of process_logits used in intrinsic.py for word-based evals, returning tokens as well.
+    if getattr(model.config, "use_character_head", False):
+        raise ValueError("The token-feature TED evaluation is not defined for character-head checkpoints.")
     if isinstance(text, list):
         logits = []
         tokens = []
@@ -248,7 +250,7 @@ def main(args):
         save_model_path = args.adapter_path
     save_str = f"{save_model_path.replace('/', '_')}_b{args.block_size}_s{args.stride}"
 
-    eval_data = torch.load(args.eval_data_path)
+    eval_data = torch.load(args.eval_data_path, weights_only=True)
     if args.valid_text_path is not None:
         valid_data = load_dataset("parquet", data_files=args.valid_text_path, split="train")
     else:

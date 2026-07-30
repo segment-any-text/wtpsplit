@@ -13,9 +13,23 @@ from wtpsplit.extract import extract
 from wtpsplit.utils import Constants, indices_to_sentences, lang_code_to_lang, reconstruct_sentences
 
 
+# Bidi formatting controls. These are invisible, so when one trails a full stop the
+# boundary character becomes an unprintable format code and the model is asked to predict
+# a boundary at something it cannot see. Only U+200F was stripped before, which left the
+# rest to leak through Hebrew- and Arabic-script text: on BOUQuET Yiddish, removing them
+# raises recall from 0.92 to 0.996.
+#
+# Deliberately excludes U+200C/U+200D (ZWNJ/ZWJ), which are orthographically meaningful in
+# Indic and Arabic scripts and must survive.
+BIDI_CONTROL_CHARS = frozenset(
+    "\u200e\u200f"  # LRM, RLM
+    "\u202a\u202b\u202c\u202d\u202e"  # LRE, RLE, PDF, LRO, RLO
+    "\u2066\u2067\u2068\u2069"  # LRI, RLI, FSI, PDI
+)
+
+
 def preprocess_sentence(sentence):
-    # right-to-left-mark
-    sentence = sentence.replace(chr(8207), "")
+    sentence = "".join(char for char in sentence if char not in BIDI_CONTROL_CHARS)
 
     return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", sentence.lstrip("-").strip()))
 

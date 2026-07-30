@@ -7,7 +7,7 @@ import pysbd
 import sklearn.metrics
 
 from wtpsplit.evaluation.intrinsic_pairwise import generate_k_mers, process_logits_k_mers
-from wtpsplit.extract import PyTorchWrapper, extract
+from wtpsplit.extract import PyTorchWrapper, extract, outputs_character_logits
 from wtpsplit.utils import Constants, sigmoid, corrupt, token_to_char_probs
 
 logger = logging.getLogger(__name__)
@@ -109,7 +109,7 @@ def evaluate_sentence(
     newline_labels = np.zeros(len(text))
     newline_labels[true_end_indices - 1] = 1
 
-    if "xlm" in model.config.model_type:
+    if not outputs_character_logits(model.config):
         tokens = tokenizer.tokenize(text, verbose=False)
         char_probs = token_to_char_probs(
             text, tokens, logits, [tokenizer.cls_token, tokenizer.sep_token, tokenizer.pad_token], offsets_mapping
