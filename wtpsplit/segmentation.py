@@ -1,11 +1,14 @@
 """Structured sentence-segmentation results."""
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
+from numpy.typing import NDArray
 
 
 Span = tuple[int, int]
+ProbabilityArray = NDArray[np.floating[Any]]
 
 
 @dataclass(frozen=True)
@@ -21,11 +24,11 @@ class Segmentation:
     text: str
     sentences: list[str]
     spans: list[Span]
-    probabilities: np.ndarray
+    probabilities: ProbabilityArray
     confidences: list[float]
     paragraphs: list[list[str]] | None = None
     paragraph_spans: list[list[Span]] | None = None
-    paragraph_probabilities: np.ndarray | None = None
+    paragraph_probabilities: ProbabilityArray | None = None
 
 
 def sentence_spans(text: str, sentences: list[str]) -> list[Span]:
@@ -42,7 +45,7 @@ def sentence_spans(text: str, sentences: list[str]) -> list[Span]:
     return spans
 
 
-def boundary_confidences(probabilities: np.ndarray, spans: list[Span]) -> list[float]:
+def boundary_confidences(probabilities: ProbabilityArray, spans: list[Span]) -> list[float]:
     """Return the model boundary probability at each sentence's final character.
 
     This includes the final sentence: its score describes how strongly the
