@@ -7,9 +7,42 @@ import numpy as np
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 
+from wtpsplit.char_head import build_char_inputs
 from wtpsplit.utils import Constants, hash_encode
 
 logger = logging.getLogger(__name__)
+
+# Character-level backbones (WtP). Everything else is subword-based, so new subword
+# backbones work here without edits; previously this was an "xlm" substring test that
+# silently excluded any non-XLM backbone.
+CHAR_MODEL_TYPES = {"bert-char", "la-canine"}
+
+# Only used when `extract` is called without a tokenizer; `SaT` and `WtP` always pass one.
+DEFAULT_TOKENIZERS = {
+    "xlm-token": "facebookAI/xlm-roberta-base",
+    "xlm-roberta": "facebookAI/xlm-roberta-base",
+    "modernbert-token": "jhu-clsp/mmBERT-base",
+    "modernbert": "jhu-clsp/mmBERT-base",
+}
+
+# XLM-R reserves two position slots (its padding_idx offset), leaving 512 usable, minus
+# CLS and SEP. Kept as a literal so the XLM-R path behaves exactly as before.
+XLM_MAX_CONTENT_BLOCK_SIZE = 510
+
+
+def outputs_character_logits(config) -> bool:
+    """Whether model logits already align one-to-one with input characters."""
+    return config.model_type in CHAR_MODEL_TYPES or getattr(config, "use_character_head", False)
+
+
+def max_content_block_size(config) -> int:
+    """Longest chunk of real tokens that fits, leaving room for CLS and SEP."""
+    if config.model_type in ("xlm-token", "xlm-roberta"):
+        return XLM_MAX_CONTENT_BLOCK_SIZE
+    max_positions = getattr(config, "max_position_embeddings", None)
+    if not max_positions:
+        return XLM_MAX_CONTENT_BLOCK_SIZE
+    return max_positions - 2
 
 
 class BertCharORTWrapper:
@@ -63,27 +96,205 @@ class PyTorchWrapper:
         assert hasattr(self, "model")
         return getattr(self.model, name)
 
-    def __call__(self, attention_mask, hashed_ids=None, language_ids=None, input_ids=None):
+    def __call__(
+        self,
+        attention_mask,
+        hashed_ids=None,
+        language_ids=None,
+        input_ids=None,
+        char_to_token=None,
+        char_is_token_final=None,
+        char_position_in_token=None,
+        char_hashes=None,
+        char_mask=None,
+    ):
         try:
             import torch
         except ImportError:
             raise ImportError("`torch` must be installed to use PyTorch models!")
 
+        def as_tensor(value):
+            if value is None:
+                return None
+            if torch.is_tensor(value):
+                return value.to(self.model.device)
+            return torch.from_numpy(value).to(self.model.device)
+
+        model_kwargs = {"attention_mask": as_tensor(attention_mask)}
+        optional_inputs = {
+            "input_ids": input_ids,
+            "hashed_ids": hashed_ids,
+            "language_ids": language_ids,
+            "char_to_token": char_to_token,
+            "char_is_token_final": char_is_token_final,
+            "char_position_in_token": char_position_in_token,
+            "char_hashes": char_hashes,
+            "char_mask": char_mask,
+        }
+        model_kwargs.update(
+            {
+                name: as_tensor(value)
+                for name, value in optional_inputs.items()
+                if value is not None
+            }
+        )
+
         with torch.no_grad():
-            logits = (
-                self.model(
-                    input_ids=torch.from_numpy(input_ids).to(self.model.device) if input_ids is not None else None,
-                    hashed_ids=torch.from_numpy(hashed_ids).to(self.model.device) if hashed_ids is not None else None,
-                    attention_mask=torch.from_numpy(attention_mask).to(self.model.device),
-                    language_ids=(
-                        torch.from_numpy(language_ids).to(self.model.device) if language_ids is not None else None
-                    ),
-                )["logits"]
-                .cpu()
-                .numpy()
-            )
+            logits = self.model(**model_kwargs)["logits"].cpu().numpy()
 
         return {"logits": logits}
+
+
+def _window_weights(length: int, weighting: Literal["uniform", "hat"]) -> np.ndarray:
+    if weighting == "uniform" or length <= 1:
+        return np.ones(length, dtype=np.float32)
+    if weighting == "hat":
+        x = np.linspace(-(1 - 1 / length), 1 - 1 / length, length, dtype=np.float32)
+        return 1 - np.abs(x)
+    raise ValueError(f"Unknown weighting scheme: {weighting!r}")
+
+
+def extract_character_head(
+    texts,
+    model,
+    *,
+    stride,
+    max_block_size,
+    batch_size,
+    pad_last_batch=False,
+    weighting: Literal["uniform", "hat"] = "uniform",
+    verbose=False,
+    tokenizer,
+):
+    """Extract and stitch character logits from overlapping token windows."""
+    import torch
+
+    if isinstance(model, SaTORTWrapper):
+        raise ValueError("Character-resolution heads are not yet supported by ONNX inference.")
+    if stride < 1:
+        raise ValueError(f"`stride` must be at least 1, got {stride}.")
+
+    encoded = tokenizer(texts, return_offsets_mapping=True, verbose=False, add_special_tokens=False)
+    token_ids = encoded["input_ids"]
+    offset_mappings = encoded["offset_mapping"]
+    content_block_size = min(max_block_size, max_content_block_size(model.config))
+    if content_block_size < 1:
+        raise ValueError(f"`max_block_size` leaves no room for content tokens: {max_block_size}.")
+
+    windows = []
+    for text_index, (text, ids, offsets) in enumerate(zip(texts, token_ids, offset_mappings)):
+        if not ids:
+            continue
+        for token_start in range(0, len(ids), stride):
+            token_end = token_start + content_block_size
+            done = False
+            if token_end >= len(ids):
+                token_end = len(ids)
+                token_start = max(token_end - content_block_size, 0)
+                done = True
+
+            char_start = 0 if token_start == 0 else offsets[token_start][0]
+            char_end = len(text) if token_end == len(ids) else offsets[token_end - 1][1]
+            relative_offsets = [
+                (max(start - char_start, 0), min(end - char_start, char_end - char_start))
+                for start, end in offsets[token_start:token_end]
+            ]
+            windows.append(
+                {
+                    "text_index": text_index,
+                    "char_start": char_start,
+                    "char_end": char_end,
+                    "text": text[char_start:char_end],
+                    "offsets": relative_offsets,
+                    "input_ids": ids[token_start:token_end],
+                }
+            )
+            if done:
+                break
+
+    all_logits = [np.zeros((len(text), model.config.num_labels), dtype=np.float32) for text in texts]
+    all_counts = [np.zeros(len(text), dtype=np.float32) for text in texts]
+    num_batches = math.ceil(len(windows) / batch_size)
+
+    for batch_index in tqdm(range(num_batches), disable=not verbose):
+        start = batch_index * batch_size
+        real_windows = windows[start : start + batch_size]
+        current_batch_size = len(real_windows)
+        if not real_windows:
+            continue
+
+        token_width = content_block_size + 2
+        batch_input_ids = np.full(
+            (current_batch_size, token_width),
+            tokenizer.pad_token_id,
+            dtype=np.int64,
+        )
+        batch_attention_mask = np.zeros((current_batch_size, token_width), dtype=np.float32)
+        for row, window in enumerate(real_windows):
+            ids = [tokenizer.cls_token_id, *window["input_ids"], tokenizer.sep_token_id]
+            batch_input_ids[row, : len(ids)] = ids
+            batch_attention_mask[row, : len(ids)] = 1
+
+        char_inputs = build_char_inputs(
+            [window["text"] for window in real_windows],
+            [window["offsets"] for window in real_windows],
+        )
+        char_to_token = char_inputs.char_to_token + 1
+
+        if current_batch_size < batch_size and pad_last_batch:
+            missing = batch_size - current_batch_size
+            batch_input_ids = np.pad(
+                batch_input_ids,
+                ((0, missing), (0, 0)),
+                constant_values=tokenizer.pad_token_id,
+            )
+            batch_attention_mask = np.pad(batch_attention_mask, ((0, missing), (0, 0)))
+
+            def pad_rows(tensor):
+                return torch.nn.functional.pad(tensor, (0,) * (2 * (tensor.ndim - 1)) + (0, missing))
+
+            char_to_token = pad_rows(char_to_token)
+            char_is_token_final = pad_rows(char_inputs.is_token_final)
+            char_position_in_token = pad_rows(char_inputs.position_in_token)
+            char_hashes = pad_rows(char_inputs.hashes)
+            char_mask = pad_rows(char_inputs.mask)
+        else:
+            char_is_token_final = char_inputs.is_token_final
+            char_position_in_token = char_inputs.position_in_token
+            char_hashes = char_inputs.hashes
+            char_mask = char_inputs.mask
+
+        logits = model(
+            input_ids=batch_input_ids,
+            attention_mask=batch_attention_mask,
+            char_to_token=char_to_token,
+            char_is_token_final=char_is_token_final,
+            char_position_in_token=char_position_in_token,
+            char_hashes=char_hashes,
+            char_mask=char_mask,
+        )["logits"][:current_batch_size]
+
+        for row, window in enumerate(real_windows):
+            text_index = window["text_index"]
+            char_start, char_end = window["char_start"], window["char_end"]
+            length = char_end - char_start
+            weights = _window_weights(length, weighting)
+            all_logits[text_index][char_start:char_end] += logits[row, :length] * weights[:, None]
+            all_counts[text_index][char_start:char_end] += weights
+
+    for index, text in enumerate(texts):
+        if not text:
+            continue
+        covered = all_counts[index] > 0
+        all_logits[index][covered] /= all_counts[index][covered, None]
+        all_logits[index][~covered] = -12.0
+
+    return (
+        [logits.astype(np.float16) for logits in all_logits],
+        None,
+        tokenizer,
+        encoded,
+    )
 
 
 def extract(
@@ -106,12 +317,37 @@ def extract(
 
     ad 1.: text is sliced into partially overlapping chunks by moving forward by a `stride` parameter (think conv1d).
     """
-    if "xlm" in model.config.model_type:
+    if getattr(model.config, "use_character_head", False):
+        if tokenizer is None:
+            default_tokenizer = DEFAULT_TOKENIZERS.get(model.config.model_type)
+            if default_tokenizer is None:
+                raise ValueError(
+                    f"No default tokenizer is known for model type {model.config.model_type!r}. "
+                    "Pass `tokenizer=` explicitly."
+                )
+            tokenizer = AutoTokenizer.from_pretrained(default_tokenizer)
+        return extract_character_head(
+            batch_of_texts,
+            model,
+            stride=stride,
+            max_block_size=max_block_size,
+            batch_size=batch_size,
+            pad_last_batch=pad_last_batch,
+            weighting=weighting,
+            verbose=verbose,
+            tokenizer=tokenizer,
+        )
+
+    if model.config.model_type not in CHAR_MODEL_TYPES:
         use_subwords = True
         if tokenizer is None:
-            tokenizer = AutoTokenizer.from_pretrained(
-                "facebookAI/xlm-roberta-base",
-            )
+            default_tokenizer = DEFAULT_TOKENIZERS.get(model.config.model_type)
+            if default_tokenizer is None:
+                raise ValueError(
+                    f"No default tokenizer is known for model type {model.config.model_type!r}. "
+                    "Pass `tokenizer=` explicitly."
+                )
+            tokenizer = AutoTokenizer.from_pretrained(default_tokenizer)
         # tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
         tokens = tokenizer(batch_of_texts, return_offsets_mapping=True, verbose=False, add_special_tokens=False)
         # remove CLS and SEP tokens, they are added later anyhow
@@ -129,9 +365,9 @@ def extract(
     text_lengths = [len(text) for text in batch_of_texts]
     # reduce block size if possible
     block_size = min(max_block_size, max(text_lengths))
-    if use_subwords and block_size > 510:
-        overflow_length = block_size - 510
-        block_size -= overflow_length  # account for CLS and SEP tokens
+    if use_subwords:
+        # account for CLS and SEP tokens
+        block_size = min(block_size, max_content_block_size(model.config))
 
     # make sure block_size is a multiple of downsampling rate
     downsampling_rate = getattr(model.config, "downsampling_rate", 1)

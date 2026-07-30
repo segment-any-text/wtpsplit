@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 import os
@@ -9,14 +10,54 @@ from pathlib import Path
 from typing import List
 
 import numpy as np
-import pandas as pd
-from mosestokenizer import MosesTokenizer
 from transformers import AutoTokenizer
 
 # same as in CANINE
 PRIMES = [31, 43, 59, 61, 73, 97, 103, 113, 137, 149, 157, 173, 181, 193, 211, 223]
 
 logger = logging.getLogger(__name__)
+
+
+class _LanguageInfoLoc:
+    """Small subset of pandas' ``.loc`` used by the research scripts."""
+
+    def __init__(self, rows):
+        self._rows = rows
+
+    def __getitem__(self, key):
+        language, column = key
+        return self._rows[language][column]
+
+
+class LanguageInfo:
+    """Dependency-free table for the bundled language metadata.
+
+    Historically ``Constants.LANGINFO`` was a pandas DataFrame, which made
+    pandas a mandatory dependency for every inference-only import.  The codebase
+    only relies on ``index``, ``iterrows()``, and two-dimensional ``loc``.
+    Providing those operations here keeps the existing research API while
+    removing pandas from the core runtime.
+    """
+
+    def __init__(self, rows):
+        self._rows = rows
+        self.index = tuple(rows)
+        self.loc = _LanguageInfoLoc(rows)
+
+    def iterrows(self):
+        return iter(self._rows.items())
+
+
+def _read_language_info(path):
+    rows = {}
+    with open(path, newline="", encoding="utf-8") as file:
+        for row in csv.DictReader(file):
+            language = row.pop("")
+            rows[language] = {
+                key: None if value == "" else value == "True" if value in {"True", "False"} else value
+                for key, value in row.items()
+            }
+    return LanguageInfo(rows)
 
 
 class ConstantsClass:
@@ -35,13 +76,17 @@ class ConstantsClass:
 
     @cached_property
     def CACHE_DIR(self):
-        CACHE_DIR = self.ROOT_DIR / ".cache"
-        CACHE_DIR.mkdir(exist_ok=True)
-        return CACHE_DIR
+        if configured := os.environ.get("WTPSPLIT_CACHE"):
+            cache_dir = Path(configured).expanduser()
+        else:
+            cache_root = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+            cache_dir = cache_root / "wtpsplit"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        return cache_dir
 
     @cached_property
     def LANGINFO(self):
-        return pd.read_csv(os.path.join(self.ROOT_DIR, "data", "language_info.csv"), index_col=0)
+        return _read_language_info(os.path.join(self.ROOT_DIR, "data", "language_info.csv"))
 
     @property
     def PUNCTUATION_CHARS(self):
@@ -92,7 +137,6 @@ class LabelArgs:
             Constants.set_punctuation_file(self.custom_punctuation_file)
         else:
             Constants.set_punctuation_file("punctuation.txt")
-        self.auxiliary_chars = Constants.DEFAULT_PUNCTUATION_FILE
 
 
 def get_label_dict(label_args):
@@ -182,6 +226,10 @@ def corrupt(text: str, do_lowercase: bool, do_remove_punct: bool):
 
 
 def corrupt_asr(text: str, lang):
+    # Training-only dependency: importing wtpsplit for inference should not
+    # require mosestokenizer (or its docopt dependency).
+    from mosestokenizer import MosesTokenizer
+
     if text is None:
         return None
 
@@ -206,7 +254,7 @@ def corrupt_asr(text: str, lang):
         corrupted_sentences = [
             tokenizer.detokenize(corrupted_tokens).lower() for corrupted_tokens in corrupted_tokenized_sentences
         ]
-    except:  # noqa
+    except Exception:
         corrupted_sentences = [
             "".join([char for char in sentence if char not in Constants.PUNCTUATION_CHARS]).lower()
             for sentence in sentences
@@ -460,7 +508,7 @@ if __name__ == "__main__":
     # test corrupt function
     from tokenizers import AddedToken
 
-    tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
+    tokenizer = AutoTokenizer.from_pretrained("facebookAI/xlm-roberta-base")
     tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
     text = "That's right, Five!\n!\n!!!\n!\n Always lay the!Blame on others!"
     input_ids = tokenizer(text)["input_ids"]

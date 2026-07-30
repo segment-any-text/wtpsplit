@@ -16,7 +16,6 @@ import datasets
 import numpy as np
 import torch
 import transformers
-from datasets import load_dataset
 
 # from datasets.download import DownloadConfig
 from tokenizers import AddedToken
@@ -24,7 +23,7 @@ from torchinfo import summary
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments, set_seed
 
-from wtpsplit.train.hf_compat import is_torch_tpu_available
+from transformers.utils.import_utils import is_torch_xla_available
 
 import wandb
 from wtpsplit.models import (
@@ -32,9 +31,9 @@ from wtpsplit.models import (
     BertCharForTokenClassification,
     LACanineConfig,
     LACanineForTokenClassification,
-    SubwordXLMConfig,
-    SubwordXLMForTokenClassification,
 )
+from wtpsplit.train.backbones import resolve_backbone
+from wtpsplit.train.stage1_data import load_stage1_dataset
 from wtpsplit.train.evaluate import evaluate_sentence
 from wtpsplit.train.trainer import Trainer
 from wtpsplit.train.utils import Model
@@ -75,6 +74,10 @@ class Args:
     use_bert: bool = False
     train_text_path: str = "data/train.parquet"
     valid_text_path: str = "data/valid.parquet"
+    stage1_dataset_name: str = "markus583/mC4-TEST"
+    stage1_dataset_config: Optional[str] = None
+    stage1_require_filtered: bool = False
+    stage1_cache_dir: Optional[str] = None
     include_languages: List[str] = None
     eval_data_path: str = "data/all_data.pth"
     num_hidden_layers: int = 3
@@ -202,7 +205,7 @@ def main():
         (args, training_args, label_args) = parser.parse_args_into_dataclasses()
         wandb_name = None
 
-    if is_torch_tpu_available():
+    if is_torch_xla_available(check_is_tpu=True):
         import torch_xla.core.xla_model as xm
 
         world_size = xm.xrt_world_size()
@@ -226,26 +229,24 @@ def main():
 
     num_labels = Constants.AUX_OFFSET + ((1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0)
     if args.use_subwords:
-        # SaT models
+        # SaT models. The config/model pair is resolved from the checkpoint rather than
+        # hardcoded, so stage-1 pretraining works on ModernBERT-family backbones (mmSaT)
+        # as well as XLM-R. `AutoModelForTokenClassification` would return the stock
+        # transformers class and silently drop the lookahead constraint.
+        config_class, model_class, _ = resolve_backbone(args.model_name_or_path)
+        config_kwargs = {
+            "num_hidden_layers": args.num_hidden_layers,
+            "num_labels": num_labels,
+            "lookahead": args.lookahead,
+            "lookahead_split_layers": args.lookahead_split_layers,
+        }
         if args.from_scratch:
-            config = SubwordXLMConfig(
-                args.model_name_or_path,
-                num_hidden_layers=args.num_hidden_layers,
-                num_labels=num_labels,
-                lookahead=args.lookahead,
-                lookahead_split_layers=args.lookahead_split_layers,
-            )
-            backbone = SubwordXLMForTokenClassification(config)
+            config = config_class(args.model_name_or_path, **config_kwargs)
+            backbone = model_class(config)
 
         else:
-            config = SubwordXLMConfig.from_pretrained(
-                args.model_name_or_path,
-                num_hidden_layers=args.num_hidden_layers,
-                num_labels=num_labels,
-                lookahead=args.lookahead,
-                lookahead_split_layers=args.lookahead_split_layers,
-            )
-            backbone = SubwordXLMForTokenClassification.from_pretrained(
+            config = config_class.from_pretrained(args.model_name_or_path, **config_kwargs)
+            backbone = model_class.from_pretrained(
                 args.model_name_or_path,
                 config=config,
             )
@@ -311,10 +312,18 @@ def main():
         split="train",
     ):
         with training_args.main_process_first():
-            # this can be used if space issues arise
-            # dlconf = DownloadConfig(cache_dir="/home/Markus/.cache/huggingface/datasets")
-            # dataset = load_dataset("markus583/mC4-TEST", split=split, download_config=dlconf)
-            dataset = load_dataset("markus583/mC4-TEST", split=split)
+            source_path = (
+                args.train_text_path if split == "train" else args.valid_text_path
+            )
+            dataset = load_stage1_dataset(
+                source_path,
+                split=split,
+                fallback_dataset=args.stage1_dataset_name,
+                fallback_config=args.stage1_dataset_config,
+                require_filtered=args.stage1_require_filtered,
+                text_column=args.text_column,
+                cache_dir=args.stage1_cache_dir,
+            )
         logger.warning(f"Loaded {split} dataset.")
         # optional: delete downloaded dataset, it is stored in cache_dir now (but we delete it later)
         # ~40GB on disk
@@ -544,12 +553,17 @@ def main():
 
         if not args.one_sample_per_line:
             with training_args.main_process_first():
+                remove_columns = (
+                    ["ends_with_punctuation"]
+                    if args.text_column == "text"
+                    and "ends_with_punctuation" in dataset.column_names
+                    else []
+                )
                 dataset = dataset.map(
                     group_texts,
                     batched=True,
                     num_proc=num_workers,
-                    # a bit hacky but oh well, only drop if sentence
-                    remove_columns=["ends_with_punctuation"] if args.text_column == "text" else [],
+                    remove_columns=remove_columns,
                 )
         logger.warning(f"Grouped {split} dataset.")
 
@@ -584,6 +598,7 @@ def main():
 
     eval_data = torch.load(
         args.eval_data_path,
+        weights_only=True,
     )
 
     def compute_metrics(trainer):

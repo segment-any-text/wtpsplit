@@ -2,32 +2,151 @@ name: Python package
 
 on: [push]
 
-jobs:
-  build:
+env:
+  # Avoids pulling the CUDA-enabled torch wheels on Linux runners without
+  # pinning a CPU index in uv.lock, which would affect GPU contributors too.
+  UV_TORCH_BACKEND: cpu
 
+jobs:
+  test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
         with:
+          enable-cache: true
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install ruff pytest
-          pip install -e .[onnx-cpu]
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
+        run: uv sync --locked --extra legacy --extra onnx-cpu
       - name: Lint with ruff
         run: |
           # stop the build if there are Python syntax errors or undefined names
-          ruff check --output-format=github --select=E9,F63,F7,F82 --target-version=py39 .
+          uv run ruff check --output-format=github --select=E9,F63,F7,F82 .
           # default set of ruff rules with GitHub Annotations
-          ruff check --output-format=github --target-version=py39 .
+          uv run ruff check --output-format=github .
+      - name: Type-check public API
+        run: uv run mypy --strict wtpsplit/__init__.pyi wtpsplit/segmentation.py wtpsplit/constants.py
       - name: Test with pytest
+        run: uv run pytest --cov=wtpsplit --cov-report=term-missing
+      - name: Test README examples
         run: |
-          pytest test.py test_length_constraints.py
+          uv run python -m doctest README.md
+          uv run python scripts/test_readme_examples.py
+
+  core-offline:
+    runs-on: ubuntu-latest
+    env:
+      HF_HUB_OFFLINE: "1"
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - name: Install core dependencies only
+        run: uv sync --locked
+      - name: Verify hub-free core
+        run: |
+          uv run python -c "from wtpsplit import SaT"
+          uv run pytest test_extract_offline.py test_model_registry.py test_packaging.py
+
+  dependency-ceiling:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - name: Resolve newest allowed dependencies
+        run: uv lock --upgrade
+      - name: Install newest allowed dependencies
+        run: uv sync --extra onnx-cpu
+      - name: Test core against dependency ceiling
+        run: uv run pytest test_extract_offline.py test_model_registry.py test_packaging.py
+
+  research-environment:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - name: Install source-only research environment
+        run: uv sync --locked --group research --extra legacy
+      - name: Verify research source modules
+        run: |
+          uv run --group research python -m compileall -q \
+            wtpsplit/train \
+            wtpsplit/evaluation \
+            wtpsplit/data_acquisition
+          uv run --group research python -c "import wtpsplit.train.backbones"
+
+  transformers-prerelease:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - name: Install core and transformers prereleases
+        run: |
+          uv sync --locked
+          uv pip install --upgrade --prerelease=allow "transformers>=5,<6"
+      - name: Test custom model imports
+        run: |
+          uv run --no-sync python -c "import wtpsplit.models"
+          uv run --no-sync pytest \
+            test_extract_offline.py \
+            test_model_registry.py \
+            test_modernbert_backbone.py \
+            test_xlm_backbone.py
+
+  # Python 3.14 is not yet supported by the whole dependency tree; run it so
+  # regressions are visible without gating the release on them.
+  test-next:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+          python-version: "3.14"
+      - name: Install dependencies
+        run: uv sync --extra legacy --extra onnx-cpu
+      - name: Test with pytest
+        run: uv run pytest
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+      - name: Build distributions
+        run: uv build
+      - name: Check metadata
+        run: uvx twine check dist/*

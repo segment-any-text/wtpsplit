@@ -40,7 +40,7 @@ MODEL_MIXIN_MAPPING["SubwordXLMRobertaModel"] = BertModelAdaptersMixin
 @dataclass
 class Args:
     model_name_or_path: str
-    base_model: str = "xlm-roberta-base"
+    base_model: str = "facebookAI/xlm-roberta-base"
     shuffle: bool = True
     text_path: str = "data/all_data.pth"
     include_languages: List[str] = None
@@ -386,6 +386,7 @@ def main():
     with training_args.main_process_first():
         data = torch.load(
             args.text_path,
+            weights_only=True,
         )
         # sort alphabetically by key for alphabetical filtering
         data = dict(sorted(data.items()))

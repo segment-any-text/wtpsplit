@@ -19,7 +19,7 @@ import adapters
 import wtpsplit.models  # noqa: F401
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture
 from wtpsplit.evaluation.intrinsic_baselines import split_language_data
-from wtpsplit.extract import PyTorchWrapper
+from wtpsplit.extract import PyTorchWrapper, outputs_character_logits
 from wtpsplit.extract_batched import extract_batched
 from wtpsplit.utils import Constants, token_to_char_probs
 from wtpsplit.evaluation.adapt import compute_statistics
@@ -89,7 +89,7 @@ def process_logits_k_mers(pairs, model, lang_code, block_size, batch_size, verbo
         special_tokens = [tokenizer.cls_token, tokenizer.sep_token, tokenizer.pad_token]
 
         for k_mer, logit, offset_mapping in zip(k_mer_texts, all_logits, offsets_mapping):
-            if "xlm" in model.config.model_type:
+            if not outputs_character_logits(model.config):
                 tokens = tokenizer.tokenize(k_mer, verbose=False)
 
                 # padding is also removed here (via offset_mapping)
@@ -97,13 +97,16 @@ def process_logits_k_mers(pairs, model, lang_code, block_size, batch_size, verbo
                 logits_list.append(logits)
                 n_tokens_list.append(len(tokens))
             else:
-                if len(logit) < offset_mapping:
+                text_length = len(k_mer)
+                if len(logit) < text_length:
                     # truncated input --> pad back
                     logit = np.pad(
-                        logit, ((0, offset_mapping - len(logit)), (0, 0)), "constant", constant_values=np.min(logit)
+                        logit,
+                        ((0, text_length - len(logit)), (0, 0)),
+                        "constant",
+                        constant_values=np.min(logit),
                     )
-                # since we pad to equal length, we need to remove the padding
-                logits_list.append(logit[:offset_mapping])
+                logits_list.append(logit[:text_length])
 
     return logits_list, n_tokens_list
 
@@ -289,7 +292,7 @@ def main(args):
     save_str = f"{save_model_path.replace('/', '_')}_b{args.block_size}_k{args.k}{args.save_suffix}"
 
     print(save_str)
-    eval_data = torch.load(args.eval_data_path)
+    eval_data = torch.load(args.eval_data_path, weights_only=True)
     if "canine" in args.model_path and "no-adapters" not in args.model_path:
         eval_data = split_language_data(eval_data)
     if args.valid_text_path is not None:

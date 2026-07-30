@@ -44,19 +44,25 @@ class Model(nn.Module):
         **kwargs,
     ):
         if position_ids is not None:
-            # XXX: 1 is pad token id
-            if "xlm" in self.config.model_type:
-                reduced_attention_mask = (input_ids != 1).to(torch.long)
-            else:
-                reduced_attention_mask = (input_ids != 0).to(torch.long)
+            # Read the pad id off the config rather than branching on the model type: it
+            # is 1 for XLM-R and 0 for the char backbones, matching the previous
+            # behaviour, but 0 for ModernBERT, where the old "xlm" test would have been
+            # right only by accident.
+            pad_token_id = getattr(self.config, "pad_token_id", None)
+            if pad_token_id is None:
+                pad_token_id = 0
+            reduced_attention_mask = (input_ids != pad_token_id).to(torch.long)
 
         # Transformers 4.51+ Trainer may pass this; HF models ignore it, custom backbones must not receive it.
         kwargs.pop("num_items_in_batch", None)
 
+        # Only the WtP backbones take language adapters; ModernBERT would choke on it.
+        if language_ids is not None:
+            kwargs["language_ids"] = language_ids
+
         output = dict(
             self.backbone.forward(
                 input_ids=input_ids,
-                language_ids=language_ids,
                 attention_mask=attention_mask,
                 position_ids=position_ids,
                 **kwargs,
