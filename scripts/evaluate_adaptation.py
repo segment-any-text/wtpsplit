@@ -7,7 +7,6 @@ import json
 from pathlib import Path
 
 import numpy as np
-from datasets import load_dataset
 
 from wtpsplit import SaT
 from wtpsplit.evaluation import evaluate_sentences, preprocess_sentence
@@ -15,6 +14,9 @@ from wtpsplit.utils import Constants
 
 
 def load_bouquet_sentences(language: str, limit: int) -> list[str]:
+    # Lazy: keep `evaluate_model` importable without the research `datasets` extra.
+    from datasets import load_dataset
+
     dataset = load_dataset("facebook/bouquet", "sentence_level", split="test", streaming=True)
     sentences = []
     seen = set()
