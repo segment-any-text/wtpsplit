@@ -56,7 +56,7 @@ jobs:
       - name: Verify hub-free core
         run: |
           uv run python -c "from wtpsplit import SaT"
-          uv run pytest test_extract_offline.py test_model_registry.py test_packaging.py
+          uv run pytest tests/test_extract_offline.py tests/test_model_registry.py tests/test_packaging.py
 
   dependency-ceiling:
     runs-on: ubuntu-latest
@@ -73,7 +73,7 @@ jobs:
       - name: Install newest allowed dependencies
         run: uv sync --extra onnx-cpu
       - name: Test core against dependency ceiling
-        run: uv run pytest test_extract_offline.py test_model_registry.py test_packaging.py
+        run: uv run pytest tests/test_extract_offline.py tests/test_model_registry.py tests/test_packaging.py
 
   research-environment:
     runs-on: ubuntu-latest
@@ -114,10 +114,10 @@ jobs:
         run: |
           uv run --no-sync python -c "import wtpsplit.models"
           uv run --no-sync pytest \
-            test_extract_offline.py \
-            test_model_registry.py \
-            test_modernbert_backbone.py \
-            test_xlm_backbone.py
+            tests/test_extract_offline.py \
+            tests/test_model_registry.py \
+            tests/test_modernbert_backbone.py \
+            tests/test_xlm_backbone.py
 
   # Python 3.14 is not yet supported by the whole dependency tree; run it so
   # regressions are visible without gating the release on them.

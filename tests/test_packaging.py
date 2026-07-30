@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).parent
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED_DATA_FILES = [
     "wtpsplit/data/punctuation.txt",
