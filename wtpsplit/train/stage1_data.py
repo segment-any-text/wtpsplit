@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -44,6 +45,54 @@ def local_data_files(path: Path, require_filtered: bool) -> tuple[str, list[str]
     return builder, [str(item) for item in candidates]
 
 
+class _LocalTable:
+    """Minimal column-oriented table for local JSON/JSONL without HuggingFace datasets."""
+
+    def __init__(self, rows: list[dict[str, Any]]):
+        self._rows = rows
+        self.column_names = list(rows[0].keys()) if rows else []
+
+    def __len__(self) -> int:
+        return len(self._rows)
+
+    def rename_column(self, old: str, new: str) -> _LocalTable:
+        for row in self._rows:
+            row[new] = row.pop(old)
+        self.column_names = [new if name == old else name for name in self.column_names]
+        return self
+
+    def select(self, indices: Any) -> _LocalTable:
+        return _LocalTable([self._rows[index] for index in indices])
+
+    def __getitem__(self, key: Any) -> Any:
+        if key == slice(None):
+            return {column: [row[column] for row in self._rows] for column in self.column_names}
+        if isinstance(key, str):
+            return [row[key] for row in self._rows]
+        raise TypeError(f"Unsupported key for local Stage-1 table: {key!r}")
+
+
+def _read_json_rows(files: list[str]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for file in files:
+        path = Path(file)
+        if path.suffix.lower() == ".jsonl":
+            with path.open(encoding="utf-8") as handle:
+                for line in handle:
+                    line = line.strip()
+                    if line:
+                        rows.append(json.loads(line))
+            continue
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(payload, list):
+            rows.extend(payload)
+        elif isinstance(payload, dict):
+            rows.append(payload)
+        else:
+            raise ValueError(f"Unsupported JSON Stage-1 payload in {path}")
+    return rows
+
+
 def normalize_columns(dataset: Any, text_column: str = "text") -> Any:
     if text_column not in dataset.column_names:
         raise ValueError(
@@ -69,22 +118,28 @@ def load_stage1_dataset(
     text_column: str = "text",
     cache_dir: str | Path | None = None,
 ) -> Any:
-    from datasets import load_dataset
-
     local_path = Path(path)
     if local_path.exists():
         builder, files = local_data_files(local_path, require_filtered)
-        dataset = load_dataset(
-            builder,
-            data_files={split: files},
-            split=split,
-            cache_dir=str(cache_dir) if cache_dir else None,
-        )
+        # Local JSON/JSONL is loadable without the research `datasets` dependency.
+        if builder == "json":
+            dataset: Any = _LocalTable(_read_json_rows(files))
+        else:
+            from datasets import load_dataset
+
+            dataset = load_dataset(
+                builder,
+                data_files={split: files},
+                split=split,
+                cache_dir=str(cache_dir) if cache_dir else None,
+            )
     else:
         if fallback_dataset is None:
             raise FileNotFoundError(
                 f"Local Stage-1 path does not exist and no fallback is configured: {path}"
             )
+        from datasets import load_dataset
+
         dataset = load_dataset(
             fallback_dataset,
             fallback_config,
