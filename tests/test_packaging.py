@@ -7,11 +7,16 @@ who install from PyPI. These tests build the real artifact and inspect it.
 
 import shutil
 import subprocess
-import tomllib
+import sys
 import zipfile
 from pathlib import Path
 
 import pytest
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
