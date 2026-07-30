@@ -13,7 +13,7 @@ This test suite covers:
 - Real-world scenarios
 - Regression tests for fixed bugs
 
-Run with: pytest test_length_constraints.py -v
+Run with: pytest tests/test_length_constraints.py -v
 """
 
 import pytest
