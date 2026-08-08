@@ -54,3 +54,19 @@ def test_rejects_unfiltered_file_when_gate_enabled(tmp_path: Path):
     write_jsonl(path, [{"text": "raw", "lang": "x_Latn"}])
     with pytest.raises(ValueError, match="contamination filtering"):
         local_data_files(path, require_filtered=True)
+
+
+def test_validation_rejects_empty_stage1_source():
+    class EmptyDataset:
+        def __len__(self):
+            return 0
+
+    with pytest.raises(ValueError, match="Need at least 1"):
+        validate_text_batch(EmptyDataset(), batch_size=1)
+
+
+def test_loader_rejects_only_empty_local_files(tmp_path: Path):
+    path = tmp_path / "empty.filtered.jsonl"
+    path.write_text("", encoding="utf-8")
+    with pytest.raises(ValueError, match="only empty files"):
+        local_data_files(path, require_filtered=True)

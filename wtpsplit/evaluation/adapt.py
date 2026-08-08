@@ -15,7 +15,10 @@ from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForTokenClassification, HfArgumentParser
 
-import adapters
+try:
+    import adapters
+except ImportError:  # optional unless --adapter_path is set
+    adapters = None
 import wtpsplit.models  # noqa: F401
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture
 from wtpsplit.evaluation.intrinsic_baselines import split_language_data
@@ -64,6 +67,7 @@ class Args:
     exclude_every_k: int = 10
     save_suffix: str = ""
     num_hidden_layers: Union[int, None] = None  # for original XLM-R
+    include_datasets: List[str] = None  # if set, only these sentence subset names (e.g. ud opus100 ersatz)
 
 
 def process_logits(text, model, lang_code, args):
@@ -168,6 +172,8 @@ def load_or_compute_logits(args, model, eval_data, valid_data=None, save_str: st
 
             # eval data
             for dataset_name, dataset in tqdm(eval_data[lang_code]["sentence"].items(), desc=lang_code):
+                if args.include_datasets is not None and dataset_name not in args.include_datasets:
+                    continue
                 if args.skip_corrupted and "corrupted" in dataset_name:
                     continue
                 if "asr" in dataset_name and not any(
@@ -314,7 +320,7 @@ def main(args):
         save_model_path = args.adapter_path
     save_str = f"{save_model_path.replace('/', '_')}_b{args.block_size}_s{args.stride}"
 
-    eval_data = torch.load(args.eval_data_path, weights_only=True)
+    eval_data = torch.load(args.eval_data_path, map_location="cpu", weights_only=False)
     if "canine" in args.model_path and "no-adapters" not in args.model_path:
         eval_data = split_language_data(eval_data)
     if args.valid_text_path is not None:
@@ -337,6 +343,8 @@ def main(args):
     else:
         model = PyTorchWrapper(AutoModelForTokenClassification.from_pretrained(model_path).to(args.device))
     if args.adapter_path:
+        if adapters is None:
+            raise SystemExit("adapter_path set but `adapters` is not installed")
         model_type = model.model.config.model_type
         # adapters need xlm-roberta as model type.
         model.model.config.model_type = "xlm-roberta"
@@ -345,6 +353,8 @@ def main(args):
         model.model.config.model_type = model_type
 
     save_str += f"{args.save_suffix}"
+    if args.include_datasets is not None:
+        save_str += "_ds-" + "-".join(sorted(args.include_datasets))
     if args.max_n_test_sentences < sys.maxsize and args.max_n_test_sentences != -1:
         save_str += f"_n{args.max_n_test_sentences}"
     if args.max_n_test_sentences == -1:
@@ -376,6 +386,8 @@ def main(args):
             indices[lang_code] = {}
 
         for dataset_name, dataset in dsets["sentence"].items():
+            if args.include_datasets is not None and dataset_name not in args.include_datasets:
+                continue
             sentences = dataset["data"]
             if not sentences:
                 continue

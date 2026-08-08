@@ -19,6 +19,12 @@ punctuation_chars = "".join(c for c in all_chars if "S" in unicodedata.category(
 @dataclass
 class Args:
     output_dir: str = "data/sentence"
+    # Legacy DEBUG / smoke budget only (~52e6 chars total → ~600k/lang @ 85 langs).
+    # Product of early WtP packing knobs (≈400 blocks × block_size 256 × batch 512),
+    # NOT the published SaT Stage-1 corpus.
+    # (~40GB on disk, ~51B train chars / ~600M chars/lang) — see train.py comment
+    # near load_stage1_dataset and data/manifests/mc4_test_per_lang_char_mass.json.
+    # Do not treat this default as SaT-scale when rebuilding mC4 or FineWeb.
     target_chars: int = 400 * 256 * 512
     valid_ratio = 0.001
 
@@ -53,8 +59,9 @@ if __name__ == "__main__":
         metadata = {}
 
         for lang_code in tqdm(languages):
+            # Legacy Hub id ``mc4`` used a dataset script; load parquet configs from allenai/c4.
             dset = load_dataset(
-                "mc4",
+                "allenai/c4",
                 "iw" if lang_code == "he" else lang_code,  # patch old lang code
                 streaming=True,
                 split="train",

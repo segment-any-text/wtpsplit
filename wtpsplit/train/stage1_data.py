@@ -25,6 +25,8 @@ def local_data_files(path: Path, require_filtered: bool) -> tuple[str, list[str]
         raise FileNotFoundError(path)
     if not candidates:
         raise FileNotFoundError(f"No supported data shards under {path}")
+    if all(item.stat().st_size == 0 for item in candidates):
+        raise ValueError(f"Stage-1 data source contains only empty files: {path}")
     if require_filtered and any(".filtered." not in item.name for item in candidates):
         raise ValueError(
             "Stage-1 contamination filtering is required, but an input shard "
@@ -114,6 +116,7 @@ def load_stage1_dataset(
     split: str,
     fallback_dataset: str | None,
     fallback_config: str | None = None,
+    fallback_revision: str | None = None,
     require_filtered: bool = False,
     text_column: str = "text",
     cache_dir: str | Path | None = None,
@@ -121,12 +124,21 @@ def load_stage1_dataset(
     local_path = Path(path)
     if local_path.exists():
         builder, files = local_data_files(local_path, require_filtered)
-        # Local JSON/JSONL is loadable without the research `datasets` dependency.
-        if builder == "json":
-            dataset: Any = _LocalTable(_read_json_rows(files))
-        else:
+        # Prefer HuggingFace datasets when available so Stage-1 training can
+        # filter/map/shuffle. Fall back to the lightweight local table only
+        # when `datasets` is not installed (inference/minimal installs).
+        try:
             from datasets import load_dataset
+        except ImportError:
+            load_dataset = None  # type: ignore[assignment]
 
+        if builder == "json" and load_dataset is None:
+            dataset: Any = _LocalTable(_read_json_rows(files))
+        elif load_dataset is None:
+            raise ImportError(
+                f"Loading Stage-1 {builder} shards requires the `datasets` package"
+            )
+        else:
             dataset = load_dataset(
                 builder,
                 data_files={split: files},
@@ -144,6 +156,7 @@ def load_stage1_dataset(
             fallback_dataset,
             fallback_config,
             split=split,
+            revision=fallback_revision,
             cache_dir=str(cache_dir) if cache_dir else None,
         )
     return normalize_columns(dataset, text_column)

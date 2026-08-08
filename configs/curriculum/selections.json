@@ -1,0 +1,35 @@
+{
+  "stage1": {
+    "status": "pending_matched_runs",
+    "selected": null,
+    "corpus": null,
+    "unit": "paragraph",
+    "backbone": null,
+    "checkpoint": null,
+    "alternatives": {
+      "fineweb_document": "runs/curriculum/stage1_fineweb_documents",
+      "fineweb_paragraph": "runs/curriculum/stage1_fineweb",
+      "mc4_document": "runs/curriculum/stage1_mc4_documents",
+      "mc4_paragraph": "runs/curriculum/stage1_mc4",
+      "fineweb_paragraph_mmbert": "runs/curriculum/stage1_fineweb_mmbert",
+      "mc4_paragraph_mmbert": "runs/curriculum/stage1_mc4_mmbert",
+      "raw_backbone": "xlm-roberta-base"
+    },
+    "evidence": {
+      "fineweb_document": "runs/curriculum/evaluation/stage1_fineweb_documents.json",
+      "fineweb_paragraph": "runs/curriculum/evaluation/stage1_fineweb.json",
+      "fineweb_paragraph_mmbert": "runs/curriculum/evaluation/stage1_fineweb_mmbert.json",
+      "mc4_document": "runs/curriculum/evaluation/stage1_mc4_documents.json",
+      "mc4_paragraph": "runs/curriculum/evaluation/stage1_mc4.json",
+      "mc4_paragraph_mmbert": "runs/curriculum/evaluation/stage1_mc4_mmbert.json"
+    }
+  },
+  "stage2_data": {
+    "selected": "abc",
+    "corpus": "data/mmsat_stage2_abc_pilot_v1.pth"
+  },
+  "stage2_model": {
+    "selected": "xlmr_token",
+    "checkpoint": "runs/curriculum/stage2"
+  }
+}

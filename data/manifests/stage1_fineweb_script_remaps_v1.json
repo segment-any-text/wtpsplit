@@ -1,0 +1,110 @@
+{
+  "version": "stage1_fineweb_script_remaps_v1",
+  "purpose": "Replace thin FineWeb2 *_Latn stand-ins with native-script configs during source resolution in scripts/build_stage1.py.",
+  "policy": [
+    "No upsample: stream native-script FineWeb2 until mC4-TEST per-lang char cap.",
+    "Existing builds made with an older mapping retain their original fingerprint and are not resumed as remapped builds.",
+    "ceb_Latn has no larger sibling \u2014 accept shortfall (F4), not in this table."
+  ],
+  "remaps": [
+    {
+      "sat_lang": "ar",
+      "from_fineweb2_language_script": "arb_Latn",
+      "to_fineweb2_language_script": "arb_Arab",
+      "fix_ids": [
+        "F1"
+      ],
+      "note": "MSA Arabic script; Latn subset is ~2k docs"
+    },
+    {
+      "sat_lang": "bn",
+      "from_fineweb2_language_script": "ben_Latn",
+      "to_fineweb2_language_script": "ben_Beng",
+      "fix_ids": [
+        "F3"
+      ],
+      "note": "Bengali script"
+    },
+    {
+      "sat_lang": "gu",
+      "from_fineweb2_language_script": "guj_Latn",
+      "to_fineweb2_language_script": "guj_Gujr",
+      "fix_ids": [
+        "F5"
+      ],
+      "note": "predicted Latn trap; Gujarati script"
+    },
+    {
+      "sat_lang": "hi",
+      "from_fineweb2_language_script": "hin_Latn",
+      "to_fineweb2_language_script": "hin_Deva",
+      "fix_ids": [
+        "F6"
+      ],
+      "note": "Hindi Devanagari; Latn subset thin vs hin_Deva"
+    },
+    {
+      "sat_lang": "kn",
+      "from_fineweb2_language_script": "kan_Latn",
+      "to_fineweb2_language_script": "kan_Knda",
+      "fix_ids": [
+        "F5"
+      ],
+      "note": "predicted Latn trap; Kannada script"
+    },
+    {
+      "sat_lang": "ml",
+      "from_fineweb2_language_script": "mal_Latn",
+      "to_fineweb2_language_script": "mal_Mlym",
+      "fix_ids": [
+        "F5"
+      ],
+      "note": "predicted Latn trap; Malayalam script"
+    },
+    {
+      "sat_lang": "mr",
+      "from_fineweb2_language_script": "mar_Latn",
+      "to_fineweb2_language_script": "mar_Deva",
+      "fix_ids": [
+        "F5"
+      ],
+      "note": "predicted Latn trap; Devanagari"
+    },
+    {
+      "sat_lang": "ne",
+      "from_fineweb2_language_script": "npi_Latn",
+      "to_fineweb2_language_script": "npi_Deva",
+      "fix_ids": [
+        "F5"
+      ],
+      "note": "predicted Latn trap; Devanagari"
+    },
+    {
+      "sat_lang": "ta",
+      "from_fineweb2_language_script": "tam_Latn",
+      "to_fineweb2_language_script": "tam_Taml",
+      "fix_ids": [
+        "F5"
+      ],
+      "note": "predicted Latn trap; Tamil script"
+    },
+    {
+      "sat_lang": "te",
+      "from_fineweb2_language_script": "tel_Latn",
+      "to_fineweb2_language_script": "tel_Telu",
+      "fix_ids": [
+        "F5"
+      ],
+      "note": "predicted Latn trap; Telugu script"
+    },
+    {
+      "sat_lang": "ur",
+      "from_fineweb2_language_script": "urd_Latn",
+      "to_fineweb2_language_script": "urd_Arab",
+      "fix_ids": [
+        "F5"
+      ],
+      "note": "predicted Latn trap; Arabic script Urdu"
+    }
+  ]
+}

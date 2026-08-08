@@ -368,8 +368,8 @@ paragraphs, PyTorch 2.13, and macOS 15.6 arm64:
 ## Reproducing the paper
 
 Research modules are available from a source checkout using the environment
-documented in [`RESEARCH.md`](RESEARCH.md). Cluster operator steps are in
-[`docs/OPERATOR.md`](docs/OPERATOR.md):
+documented in [`RESEARCH.md`](RESEARCH.md). Stage 1 data, training, and
+evaluation are described in [`docs/STAGE1.md`](docs/STAGE1.md):
 
 ```bash
 uv sync --locked --group research --extra legacy

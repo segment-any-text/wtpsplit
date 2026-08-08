@@ -1,0 +1,48 @@
+{
+  "version": "mmsat_contamination_index_manifest_v2",
+  "created": "2026-07-30",
+  "reproducibility": {
+    "status": "frozen_artifact_required_for_matched_runs",
+    "original_bouquet_revision": null,
+    "note": "The original BOUQuET revision was not retained. A rebuild is a new contamination input and requires a new manifest and FineWeb corpus receipt."
+  },
+  "artifact": "data/external/mmsat_contamination_index_v1.json.gz",
+  "artifact_sha256": "e64b631886b9e7ff6fad2efb2cc12aadf30351a1a737fbebffeb912095483c60",
+  "artifact_bytes": 29242197,
+  "inputs": {
+    "ud_selection": "data/manifests/ud_2_18_frozen_selection_v1.json",
+    "bouquet_splits": [
+      "dev",
+      "test"
+    ],
+    "bouquet_revision": null
+  },
+  "input_sha256": {
+    "ud_selection": "ee6f644c7a75092a179e3c3e1f2b0613570902a97be937144489e8935dbf3824"
+  },
+  "counts": {
+    "exact_hashes": 600295,
+    "near_signatures": 454529,
+    "by_source": {
+      "ud_2.18_test": 197371,
+      "bouquet_dev_partial": 151897,
+      "bouquet_test_partial": 265165
+    }
+  },
+  "input_units": {
+    "ud_sentences": 182119,
+    "bouquet_documents": 87450
+  },
+  "algorithm": {
+    "normalization": "Unicode NFKC, casefold, collapsed whitespace",
+    "exact": "Global SHA-256 of documents and coarse sentence/line units; v1 source mapping was not retained, so exact byte-equivalent matches stay conservative.",
+    "near": "64-bit character-shingle SimHash, 4x16-bit LSH, Hamming <= 12; candidates restricted to the same ISO language",
+    "near_policy": "Conservative quarantine; never silently retain."
+  },
+  "migration": {
+    "date": "2026-07-30",
+    "from": "mmsat_contamination_index_v1",
+    "network_or_corpus_access": false
+  },
+  "rebuild_command": "python scripts/build_contamination_index.py"
+}

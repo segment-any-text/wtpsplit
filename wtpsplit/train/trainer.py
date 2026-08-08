@@ -164,44 +164,10 @@ class Trainer(transformers.Trainer):
 
         return self.lr_scheduler
 
-    def _maybe_log_save_evaluate(self, tr_loss, model, trial, epoch, ignore_keys_for_eval):
-        if self.control.should_log:
-            if is_torch_xla_available(check_is_tpu=True):
-                xm.mark_step()
-
-            logs: Dict[str, float] = {}
-
-            # all_gather + mean() to get average loss over all processes
-            tr_loss_scalar = self._nested_gather(tr_loss).mean().item()
-
-            # reset tr_loss to zero
-            tr_loss -= tr_loss
-
-            logs["loss"] = round(
-                tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged),
-                4,
-            )
-            (
-                logs["learning_rate"],
-                _,
-                logs["learning_rate_adapter"],
-                _,
-            ) = self.lr_scheduler.get_last_lr()
-
-            self._total_loss_scalar += tr_loss_scalar
-            self._globalstep_last_logged = self.state.global_step
-            self.store_flos()
-
-            self.log(logs)
-
-        metrics = None
-        if self.control.should_evaluate:
-            metrics = self.evaluate(ignore_keys=ignore_keys_for_eval)
-            self._report_to_hp_search(trial, self.state.global_step, metrics)
-
-        if self.control.should_save:
-            self._save_checkpoint(model, trial, metrics=metrics)
-            self.control = self.callback_handler.on_save(self.args, self.state, self.control)
+    def _maybe_log_save_evaluate(self, *args, **kwargs):
+        # Transformers 5 changed this signature repeatedly; defer to upstream.
+        # Adapter-specific LR logging is unused for mmSaT Stage-1 Track B runs.
+        return transformers.Trainer._maybe_log_save_evaluate(self, *args, **kwargs)
 
     def evaluation_loop(
         self,
@@ -411,6 +377,58 @@ class Trainer(transformers.Trainer):
             metrics=metrics,
             num_samples=num_samples,
         )
+
+    def _save(self, output_dir: Optional[str] = None, state_dict=None):
+        """GPU/CPU save path: unwrap ``Model`` so weights/config match ``from_pretrained``.
+
+        Default HF ``Trainer._save`` sees our training wrapper (``wtpsplit.train.utils.Model``)
+        as a plain ``nn.Module``, so it dumps ``state_dict`` with a ``backbone.`` prefix and
+        skips ``config.json`` / tokenizer. TPU path already unwrapped via ``_save_tpu``.
+        """
+        output_dir = output_dir if output_dir is not None else self.args.output_dir
+        os.makedirs(output_dir, exist_ok=True)
+        logger.info(f"Saving model checkpoint to {output_dir}")
+
+        if isinstance(self.model, Model):
+            actual_model = self.model.backbone
+            if state_dict is not None:
+                # Trainer may pass the wrapper state_dict; strip the prefix.
+                prefix = "backbone."
+                state_dict = {
+                    (k[len(prefix) :] if k.startswith(prefix) else k): v for k, v in state_dict.items()
+                }
+        else:
+            actual_model = self.model
+
+        if isinstance(actual_model, PreTrainedModel):
+            actual_model.save_pretrained(output_dir, state_dict=state_dict)
+        elif isinstance(unwrap_model(actual_model), PreTrainedModel):
+            unwrap_model(actual_model).save_pretrained(
+                output_dir,
+                state_dict=state_dict if state_dict is not None else actual_model.state_dict(),
+            )
+        else:
+            logger.warning("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
+            import safetensors.torch
+
+            if state_dict is None:
+                state_dict = actual_model.state_dict()
+            safetensors.torch.save_file(
+                state_dict,
+                os.path.join(output_dir, "model.safetensors"),
+                metadata={"format": "pt"},
+            )
+
+        # Prefer explicit tokenizer (Stage-1); HF may store it as processing_class.
+        tokenizer = getattr(self, "tokenizer", None) or getattr(self, "processing_class", None)
+        if tokenizer is None and self.data_collator is not None:
+            tokenizer = getattr(self.data_collator, "tokenizer", None)
+            if tokenizer is None and hasattr(self.data_collator, "keywords"):
+                tokenizer = self.data_collator.keywords.get("tokenizer")
+        if tokenizer is not None:
+            tokenizer.save_pretrained(output_dir)
+
+        torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
 
     def _save_tpu(self, output_dir: Optional[str] = None):
         output_dir = output_dir if output_dir is not None else self.args.output_dir

@@ -15,8 +15,8 @@ uv sync --locked --group research --extra legacy
 Add `--extra onnx-cpu` for the full API test suite (ONNX-backed tests need the
 runtime even when research work uses PyTorch).
 
-Cluster train/eval: [docs/OPERATOR.md](docs/OPERATOR.md).  
-Stage sequence and blockers: [docs/TRAINING_CURRICULUM.md](docs/TRAINING_CURRICULUM.md).
+Stage 1 data, training, evaluation, and open work:
+[docs/STAGE1.md](docs/STAGE1.md).
 
 ```bash
 uv run python wtpsplit/train/train.py configs/your_config.json

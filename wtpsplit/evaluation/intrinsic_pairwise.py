@@ -14,7 +14,11 @@ from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForTokenClassification, HfArgumentParser
 import numpy as np
-import adapters
+
+try:
+    import adapters
+except ImportError:  # optional; Stage-1 training does not need AdapterHub
+    adapters = None
 
 import wtpsplit.models  # noqa: F401
 from wtpsplit.evaluation import evaluate_mixture, get_labels, train_mixture
@@ -303,6 +307,11 @@ def main(args):
     print("Loading model...")
     model = PyTorchWrapper(AutoModelForTokenClassification.from_pretrained(args.model_path).to(args.device))
     if args.adapter_path:
+        if adapters is None:
+            raise ImportError(
+                "Loading --adapter_path requires the optional 'adapters' package "
+                "(incompatible with transformers 5 in this env)."
+            )
         model_type = model.model.config.model_type
         # adapters need xlm-roberta as model type.
         model.model.config.model_type = "xlm-roberta"

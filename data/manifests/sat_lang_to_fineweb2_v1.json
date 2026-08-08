@@ -1,0 +1,489 @@
+{
+  "version": "sat_lang_to_fineweb2_v1",
+  "purpose": "Map SaT/mC4 Stage-1 language codes to FineWeb2 language_script for matched FineWeb vs mC4 Stage 1.",
+  "notes": [
+    "FineWeb2 has no English. Matched bake-off includes en via OG FineWeb (HuggingFaceFW/fineweb) on the FineWeb arm and allenai/c4 en on the mC4 arm (see fineweb_english on the en row).",
+    "Default matched recipe: 85 SaT langs (84 FineWeb2 pairs + English).",
+    "Macrolanguage stand-ins are recorded in per-row notes.",
+    "Paragraph/document units: scripts/build_stage1.py.",
+    "Script remaps (2026-08): thin *_Latn stand-ins are replaced with native-script sources for ar/bn/gu/kn/ml/mr/ne/ta/te/ur. Fresh builds apply stage1_fineweb_script_remaps_v1.json during source resolution; older artifacts must be rebuilt or retained under their original fingerprint."
+  ],
+  "counts": {
+    "sat_languages": 85,
+    "fineweb2_paired": 84,
+    "english_via_og_fineweb": 1,
+    "matched_bakeoff_languages": 85,
+    "unpaired_fineweb2_only": [
+      "en"
+    ]
+  },
+  "rows": [
+    {
+      "sat_lang": "af",
+      "iso639_3": "afr",
+      "fineweb2_language_script": "afr_Latn"
+    },
+    {
+      "sat_lang": "am",
+      "iso639_3": "amh",
+      "fineweb2_language_script": "amh_Ethi"
+    },
+    {
+      "sat_lang": "ar",
+      "iso639_3": "arb",
+      "fineweb2_language_script": "arb_Arab",
+      "note": "MSA arb stand-in for SaT ar Remapped arb_Latn→arb_Arab (F1: thin Latn stand-in).",
+      "fineweb2_language_script_previous_latn": "arb_Latn"
+    },
+    {
+      "sat_lang": "az",
+      "iso639_3": "azj",
+      "fineweb2_language_script": "azj_Latn",
+      "note": "azj stand-in"
+    },
+    {
+      "sat_lang": "be",
+      "iso639_3": "bel",
+      "fineweb2_language_script": "bel_Cyrl"
+    },
+    {
+      "sat_lang": "bg",
+      "iso639_3": "bul",
+      "fineweb2_language_script": "bul_Cyrl"
+    },
+    {
+      "sat_lang": "bn",
+      "iso639_3": "ben",
+      "fineweb2_language_script": "ben_Beng",
+      "fineweb2_language_script_previous_latn": "ben_Latn",
+      "note": "Remapped ben_Latn→ben_Beng (F3: thin Latn stand-in)."
+    },
+    {
+      "sat_lang": "ca",
+      "iso639_3": "cat",
+      "fineweb2_language_script": "cat_Latn"
+    },
+    {
+      "sat_lang": "ceb",
+      "iso639_3": "ceb",
+      "fineweb2_language_script": "ceb_Latn"
+    },
+    {
+      "sat_lang": "cs",
+      "iso639_3": "ces",
+      "fineweb2_language_script": "ces_Latn"
+    },
+    {
+      "sat_lang": "cy",
+      "iso639_3": "cym",
+      "fineweb2_language_script": "cym_Latn"
+    },
+    {
+      "sat_lang": "da",
+      "iso639_3": "dan",
+      "fineweb2_language_script": "dan_Latn"
+    },
+    {
+      "sat_lang": "de",
+      "iso639_3": "deu",
+      "fineweb2_language_script": "deu_Latn"
+    },
+    {
+      "sat_lang": "el",
+      "iso639_3": "ell",
+      "fineweb2_language_script": "ell_Grek"
+    },
+    {
+      "sat_lang": "en",
+      "iso639_3": "eng",
+      "fineweb2_language_script": null,
+      "fineweb_english": {
+        "hf_dataset": "HuggingFaceFW/fineweb",
+        "hf_config": "default",
+        "hf_split": "train",
+        "local_script_id": "eng_FineWeb"
+      },
+      "note": "FineWeb2 has no English. FineWeb arm: OG FineWeb (local_script_id eng_FineWeb JSONL or Hub stream). mC4 arm: allenai/c4 config en."
+    },
+    {
+      "sat_lang": "eo",
+      "iso639_3": "epo",
+      "fineweb2_language_script": "epo_Latn"
+    },
+    {
+      "sat_lang": "es",
+      "iso639_3": "spa",
+      "fineweb2_language_script": "spa_Latn"
+    },
+    {
+      "sat_lang": "et",
+      "iso639_3": "ekk",
+      "fineweb2_language_script": "ekk_Latn",
+      "note": "ekk stand-in"
+    },
+    {
+      "sat_lang": "eu",
+      "iso639_3": "eus",
+      "fineweb2_language_script": "eus_Latn"
+    },
+    {
+      "sat_lang": "fa",
+      "iso639_3": "fas",
+      "fineweb2_language_script": "fas_Arab"
+    },
+    {
+      "sat_lang": "fi",
+      "iso639_3": "fin",
+      "fineweb2_language_script": "fin_Latn"
+    },
+    {
+      "sat_lang": "fr",
+      "iso639_3": "fra",
+      "fineweb2_language_script": "fra_Latn"
+    },
+    {
+      "sat_lang": "fy",
+      "iso639_3": "fry",
+      "fineweb2_language_script": "fry_Latn"
+    },
+    {
+      "sat_lang": "ga",
+      "iso639_3": "gle",
+      "fineweb2_language_script": "gle_Latn"
+    },
+    {
+      "sat_lang": "gd",
+      "iso639_3": "gla",
+      "fineweb2_language_script": "gla_Latn"
+    },
+    {
+      "sat_lang": "gl",
+      "iso639_3": "glg",
+      "fineweb2_language_script": "glg_Latn"
+    },
+    {
+      "sat_lang": "gu",
+      "iso639_3": "guj",
+      "fineweb2_language_script": "guj_Gujr",
+      "fineweb2_language_script_previous_latn": "guj_Latn",
+      "note": "Remapped guj_Latn→guj_Gujr (F5: thin Latn stand-in)."
+    },
+    {
+      "sat_lang": "ha",
+      "iso639_3": "hau",
+      "fineweb2_language_script": "hau_Latn"
+    },
+    {
+      "sat_lang": "he",
+      "iso639_3": "heb",
+      "fineweb2_language_script": "heb_Hebr"
+    },
+    {
+      "sat_lang": "hi",
+      "iso639_3": "hin",
+      "fineweb2_language_script": "hin_Deva",
+      "fineweb2_language_script_previous_latn": "hin_Latn",
+      "note": "Remapped hin_Latn→hin_Deva (F6: thin Latn stand-in)."
+    },
+    {
+      "sat_lang": "hu",
+      "iso639_3": "hun",
+      "fineweb2_language_script": "hun_Latn"
+    },
+    {
+      "sat_lang": "hy",
+      "iso639_3": "hye",
+      "fineweb2_language_script": "hye_Armn"
+    },
+    {
+      "sat_lang": "id",
+      "iso639_3": "ind",
+      "fineweb2_language_script": "ind_Latn"
+    },
+    {
+      "sat_lang": "ig",
+      "iso639_3": "ibo",
+      "fineweb2_language_script": "ibo_Latn"
+    },
+    {
+      "sat_lang": "is",
+      "iso639_3": "isl",
+      "fineweb2_language_script": "isl_Latn"
+    },
+    {
+      "sat_lang": "it",
+      "iso639_3": "ita",
+      "fineweb2_language_script": "ita_Latn"
+    },
+    {
+      "sat_lang": "ja",
+      "iso639_3": "jpn",
+      "fineweb2_language_script": "jpn_Jpan"
+    },
+    {
+      "sat_lang": "jv",
+      "iso639_3": "jav",
+      "fineweb2_language_script": "jav_Latn"
+    },
+    {
+      "sat_lang": "ka",
+      "iso639_3": "kat",
+      "fineweb2_language_script": "kat_Geor"
+    },
+    {
+      "sat_lang": "kk",
+      "iso639_3": "kaz",
+      "fineweb2_language_script": "kaz_Cyrl"
+    },
+    {
+      "sat_lang": "km",
+      "iso639_3": "khm",
+      "fineweb2_language_script": "khm_Khmr"
+    },
+    {
+      "sat_lang": "kn",
+      "iso639_3": "kan",
+      "fineweb2_language_script": "kan_Knda",
+      "fineweb2_language_script_previous_latn": "kan_Latn",
+      "note": "Remapped kan_Latn→kan_Knda (F5: thin Latn stand-in)."
+    },
+    {
+      "sat_lang": "ko",
+      "iso639_3": "kor",
+      "fineweb2_language_script": "kor_Hang"
+    },
+    {
+      "sat_lang": "ku",
+      "iso639_3": "kmr",
+      "fineweb2_language_script": "kmr_Latn",
+      "note": "kmr stand-in"
+    },
+    {
+      "sat_lang": "ky",
+      "iso639_3": "kir",
+      "fineweb2_language_script": "kir_Cyrl"
+    },
+    {
+      "sat_lang": "la",
+      "iso639_3": "lat",
+      "fineweb2_language_script": "lat_Latn"
+    },
+    {
+      "sat_lang": "lt",
+      "iso639_3": "lit",
+      "fineweb2_language_script": "lit_Latn"
+    },
+    {
+      "sat_lang": "lv",
+      "iso639_3": "lvs",
+      "fineweb2_language_script": "lvs_Latn",
+      "note": "lvs stand-in"
+    },
+    {
+      "sat_lang": "mg",
+      "iso639_3": "plt",
+      "fineweb2_language_script": "plt_Latn",
+      "note": "plt stand-in"
+    },
+    {
+      "sat_lang": "mk",
+      "iso639_3": "mkd",
+      "fineweb2_language_script": "mkd_Cyrl"
+    },
+    {
+      "sat_lang": "ml",
+      "iso639_3": "mal",
+      "fineweb2_language_script": "mal_Mlym",
+      "fineweb2_language_script_previous_latn": "mal_Latn",
+      "note": "Remapped mal_Latn→mal_Mlym (F5: thin Latn stand-in)."
+    },
+    {
+      "sat_lang": "mn",
+      "iso639_3": "khk",
+      "fineweb2_language_script": "khk_Cyrl",
+      "note": "khk stand-in"
+    },
+    {
+      "sat_lang": "mr",
+      "iso639_3": "mar",
+      "fineweb2_language_script": "mar_Deva",
+      "fineweb2_language_script_previous_latn": "mar_Latn",
+      "note": "Remapped mar_Latn→mar_Deva (F5: thin Latn stand-in)."
+    },
+    {
+      "sat_lang": "ms",
+      "iso639_3": "zsm",
+      "fineweb2_language_script": "zsm_Latn"
+    },
+    {
+      "sat_lang": "mt",
+      "iso639_3": "mlt",
+      "fineweb2_language_script": "mlt_Latn"
+    },
+    {
+      "sat_lang": "my",
+      "iso639_3": "mya",
+      "fineweb2_language_script": "mya_Mymr"
+    },
+    {
+      "sat_lang": "ne",
+      "iso639_3": "npi",
+      "fineweb2_language_script": "npi_Deva",
+      "fineweb2_language_script_previous_latn": "npi_Latn",
+      "note": "Remapped npi_Latn→npi_Deva (F5: thin Latn stand-in)."
+    },
+    {
+      "sat_lang": "nl",
+      "iso639_3": "nld",
+      "fineweb2_language_script": "nld_Latn"
+    },
+    {
+      "sat_lang": "no",
+      "iso639_3": "nob",
+      "fineweb2_language_script": "nob_Latn",
+      "note": "nob stand-in"
+    },
+    {
+      "sat_lang": "pa",
+      "iso639_3": "pan",
+      "fineweb2_language_script": "pan_Guru",
+      "note": "Gurmukhi Punjabi stand-in for SaT pa (pan_Latn failed to stream)"
+    },
+    {
+      "sat_lang": "pl",
+      "iso639_3": "pol",
+      "fineweb2_language_script": "pol_Latn"
+    },
+    {
+      "sat_lang": "ps",
+      "iso639_3": "pbt",
+      "fineweb2_language_script": "pbt_Arab",
+      "note": "pbt stand-in"
+    },
+    {
+      "sat_lang": "pt",
+      "iso639_3": "por",
+      "fineweb2_language_script": "por_Latn"
+    },
+    {
+      "sat_lang": "ro",
+      "iso639_3": "ron",
+      "fineweb2_language_script": "ron_Latn"
+    },
+    {
+      "sat_lang": "ru",
+      "iso639_3": "rus",
+      "fineweb2_language_script": "rus_Cyrl"
+    },
+    {
+      "sat_lang": "si",
+      "iso639_3": "sin",
+      "fineweb2_language_script": "sin_Sinh"
+    },
+    {
+      "sat_lang": "sk",
+      "iso639_3": "slk",
+      "fineweb2_language_script": "slk_Latn"
+    },
+    {
+      "sat_lang": "sl",
+      "iso639_3": "slv",
+      "fineweb2_language_script": "slv_Latn"
+    },
+    {
+      "sat_lang": "sq",
+      "iso639_3": "als",
+      "fineweb2_language_script": "als_Latn",
+      "note": "als stand-in"
+    },
+    {
+      "sat_lang": "sr",
+      "iso639_3": "srp",
+      "fineweb2_language_script": "srp_Latn"
+    },
+    {
+      "sat_lang": "sv",
+      "iso639_3": "swe",
+      "fineweb2_language_script": "swe_Latn"
+    },
+    {
+      "sat_lang": "ta",
+      "iso639_3": "tam",
+      "fineweb2_language_script": "tam_Taml",
+      "fineweb2_language_script_previous_latn": "tam_Latn",
+      "note": "Remapped tam_Latn→tam_Taml (F5: thin Latn stand-in)."
+    },
+    {
+      "sat_lang": "te",
+      "iso639_3": "tel",
+      "fineweb2_language_script": "tel_Telu",
+      "fineweb2_language_script_previous_latn": "tel_Latn",
+      "note": "Remapped tel_Latn→tel_Telu (F5: thin Latn stand-in)."
+    },
+    {
+      "sat_lang": "tg",
+      "iso639_3": "tgk",
+      "fineweb2_language_script": "tgk_Cyrl"
+    },
+    {
+      "sat_lang": "th",
+      "iso639_3": "tha",
+      "fineweb2_language_script": "tha_Thai"
+    },
+    {
+      "sat_lang": "tr",
+      "iso639_3": "tur",
+      "fineweb2_language_script": "tur_Latn"
+    },
+    {
+      "sat_lang": "uk",
+      "iso639_3": "ukr",
+      "fineweb2_language_script": "ukr_Cyrl"
+    },
+    {
+      "sat_lang": "ur",
+      "iso639_3": "urd",
+      "fineweb2_language_script": "urd_Arab",
+      "fineweb2_language_script_previous_latn": "urd_Latn",
+      "note": "Remapped urd_Latn→urd_Arab (F5: thin Latn stand-in)."
+    },
+    {
+      "sat_lang": "uz",
+      "iso639_3": "uzn",
+      "fineweb2_language_script": "uzn_Latn",
+      "note": "uzn stand-in"
+    },
+    {
+      "sat_lang": "vi",
+      "iso639_3": "vie",
+      "fineweb2_language_script": "vie_Latn"
+    },
+    {
+      "sat_lang": "xh",
+      "iso639_3": "xho",
+      "fineweb2_language_script": "xho_Latn"
+    },
+    {
+      "sat_lang": "yi",
+      "iso639_3": "ydd",
+      "fineweb2_language_script": "ydd_Hebr",
+      "note": "ydd stand-in"
+    },
+    {
+      "sat_lang": "yo",
+      "iso639_3": "yor",
+      "fineweb2_language_script": "yor_Latn"
+    },
+    {
+      "sat_lang": "zh",
+      "iso639_3": "cmn",
+      "fineweb2_language_script": "cmn_Hani",
+      "note": "cmn stand-in"
+    },
+    {
+      "sat_lang": "zu",
+      "iso639_3": "zul",
+      "fineweb2_language_script": "zul_Latn"
+    }
+  ]
+}

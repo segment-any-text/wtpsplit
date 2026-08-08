@@ -416,6 +416,12 @@ else:
     if not args.run_final_evaluation:
         del test_sentences
         gc.collect()
+    # Transformers 5 requires eval_dataset whenever eval_strategy != "no".
+    # During-training eval uses MultiDatasetEvalCallback only when W&B is on;
+    # otherwise keep packing deferred and disable step/epoch eval.
+    if training_args.eval_strategy != "no":
+        training_args.eval_strategy = "no"
+        print("dataset_lifecycle eval_strategy=forced_no (deferred packing)")
 
 experiment_name = model_checkpoint.split("/")[-1]
 
@@ -438,7 +444,28 @@ def compute_prf(true_values, predicted_values):
 def sigmoid_array(x):
     # Extreme masked-BCE logits are expected after training. Clipping only
     # changes values that already round to 0/1 while avoiding exp overflow.
-    return 1 / (1 + np.exp(-np.clip(x, -80, 80)))
+    # Cast explicitly: object/None arrays from Trainer predict break np.clip.
+    x = np.asarray(x, dtype=np.float64)
+    return 1 / (1 + np.exp(-np.clip(x, -80.0, 80.0)))
+
+
+def _flatten_numeric(values, dtype):
+    """Flatten Trainer predict outputs that may be ragged object arrays."""
+    if values is None:
+        return np.zeros(0, dtype=dtype)
+    if isinstance(values, (tuple, list)):
+        values = values[0]
+    array = np.asarray(values)
+    if array.dtype != object:
+        return array.astype(dtype, copy=False).reshape(-1)
+    pieces = []
+    for item in array.flat:
+        if item is None:
+            continue
+        pieces.append(np.asarray(item, dtype=dtype).reshape(-1))
+    if not pieces:
+        return np.zeros(0, dtype=dtype)
+    return np.concatenate(pieces)
 
 
 def compute_metrics(p):
@@ -702,12 +729,21 @@ if args.run_final_evaluation:
     dataset_count = 0
     for lang_code in test_dataset:
         for eval_dataset in test_dataset[lang_code].values():
+            if len(eval_dataset) == 0:
+                continue
             prediction = trainer.predict(eval_dataset)
-            logits = np.asarray(prediction.predictions).reshape(-1)
-            labels = np.asarray(prediction.label_ids).reshape(-1)
+            logits = _flatten_numeric(prediction.predictions, np.float64)
+            labels = _flatten_numeric(prediction.label_ids, np.int64)
+            if logits.size != labels.size:
+                raise ValueError(
+                    f"Prediction/label length mismatch for {lang_code}: "
+                    f"{logits.size} vs {labels.size}"
+                )
             keep = labels != -100
             kept_probabilities = sigmoid_array(logits[keep])
             kept_labels = labels[keep]
+            if kept_labels.size == 0:
+                continue
             all_probabilities.append(kept_probabilities)
             all_labels.append(kept_labels)
             language_probabilities[lang_code].append(kept_probabilities)
@@ -715,8 +751,12 @@ if args.run_final_evaluation:
             language_scripts[lang_code][evaluation_scripts[lang_code]] += len(kept_labels)
             dataset_count += 1
 
-    probabilities = np.concatenate(all_probabilities)
-    labels = np.concatenate(all_labels)
+    if not all_probabilities:
+        probabilities = np.zeros(0, dtype=np.float64)
+        labels = np.zeros(0, dtype=np.int64)
+    else:
+        probabilities = np.concatenate(all_probabilities)
+        labels = np.concatenate(all_labels)
 
     def metrics_at(group_probabilities, group_labels, threshold):
         precision, recall, f1 = compute_prf(

@@ -1,0 +1,1580 @@
+{
+  "version": "mc4_test_per_lang_char_mass_v1",
+  "dataset": "markus583/mC4-TEST",
+  "source_revision": "6c109b67925b989746262bb67f0214f59bb1f8a2",
+  "finished_at": "2026-08-04 21:44:39",
+  "splits": {
+    "train": {
+      "summary": {
+        "n_languages": 85,
+        "languages": [
+          "af",
+          "am",
+          "ar",
+          "az",
+          "be",
+          "bg",
+          "bn",
+          "ca",
+          "ceb",
+          "cs",
+          "cy",
+          "da",
+          "de",
+          "el",
+          "en",
+          "eo",
+          "es",
+          "et",
+          "eu",
+          "fa",
+          "fi",
+          "fr",
+          "fy",
+          "ga",
+          "gd",
+          "gl",
+          "gu",
+          "ha",
+          "he",
+          "hi",
+          "hu",
+          "hy",
+          "id",
+          "ig",
+          "is",
+          "it",
+          "ja",
+          "jv",
+          "ka",
+          "kk",
+          "km",
+          "kn",
+          "ko",
+          "ku",
+          "ky",
+          "la",
+          "lt",
+          "lv",
+          "mg",
+          "mk",
+          "ml",
+          "mn",
+          "mr",
+          "ms",
+          "mt",
+          "my",
+          "ne",
+          "nl",
+          "no",
+          "pa",
+          "pl",
+          "ps",
+          "pt",
+          "ro",
+          "ru",
+          "si",
+          "sk",
+          "sl",
+          "sq",
+          "sr",
+          "sv",
+          "ta",
+          "te",
+          "tg",
+          "th",
+          "tr",
+          "uk",
+          "ur",
+          "uz",
+          "vi",
+          "xh",
+          "yi",
+          "yo",
+          "zh",
+          "zu"
+        ],
+        "total_rows": 312181384,
+        "total_chars": 50976687423,
+        "chars_min": 135066575,
+        "chars_max": 616400738,
+        "chars_mean": 599725734.3882353,
+        "chars_median": 616202004.0,
+        "chars_std": 80880029.55448516,
+        "chars_cv": 0.13486169579997892,
+        "recommended_equal_chars_target_chars": 50976687423,
+        "recommended_chars_per_language": 599725734,
+        "match_min_chars_per_language": 135066575,
+        "match_min_total_chars": 11480658875
+      },
+      "per_lang": {
+        "af": {
+          "rows": 3953895,
+          "chars": 616222236,
+          "punct_rows": 1982898,
+          "nonpunct_rows": 1970997,
+          "punct_row_ratio": 0.5015049716798246,
+          "mean_chars_per_row": 155.85194750998699
+        },
+        "am": {
+          "rows": 3700124,
+          "chars": 560908173,
+          "punct_rows": 2253110,
+          "nonpunct_rows": 1447014,
+          "punct_row_ratio": 0.6089282413238043,
+          "mean_chars_per_row": 151.59172314225145
+        },
+        "ar": {
+          "rows": 4002992,
+          "chars": 616233732,
+          "punct_rows": 1892805,
+          "nonpunct_rows": 2110187,
+          "punct_row_ratio": 0.4728475600251012,
+          "mean_chars_per_row": 153.94328342399885
+        },
+        "az": {
+          "rows": 3726595,
+          "chars": 616233370,
+          "punct_rows": 1870717,
+          "nonpunct_rows": 1855878,
+          "punct_row_ratio": 0.5019909595756985,
+          "mean_chars_per_row": 165.36097161081364
+        },
+        "be": {
+          "rows": 3660978,
+          "chars": 616188748,
+          "punct_rows": 2234615,
+          "nonpunct_rows": 1426363,
+          "punct_row_ratio": 0.6103874429182584,
+          "mean_chars_per_row": 168.31260608504067
+        },
+        "bg": {
+          "rows": 3941467,
+          "chars": 616180378,
+          "punct_rows": 2165137,
+          "nonpunct_rows": 1776330,
+          "punct_row_ratio": 0.5493226253067703,
+          "mean_chars_per_row": 156.33275072453986
+        },
+        "bn": {
+          "rows": 3514619,
+          "chars": 616197645,
+          "punct_rows": 1983074,
+          "nonpunct_rows": 1531545,
+          "punct_row_ratio": 0.564235838934462,
+          "mean_chars_per_row": 175.32416600490694
+        },
+        "ca": {
+          "rows": 3561030,
+          "chars": 616195305,
+          "punct_rows": 1938555,
+          "nonpunct_rows": 1622475,
+          "punct_row_ratio": 0.5443804180251219,
+          "mean_chars_per_row": 173.0385043091465
+        },
+        "ceb": {
+          "rows": 4719549,
+          "chars": 616215526,
+          "punct_rows": 2870343,
+          "nonpunct_rows": 1849206,
+          "punct_row_ratio": 0.6081816292192326,
+          "mean_chars_per_row": 130.5666126148918
+        },
+        "cs": {
+          "rows": 3793669,
+          "chars": 616234150,
+          "punct_rows": 1810012,
+          "nonpunct_rows": 1983657,
+          "punct_row_ratio": 0.47711384414401997,
+          "mean_chars_per_row": 162.4375110216521
+        },
+        "cy": {
+          "rows": 3720811,
+          "chars": 616249375,
+          "punct_rows": 1866904,
+          "nonpunct_rows": 1853907,
+          "punct_row_ratio": 0.5017465278403015,
+          "mean_chars_per_row": 165.62232669168094
+        },
+        "da": {
+          "rows": 3319117,
+          "chars": 616203033,
+          "punct_rows": 1691442,
+          "nonpunct_rows": 1627675,
+          "punct_row_ratio": 0.5096060187091929,
+          "mean_chars_per_row": 185.6527001006593
+        },
+        "de": {
+          "rows": 3478201,
+          "chars": 616167261,
+          "punct_rows": 1738885,
+          "nonpunct_rows": 1739316,
+          "punct_row_ratio": 0.4999380426835597,
+          "mean_chars_per_row": 177.15113675144133
+        },
+        "el": {
+          "rows": 3303539,
+          "chars": 616220449,
+          "punct_rows": 1807585,
+          "nonpunct_rows": 1495954,
+          "punct_row_ratio": 0.5471662359669434,
+          "mean_chars_per_row": 186.53342642541833
+        },
+        "en": {
+          "rows": 3140211,
+          "chars": 616242512,
+          "punct_rows": 1626065,
+          "nonpunct_rows": 1514146,
+          "punct_row_ratio": 0.5178202993365733,
+          "mean_chars_per_row": 196.24239008143084
+        },
+        "eo": {
+          "rows": 4208851,
+          "chars": 616184685,
+          "punct_rows": 2307749,
+          "nonpunct_rows": 1901102,
+          "punct_row_ratio": 0.5483085526192303,
+          "mean_chars_per_row": 146.40211425873713
+        },
+        "es": {
+          "rows": 3161792,
+          "chars": 616205938,
+          "punct_rows": 1632750,
+          "nonpunct_rows": 1529042,
+          "punct_row_ratio": 0.5164001933080987,
+          "mean_chars_per_row": 194.8913584448313
+        },
+        "et": {
+          "rows": 4040704,
+          "chars": 616229671,
+          "punct_rows": 2241212,
+          "nonpunct_rows": 1799492,
+          "punct_row_ratio": 0.5546587921312722,
+          "mean_chars_per_row": 152.5055215625792
+        },
+        "eu": {
+          "rows": 3853902,
+          "chars": 616198119,
+          "punct_rows": 2164242,
+          "nonpunct_rows": 1689660,
+          "punct_row_ratio": 0.5615716227345687,
+          "mean_chars_per_row": 159.88941052470977
+        },
+        "fa": {
+          "rows": 3719864,
+          "chars": 616207935,
+          "punct_rows": 1773973,
+          "nonpunct_rows": 1945891,
+          "punct_row_ratio": 0.47689189712312063,
+          "mean_chars_per_row": 165.65335049883544
+        },
+        "fi": {
+          "rows": 3496356,
+          "chars": 616215996,
+          "punct_rows": 1831695,
+          "nonpunct_rows": 1664661,
+          "punct_row_ratio": 0.523886869643709,
+          "mean_chars_per_row": 176.24520958392108
+        },
+        "fr": {
+          "rows": 3810155,
+          "chars": 616183233,
+          "punct_rows": 1858130,
+          "nonpunct_rows": 1952025,
+          "punct_row_ratio": 0.4876783227978914,
+          "mean_chars_per_row": 161.7213034640323
+        },
+        "fy": {
+          "rows": 4921624,
+          "chars": 616142434,
+          "punct_rows": 1572692,
+          "nonpunct_rows": 3348932,
+          "punct_row_ratio": 0.3195473689172517,
+          "mean_chars_per_row": 125.19087886437485
+        },
+        "ga": {
+          "rows": 4622669,
+          "chars": 616175311,
+          "punct_rows": 2046241,
+          "nonpunct_rows": 2576428,
+          "punct_row_ratio": 0.44265358389276843,
+          "mean_chars_per_row": 133.29427458466094
+        },
+        "gd": {
+          "rows": 2342611,
+          "chars": 616382896,
+          "punct_rows": 840010,
+          "nonpunct_rows": 1502601,
+          "punct_row_ratio": 0.358578526268339,
+          "mean_chars_per_row": 263.1179039114902
+        },
+        "gl": {
+          "rows": 4140195,
+          "chars": 616202004,
+          "punct_rows": 1897306,
+          "nonpunct_rows": 2242889,
+          "punct_row_ratio": 0.4582648884895518,
+          "mean_chars_per_row": 148.83405346849605
+        },
+        "gu": {
+          "rows": 3799779,
+          "chars": 616192748,
+          "punct_rows": 2113557,
+          "nonpunct_rows": 1686222,
+          "punct_row_ratio": 0.5562315597828189,
+          "mean_chars_per_row": 162.16541751507128
+        },
+        "ha": {
+          "rows": 4184994,
+          "chars": 579344003,
+          "punct_rows": 1954469,
+          "nonpunct_rows": 2230525,
+          "punct_row_ratio": 0.4670183517586883,
+          "mean_chars_per_row": 138.43365199567788
+        },
+        "he": {
+          "rows": 4266469,
+          "chars": 616206575,
+          "punct_rows": 2370364,
+          "nonpunct_rows": 1896105,
+          "punct_row_ratio": 0.55557980147049,
+          "mean_chars_per_row": 144.43010719168473
+        },
+        "hi": {
+          "rows": 3708045,
+          "chars": 616204409,
+          "punct_rows": 1837173,
+          "nonpunct_rows": 1870872,
+          "punct_row_ratio": 0.4954559612949681,
+          "mean_chars_per_row": 166.18040207171165
+        },
+        "hu": {
+          "rows": 3429251,
+          "chars": 616211624,
+          "punct_rows": 1809706,
+          "nonpunct_rows": 1619545,
+          "punct_row_ratio": 0.5277263169129353,
+          "mean_chars_per_row": 179.69277372814062
+        },
+        "hy": {
+          "rows": 3400041,
+          "chars": 616193916,
+          "punct_rows": 1986766,
+          "nonpunct_rows": 1413275,
+          "punct_row_ratio": 0.5843358947730336,
+          "mean_chars_per_row": 181.23131926938527
+        },
+        "id": {
+          "rows": 3349282,
+          "chars": 616210187,
+          "punct_rows": 1581174,
+          "nonpunct_rows": 1768108,
+          "punct_row_ratio": 0.4720934218139888,
+          "mean_chars_per_row": 183.9827721284741
+        },
+        "ig": {
+          "rows": 1677287,
+          "chars": 224430917,
+          "punct_rows": 784243,
+          "nonpunct_rows": 893044,
+          "punct_row_ratio": 0.4675663735544364,
+          "mean_chars_per_row": 133.80591216649267
+        },
+        "is": {
+          "rows": 3874864,
+          "chars": 616199163,
+          "punct_rows": 2089049,
+          "nonpunct_rows": 1785815,
+          "punct_row_ratio": 0.5391283410204849,
+          "mean_chars_per_row": 159.02472009340198
+        },
+        "it": {
+          "rows": 3353487,
+          "chars": 616131639,
+          "punct_rows": 1608835,
+          "nonpunct_rows": 1744652,
+          "punct_row_ratio": 0.4797498842249873,
+          "mean_chars_per_row": 183.72864990978047
+        },
+        "ja": {
+          "rows": 5925277,
+          "chars": 616243958,
+          "punct_rows": 3319646,
+          "nonpunct_rows": 2605631,
+          "punct_row_ratio": 0.5602516135532567,
+          "mean_chars_per_row": 104.00255684249024
+        },
+        "jv": {
+          "rows": 4872396,
+          "chars": 616188493,
+          "punct_rows": 1990279,
+          "nonpunct_rows": 2882117,
+          "punct_row_ratio": 0.408480550431451,
+          "mean_chars_per_row": 126.46519145816555
+        },
+        "ka": {
+          "rows": 3720525,
+          "chars": 616217335,
+          "punct_rows": 2129086,
+          "nonpunct_rows": 1591439,
+          "punct_row_ratio": 0.5722541845572869,
+          "mean_chars_per_row": 165.6264465364431
+        },
+        "kk": {
+          "rows": 3370886,
+          "chars": 616214201,
+          "punct_rows": 2043259,
+          "nonpunct_rows": 1327627,
+          "punct_row_ratio": 0.6061489471907385,
+          "mean_chars_per_row": 182.80481778381113
+        },
+        "km": {
+          "rows": 3222478,
+          "chars": 616194902,
+          "punct_rows": 1523007,
+          "nonpunct_rows": 1699471,
+          "punct_row_ratio": 0.47261982859153734,
+          "mean_chars_per_row": 191.21772188980034
+        },
+        "kn": {
+          "rows": 3280715,
+          "chars": 616169127,
+          "punct_rows": 1909578,
+          "nonpunct_rows": 1371137,
+          "punct_row_ratio": 0.5820615323184123,
+          "mean_chars_per_row": 187.81549967004145
+        },
+        "ko": {
+          "rows": 5453309,
+          "chars": 616217937,
+          "punct_rows": 2290257,
+          "nonpunct_rows": 3163052,
+          "punct_row_ratio": 0.41997565148059646,
+          "mean_chars_per_row": 112.99890341808982
+        },
+        "ku": {
+          "rows": 3715762,
+          "chars": 616191739,
+          "punct_rows": 2035210,
+          "nonpunct_rows": 1680552,
+          "punct_row_ratio": 0.547723454839142,
+          "mean_chars_per_row": 165.83186409678552
+        },
+        "ky": {
+          "rows": 3759793,
+          "chars": 616217288,
+          "punct_rows": 2290994,
+          "nonpunct_rows": 1468799,
+          "punct_row_ratio": 0.6093404610307004,
+          "mean_chars_per_row": 163.8965996266284
+        },
+        "la": {
+          "rows": 3280329,
+          "chars": 616194772,
+          "punct_rows": 1614093,
+          "nonpunct_rows": 1666236,
+          "punct_row_ratio": 0.49205216915742295,
+          "mean_chars_per_row": 187.84541794435864
+        },
+        "lt": {
+          "rows": 3715156,
+          "chars": 616212734,
+          "punct_rows": 2170190,
+          "nonpunct_rows": 1544966,
+          "punct_row_ratio": 0.5841450533974886,
+          "mean_chars_per_row": 165.86456504114497
+        },
+        "lv": {
+          "rows": 3835612,
+          "chars": 616209962,
+          "punct_rows": 2179607,
+          "nonpunct_rows": 1656005,
+          "punct_row_ratio": 0.5682553396954645,
+          "mean_chars_per_row": 160.6549259935572
+        },
+        "mg": {
+          "rows": 4343973,
+          "chars": 616212858,
+          "punct_rows": 1803736,
+          "nonpunct_rows": 2540237,
+          "punct_row_ratio": 0.41522725854879855,
+          "mean_chars_per_row": 141.8546703674263
+        },
+        "mk": {
+          "rows": 3675161,
+          "chars": 616192591,
+          "punct_rows": 2036217,
+          "nonpunct_rows": 1638944,
+          "punct_row_ratio": 0.5540483804655089,
+          "mean_chars_per_row": 167.6641080485998
+        },
+        "ml": {
+          "rows": 3135205,
+          "chars": 616151795,
+          "punct_rows": 1753039,
+          "nonpunct_rows": 1382166,
+          "punct_row_ratio": 0.5591465310880788,
+          "mean_chars_per_row": 196.52679649337125
+        },
+        "mn": {
+          "rows": 4087566,
+          "chars": 616190448,
+          "punct_rows": 2088251,
+          "nonpunct_rows": 1999315,
+          "punct_row_ratio": 0.5108788457483011,
+          "mean_chars_per_row": 150.74752260880925
+        },
+        "mr": {
+          "rows": 3552857,
+          "chars": 616195723,
+          "punct_rows": 1461585,
+          "nonpunct_rows": 2091272,
+          "punct_row_ratio": 0.41138300809742695,
+          "mean_chars_per_row": 173.43668011406032
+        },
+        "ms": {
+          "rows": 3822396,
+          "chars": 616229039,
+          "punct_rows": 2273870,
+          "nonpunct_rows": 1548526,
+          "punct_row_ratio": 0.5948808025123509,
+          "mean_chars_per_row": 161.21538401568023
+        },
+        "mt": {
+          "rows": 2834578,
+          "chars": 616400738,
+          "punct_rows": 942395,
+          "nonpunct_rows": 1892183,
+          "punct_row_ratio": 0.33246395054219713,
+          "mean_chars_per_row": 217.4576737701344
+        },
+        "my": {
+          "rows": 3387163,
+          "chars": 616219301,
+          "punct_rows": 2050875,
+          "nonpunct_rows": 1336288,
+          "punct_row_ratio": 0.6054845899060659,
+          "mean_chars_per_row": 181.92785555345284
+        },
+        "ne": {
+          "rows": 3372693,
+          "chars": 616198323,
+          "punct_rows": 1826697,
+          "nonpunct_rows": 1545996,
+          "punct_row_ratio": 0.541613778662926,
+          "mean_chars_per_row": 182.70216797081738
+        },
+        "nl": {
+          "rows": 3695063,
+          "chars": 616223899,
+          "punct_rows": 1880726,
+          "nonpunct_rows": 1814337,
+          "punct_row_ratio": 0.508983473353499,
+          "mean_chars_per_row": 166.7695243626428
+        },
+        "no": {
+          "rows": 3265827,
+          "chars": 616221722,
+          "punct_rows": 1632074,
+          "nonpunct_rows": 1633753,
+          "punct_row_ratio": 0.499742944130231,
+          "mean_chars_per_row": 188.68780312000604
+        },
+        "pa": {
+          "rows": 3407578,
+          "chars": 616203162,
+          "punct_rows": 1826718,
+          "nonpunct_rows": 1580860,
+          "punct_row_ratio": 0.5360751830185545,
+          "mean_chars_per_row": 180.83317887367508
+        },
+        "pl": {
+          "rows": 3675811,
+          "chars": 616195647,
+          "punct_rows": 1792074,
+          "nonpunct_rows": 1883737,
+          "punct_row_ratio": 0.48753159506840804,
+          "mean_chars_per_row": 167.635291096305
+        },
+        "ps": {
+          "rows": 3917296,
+          "chars": 616170525,
+          "punct_rows": 2290168,
+          "nonpunct_rows": 1627128,
+          "punct_row_ratio": 0.5846298058660873,
+          "mean_chars_per_row": 157.29485977061728
+        },
+        "pt": {
+          "rows": 3607571,
+          "chars": 616219427,
+          "punct_rows": 1904593,
+          "nonpunct_rows": 1702978,
+          "punct_row_ratio": 0.5279433169853067,
+          "mean_chars_per_row": 170.81283417568218
+        },
+        "ro": {
+          "rows": 3194954,
+          "chars": 616185299,
+          "punct_rows": 1680203,
+          "nonpunct_rows": 1514751,
+          "punct_row_ratio": 0.5258927045585007,
+          "mean_chars_per_row": 192.86202524355593
+        },
+        "ru": {
+          "rows": 3392734,
+          "chars": 616216135,
+          "punct_rows": 1976792,
+          "nonpunct_rows": 1415942,
+          "punct_row_ratio": 0.5826545788735574,
+          "mean_chars_per_row": 181.62818983156356
+        },
+        "si": {
+          "rows": 3950658,
+          "chars": 616204164,
+          "punct_rows": 2374859,
+          "nonpunct_rows": 1575799,
+          "punct_row_ratio": 0.6011299889790511,
+          "mean_chars_per_row": 155.9750714944194
+        },
+        "sk": {
+          "rows": 4026987,
+          "chars": 616169045,
+          "punct_rows": 1984818,
+          "nonpunct_rows": 2042169,
+          "punct_row_ratio": 0.49287916747682575,
+          "mean_chars_per_row": 153.00994142767286
+        },
+        "sl": {
+          "rows": 3985710,
+          "chars": 616194026,
+          "punct_rows": 2179564,
+          "nonpunct_rows": 1806146,
+          "punct_row_ratio": 0.5468446023418663,
+          "mean_chars_per_row": 154.60081792202644
+        },
+        "sq": {
+          "rows": 3513459,
+          "chars": 616218336,
+          "punct_rows": 1934728,
+          "nonpunct_rows": 1578731,
+          "punct_row_ratio": 0.5506618975772878,
+          "mean_chars_per_row": 175.38793991903705
+        },
+        "sr": {
+          "rows": 3606730,
+          "chars": 616110677,
+          "punct_rows": 2285247,
+          "nonpunct_rows": 1321483,
+          "punct_row_ratio": 0.633606341478292,
+          "mean_chars_per_row": 170.82251152706192
+        },
+        "sv": {
+          "rows": 3694525,
+          "chars": 616150722,
+          "punct_rows": 1918619,
+          "nonpunct_rows": 1775906,
+          "punct_row_ratio": 0.5193141202184314,
+          "mean_chars_per_row": 166.77400261197312
+        },
+        "ta": {
+          "rows": 3627513,
+          "chars": 616153416,
+          "punct_rows": 2299179,
+          "nonpunct_rows": 1328334,
+          "punct_row_ratio": 0.633816887768562,
+          "mean_chars_per_row": 169.8556052038959
+        },
+        "te": {
+          "rows": 3560043,
+          "chars": 616161525,
+          "punct_rows": 2007947,
+          "nonpunct_rows": 1552096,
+          "punct_row_ratio": 0.5640232435394741,
+          "mean_chars_per_row": 173.0769895195086
+        },
+        "tg": {
+          "rows": 3554378,
+          "chars": 616212716,
+          "punct_rows": 2294250,
+          "nonpunct_rows": 1260128,
+          "punct_row_ratio": 0.6454715846204315,
+          "mean_chars_per_row": 173.36724343893644
+        },
+        "th": {
+          "rows": 3648761,
+          "chars": 616203124,
+          "punct_rows": 792405,
+          "nonpunct_rows": 2856356,
+          "punct_row_ratio": 0.2171709794091748,
+          "mean_chars_per_row": 168.88010039572336
+        },
+        "tr": {
+          "rows": 3374506,
+          "chars": 616224343,
+          "punct_rows": 1684488,
+          "nonpunct_rows": 1690018,
+          "punct_row_ratio": 0.49918062080790493,
+          "mean_chars_per_row": 182.61171946353036
+        },
+        "uk": {
+          "rows": 3621243,
+          "chars": 616211131,
+          "punct_rows": 2219555,
+          "nonpunct_rows": 1401688,
+          "punct_row_ratio": 0.6129262797332298,
+          "mean_chars_per_row": 170.16563953316583
+        },
+        "ur": {
+          "rows": 3013670,
+          "chars": 616171042,
+          "punct_rows": 1605930,
+          "nonpunct_rows": 1407740,
+          "punct_row_ratio": 0.5328818351047062,
+          "mean_chars_per_row": 204.45869720307797
+        },
+        "uz": {
+          "rows": 3768240,
+          "chars": 616196653,
+          "punct_rows": 2246227,
+          "nonpunct_rows": 1522013,
+          "punct_row_ratio": 0.5960944631976732,
+          "mean_chars_per_row": 163.52372805341486
+        },
+        "vi": {
+          "rows": 3793169,
+          "chars": 616114791,
+          "punct_rows": 2037735,
+          "nonpunct_rows": 1755434,
+          "punct_row_ratio": 0.5372117614585588,
+          "mean_chars_per_row": 162.42745604005518
+        },
+        "xh": {
+          "rows": 1179000,
+          "chars": 180636827,
+          "punct_rows": 608365,
+          "nonpunct_rows": 570635,
+          "punct_row_ratio": 0.5160008481764207,
+          "mean_chars_per_row": 153.2118973706531
+        },
+        "yi": {
+          "rows": 3806574,
+          "chars": 616270271,
+          "punct_rows": 1854309,
+          "nonpunct_rows": 1952265,
+          "punct_row_ratio": 0.4871333120018158,
+          "mean_chars_per_row": 161.89630649502675
+        },
+        "yo": {
+          "rows": 987472,
+          "chars": 135066575,
+          "punct_rows": 481099,
+          "nonpunct_rows": 506373,
+          "punct_row_ratio": 0.48720267511382603,
+          "mean_chars_per_row": 136.7801568044461
+        },
+        "zh": {
+          "rows": 5957730,
+          "chars": 616202942,
+          "punct_rows": 2482802,
+          "nonpunct_rows": 3474928,
+          "punct_row_ratio": 0.416736240145156,
+          "mean_chars_per_row": 103.42914868582497
+        },
+        "zu": {
+          "rows": 4091333,
+          "chars": 616170721,
+          "punct_rows": 1441337,
+          "nonpunct_rows": 2649996,
+          "punct_row_ratio": 0.35229031711669523,
+          "mean_chars_per_row": 150.6039036666045
+        }
+      }
+    },
+    "valid": {
+      "summary": {
+        "n_languages": 85,
+        "languages": [
+          "af",
+          "am",
+          "ar",
+          "az",
+          "be",
+          "bg",
+          "bn",
+          "ca",
+          "ceb",
+          "cs",
+          "cy",
+          "da",
+          "de",
+          "el",
+          "en",
+          "eo",
+          "es",
+          "et",
+          "eu",
+          "fa",
+          "fi",
+          "fr",
+          "fy",
+          "ga",
+          "gd",
+          "gl",
+          "gu",
+          "ha",
+          "he",
+          "hi",
+          "hu",
+          "hy",
+          "id",
+          "ig",
+          "is",
+          "it",
+          "ja",
+          "jv",
+          "ka",
+          "kk",
+          "km",
+          "kn",
+          "ko",
+          "ku",
+          "ky",
+          "la",
+          "lt",
+          "lv",
+          "mg",
+          "mk",
+          "ml",
+          "mn",
+          "mr",
+          "ms",
+          "mt",
+          "my",
+          "ne",
+          "nl",
+          "no",
+          "pa",
+          "pl",
+          "ps",
+          "pt",
+          "ro",
+          "ru",
+          "si",
+          "sk",
+          "sl",
+          "sq",
+          "sr",
+          "sv",
+          "ta",
+          "te",
+          "tg",
+          "th",
+          "tr",
+          "uk",
+          "ur",
+          "uz",
+          "vi",
+          "xh",
+          "yi",
+          "yo",
+          "zh",
+          "zu"
+        ],
+        "total_rows": 311196,
+        "total_chars": 50321104,
+        "chars_min": 123081,
+        "chars_max": 698910,
+        "chars_mean": 592012.9882352941,
+        "chars_median": 606545.0,
+        "chars_std": 89238.267553054,
+        "chars_cv": 0.1507370097049061,
+        "recommended_equal_chars_target_chars": 50321104,
+        "recommended_chars_per_language": 592013,
+        "match_min_chars_per_language": 123081,
+        "match_min_total_chars": 10461885
+      },
+      "per_lang": {
+        "af": {
+          "rows": 3892,
+          "chars": 587715,
+          "punct_rows": 1990,
+          "nonpunct_rows": 1902,
+          "punct_row_ratio": 0.5113052415210688,
+          "mean_chars_per_row": 151.00590955806783
+        },
+        "am": {
+          "rows": 3645,
+          "chars": 580842,
+          "punct_rows": 2220,
+          "nonpunct_rows": 1425,
+          "punct_row_ratio": 0.6090534979423868,
+          "mean_chars_per_row": 159.35308641975308
+        },
+        "ar": {
+          "rows": 4085,
+          "chars": 575858,
+          "punct_rows": 1931,
+          "nonpunct_rows": 2154,
+          "punct_row_ratio": 0.4727050183598531,
+          "mean_chars_per_row": 140.9689106487148
+        },
+        "az": {
+          "rows": 3759,
+          "chars": 576160,
+          "punct_rows": 1855,
+          "nonpunct_rows": 1904,
+          "punct_row_ratio": 0.4934823091247672,
+          "mean_chars_per_row": 153.27480712955574
+        },
+        "be": {
+          "rows": 3616,
+          "chars": 622111,
+          "punct_rows": 2248,
+          "nonpunct_rows": 1368,
+          "punct_row_ratio": 0.6216814159292036,
+          "mean_chars_per_row": 172.04397123893804
+        },
+        "bg": {
+          "rows": 3825,
+          "chars": 629251,
+          "punct_rows": 2105,
+          "nonpunct_rows": 1720,
+          "punct_row_ratio": 0.550326797385621,
+          "mean_chars_per_row": 164.51006535947712
+        },
+        "bn": {
+          "rows": 3512,
+          "chars": 611898,
+          "punct_rows": 1962,
+          "nonpunct_rows": 1550,
+          "punct_row_ratio": 0.5586560364464692,
+          "mean_chars_per_row": 174.23063781321184
+        },
+        "ca": {
+          "rows": 3506,
+          "chars": 614500,
+          "punct_rows": 1916,
+          "nonpunct_rows": 1590,
+          "punct_row_ratio": 0.5464917284654878,
+          "mean_chars_per_row": 175.27096406160868
+        },
+        "ceb": {
+          "rows": 4656,
+          "chars": 594180,
+          "punct_rows": 2814,
+          "nonpunct_rows": 1842,
+          "punct_row_ratio": 0.604381443298969,
+          "mean_chars_per_row": 127.6159793814433
+        },
+        "cs": {
+          "rows": 3805,
+          "chars": 575327,
+          "punct_rows": 1801,
+          "nonpunct_rows": 2004,
+          "punct_row_ratio": 0.4733245729303548,
+          "mean_chars_per_row": 151.2028909329829
+        },
+        "cy": {
+          "rows": 3677,
+          "chars": 560217,
+          "punct_rows": 1846,
+          "nonpunct_rows": 1831,
+          "punct_row_ratio": 0.5020397062822953,
+          "mean_chars_per_row": 152.3570845798205
+        },
+        "da": {
+          "rows": 3349,
+          "chars": 606390,
+          "punct_rows": 1750,
+          "nonpunct_rows": 1599,
+          "punct_row_ratio": 0.5225440429979098,
+          "mean_chars_per_row": 181.06598984771574
+        },
+        "de": {
+          "rows": 3426,
+          "chars": 642188,
+          "punct_rows": 1726,
+          "nonpunct_rows": 1700,
+          "punct_row_ratio": 0.50379451255108,
+          "mean_chars_per_row": 187.4454173963806
+        },
+        "el": {
+          "rows": 3294,
+          "chars": 589002,
+          "punct_rows": 1813,
+          "nonpunct_rows": 1481,
+          "punct_row_ratio": 0.550394656952034,
+          "mean_chars_per_row": 178.81056466302368
+        },
+        "en": {
+          "rows": 3076,
+          "chars": 566964,
+          "punct_rows": 1619,
+          "nonpunct_rows": 1457,
+          "punct_row_ratio": 0.526332899869961,
+          "mean_chars_per_row": 184.3185955786736
+        },
+        "eo": {
+          "rows": 4335,
+          "chars": 624918,
+          "punct_rows": 2346,
+          "nonpunct_rows": 1989,
+          "punct_row_ratio": 0.5411764705882353,
+          "mean_chars_per_row": 144.15640138408304
+        },
+        "es": {
+          "rows": 3172,
+          "chars": 603632,
+          "punct_rows": 1609,
+          "nonpunct_rows": 1563,
+          "punct_row_ratio": 0.507250945775536,
+          "mean_chars_per_row": 190.30012610340478
+        },
+        "et": {
+          "rows": 3940,
+          "chars": 580186,
+          "punct_rows": 2174,
+          "nonpunct_rows": 1766,
+          "punct_row_ratio": 0.5517766497461929,
+          "mean_chars_per_row": 147.2553299492386
+        },
+        "eu": {
+          "rows": 3860,
+          "chars": 611414,
+          "punct_rows": 2177,
+          "nonpunct_rows": 1683,
+          "punct_row_ratio": 0.5639896373056995,
+          "mean_chars_per_row": 158.39740932642488
+        },
+        "fa": {
+          "rows": 3637,
+          "chars": 601832,
+          "punct_rows": 1713,
+          "nonpunct_rows": 1924,
+          "punct_row_ratio": 0.47099257629914765,
+          "mean_chars_per_row": 165.47484190266704
+        },
+        "fi": {
+          "rows": 3606,
+          "chars": 604879,
+          "punct_rows": 1884,
+          "nonpunct_rows": 1722,
+          "punct_row_ratio": 0.5224625623960066,
+          "mean_chars_per_row": 167.74237382140876
+        },
+        "fr": {
+          "rows": 3757,
+          "chars": 626220,
+          "punct_rows": 1767,
+          "nonpunct_rows": 1990,
+          "punct_row_ratio": 0.47032206547777483,
+          "mean_chars_per_row": 166.68086239020496
+        },
+        "fy": {
+          "rows": 4947,
+          "chars": 680894,
+          "punct_rows": 1552,
+          "nonpunct_rows": 3395,
+          "punct_row_ratio": 0.3137254901960784,
+          "mean_chars_per_row": 137.63776025874267
+        },
+        "ga": {
+          "rows": 4620,
+          "chars": 634173,
+          "punct_rows": 1991,
+          "nonpunct_rows": 2629,
+          "punct_row_ratio": 0.430952380952381,
+          "mean_chars_per_row": 137.26688311688312
+        },
+        "gd": {
+          "rows": 2262,
+          "chars": 426574,
+          "punct_rows": 829,
+          "nonpunct_rows": 1433,
+          "punct_row_ratio": 0.3664898320070734,
+          "mean_chars_per_row": 188.58267020335987
+        },
+        "gl": {
+          "rows": 4146,
+          "chars": 607422,
+          "punct_rows": 1932,
+          "nonpunct_rows": 2214,
+          "punct_row_ratio": 0.46599131693198265,
+          "mean_chars_per_row": 146.5079594790159
+        },
+        "gu": {
+          "rows": 3771,
+          "chars": 616763,
+          "punct_rows": 2100,
+          "nonpunct_rows": 1671,
+          "punct_row_ratio": 0.5568814638027049,
+          "mean_chars_per_row": 163.5542296473084
+        },
+        "ha": {
+          "rows": 4155,
+          "chars": 602465,
+          "punct_rows": 1973,
+          "nonpunct_rows": 2182,
+          "punct_row_ratio": 0.47484957882069795,
+          "mean_chars_per_row": 144.99759326113116
+        },
+        "he": {
+          "rows": 4246,
+          "chars": 602959,
+          "punct_rows": 2354,
+          "nonpunct_rows": 1892,
+          "punct_row_ratio": 0.5544041450777202,
+          "mean_chars_per_row": 142.00635892604805
+        },
+        "hi": {
+          "rows": 3702,
+          "chars": 605201,
+          "punct_rows": 1847,
+          "nonpunct_rows": 1855,
+          "punct_row_ratio": 0.49891950297136684,
+          "mean_chars_per_row": 163.47947055645596
+        },
+        "hu": {
+          "rows": 3424,
+          "chars": 597912,
+          "punct_rows": 1729,
+          "nonpunct_rows": 1695,
+          "punct_row_ratio": 0.5049649532710281,
+          "mean_chars_per_row": 174.62383177570092
+        },
+        "hy": {
+          "rows": 3385,
+          "chars": 625693,
+          "punct_rows": 2075,
+          "nonpunct_rows": 1310,
+          "punct_row_ratio": 0.6129985228951256,
+          "mean_chars_per_row": 184.84283604135894
+        },
+        "id": {
+          "rows": 3320,
+          "chars": 599311,
+          "punct_rows": 1557,
+          "nonpunct_rows": 1763,
+          "punct_row_ratio": 0.46897590361445785,
+          "mean_chars_per_row": 180.51536144578313
+        },
+        "ig": {
+          "rows": 1627,
+          "chars": 231172,
+          "punct_rows": 757,
+          "nonpunct_rows": 870,
+          "punct_row_ratio": 0.46527350952673635,
+          "mean_chars_per_row": 142.08481868469576
+        },
+        "is": {
+          "rows": 3947,
+          "chars": 610602,
+          "punct_rows": 2171,
+          "nonpunct_rows": 1776,
+          "punct_row_ratio": 0.5500380035469977,
+          "mean_chars_per_row": 154.70027869267798
+        },
+        "it": {
+          "rows": 3413,
+          "chars": 677894,
+          "punct_rows": 1660,
+          "nonpunct_rows": 1753,
+          "punct_row_ratio": 0.48637562261939643,
+          "mean_chars_per_row": 198.6211544096103
+        },
+        "ja": {
+          "rows": 5986,
+          "chars": 565507,
+          "punct_rows": 3355,
+          "nonpunct_rows": 2631,
+          "punct_row_ratio": 0.5604744403608419,
+          "mean_chars_per_row": 94.47160040093551
+        },
+        "jv": {
+          "rows": 4869,
+          "chars": 621006,
+          "punct_rows": 1970,
+          "nonpunct_rows": 2899,
+          "punct_row_ratio": 0.40460053399055246,
+          "mean_chars_per_row": 127.54282193468885
+        },
+        "ka": {
+          "rows": 3664,
+          "chars": 592259,
+          "punct_rows": 2101,
+          "nonpunct_rows": 1563,
+          "punct_row_ratio": 0.5734170305676856,
+          "mean_chars_per_row": 161.6427401746725
+        },
+        "kk": {
+          "rows": 3414,
+          "chars": 595232,
+          "punct_rows": 2120,
+          "nonpunct_rows": 1294,
+          "punct_row_ratio": 0.6209724663151728,
+          "mean_chars_per_row": 174.3503222026948
+        },
+        "km": {
+          "rows": 3118,
+          "chars": 614644,
+          "punct_rows": 1482,
+          "nonpunct_rows": 1636,
+          "punct_row_ratio": 0.47530468248877483,
+          "mean_chars_per_row": 197.1276459268762
+        },
+        "kn": {
+          "rows": 3307,
+          "chars": 640476,
+          "punct_rows": 1899,
+          "nonpunct_rows": 1408,
+          "punct_row_ratio": 0.574236468097974,
+          "mean_chars_per_row": 193.67281524039916
+        },
+        "ko": {
+          "rows": 5513,
+          "chars": 601781,
+          "punct_rows": 2335,
+          "nonpunct_rows": 3178,
+          "punct_row_ratio": 0.42354434971884636,
+          "mean_chars_per_row": 109.15672047886812
+        },
+        "ku": {
+          "rows": 3765,
+          "chars": 620153,
+          "punct_rows": 2110,
+          "nonpunct_rows": 1655,
+          "punct_row_ratio": 0.5604249667994687,
+          "mean_chars_per_row": 164.7152722443559
+        },
+        "ky": {
+          "rows": 3689,
+          "chars": 592136,
+          "punct_rows": 2305,
+          "nonpunct_rows": 1384,
+          "punct_row_ratio": 0.6248305773922472,
+          "mean_chars_per_row": 160.51396042287882
+        },
+        "la": {
+          "rows": 3311,
+          "chars": 614648,
+          "punct_rows": 1651,
+          "nonpunct_rows": 1660,
+          "punct_row_ratio": 0.4986408939897312,
+          "mean_chars_per_row": 185.63817577771067
+        },
+        "lt": {
+          "rows": 3623,
+          "chars": 596883,
+          "punct_rows": 2109,
+          "nonpunct_rows": 1514,
+          "punct_row_ratio": 0.582114269942037,
+          "mean_chars_per_row": 164.74827491029532
+        },
+        "lv": {
+          "rows": 3859,
+          "chars": 599599,
+          "punct_rows": 2177,
+          "nonpunct_rows": 1682,
+          "punct_row_ratio": 0.5641357864731796,
+          "mean_chars_per_row": 155.37678154962427
+        },
+        "mg": {
+          "rows": 4296,
+          "chars": 596647,
+          "punct_rows": 1783,
+          "nonpunct_rows": 2513,
+          "punct_row_ratio": 0.41503724394785846,
+          "mean_chars_per_row": 138.8843109869646
+        },
+        "mk": {
+          "rows": 3658,
+          "chars": 616937,
+          "punct_rows": 2016,
+          "nonpunct_rows": 1642,
+          "punct_row_ratio": 0.5511208310552215,
+          "mean_chars_per_row": 168.65418261344996
+        },
+        "ml": {
+          "rows": 3223,
+          "chars": 657717,
+          "punct_rows": 1820,
+          "nonpunct_rows": 1403,
+          "punct_row_ratio": 0.5646912814148309,
+          "mean_chars_per_row": 204.06981073533976
+        },
+        "mn": {
+          "rows": 4133,
+          "chars": 619889,
+          "punct_rows": 2085,
+          "nonpunct_rows": 2048,
+          "punct_row_ratio": 0.5044761674328575,
+          "mean_chars_per_row": 149.98524074522138
+        },
+        "mr": {
+          "rows": 3514,
+          "chars": 613805,
+          "punct_rows": 1491,
+          "nonpunct_rows": 2023,
+          "punct_row_ratio": 0.4243027888446215,
+          "mean_chars_per_row": 174.67416050085373
+        },
+        "ms": {
+          "rows": 3728,
+          "chars": 580499,
+          "punct_rows": 2254,
+          "nonpunct_rows": 1474,
+          "punct_row_ratio": 0.6046137339055794,
+          "mean_chars_per_row": 155.71325107296138
+        },
+        "mt": {
+          "rows": 2755,
+          "chars": 409299,
+          "punct_rows": 947,
+          "nonpunct_rows": 1808,
+          "punct_row_ratio": 0.34373865698729583,
+          "mean_chars_per_row": 148.56588021778583
+        },
+        "my": {
+          "rows": 3379,
+          "chars": 590508,
+          "punct_rows": 2041,
+          "nonpunct_rows": 1338,
+          "punct_row_ratio": 0.6040248594258656,
+          "mean_chars_per_row": 174.75821248890205
+        },
+        "ne": {
+          "rows": 3258,
+          "chars": 611133,
+          "punct_rows": 1807,
+          "nonpunct_rows": 1451,
+          "punct_row_ratio": 0.55463474524248,
+          "mean_chars_per_row": 187.57918968692448
+        },
+        "nl": {
+          "rows": 3692,
+          "chars": 585615,
+          "punct_rows": 1905,
+          "nonpunct_rows": 1787,
+          "punct_row_ratio": 0.5159804983748646,
+          "mean_chars_per_row": 158.61728060671723
+        },
+        "no": {
+          "rows": 3240,
+          "chars": 587826,
+          "punct_rows": 1622,
+          "nonpunct_rows": 1618,
+          "punct_row_ratio": 0.5006172839506173,
+          "mean_chars_per_row": 181.42777777777778
+        },
+        "pa": {
+          "rows": 3392,
+          "chars": 606679,
+          "punct_rows": 1785,
+          "nonpunct_rows": 1607,
+          "punct_row_ratio": 0.5262382075471698,
+          "mean_chars_per_row": 178.85583726415095
+        },
+        "pl": {
+          "rows": 3628,
+          "chars": 613942,
+          "punct_rows": 1794,
+          "nonpunct_rows": 1834,
+          "punct_row_ratio": 0.49448732083792724,
+          "mean_chars_per_row": 169.22326350606394
+        },
+        "ps": {
+          "rows": 3935,
+          "chars": 640075,
+          "punct_rows": 2334,
+          "nonpunct_rows": 1601,
+          "punct_row_ratio": 0.593138500635324,
+          "mean_chars_per_row": 162.66200762388817
+        },
+        "pt": {
+          "rows": 3657,
+          "chars": 619746,
+          "punct_rows": 1923,
+          "nonpunct_rows": 1734,
+          "punct_row_ratio": 0.5258408531583265,
+          "mean_chars_per_row": 169.4684167350287
+        },
+        "ro": {
+          "rows": 3220,
+          "chars": 624395,
+          "punct_rows": 1671,
+          "nonpunct_rows": 1549,
+          "punct_row_ratio": 0.518944099378882,
+          "mean_chars_per_row": 193.9114906832298
+        },
+        "ru": {
+          "rows": 3340,
+          "chars": 611646,
+          "punct_rows": 1908,
+          "nonpunct_rows": 1432,
+          "punct_row_ratio": 0.5712574850299401,
+          "mean_chars_per_row": 183.12754491017964
+        },
+        "si": {
+          "rows": 3953,
+          "chars": 605286,
+          "punct_rows": 2393,
+          "nonpunct_rows": 1560,
+          "punct_row_ratio": 0.605363015431318,
+          "mean_chars_per_row": 153.12066784720466
+        },
+        "sk": {
+          "rows": 4108,
+          "chars": 640493,
+          "punct_rows": 2086,
+          "nonpunct_rows": 2022,
+          "punct_row_ratio": 0.5077896786757546,
+          "mean_chars_per_row": 155.91358325219085
+        },
+        "sl": {
+          "rows": 3976,
+          "chars": 615433,
+          "punct_rows": 2174,
+          "nonpunct_rows": 1802,
+          "punct_row_ratio": 0.5467806841046278,
+          "mean_chars_per_row": 154.78697183098592
+        },
+        "sq": {
+          "rows": 3431,
+          "chars": 591297,
+          "punct_rows": 1949,
+          "nonpunct_rows": 1482,
+          "punct_row_ratio": 0.5680559603614107,
+          "mean_chars_per_row": 172.33955115126784
+        },
+        "sr": {
+          "rows": 3643,
+          "chars": 698910,
+          "punct_rows": 2311,
+          "nonpunct_rows": 1332,
+          "punct_row_ratio": 0.634367279714521,
+          "mean_chars_per_row": 191.85012352456766
+        },
+        "sv": {
+          "rows": 3716,
+          "chars": 658842,
+          "punct_rows": 1946,
+          "nonpunct_rows": 1770,
+          "punct_row_ratio": 0.523681377825619,
+          "mean_chars_per_row": 177.29870828848223
+        },
+        "ta": {
+          "rows": 3561,
+          "chars": 656013,
+          "punct_rows": 2277,
+          "nonpunct_rows": 1284,
+          "punct_row_ratio": 0.6394271272114574,
+          "mean_chars_per_row": 184.22156697556866
+        },
+        "te": {
+          "rows": 3614,
+          "chars": 648431,
+          "punct_rows": 2040,
+          "nonpunct_rows": 1574,
+          "punct_row_ratio": 0.5644714997232982,
+          "mean_chars_per_row": 179.4219701162147
+        },
+        "tg": {
+          "rows": 3492,
+          "chars": 599703,
+          "punct_rows": 2250,
+          "nonpunct_rows": 1242,
+          "punct_row_ratio": 0.6443298969072165,
+          "mean_chars_per_row": 171.73625429553263
+        },
+        "th": {
+          "rows": 3611,
+          "chars": 616953,
+          "punct_rows": 768,
+          "nonpunct_rows": 2843,
+          "punct_row_ratio": 0.21268346718360565,
+          "mean_chars_per_row": 170.85378011631127
+        },
+        "tr": {
+          "rows": 3322,
+          "chars": 585490,
+          "punct_rows": 1655,
+          "nonpunct_rows": 1667,
+          "punct_row_ratio": 0.49819385912101144,
+          "mean_chars_per_row": 176.24623720650212
+        },
+        "uk": {
+          "rows": 3570,
+          "chars": 598409,
+          "punct_rows": 2136,
+          "nonpunct_rows": 1434,
+          "punct_row_ratio": 0.5983193277310924,
+          "mean_chars_per_row": 167.62156862745098
+        },
+        "ur": {
+          "rows": 3075,
+          "chars": 638382,
+          "punct_rows": 1656,
+          "nonpunct_rows": 1419,
+          "punct_row_ratio": 0.5385365853658537,
+          "mean_chars_per_row": 207.60390243902438
+        },
+        "uz": {
+          "rows": 3769,
+          "chars": 612845,
+          "punct_rows": 2212,
+          "nonpunct_rows": 1557,
+          "punct_row_ratio": 0.5868930750862298,
+          "mean_chars_per_row": 162.6014858052534
+        },
+        "vi": {
+          "rows": 3792,
+          "chars": 694745,
+          "punct_rows": 2078,
+          "nonpunct_rows": 1714,
+          "punct_row_ratio": 0.5479957805907173,
+          "mean_chars_per_row": 183.21334388185653
+        },
+        "xh": {
+          "rows": 1171,
+          "chars": 181743,
+          "punct_rows": 609,
+          "nonpunct_rows": 562,
+          "punct_row_ratio": 0.520068317677199,
+          "mean_chars_per_row": 155.20324508966695
+        },
+        "yi": {
+          "rows": 3820,
+          "chars": 539288,
+          "punct_rows": 1824,
+          "nonpunct_rows": 1996,
+          "punct_row_ratio": 0.4774869109947644,
+          "mean_chars_per_row": 141.17486910994765
+        },
+        "yo": {
+          "rows": 981,
+          "chars": 123081,
+          "punct_rows": 460,
+          "nonpunct_rows": 521,
+          "punct_row_ratio": 0.4689092762487258,
+          "mean_chars_per_row": 125.46483180428135
+        },
+        "zh": {
+          "rows": 5914,
+          "chars": 606545,
+          "punct_rows": 2449,
+          "nonpunct_rows": 3465,
+          "punct_row_ratio": 0.4141021305377071,
+          "mean_chars_per_row": 102.56087250591816
+        },
+        "zu": {
+          "rows": 4116,
+          "chars": 663814,
+          "punct_rows": 1451,
+          "nonpunct_rows": 2665,
+          "punct_row_ratio": 0.3525267249757046,
+          "mean_chars_per_row": 161.27648202138
+        }
+      }
+    }
+  }
+}

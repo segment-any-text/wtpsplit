@@ -33,8 +33,7 @@ from wtpsplit.models import (
     LACanineForTokenClassification,
 )
 from wtpsplit.train.backbones import resolve_backbone
-from wtpsplit.train.stage1_data import load_stage1_dataset
-from wtpsplit.train.evaluate import evaluate_sentence
+from wtpsplit.train.stage1_data import load_stage1_dataset, validate_text_batch
 from wtpsplit.train.trainer import Trainer
 from wtpsplit.train.utils import Model
 
@@ -76,6 +75,7 @@ class Args:
     valid_text_path: str = "data/valid.parquet"
     stage1_dataset_name: str = "markus583/mC4-TEST"
     stage1_dataset_config: Optional[str] = None
+    stage1_dataset_revision: Optional[str] = None
     stage1_require_filtered: bool = False
     stage1_cache_dir: Optional[str] = None
     include_languages: List[str] = None
@@ -107,6 +107,7 @@ class Args:
     lookahead: int = None
     lookahead_split_layers: Optional[int] = None
     sample_non_whitespace: int = 1
+    cleanup_checkpoints_after_training: bool = False
 
 
 def collate_fn(batch, args, label_args, label_dict, tokenizer, add_lang_ids: bool = False):
@@ -225,6 +226,10 @@ def main():
     setup_logging(training_args)
     set_seed(training_args.seed)
     training_args.hub_strategy = "end"
+    # Keep only the latest mid-run checkpoint on disk; final weights are written to
+    # output_dir via trainer.save_model(), then checkpoint-* dirs are removed below.
+    # (Requires Trainer._save to unwrap Model — otherwise final dir lacks config.json
+    # and uses backbone.* weight keys.)
     training_args.save_total_limit = 1
 
     num_labels = Constants.AUX_OFFSET + ((1 + len(Constants.PUNCTUATION_CHARS)) if args.do_auxiliary_training else 0)
@@ -255,6 +260,7 @@ def main():
         tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
         # needed since we create labels in collate_fn based on tokens
         tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
+        backbone.resize_token_embeddings(len(tokenizer))
         custom_token_id = tokenizer.convert_tokens_to_ids("\n")
         # used later to filter out special tokens
         special_tokens_ids = set(tokenizer.all_special_ids)
@@ -320,13 +326,16 @@ def main():
                 split=split,
                 fallback_dataset=args.stage1_dataset_name,
                 fallback_config=args.stage1_dataset_config,
+                fallback_revision=args.stage1_dataset_revision,
                 require_filtered=args.stage1_require_filtered,
                 text_column=args.text_column,
                 cache_dir=args.stage1_cache_dir,
             )
         logger.warning(f"Loaded {split} dataset.")
         # optional: delete downloaded dataset, it is stored in cache_dir now (but we delete it later)
-        # ~40GB on disk
+        # SaT Stage-1 dump (mC4-TEST) is ~40GB on disk / ~51B train
+        # chars — not the extract_sentences.py default target_chars=400*256*512 (~52M,
+        # legacy DEBUG-only packing smoke). See mc4_test_per_lang_char_mass.json.
         # os.system("rm -rf /home/Markus/.cache/huggingface/datasets")
 
         if include_languages is not None:
@@ -395,6 +404,19 @@ def main():
                     batch_size=1_000_000,
                     num_proc=num_workers,
                 )
+
+        validation = validate_text_batch(
+            dataset,
+            batch_size=1,
+            text_column=args.text_column,
+        )
+        logger.warning(
+            "Validated %s Stage-1 source: %s language=%s characters=%s",
+            split,
+            validation["batch_size"],
+            validation["languages"][0],
+            validation["characters"],
+        )
 
         def tokenize_texts(examples):
             # do not return CLS and SEP token here
@@ -553,29 +575,29 @@ def main():
 
         if not args.one_sample_per_line:
             with training_args.main_process_first():
-                remove_columns = (
-                    ["ends_with_punctuation"]
-                    if args.text_column == "text"
-                    and "ends_with_punctuation" in dataset.column_names
-                    else []
-                )
+                # group_texts rebuilds the schema; drop all source columns so Arrow
+                # does not keep FineWeb2 metadata columns at the old batch length.
                 dataset = dataset.map(
                     group_texts,
                     batched=True,
                     num_proc=num_workers,
-                    remove_columns=remove_columns,
+                    remove_columns=dataset.column_names,
                 )
         logger.warning(f"Grouped {split} dataset.")
 
         return dataset
 
-    valid_dataset = prepare_dataset(
-        num_workers=args.preprocessing_num_workers,
-        include_languages=args.include_languages,
-        shuffle=False,
-        split="valid",
-    )
-    logger.warning(f"Valid dataset has {len(valid_dataset)} examples.")
+    valid_dataset = None
+    if training_args.do_eval:
+        valid_dataset = prepare_dataset(
+            num_workers=args.preprocessing_num_workers,
+            include_languages=args.include_languages,
+            shuffle=False,
+            split="valid",
+        )
+        logger.warning(f"Valid dataset has {len(valid_dataset)} examples.")
+    else:
+        logger.warning("Skipping valid dataset preparation (do_eval=False).")
 
     train_dataset = prepare_dataset(
         num_workers=args.preprocessing_num_workers,
@@ -596,66 +618,74 @@ def main():
             logger.warning(tokenizer.decode(sample["input_ids"]))
         count += 1
 
-    eval_data = torch.load(
-        args.eval_data_path,
-        weights_only=True,
-    )
+    eval_data = None
+    compute_metrics = None
+    if training_args.do_eval:
+        eval_data = torch.load(
+            args.eval_data_path,
+            weights_only=True,
+        )
 
-    def compute_metrics(trainer):
-        metrics = {}
-        avg_metrics = defaultdict(lambda: [])
+        def compute_metrics(trainer):
+            metrics = {}
+            avg_metrics = defaultdict(lambda: [])
 
-        model = trainer._wrap_model(trainer.model, training=False)
+            model = trainer._wrap_model(trainer.model, training=False)
 
-        for lang_code, lang_data in tqdm(eval_data.items(), desc="Evaluate!"):
-            if args.include_languages is not None and lang_code not in args.include_languages:
-                continue
+            for lang_code, lang_data in tqdm(eval_data.items(), desc="Evaluate!"):
+                if args.include_languages is not None and lang_code not in args.include_languages:
+                    continue
 
-            if trainer.args.process_index == 0 and args.do_sentence_training:
-                for dataset_name, dataset in lang_data["sentence"].items():
-                    if not dataset["data"][0]:
-                        continue
+                if trainer.args.process_index == 0 and args.do_sentence_training:
+                    for dataset_name, dataset in lang_data["sentence"].items():
+                        if not dataset["data"][0]:
+                            continue
 
-                    if isinstance(dataset["data"][0], list):
-                        # too slow here
-                        continue
-                    score, info = evaluate_sentence(
-                        lang_code,
-                        dataset["data"],
-                        model,
-                        stride=args.eval_stride,
-                        block_size=args.block_size,
-                        batch_size=training_args.per_device_eval_batch_size,
-                        threshold=args.threshold,
-                    )
-                    metrics[f"{lang_code}_{dataset_name}_pr_auc"] = score
-                    metrics[f"{lang_code}_{dataset_name}_f1"] = info["f1"]
-                    metrics[f"{lang_code}_{dataset_name}_f1_best"] = info["f1_best"]
-                    metrics[f"{lang_code}_{dataset_name}_threshold_best"] = info["threshold_best"]
-                    avg_metrics[f"average_{dataset_name}_pr_auc"].append(score)
-                    avg_metrics[f"average_{dataset_name}_f1"].append(info["f1"])
-                    avg_metrics[f"average_{dataset_name}_f1_best"].append(info["f1_best"])
-                    avg_metrics[f"average_{dataset_name}_threshold_best"].append(info["threshold_best"])
+                        if isinstance(dataset["data"][0], list):
+                            # too slow here
+                            continue
+                        from wtpsplit.train.evaluate import evaluate_sentence
 
-                    if lang_code in ["zh", "ja", "my", "km"]:
-                        avg_metrics[f"average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
-                        avg_metrics[f"average_nonwhitespace_{dataset_name}_f1"].append(info["f1"])
-                        avg_metrics[f"average_nonwhitespace_{dataset_name}_f1_best"].append(info["f1_best"])
-                        avg_metrics[f"average_nonwhitespace_{dataset_name}_threshold_best"].append(
-                            info["threshold_best"]
+                        score, info = evaluate_sentence(
+                            lang_code,
+                            dataset["data"],
+                            model,
+                            stride=args.eval_stride,
+                            block_size=args.block_size,
+                            batch_size=training_args.per_device_eval_batch_size,
+                            threshold=args.threshold,
                         )
-                    else:
-                        avg_metrics[f"average_whitespace_{dataset_name}_pr_auc"].append(score)
-                        avg_metrics[f"average_whitespace_{dataset_name}_f1"].append(info["f1"])
-                        avg_metrics[f"average_whitespace_{dataset_name}_f1_best"].append(info["f1_best"])
-                        avg_metrics[f"average_whitespace_{dataset_name}_threshold_best"].append(info["threshold_best"])
+                        metrics[f"{lang_code}_{dataset_name}_pr_auc"] = score
+                        metrics[f"{lang_code}_{dataset_name}_f1"] = info["f1"]
+                        metrics[f"{lang_code}_{dataset_name}_f1_best"] = info["f1_best"]
+                        metrics[f"{lang_code}_{dataset_name}_threshold_best"] = info["threshold_best"]
+                        avg_metrics[f"average_{dataset_name}_pr_auc"].append(score)
+                        avg_metrics[f"average_{dataset_name}_f1"].append(info["f1"])
+                        avg_metrics[f"average_{dataset_name}_f1_best"].append(info["f1_best"])
+                        avg_metrics[f"average_{dataset_name}_threshold_best"].append(info["threshold_best"])
 
-        for name, values in avg_metrics.items():
-            if len(values) > 1:
-                metrics[name] = np.mean(values)
+                        if lang_code in ["zh", "ja", "my", "km"]:
+                            avg_metrics[f"average_nonwhitespace_{dataset_name}_pr_auc"].append(score)
+                            avg_metrics[f"average_nonwhitespace_{dataset_name}_f1"].append(info["f1"])
+                            avg_metrics[f"average_nonwhitespace_{dataset_name}_f1_best"].append(info["f1_best"])
+                            avg_metrics[f"average_nonwhitespace_{dataset_name}_threshold_best"].append(
+                                info["threshold_best"]
+                            )
+                        else:
+                            avg_metrics[f"average_whitespace_{dataset_name}_pr_auc"].append(score)
+                            avg_metrics[f"average_whitespace_{dataset_name}_f1"].append(info["f1"])
+                            avg_metrics[f"average_whitespace_{dataset_name}_f1_best"].append(info["f1_best"])
+                            avg_metrics[f"average_whitespace_{dataset_name}_threshold_best"].append(
+                                info["threshold_best"]
+                            )
 
-        return metrics
+            for name, values in avg_metrics.items():
+                if len(values) > 1:
+                    metrics[name] = np.mean(values)
 
+            return metrics
+    else:
+        logger.warning("Skipping eval_data load (do_eval=False).")
     if "wandb" in training_args.report_to and training_args.process_index == 0:
         wandb.init(name=wandb_name, project="sentence")
         wandb.config.update(args)
@@ -692,6 +722,8 @@ def main():
         train_dataset=train_dataset,
         eval_dataset=valid_dataset,
         compute_metrics=compute_metrics,
+        # transformers≥4.46: `tokenizer` renamed to `processing_class`
+        processing_class=tokenizer if args.use_subwords else None,
         data_collator=partial(
             collate_fn,
             args=args,
@@ -706,12 +738,16 @@ def main():
     trainer.save_model()
     trainer.save_state()
 
-    # remove old checkpoints to save space
-    checkpoint_pattern = os.path.join(training_args.output_dir, "checkpoint-*")
-
-    for checkpoint_dir in glob(checkpoint_pattern):
-        if os.path.isdir(checkpoint_dir):
-            shutil.rmtree(checkpoint_dir)
+    # Keep resumable checkpoints until the orchestration layer has validated and
+    # promoted the final model artifact. Legacy runs may opt into eager cleanup.
+    if args.cleanup_checkpoints_after_training:
+        checkpoint_pattern = os.path.join(
+            training_args.output_dir,
+            "checkpoint-*",
+        )
+        for checkpoint_dir in glob(checkpoint_pattern):
+            if os.path.isdir(checkpoint_dir):
+                shutil.rmtree(checkpoint_dir)
 
 
 def _mp_fn(index):
