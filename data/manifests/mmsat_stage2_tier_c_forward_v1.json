@@ -1,0 +1,76 @@
+{
+  "version": "mmsat_stage2_tier_c_forward_v1",
+  "status": "internal_pilot_training_only",
+  "sha256": "b1d02848e95995eb5cc6c7ab30e6e9d8557b3f789496df10b0b61cf7a4eaba01",
+  "source": {
+    "dataset": "UD_English-EWT",
+    "version": "r2.18",
+    "license": "CC BY-SA 4.0",
+    "sentences": 500,
+    "selection": "deterministic SHA-256 cap from clean Tier A"
+  },
+  "hub_revisions": {
+    "bouquet": "9a6070a9652e350dda1d353c4fd198533199a911",
+    "mt_model": "f8d333a098d19b4fd9a8b18f94170487ad3f821d"
+  },
+  "construction": "Translate every trusted English sentence independently and use the target unit end as an inherited boundary.",
+  "mt_model": "facebook/nllb-200-distilled-600M",
+  "requested_languages": [
+    "bod_Tibt",
+    "dzo_Tibt",
+    "ibo_Latn",
+    "ssw_Latn",
+    "amh_Ethi",
+    "arz_Arab"
+  ],
+  "statistics": {
+    "bod_Tibt": {
+      "source_sentences": 500,
+      "empty_removed": 0,
+      "source_identical_removed": 19,
+      "duplicate_removed": 0,
+      "evaluation_overlap_removed": 0,
+      "clean_train_sentences": 481
+    },
+    "dzo_Tibt": {
+      "source_sentences": 500,
+      "empty_removed": 0,
+      "source_identical_removed": 15,
+      "duplicate_removed": 0,
+      "evaluation_overlap_removed": 0,
+      "clean_train_sentences": 485
+    },
+    "ibo_Latn": {
+      "source_sentences": 500,
+      "empty_removed": 0,
+      "source_identical_removed": 33,
+      "duplicate_removed": 0,
+      "evaluation_overlap_removed": 1,
+      "clean_train_sentences": 466
+    },
+    "ssw_Latn": {
+      "source_sentences": 500,
+      "empty_removed": 0,
+      "source_identical_removed": 27,
+      "duplicate_removed": 0,
+      "evaluation_overlap_removed": 0,
+      "clean_train_sentences": 473
+    },
+    "amh_Ethi": {
+      "source_sentences": 500,
+      "empty_removed": 0,
+      "source_identical_removed": 12,
+      "duplicate_removed": 0,
+      "evaluation_overlap_removed": 0,
+      "clean_train_sentences": 488
+    },
+    "arz_Arab": {
+      "source_sentences": 500,
+      "empty_removed": 0,
+      "source_identical_removed": 13,
+      "duplicate_removed": 0,
+      "evaluation_overlap_removed": 0,
+      "clean_train_sentences": 487
+    }
+  }
+}

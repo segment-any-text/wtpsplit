@@ -33,6 +33,9 @@ from transformers import AutoTokenizer
 from wtpsplit.evaluation import preprocess_sentence
 from wtpsplit.utils import Constants
 
+BOUQUET_DATASET = "facebook/bouquet"
+BOUQUET_REVISION = "9a6070a9652e350dda1d353c4fd198533199a911"
+
 # Scripts written without spaces between words. `Constants.SEPARATORS` only covers the
 # 85 languages in language_info.csv and silently defaults to " " for everything else,
 # which would be wrong for these.
@@ -239,7 +242,11 @@ def load_ud(
         yield lang, treebank.name, _chunk(sentences, sentences_per_doc)
 
 
-def load_bouquet(split: str, max_langs: int | None) -> Iterator[tuple[str, str, list[list[str]]]]:
+def load_bouquet(
+    split: str,
+    max_langs: int | None,
+    revision: str | None = BOUQUET_REVISION,
+) -> Iterator[tuple[str, str, list[list[str]]]]:
     """BOUQuET is sentence-parallel across 275 varieties, grouped by `par_id`.
 
     Gated on the Hub, so this needs `huggingface-cli login` plus accepting the terms.
@@ -247,7 +254,12 @@ def load_bouquet(split: str, max_langs: int | None) -> Iterator[tuple[str, str, 
     """
     import datasets
 
-    ds = datasets.load_dataset("facebook/bouquet", "sentence_level", split=split)
+    ds = datasets.load_dataset(
+        BOUQUET_DATASET,
+        "sentence_level",
+        split=split,
+        revision=revision,
+    )
     frame = ds.to_pandas()
 
     langs = sorted(frame["src_lang"].unique())

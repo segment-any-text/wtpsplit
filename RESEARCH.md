@@ -18,6 +18,11 @@ runtime even when research work uses PyTorch).
 Stage 1 data, training, evaluation, and open work:
 [docs/STAGE1.md](docs/STAGE1.md).
 
+Stage 2 sentence supervision, replay experiments and evaluation:
+[docs/STAGE2.md](docs/STAGE2.md). Its source routing and corpus builders are in
+[docs/STAGE2_DATA.md](docs/STAGE2_DATA.md). Early results and negative
+experiments are summarized in [docs/STAGE2_RESULTS.md](docs/STAGE2_RESULTS.md).
+
 ```bash
 uv run python wtpsplit/train/train.py configs/your_config.json
 uv run python wtpsplit/train/train_SM.py configs/your_config.json

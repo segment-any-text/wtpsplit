@@ -1,0 +1,170 @@
+{
+  "version": "mmsat_stage2_ab_pilot_v1",
+  "status": "materialized_training_only_no_evaluation_text",
+  "sha256": "cada95bb7aa5b0a3b0f6e04f1228ca9e7bc90eadf0efe52f12f3c46a3f9fc45d",
+  "bouquet_revision": "9a6070a9652e350dda1d353c4fd198533199a911",
+  "policy": {
+    "max_sentences_per_language": 10000,
+    "selection": "deterministic SHA-256 ordering after deduplication",
+    "evaluation_exclusion": "Exact normalized matches to designated UD dev/test and BOUQuET dev/test are removed.",
+    "tier_b_release": "Internal pilot only until attribution and redistribution review is complete."
+  },
+  "counts": {
+    "languages": 15,
+    "tier_a_languages": 11,
+    "tier_b_languages": 4,
+    "materialized_sentences": 95565
+  },
+  "rows": [
+    {
+      "language_script": "cmn_Hans",
+      "tier": "A",
+      "dataset": "ud",
+      "source": "UD_Chinese-GSDSimp",
+      "raw_sentences": 3997,
+      "after_evaluation_exclusion": 3997,
+      "unique_after_evaluation_exclusion": 3997,
+      "materialized_sentences": 3997
+    },
+    {
+      "language_script": "deu_Latn",
+      "tier": "A",
+      "dataset": "ud",
+      "source": "UD_German-GSD",
+      "raw_sentences": 13813,
+      "after_evaluation_exclusion": 13790,
+      "unique_after_evaluation_exclusion": 13788,
+      "materialized_sentences": 10000
+    },
+    {
+      "language_script": "eng_Latn",
+      "tier": "A",
+      "dataset": "ud",
+      "source": "UD_English-EWT",
+      "raw_sentences": 12544,
+      "after_evaluation_exclusion": 12181,
+      "unique_after_evaluation_exclusion": 11654,
+      "materialized_sentences": 10000
+    },
+    {
+      "language_script": "fra_Latn",
+      "tier": "A",
+      "dataset": "ud",
+      "source": "UD_French-GSD",
+      "raw_sentences": 14450,
+      "after_evaluation_exclusion": 14449,
+      "unique_after_evaluation_exclusion": 14449,
+      "materialized_sentences": 10000
+    },
+    {
+      "language_script": "heb_Hebr",
+      "tier": "A",
+      "dataset": "ud",
+      "source": "UD_Hebrew-IAHLTwiki",
+      "raw_sentences": 4298,
+      "after_evaluation_exclusion": 4298,
+      "unique_after_evaluation_exclusion": 4297,
+      "materialized_sentences": 4297
+    },
+    {
+      "language_script": "hye_Armn",
+      "tier": "A",
+      "dataset": "ud",
+      "source": "UD_Armenian-BSUT",
+      "raw_sentences": 1451,
+      "after_evaluation_exclusion": 1449,
+      "unique_after_evaluation_exclusion": 1447,
+      "materialized_sentences": 1447
+    },
+    {
+      "language_script": "jpn_Jpan",
+      "tier": "A",
+      "dataset": "ud",
+      "source": "UD_Japanese-GSD",
+      "raw_sentences": 7050,
+      "after_evaluation_exclusion": 7050,
+      "unique_after_evaluation_exclusion": 7050,
+      "materialized_sentences": 7050
+    },
+    {
+      "language_script": "kor_Kore",
+      "tier": "A",
+      "dataset": "ud",
+      "source": "UD_Korean-Kaist",
+      "raw_sentences": 23010,
+      "after_evaluation_exclusion": 23010,
+      "unique_after_evaluation_exclusion": 22949,
+      "materialized_sentences": 10000
+    },
+    {
+      "language_script": "rus_Cyrl",
+      "tier": "A",
+      "dataset": "ud",
+      "source": "UD_Russian-GSD",
+      "raw_sentences": 3850,
+      "after_evaluation_exclusion": 3850,
+      "unique_after_evaluation_exclusion": 3843,
+      "materialized_sentences": 3843
+    },
+    {
+      "language_script": "spa_Latn",
+      "tier": "A",
+      "dataset": "ud",
+      "source": "UD_Spanish-AnCora",
+      "raw_sentences": 14287,
+      "after_evaluation_exclusion": 14279,
+      "unique_after_evaluation_exclusion": 14253,
+      "materialized_sentences": 10000
+    },
+    {
+      "language_script": "tha_Thai",
+      "tier": "A",
+      "dataset": "ud",
+      "source": "UD_Thai-TUD",
+      "raw_sentences": 2902,
+      "after_evaluation_exclusion": 2902,
+      "unique_after_evaluation_exclusion": 2902,
+      "materialized_sentences": 2902
+    },
+    {
+      "language_script": "hin_Deva",
+      "tier": "B",
+      "dataset": "tatoeba",
+      "source": "OPUS Tatoeba",
+      "raw_sentences": 11201,
+      "after_evaluation_exclusion": 10785,
+      "unique_after_evaluation_exclusion": 10785,
+      "materialized_sentences": 10000
+    },
+    {
+      "language_script": "kat_Geor",
+      "tier": "B",
+      "dataset": "tatoeba",
+      "source": "OPUS Tatoeba",
+      "raw_sentences": 1344,
+      "after_evaluation_exclusion": 1323,
+      "unique_after_evaluation_exclusion": 1323,
+      "materialized_sentences": 1323
+    },
+    {
+      "language_script": "khm_Khmr",
+      "tier": "B",
+      "dataset": "tatoeba",
+      "source": "OPUS Tatoeba",
+      "raw_sentences": 787,
+      "after_evaluation_exclusion": 706,
+      "unique_after_evaluation_exclusion": 706,
+      "materialized_sentences": 706
+    },
+    {
+      "language_script": "ukr_Cyrl",
+      "tier": "B",
+      "dataset": "tatoeba",
+      "source": "OPUS Tatoeba",
+      "raw_sentences": 178876,
+      "after_evaluation_exclusion": 153435,
+      "unique_after_evaluation_exclusion": 153435,
+      "materialized_sentences": 10000
+    }
+  ]
+}

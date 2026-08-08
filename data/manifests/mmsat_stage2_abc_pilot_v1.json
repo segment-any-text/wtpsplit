@@ -1,0 +1,146 @@
+{
+  "version": "mmsat_stage2_abc_pilot_v1",
+  "status": "materialized_training_only_internal_pilot",
+  "sha256": "de3c5d6d530c9da2fb3dcafa5e20c4d6985d246f2cf9f961b0b211ff80810a18",
+  "counts": {
+    "languages": 21,
+    "tier_a_languages": 11,
+    "tier_b_languages": 4,
+    "tier_c_languages": 6,
+    "sentences": 98445
+  },
+  "open_panel_pairs": [
+    "sat_Olck",
+    "chr_Cher",
+    "div_Thaa",
+    "roh_Latn"
+  ],
+  "rows": [
+    {
+      "language_script": "amh_Ethi",
+      "tier": "C",
+      "dataset": "nllb",
+      "sentences": 488
+    },
+    {
+      "language_script": "arz_Arab",
+      "tier": "C",
+      "dataset": "nllb",
+      "sentences": 487
+    },
+    {
+      "language_script": "bod_Tibt",
+      "tier": "C",
+      "dataset": "nllb",
+      "sentences": 481
+    },
+    {
+      "language_script": "cmn_Hans",
+      "tier": "A",
+      "dataset": "ud",
+      "sentences": 3997
+    },
+    {
+      "language_script": "deu_Latn",
+      "tier": "A",
+      "dataset": "ud",
+      "sentences": 10000
+    },
+    {
+      "language_script": "dzo_Tibt",
+      "tier": "C",
+      "dataset": "nllb",
+      "sentences": 485
+    },
+    {
+      "language_script": "eng_Latn",
+      "tier": "A",
+      "dataset": "ud",
+      "sentences": 10000
+    },
+    {
+      "language_script": "fra_Latn",
+      "tier": "A",
+      "dataset": "ud",
+      "sentences": 10000
+    },
+    {
+      "language_script": "heb_Hebr",
+      "tier": "A",
+      "dataset": "ud",
+      "sentences": 4297
+    },
+    {
+      "language_script": "hin_Deva",
+      "tier": "B",
+      "dataset": "tatoeba",
+      "sentences": 10000
+    },
+    {
+      "language_script": "hye_Armn",
+      "tier": "A",
+      "dataset": "ud",
+      "sentences": 1447
+    },
+    {
+      "language_script": "ibo_Latn",
+      "tier": "C",
+      "dataset": "nllb",
+      "sentences": 466
+    },
+    {
+      "language_script": "jpn_Jpan",
+      "tier": "A",
+      "dataset": "ud",
+      "sentences": 7050
+    },
+    {
+      "language_script": "kat_Geor",
+      "tier": "B",
+      "dataset": "tatoeba",
+      "sentences": 1323
+    },
+    {
+      "language_script": "khm_Khmr",
+      "tier": "B",
+      "dataset": "tatoeba",
+      "sentences": 706
+    },
+    {
+      "language_script": "kor_Kore",
+      "tier": "A",
+      "dataset": "ud",
+      "sentences": 10000
+    },
+    {
+      "language_script": "rus_Cyrl",
+      "tier": "A",
+      "dataset": "ud",
+      "sentences": 3843
+    },
+    {
+      "language_script": "spa_Latn",
+      "tier": "A",
+      "dataset": "ud",
+      "sentences": 10000
+    },
+    {
+      "language_script": "ssw_Latn",
+      "tier": "C",
+      "dataset": "nllb",
+      "sentences": 473
+    },
+    {
+      "language_script": "tha_Thai",
+      "tier": "A",
+      "dataset": "ud",
+      "sentences": 2902
+    },
+    {
+      "language_script": "ukr_Cyrl",
+      "tier": "B",
+      "dataset": "tatoeba",
+      "sentences": 10000
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "version": "mmsat_stage2_historical_control_v1",
+  "status": "compatibility_control_not_release_training_data",
+  "sha256": "cf0007d6602d3cc4b5fe9a696619ebc0a1f0fe83c146d659a5dbe876a77a3480",
+  "bouquet_revision": "9a6070a9652e350dda1d353c4fd198533199a911",
+  "counts": {
+    "languages": 17,
+    "sentences": 124839
+  },
+  "missing_expanded_languages": [
+    "arz_Arab",
+    "bod_Tibt",
+    "dzo_Tibt",
+    "ssw_Latn"
+  ],
+  "rows": [
+    {
+      "language_script": "amh_Ethi",
+      "historical_code": "am",
+      "dataset": "opus100",
+      "raw_sentences": 10000,
+      "materialized_sentences": 4869
+    },
+    {
+      "language_script": "cmn_Hans",
+      "historical_code": "zh",
+      "dataset": "ud",
+      "raw_sentences": 3997,
+      "materialized_sentences": 3997
+    },
+    {
+      "language_script": "deu_Latn",
+      "historical_code": "de",
+      "dataset": "ud",
+      "raw_sentences": 10000,
+      "materialized_sentences": 10000
+    },
+    {
+      "language_script": "eng_Latn",
+      "historical_code": "en",
+      "dataset": "ud",
+      "raw_sentences": 8548,
+      "materialized_sentences": 8157
+    },
+    {
+      "language_script": "fra_Latn",
+      "historical_code": "fr",
+      "dataset": "ud",
+      "raw_sentences": 10000,
+      "materialized_sentences": 10000
+    },
+    {
+      "language_script": "heb_Hebr",
+      "historical_code": "he",
+      "dataset": "ud",
+      "raw_sentences": 4298,
+      "materialized_sentences": 4297
+    },
+    {
+      "language_script": "hin_Deva",
+      "historical_code": "hi",
+      "dataset": "ud",
+      "raw_sentences": 10000,
+      "materialized_sentences": 9991
+    },
+    {
+      "language_script": "hye_Armn",
+      "historical_code": "hy",
+      "dataset": "ud",
+      "raw_sentences": 1226,
+      "materialized_sentences": 1223
+    },
+    {
+      "language_script": "ibo_Latn",
+      "historical_code": "ig",
+      "dataset": "opus100",
+      "raw_sentences": 10000,
+      "materialized_sentences": 1771
+    },
+    {
+      "language_script": "jpn_Jpan",
+      "historical_code": "ja",
+      "dataset": "ud",
+      "raw_sentences": 7050,
+      "materialized_sentences": 7050
+    },
+    {
+      "language_script": "kat_Geor",
+      "historical_code": "ka",
+      "dataset": "opus100",
+      "raw_sentences": 10000,
+      "materialized_sentences": 9395
+    },
+    {
+      "language_script": "khm_Khmr",
+      "historical_code": "km",
+      "dataset": "opus100",
+      "raw_sentences": 10000,
+      "materialized_sentences": 9461
+    },
+    {
+      "language_script": "kor_Kore",
+      "historical_code": "ko",
+      "dataset": "ud",
+      "raw_sentences": 10000,
+      "materialized_sentences": 9956
+    },
+    {
+      "language_script": "rus_Cyrl",
+      "historical_code": "ru",
+      "dataset": "ud",
+      "raw_sentences": 10000,
+      "materialized_sentences": 9577
+    },
+    {
+      "language_script": "spa_Latn",
+      "historical_code": "es",
+      "dataset": "ud",
+      "raw_sentences": 10000,
+      "materialized_sentences": 9970
+    },
+    {
+      "language_script": "tha_Thai",
+      "historical_code": "th",
+      "dataset": "opus100",
+      "raw_sentences": 10000,
+      "materialized_sentences": 9647
+    },
+    {
+      "language_script": "ukr_Cyrl",
+      "historical_code": "uk",
+      "dataset": "ud",
+      "raw_sentences": 5521,
+      "materialized_sentences": 5478
+    }
+  ]
+}

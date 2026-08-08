@@ -29,7 +29,27 @@
     "corpus": "data/mmsat_stage2_abc_pilot_v1.pth"
   },
   "stage2_model": {
+    "status": "provisional_pending_replay_and_exact_evaluation",
     "selected": "xlmr_token",
-    "checkpoint": "runs/curriculum/stage2"
+    "initialization": "xlm-roberta-base",
+    "checkpoint": "runs/curriculum/stage2",
+    "next_comparison": "ABC with 50% historical replay versus the matched no-replay arm"
+  },
+  "stage2_experiments": {
+    "character_head": {
+      "status": "pending_matched_exact_evaluation",
+      "config": "configs/curriculum/stage2_character.json",
+      "control_config": "configs/curriculum/stage2.json"
+    },
+    "tier_d_reverse_document_projection": {
+      "status": "open_research_no_accepted_training_artifact",
+      "role": "alternative_to_tier_c_forward_sentence_translation",
+      "next_comparison": "A/B versus matched A/B+C and A/B+D supervision arms"
+    }
+  },
+  "stage3": {
+    "status": "optional_consolidation_not_yet_selected",
+    "input": "runs/curriculum/stage2",
+    "checkpoint": "runs/curriculum/stage3"
   }
 }

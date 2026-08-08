@@ -1,0 +1,21 @@
+{
+  "version": "sat_historical_corpus_v1",
+  "status": "legacy_compatibility_and_stage3_corpus",
+  "artifact_path": "data/all_data_11_05-all.pth",
+  "sha256": "128f87a298aafa80a8388ab2a8f9e8ab76b0e3f2b89ea52bce08c39df90d316d",
+  "bytes": 843271820,
+  "counts": {
+    "training_languages": 85,
+    "embedded_evaluation_language_entries": 89
+  },
+  "roles": [
+    "source for rebuilding Stage 2 audits and the historical replay control",
+    "optional Stage 3 consolidation corpus"
+  ],
+  "provenance_limitations": [
+    "the historical corpus predates the Stage 2 source receipts",
+    "per-example OPUS provenance cannot be reconstructed",
+    "embedded evaluation data makes this unsuitable for the external Stage 2 evaluation protocol"
+  ],
+  "distribution": "not stored in Git; copy from the existing SaT research storage and verify this receipt"
+}

@@ -1,19 +1,15 @@
 import gc
 import json
-import math
 import random
 import sys
 from collections import Counter, defaultdict
-from dataclasses import dataclass
-from itertools import cycle
 from pathlib import Path
-from typing import Iterable, List, Sequence, Tuple
 
 import numpy as np
 import torch
 import transformers
 from datasets import Dataset
-from torch.utils.data import BatchSampler, ConcatDataset, DataLoader, SubsetRandomSampler
+from torch.utils.data import ConcatDataset, DataLoader
 from tqdm import tqdm
 from transformers import (
     AutoTokenizer,
@@ -28,48 +24,17 @@ from wtpsplit.char_head import CharacterDataCollator
 from wtpsplit.evaluation.diagnostics.boundary_ceiling import dominant_script, separator_for
 from wtpsplit.models import SubwordXLMForTokenClassification
 from wtpsplit.train.backbones import resolve_backbone
+from wtpsplit.train.sm_arguments import SentenceTrainingArguments
 from wtpsplit.train.sm_data import prepare_sentence_datasets
+from wtpsplit.train.sm_sampling import (
+    DistributedRoundRobinBatchSampler,
+    DistributedWeightedGroupBatchSampler,
+    WeightedGroupConcatDataset,
+)
 from wtpsplit.utils import Constants
 
-
-@dataclass
-class Args:
-    block_size: int = 256
-    num_layers: int = 12  # number of layers
-    lim_lookahead: bool = False  # our "Lookahead" ablation
-    without_pretraining: bool = False  # our "No pre-training" ablation
-    no_sm_corruption: bool = False  # our "Only clean text" ablation
-    use_character_head: bool = False
-    balance_character_loss: bool = True
-    # Identity preserves a trained token classifier; raw encoders should use random.
-    character_head_init: str = "identity"
-    run_final_evaluation: bool = False
-    evaluation_only: bool = False
-    # Comma-separated optimizer steps to retain as model-only learning-curve
-    # checkpoints. This avoids saving every short interval during long pilots.
-    checkpoint_milestones: str = None
-    # Set these to train a backbone other than SaT/XLM-R (e.g. mmBERT for SaT 2). When
-    # `model_name_or_path` is given it overrides the stage-1 checkpoint that would
-    # otherwise be derived from `num_layers` and `lim_lookahead`.
-    model_name_or_path: str = None
-    tokenizer_name_or_path: str = None
-    data_path: str = "data/all_data_11_05-all.pth"
-    # Stage 2 configs should set this to "projected". The default preserves the
-    # Stage 3 priority ud -> opus100 -> nllb, with projected as a final fallback.
-    training_dataset: str = None
-    # Optional bounded-data controls for smoke tests. Production defaults retain every
-    # language and every training sentence.
-    languages: str = None  # comma-separated language codes
-    max_train_sentences_per_dataset: int = None
-    max_eval_instances_per_dataset: int = 200
-    # Total lookahead budget, divided across layers (see SubwordXLMConfig.lookahead).
-    # Only applies on the `model_name_or_path` route; the SaT checkpoints below already
-    # bake their lookahead setting into the pretrained weights.
-    lookahead: int = None
-
-
 # Parsing command line arguments or JSON config files as needed
-parser = HfArgumentParser([Args, TrainingArguments])
+parser = HfArgumentParser([SentenceTrainingArguments, TrainingArguments])
 
 if len(sys.argv) > 1 and sys.argv[1].endswith(".json"):
     args, training_args = parser.parse_json_file(sys.argv[1])
@@ -94,6 +59,17 @@ if args.max_train_sentences_per_dataset is not None and args.max_train_sentences
     raise ValueError("`max_train_sentences_per_dataset` must be at least 1.")
 if args.max_eval_instances_per_dataset < 1:
     raise ValueError("`max_eval_instances_per_dataset` must be at least 1.")
+if not 0 <= args.replay_fraction < 1:
+    raise ValueError("`replay_fraction` must be in the half-open interval [0, 1).")
+if bool(args.replay_data_path) != (args.replay_fraction > 0):
+    raise ValueError(
+        "Set both `replay_data_path` and a positive `replay_fraction`, or neither."
+    )
+if (
+    args.max_replay_train_sentences_per_dataset is not None
+    and args.max_replay_train_sentences_per_dataset < 1
+):
+    raise ValueError("`max_replay_train_sentences_per_dataset` must be at least 1.")
 
 checkpoint_milestones = (
     {int(step) for step in args.checkpoint_milestones.split(",")}
@@ -116,6 +92,32 @@ train_sentences, test_sentences = prepare_sentence_datasets(
     max_train_sentences_per_dataset=args.max_train_sentences_per_dataset,
     max_eval_instances_per_dataset=args.max_eval_instances_per_dataset,
 )
+
+replay_train_sentences = None
+if args.replay_data_path:
+    replay_data = torch.load(args.replay_data_path, weights_only=True)
+    replay_languages = (
+        set(args.replay_languages.split(","))
+        if args.replay_languages
+        else None
+    )
+    replay_train_sentences, _ = prepare_sentence_datasets(
+        replay_data,
+        selected_languages=replay_languages,
+        requested_training_dataset=args.replay_training_dataset,
+        no_sm_corruption=args.no_sm_corruption,
+        max_train_sentences_per_dataset=(
+            args.max_replay_train_sentences_per_dataset
+        ),
+        max_eval_instances_per_dataset=1,
+    )
+    del replay_data
+    gc.collect()
+    print(
+        "replay "
+        f"path={args.replay_data_path} fraction={args.replay_fraction:.4f} "
+        f"languages={len(replay_train_sentences)}"
+    )
 
 
 def evaluation_script_sample(datasets, limit=2000):
@@ -385,6 +387,8 @@ def pack_language_datasets(input_data_dict, block_size, *, description):
 if args.evaluation_only:
     train_dataset_by_language = {}
     del train_sentences
+    replay_dataset_by_language = {}
+    replay_train_sentences = None
     gc.collect()
 else:
     train_dataset_by_language = pack_language_datasets(
@@ -394,6 +398,16 @@ else:
     )
     del train_sentences
     gc.collect()
+    if replay_train_sentences is not None:
+        replay_dataset_by_language = pack_language_datasets(
+            replay_train_sentences,
+            block_size,
+            description="Packing replay languages",
+        )
+        del replay_train_sentences
+        gc.collect()
+    else:
+        replay_dataset_by_language = {}
 
 # Final evaluation is intentionally packed after training. Keeping the full packed
 # train and evaluation corpora alive together pushed this workstation to roughly
@@ -530,12 +544,31 @@ class MilestoneSaveCallback(TrainerCallback):
 if args.evaluation_only:
     train_datasets = None
 else:
-    train_datasets = []
+    primary_datasets = []
     for language_data in train_dataset_by_language.values():
-        train_datasets.extend(language_data.values())
-    random.shuffle(train_datasets)
-    train_datasets = ConcatDataset(train_datasets)
+        primary_datasets.extend(language_data.values())
+    random.shuffle(primary_datasets)
+    primary_dataset = ConcatDataset(primary_datasets)
+    if replay_dataset_by_language:
+        replay_datasets = []
+        for language_data in replay_dataset_by_language.values():
+            replay_datasets.extend(language_data.values())
+        random.shuffle(replay_datasets)
+        replay_dataset = ConcatDataset(replay_datasets)
+        train_datasets = WeightedGroupConcatDataset(
+            [primary_dataset, replay_dataset],
+            [1 - args.replay_fraction, args.replay_fraction],
+        )
+        print(
+            "training_mixture "
+            f"primary_examples={len(primary_dataset)} "
+            f"replay_examples={len(replay_dataset)} "
+            f"replay_fraction={args.replay_fraction:.4f}"
+        )
+    else:
+        train_datasets = primary_dataset
 del train_dataset_by_language
+del replay_dataset_by_language
 gc.collect()
 
 run = wandb.init(project="sentence") if use_wandb else None
@@ -566,80 +599,6 @@ if args.use_character_head:
 # )
 
 
-class RoundRobinSampler:
-    def __init__(self, samplers: Sequence[Iterable], reinit: bool = False):
-        self.samplers = samplers
-        self.reinit = reinit
-
-    def __iter__(self):
-        iterators = [iter(sampler) for sampler in self.samplers]
-
-        for i in cycle(range(len(iterators))):
-            it = iterators[i]
-
-            try:
-                yield next(it)
-
-            except StopIteration:
-                if not self.reinit:
-                    break
-
-                it = iter(self.samplers[i])
-                iterators[i] = it
-                yield next(it)
-
-
-def get_subset(length: int, i: int, k: int, offset: int = 0) -> Tuple[int, int]:
-    assert i < k
-    s = math.ceil(length / k)  # size of one split
-    start = i * s
-    end = min((i + 1) * s, length)
-    return offset + start, offset + end
-
-
-class DistributedRoundRobinBatchSampler:
-    def __init__(
-        self,
-        lengths: List[int],
-        batch_size: int,
-        rank: int,
-        num_replicas: int,
-        drop_last: bool = False,
-        seed: int = 0,
-        shuffle: bool = True,
-        reinit: bool = False,
-    ):
-        self.lengths = lengths
-        offsets = [sum(lengths[:i]) for i in range(len(lengths))]
-        self.ranges = [get_subset(length, rank, num_replicas, offset) for offset, length in zip(offsets, lengths)]
-        self.seed = seed
-        self.shuffle = shuffle
-        self.drop_last = drop_last
-        self.epoch = 0
-        self.reinit = reinit
-        self.batch_size = batch_size
-        self.batch_start = 0
-
-    def __iter__(self):
-        g = torch.Generator()
-        g.manual_seed(self.seed + self.epoch)
-
-        batch_samplers = [
-            BatchSampler(
-                (SubsetRandomSampler(range(start, end), generator=g) if self.shuffle else range(start, end)),
-                self.batch_size,
-                self.drop_last,
-            )
-            for (start, end) in self.ranges
-        ]
-
-        sampler = RoundRobinSampler(batch_samplers, reinit=self.reinit)
-        return iter(sampler)
-
-    def __len__(self):
-        return min(length for length in self.lengths) // self.batch_size
-
-
 class CustomTrainer(Trainer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -651,14 +610,21 @@ class CustomTrainer(Trainer):
     def get_train_dataloader(self) -> DataLoader:
         dataset = self.train_dataset
 
-        if isinstance(dataset, ConcatDataset):
+        if isinstance(dataset, WeightedGroupConcatDataset):
+            sizes = [len(group) for group in dataset.datasets]
+            batch_sampler = DistributedWeightedGroupBatchSampler(
+                lengths=sizes,
+                weights=dataset.group_weights,
+                batch_size=self.args.train_batch_size,
+                drop_last=False,
+                rank=self.args.process_index,
+                num_replicas=self.args.world_size,
+                seed=self.args.seed,
+                subgroup_lengths=dataset.group_lengths,
+            )
+        elif isinstance(dataset, ConcatDataset):
             sizes = [len(ds) for ds in dataset.datasets]
-        else:
-            sizes = [len(dataset)]
-
-        loader = DataLoader(
-            dataset,
-            batch_sampler=DistributedRoundRobinBatchSampler(
+            batch_sampler = DistributedRoundRobinBatchSampler(
                 lengths=sizes,
                 batch_size=self.args.train_batch_size,
                 drop_last=False,
@@ -666,7 +632,22 @@ class CustomTrainer(Trainer):
                 num_replicas=self.args.world_size,
                 seed=self.args.seed,
                 reinit=True,
-            ),
+            )
+        else:
+            sizes = [len(dataset)]
+            batch_sampler = DistributedRoundRobinBatchSampler(
+                lengths=sizes,
+                batch_size=self.args.train_batch_size,
+                drop_last=False,
+                rank=self.args.process_index,
+                num_replicas=self.args.world_size,
+                seed=self.args.seed,
+                reinit=True,
+            )
+
+        loader = DataLoader(
+            dataset,
+            batch_sampler=batch_sampler,
             num_workers=self.args.dataloader_num_workers,
             pin_memory=self.args.dataloader_pin_memory,
             collate_fn=self.data_collator,
@@ -690,6 +671,10 @@ trainer = CustomTrainer(
 
 if not args.evaluation_only:
     trainer.train()
+    # Downstream evaluation and the optional Stage 3 run consume the run's
+    # output directory, not an internal checkpoint-* directory. Keep a final
+    # loadable model and tokenizer at that stable path.
+    trainer.save_model()
     # Checkpointing is complete. Final prediction needs only the model and collator,
     # so release the full training corpus and optimizer before packing held-out data.
     trainer.train_dataset = None
