@@ -4,7 +4,11 @@ target-version = ["py39", "py310", "py311", "py312"]
 
 [tool.ruff]
 line-length = 120
-lint.ignore = ["E741"]
+
+[tool.ruff.lint]
+# Pre-0.16 default. Ruff 0.16 enables 413 rules by default; CI installs latest ruff.
+select = ["E4", "E7", "E9", "F"]
+ignore = ["E741"]
 
 [tool.ruff.lint.per-file-ignores]
 "test.py" = ["E501"]

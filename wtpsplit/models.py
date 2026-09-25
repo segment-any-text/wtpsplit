@@ -737,7 +737,15 @@ class LACanineModel(CanineModel):
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        extended_attention_mask: torch.Tensor = self.get_extended_attention_mask(attention_mask, input_shape)
+        # Keep [batch, 1, 1, seq]: _downsample_attention_mask pools that axis with MaxPool1d.
+        # transformers 5 removed PreTrainedModel.get_extended_attention_mask.
+        extended_attention_mask: torch.Tensor = get_extended_attention_mask(
+            self.config,
+            attention_mask,
+            input_shape,
+            dtype=self.dtype,
+            expand_to_square=False,
+        )
         extended_molecule_attention_mask = self._downsample_attention_mask(
             extended_attention_mask, downsampling_rate=self.config.downsampling_rate
         )
@@ -762,7 +770,7 @@ class LACanineModel(CanineModel):
         # `input_char_encoding`: shape (batch_size, char_seq_len, char_dim)
         if attention_mask.ndim == 2:
             char_attention_mask = self._create_3d_attention_mask_from_input_mask(
-                input_ids or inputs_embeds, attention_mask
+                input_ids if input_ids is not None else inputs_embeds, attention_mask
             )
         else:
             char_attention_mask = attention_mask
@@ -1272,6 +1280,7 @@ def get_extended_attention_mask(
     lookahead: Optional[int] = None,
     device: torch.device = None,
     dtype: torch.float = None,
+    expand_to_square: bool = True,
 ) -> Tensor:
     """
     Makes broadcastable attention and causal masks so that future and masked tokens are ignored.
@@ -1301,7 +1310,7 @@ def get_extended_attention_mask(
         # Provided a padding mask of dimensions [batch_size, seq_length]
         # - if the model is a decoder, apply a causal mask in addition to the padding mask
         # - if the model is an encoder, make the mask broadcastable to [batch_size, num_heads, seq_length, seq_length]
-        if config.is_decoder:
+        if getattr(config, "is_decoder", False):
             # tf5 removed device param; omit for both tf4/tf5 (tf4 accepts device=None).
             extended_attention_mask = ModuleUtilsMixin.create_extended_attention_mask_for_decoder(
                 input_shape, attention_mask
@@ -1320,7 +1329,10 @@ def get_extended_attention_mask(
         else:
             # [batch, 1, seq, seq] for compatibility with transformers 5+ SDPA; semantics
             # equivalent to [batch, 1, 1, seq] broadcast (mask depends only on key positions).
-            extended_attention_mask = attention_mask[:, None, None, :].expand(-1, 1, attention_mask.size(1), -1)
+            # Canine downsampling needs the unexpanded [batch, 1, 1, seq] form.
+            extended_attention_mask = attention_mask[:, None, None, :]
+            if expand_to_square:
+                extended_attention_mask = extended_attention_mask.expand(-1, 1, attention_mask.size(1), -1)
     else:
         raise ValueError(
             f"Wrong shape for input_ids (shape {input_shape}) or attention_mask (shape {attention_mask.shape})"

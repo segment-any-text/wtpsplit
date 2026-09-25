@@ -1,15 +1,62 @@
 import math
 import sys
 import logging
-from typing import Literal
+from typing import Literal, Optional
 
 import numpy as np
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 
+from wtpsplit.aitune_integration import apply_aitune, pop_aitune_kwargs
 from wtpsplit.utils import Constants, hash_encode
 
 logger = logging.getLogger(__name__)
+
+_INDUCTOR_ALIASES = {"inductor", "torchinductor", "torch_inductor", "default"}
+_AITUNE_ALIASES = {"aitune", "ai_tune"}
+
+
+def normalize_optimize_backend(backend: Optional[str]) -> str:
+    """Map public ``optimize(backend=...)`` names onto ``inductor`` or ``aitune``."""
+    key = (backend or "inductor").lower().replace("-", "_")
+    if key in _INDUCTOR_ALIASES:
+        return "inductor"
+    if key in _AITUNE_ALIASES:
+        return "aitune"
+    if key in {"none", "off", "eager"}:
+        raise ValueError(
+            f"backend={backend!r} is not an optimized backend. "
+            "Omit optimize() for eager PyTorch, or pass backend='inductor' / 'aitune'."
+        )
+    return key
+
+
+def _module_device(module):
+    """Device of a plain, ``torch.compile``d, or AITune-wrapped module."""
+    device = getattr(module, "device", None)
+    if getattr(device, "type", None):
+        return device
+    try:
+        return next(module.parameters()).device
+    except StopIteration as exc:
+        raise RuntimeError("Cannot infer model device: the module has no parameters.") from exc
+
+
+def logits_from_model_output(output):
+    """Read logits from a Hugging Face dict/output or from a compiled tuple."""
+    if isinstance(output, (tuple, list)):
+        if not output:
+            raise RuntimeError("Model forward returned an empty sequence; expected logits.")
+        return output[0]
+    logits = getattr(output, "logits", None)
+    if logits is not None:
+        return logits
+    try:
+        return output["logits"]
+    except Exception as exc:
+        raise TypeError(
+            "Model forward did not return logits. Expected a dict-like output or a tuple whose first item is logits."
+        ) from exc
 
 
 class BertCharORTWrapper:
@@ -58,10 +105,81 @@ class PyTorchWrapper:
     def __init__(self, model):
         self.model = model
         self.config = model.config
+        self._torch_compiled = False
 
     def __getattr__(self, name):
         assert hasattr(self, "model")
         return getattr(self.model, name)
+
+    def optimize(
+        self,
+        *,
+        backend: str = "inductor",
+        mode: Optional[str] = None,
+        fullgraph: bool = False,
+        dynamic: bool = True,
+        **compile_kwargs,
+    ):
+        """Compile the underlying Hugging Face model with :func:`torch.compile` (TorchInductor by default).
+
+        Call after moving the model to the target device and changing dtype (e.g. ``half()``), so the
+        compiled graph matches inference. A second call is ignored.
+
+        Chunk length and the last batch size vary across ``split`` calls, so ``dynamic=True`` is the
+        default. ``mode="reduce-overhead"`` enables CUDA graphs and fights those varying shapes; pass
+        it only when every forward uses the same batch and sequence length. ``None`` lets Inductor
+        pick its default mode.
+
+        Args:
+            backend: ``"inductor"`` for TorchInductor (aliases: ``"torchinductor"``, ``"torch_inductor"``),
+                or ``"aitune"`` for NVIDIA AITune (CUDA only; requires ``pip install wtpsplit[aitune]``).
+            mode: Compilation mode (``"default"``, ``"reduce-overhead"``, ``"max-autotune"``,
+                ``"max-autotune-no-cudagraphs"``). ``None`` uses the backend default.
+            fullgraph: Passed to :func:`torch.compile` and to AITune's Inductor backend.
+            dynamic: If ``True`` (default), allow varying sequence lengths across chunks.
+            **compile_kwargs: For ``inductor``, passed to :func:`torch.compile`. For ``aitune``, optional:
+                ``aitune_strategy`` (``"first_wins"``, ``"inductor_only"``, ``"highest_throughput"``),
+                ``aitune_batch_sizes``, ``aitune_max_batches``, ``aitune_calibration``, ``aitune_dry_run``.
+        """
+        try:
+            import torch
+        except ImportError:
+            raise ImportError("`torch` must be installed to use optimize().") from None
+
+        if self._torch_compiled:
+            logger.warning("optimize() was already applied; keeping the existing compiled model.")
+            return self
+
+        key = normalize_optimize_backend(backend)
+
+        if key == "aitune":
+            aitune_kwargs = pop_aitune_kwargs(compile_kwargs)
+            if compile_kwargs:
+                raise TypeError(f"Unexpected keyword arguments for backend='aitune': {sorted(compile_kwargs)}")
+            self.model.eval()
+            self.model = apply_aitune(
+                self.model, mode=mode, fullgraph=fullgraph, dynamic=dynamic, **aitune_kwargs
+            )
+            self._torch_compiled = True
+            return self
+
+        if not hasattr(torch, "compile"):
+            raise RuntimeError("torch.compile requires PyTorch 2.0 or newer.")
+
+        self.model.eval()
+        compile_kwargs = dict(compile_kwargs)
+        if mode is not None:
+            compile_kwargs["mode"] = mode
+
+        self.model = torch.compile(
+            self.model,
+            backend=key,
+            fullgraph=fullgraph,
+            dynamic=dynamic,
+            **compile_kwargs,
+        )
+        self._torch_compiled = True
+        return self
 
     def __call__(self, attention_mask, hashed_ids=None, language_ids=None, input_ids=None):
         try:
@@ -69,19 +187,20 @@ class PyTorchWrapper:
         except ImportError:
             raise ImportError("`torch` must be installed to use PyTorch models!")
 
-        with torch.no_grad():
-            logits = (
-                self.model(
-                    input_ids=torch.from_numpy(input_ids).to(self.model.device) if input_ids is not None else None,
-                    hashed_ids=torch.from_numpy(hashed_ids).to(self.model.device) if hashed_ids is not None else None,
-                    attention_mask=torch.from_numpy(attention_mask).to(self.model.device),
-                    language_ids=(
-                        torch.from_numpy(language_ids).to(self.model.device) if language_ids is not None else None
-                    ),
-                )["logits"]
-                .cpu()
-                .numpy()
-            )
+        # inference_mode: stricter than no_grad(); this wrapper is inference-only.
+        with torch.inference_mode():
+            device = _module_device(self.model)
+            forward_kwargs = {
+                "attention_mask": torch.from_numpy(attention_mask).to(device),
+            }
+            if input_ids is not None:
+                forward_kwargs["input_ids"] = torch.from_numpy(input_ids).to(device)
+            if hashed_ids is not None:
+                forward_kwargs["hashed_ids"] = torch.from_numpy(hashed_ids).to(device)
+            if language_ids is not None:
+                forward_kwargs["language_ids"] = torch.from_numpy(language_ids).to(device)
+
+            logits = logits_from_model_output(self.model(**forward_kwargs)).detach().cpu().numpy()
 
         return {"logits": logits}
 

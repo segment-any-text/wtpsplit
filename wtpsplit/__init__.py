@@ -30,7 +30,7 @@ from wtpsplit.utils.constraints import (
 )
 from wtpsplit.utils.priors import create_prior_function
 
-__version__ = "2.2.1"
+__version__ = "2.2.2"
 
 # suppress docopt syntax warnings (triggered in Python 3.14+)
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")
@@ -227,6 +227,27 @@ class WtP:
     def __getattr__(self, name):
         assert hasattr(self, "model")
         return getattr(self.model, name)
+
+    def optimize(
+        self,
+        backend: str = "inductor",
+        *,
+        mode: str = None,
+        fullgraph: bool = False,
+        dynamic: bool = True,
+        **compile_kwargs,
+    ):
+        """Compile the PyTorch model with ``torch.compile`` (TorchInductor by default). Not available for ONNX."""
+        if not isinstance(self.model, PyTorchWrapper):
+            raise ValueError(
+                "optimize() only applies to PyTorch models loaded from a checkpoint. "
+                "It does not apply to ONNX Runtime (set ort_providers=None) or to ad-hoc model objects "
+                "that are not wrapped as expected."
+            )
+        self.model.optimize(
+            backend=backend, mode=mode, fullgraph=fullgraph, dynamic=dynamic, **compile_kwargs
+        )
+        return self
 
     def predict_proba(
         self,
@@ -907,6 +928,27 @@ class SaT:
     def __getattr__(self, name):
         assert hasattr(self, "model")
         return getattr(self.model, name)
+
+    def optimize(
+        self,
+        backend: str = "inductor",
+        *,
+        mode: str = None,
+        fullgraph: bool = False,
+        dynamic: bool = True,
+        **compile_kwargs,
+    ):
+        """Compile the PyTorch model with ``torch.compile`` (TorchInductor by default). Not available for ONNX."""
+        if not isinstance(self.model, PyTorchWrapper):
+            raise ValueError(
+                "optimize() only applies to PyTorch models loaded from a checkpoint. "
+                "It does not apply to ONNX Runtime (set ort_providers=None) or to ad-hoc model objects "
+                "that are not wrapped as expected."
+            )
+        self.model.optimize(
+            backend=backend, mode=mode, fullgraph=fullgraph, dynamic=dynamic, **compile_kwargs
+        )
+        return self
 
     def predict_proba(
         self,

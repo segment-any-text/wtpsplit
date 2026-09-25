@@ -27,6 +27,17 @@ wtp.split("Hello This is a test.", lang_code="en")
 wtp.split("Hello This is a test.", lang_code="en", style="ud")
 ```
 
+## Faster PyTorch inference (`torch.compile`)
+
+Same as for [SaT](./README.md#faster-pytorch-inference-torchcompile--torchinductor): call `optimize()` after `to()` / `half()` on PyTorch `wtp-bert-*` models (not with ONNX). For `backend="aitune"`, install `wtpsplit[aitune]` (see main README).
+
+```python
+wtp = WtP("wtp-bert-mini")
+wtp.half().to("cuda")
+wtp.optimize()  # or backend="aitune" with wtpsplit[aitune]
+wtp.split("Hello This is a test.")
+```
+
 ## ONNX support
 
 You can enable ONNX inference for the `wtp-bert-*` models:

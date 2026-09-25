@@ -51,6 +51,44 @@ sat_adapted.split("This is a test This is another test.")
 # returns ['This is a test ', 'This is another test']
 ```
 
+## Faster PyTorch inference (`torch.compile` / TorchInductor)
+
+For repeated inference without exporting to ONNX, compile the PyTorch model with [TorchInductor](https://pytorch.org/docs/stable/torch.compiler.html) via `optimize()` (PyTorch 2.0+). This is **optional** - the first `split` after `optimize()` can be slow while graphs are built. Call `optimize()` **after** `to()` / `half()` so the compiled graph matches *your* device and dtype.
+
+```python
+from wtpsplit import SaT
+
+sat = SaT("sat-3l-sm")
+sat.half().to("cuda")
+sat.optimize()  # backend="inductor" (default); dynamic shapes on
+
+sat.split("This is a test This is another test.")
+```
+
+- **SaT** and **WtP** PyTorch checkpoints only — not available with `ort_providers` / ONNX.
+- `backend` synonyms: `"inductor"`, `"torchinductor"`.
+- Chunk length and the last batch size change between calls, so `dynamic=True` is the default. `mode="reduce-overhead"` (CUDA graphs) is faster only when every forward uses the same shapes; otherwise use the default or `mode="max-autotune-no-cudagraphs"`.
+- Optional on NVIDIA Ampere+: `torch.set_float32_matmul_precision("high")` before inference (faster fp32 matmuls).
+
+### NVIDIA AITune (auto backend selection, CUDA)
+
+[NVIDIA AITune](https://github.com/ai-dynamo/aitune) benchmarks backends (TensorRT, Torch-TensorRT, Torch Inductor, …) on your GPU and picks a fast path. Requires Linux, CUDA, and a separate install:
+
+```bash
+pip install wtpsplit[aitune] --extra-index-url https://pypi.nvidia.com
+```
+
+```python
+sat = SaT("sat-3l-sm")
+sat.half().to("cuda")
+# first_wins tries TensorRT → Torch-TensorRT → Inductor when available
+sat.optimize(backend="aitune")
+# or only Inductor via AITune (faster tuning, no TensorRT dependency):
+# sat.optimize(backend="aitune", aitune_strategy="inductor_only", aitune_max_batches=4)
+
+sat.split("This is a test This is another test.")
+```
+
 ## ONNX Support
 
 🚀 You can now enable even faster ONNX inference for `sat` and `sat-sm` models! 🚀
