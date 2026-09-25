@@ -257,7 +257,14 @@ def _install_metadata_fallback(wrapped):
 
     def safe_call_backend_with_dynamic_match(self, sample):
         args, kwargs = sample
-        sample_metadata = SampleMetadata.from_inputs(args, kwargs, strict=self._config.strict_mode)
+        # AITune 0.6+ takes one named-input dict. Older releases took (args, kwargs).
+        if hasattr(self, "_forward_signature"):
+            forward_inputs = self._forward_signature.normalize(args, kwargs)
+            sample_metadata = SampleMetadata.from_inputs(
+                forward_inputs.arguments, strict=self._config.strict_mode
+            )
+        else:
+            sample_metadata = SampleMetadata.from_inputs(args, kwargs, strict=self._config.strict_mode)
         backend = self._backends.get(sample_metadata)
         if backend is None:
             for candidate_metadata, candidate_backend in self._backends.items():
