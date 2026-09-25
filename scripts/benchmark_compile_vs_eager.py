@@ -143,7 +143,11 @@ def main() -> int:
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     parser.add_argument("--dtype", choices=("float32", "float16", "bfloat16"), default="float32")
     parser.add_argument("--backend", default="inductor", help="torch.compile backend passed to optimize()")
-    parser.add_argument("--mode", default="reduce-overhead", help="torch.compile mode passed to optimize()")
+    parser.add_argument(
+        "--mode",
+        default=None,
+        help="torch.compile mode passed to optimize() (default: Inductor's own default)",
+    )
     parser.add_argument("--threshold", type=float, default=0.025)
     parser.add_argument("--stride", type=int, default=256)
     parser.add_argument("--block-size", type=int, default=512)

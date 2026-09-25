@@ -60,13 +60,14 @@ from wtpsplit import SaT
 
 sat = SaT("sat-3l-sm")
 sat.half().to("cuda")
-sat.optimize()  # backend="inductor" (default), mode="reduce-overhead"
+sat.optimize()  # backend="inductor" (default); dynamic shapes on
 
 sat.split("This is a test This is another test.")
 ```
 
 - **SaT** and **WtP** PyTorch checkpoints only — not available with `ort_providers` / ONNX.
 - `backend` synonyms: `"inductor"`, `"torchinductor"`.
+- Chunk length and the last batch size change between calls, so `dynamic=True` is the default. `mode="reduce-overhead"` (CUDA graphs) is faster only when every forward uses the same shapes; otherwise use the default or `mode="max-autotune-no-cudagraphs"`.
 - Optional on NVIDIA Ampere+: `torch.set_float32_matmul_precision("high")` before inference (faster fp32 matmuls).
 
 ### NVIDIA AITune (auto backend selection, CUDA)

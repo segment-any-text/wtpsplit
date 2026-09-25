@@ -17,72 +17,119 @@ def _require_aitune():
 
 
 def _build_calibration_dataset(model, device) -> list[dict[str, Any]]:
-    """Synthetic calibration samples covering short and long chunk lengths."""
+    """Synthetic unbatched samples covering the chunk lengths ``extract`` actually feeds.
+
+    AITune stacks these on dim 0, so each tensor is one example: ``(seq,)`` or
+    ``(seq, num_hashes)``. Lengths stay inside the position-embedding window and
+    on the character-model downsampling grid.
+    """
     import torch
 
     config = model.config
     model_type = getattr(config, "model_type", "") or ""
-    lengths = (64, 128, 256, 512)
+    rate = int(getattr(config, "downsampling_rate", 1) or 1)
+    lengths = tuple(length for length in (64, 128, 256, 512) if length % rate == 0) or (rate,)
+    uses_lang = getattr(config, "language_adapter", "off") in {"on", "shared"}
     samples: list[dict[str, Any]] = []
 
     for seq_len in lengths:
         if "xlm" in model_type:
-            length = min(seq_len + 2, 514)
-            samples.append(
-                {
-                    "input_ids": torch.randint(0, 50000, (length,), dtype=torch.long, device=device),
-                    "attention_mask": torch.ones(length, dtype=torch.float32, device=device),
-                }
-            )
+            # CLS/SEP are added around the chunk; stay within the 512 position window.
+            length = min(seq_len + 2, 512)
+            sample = {
+                "input_ids": torch.randint(0, 50000, (length,), dtype=torch.long, device=device),
+                "attention_mask": torch.ones(length, dtype=torch.float32, device=device),
+            }
         else:
             num_hashes = getattr(config, "num_hash_functions", 8)
             num_buckets = getattr(config, "num_hash_buckets", 10000)
-            samples.append(
-                {
-                    "hashed_ids": torch.randint(
-                        0, num_buckets, (seq_len, num_hashes), dtype=torch.long, device=device
-                    ),
-                    "attention_mask": torch.ones(seq_len, dtype=torch.float32, device=device),
-                }
-            )
+            sample = {
+                "hashed_ids": torch.randint(0, num_buckets, (seq_len, num_hashes), dtype=torch.long, device=device),
+                "attention_mask": torch.ones(seq_len, dtype=torch.float32, device=device),
+            }
+        if uses_lang and "xlm" not in model_type:
+            # Batched to shape (batch,) by AITune, matching ``extract``.
+            sample["language_ids"] = torch.zeros((), dtype=torch.long, device=device)
+        samples.append(sample)
 
     return samples
 
 
-def _resolve_strategy(strategy_name: str | None, backends: list | None):
-    from aitune.torch.backend import TorchInductorBackend
-    from aitune.torch.tune_strategy import FirstWinsStrategy, HighestThroughputStrategy, OneBackendStrategy
+def _backend_cls(*names: str):
+    for name in names:
+        factory = _try_backend("aitune.torch.backend", name)
+        if factory is not None:
+            return factory
+    raise ImportError(
+        "Could not import an AITune TorchInductor backend "
+        f"(tried {', '.join(names)}). Upgrade with: pip install -U 'aitune>=0.4'"
+    )
+
+
+def _strategy_cls(*names: str):
+    for name in names:
+        factory = _try_backend("aitune.torch.tune_strategy", name)
+        if factory is not None:
+            return factory
+    raise ImportError(
+        "Could not import an AITune tune strategy "
+        f"(tried {', '.join(names)}). Upgrade with: pip install -U 'aitune>=0.4'"
+    )
+
+
+def _inductor_backend(*, mode: str | None, fullgraph: bool, dynamic: bool):
+    """TorchInductor backend, using the current JIT class and falling back to older names."""
+    backend_cls = _backend_cls("TorchInductorJitBackend", "TorchInductorBackend")
+    config_cls = _try_backend("aitune.torch.backend", "TorchInductorJitBackendConfig")
+    if config_cls is None:
+        return backend_cls()
+    config_kwargs: dict[str, Any] = {"fullgraph": fullgraph, "dynamic": dynamic}
+    if mode is not None:
+        config_kwargs["mode"] = mode
+    try:
+        return backend_cls(config=config_cls(**config_kwargs))
+    except TypeError:
+        return backend_cls()
+
+
+def _resolve_strategy(
+    strategy_name: str | None,
+    backends: list | None,
+    *,
+    mode: str | None,
+    fullgraph: bool,
+    dynamic: bool,
+):
+    first_wins = _strategy_cls("FirstWinsStrategy")
+    one_backend = _strategy_cls("OneBackendStrategy")
 
     if backends is not None:
-        return FirstWinsStrategy(backends=backends)
+        return first_wins(backends=backends)
 
     key = (strategy_name or "first_wins").lower().replace("-", "_")
+    inductor = _inductor_backend(mode=mode, fullgraph=fullgraph, dynamic=dynamic)
     if key in ("inductor", "inductor_only", "torch_inductor"):
-        return OneBackendStrategy(backend=TorchInductorBackend())
+        return one_backend(backend=inductor)
 
-    backends = _default_aitune_backends()
+    available = _default_aitune_backends(inductor)
     if key in ("highest_throughput", "best", "max_throughput"):
-        from aitune.torch.backend import TorchEagerBackend
+        strategy_cls = _strategy_cls("MaxThroughputStrategy", "HighestThroughputStrategy")
+        try:
+            return strategy_cls(backends=available)
+        except TypeError:
+            return strategy_cls()
 
-        return HighestThroughputStrategy(backends=backends + [TorchEagerBackend()])
-
-    return FirstWinsStrategy(backends=backends)
+    return first_wins(backends=available)
 
 
-def _default_aitune_backends() -> list:
-    """Backends tried in order for ``first_wins`` (TensorRT first when available)."""
-    from aitune.torch.backend import TorchInductorBackend
-
+def _default_aitune_backends(inductor_backend) -> list:
+    """Backends tried in order for ``first_wins`` (TensorRT first when importable)."""
     backends = []
-    for factory in (
-        _try_backend("aitune.torch.backend", "TensorRTBackend"),
-        _try_backend("aitune.torch.backend", "TorchTensorRTJitBackend"),
-        _try_backend("aitune.torch.backend", "TorchInductorBackend"),
-    ):
+    for class_name in ("TensorRTBackend", "TorchTensorRTJitBackend"):
+        factory = _try_backend("aitune.torch.backend", class_name)
         if factory is not None:
             backends.append(factory())
-    if not backends:
-        backends.append(TorchInductorBackend())
+    backends.append(inductor_backend)
     return backends
 
 
@@ -113,13 +160,16 @@ def pop_aitune_kwargs(compile_kwargs: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def apply_aitune(model, **aitune_kwargs):
+def apply_aitune(model, *, mode: str | None = None, fullgraph: bool = False, dynamic: bool = True, **aitune_kwargs):
     """Wrap ``model`` with AITune and run ahead-of-time tuning. Returns the wrapped module."""
+    import logging
+
     import torch
 
     ait = _require_aitune()
     from aitune.torch.dataloader import DynamicShapeDataset
-    from aitune.torch.tune_strategy import TuneStrategy
+
+    logger = logging.getLogger(__name__)
 
     if not torch.cuda.is_available():
         raise RuntimeError(
@@ -127,24 +177,31 @@ def apply_aitune(model, **aitune_kwargs):
         )
 
     device = getattr(model, "device", None)
-    if device is None or device.type != "cuda":
+    if device is None or getattr(device, "type", None) != "cuda":
         raise RuntimeError(
             "AITune requires the model on CUDA. Call `.to('cuda')` before `optimize(backend='aitune')`."
         )
 
+    model.eval()
     calibration = aitune_kwargs.pop("aitune_calibration", None)
     dataset = (
-        calibration
-        if calibration is not None
-        else DynamicShapeDataset(_build_calibration_dataset(model, device))
+        calibration if calibration is not None else DynamicShapeDataset(_build_calibration_dataset(model, device))
     )
     batch_sizes = aitune_kwargs.pop("aitune_batch_sizes", None) or [1, 2]
     max_batches = aitune_kwargs.pop("aitune_max_batches", 4)
     strategy_name = aitune_kwargs.pop("aitune_strategy", None)
     backends = aitune_kwargs.pop("aitune_backends", None)
     dry_run = aitune_kwargs.pop("aitune_dry_run", False)
+    if len(set(batch_sizes)) < 2:
+        logger.warning(
+            "AITune needs at least two batch sizes to mark the batch axis as dynamic; "
+            "using [1, 2] so later split() batch sizes still match."
+        )
+        batch_sizes = [1, 2]
 
-    strategy: TuneStrategy = _resolve_strategy(strategy_name, backends)
+    strategy = _resolve_strategy(
+        strategy_name, backends, mode=mode, fullgraph=fullgraph, dynamic=dynamic
+    )
     name = f"{model.__class__.__module__}.{model.__class__.__qualname__}".replace("/", "_")
     wrapped = ait.Module(model, name=name, strategy=strategy)
 

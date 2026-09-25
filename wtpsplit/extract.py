@@ -1,7 +1,7 @@
 import math
 import sys
 import logging
-from typing import Literal
+from typing import Literal, Optional
 
 import numpy as np
 from tqdm.auto import tqdm
@@ -11,6 +11,52 @@ from wtpsplit.aitune_integration import apply_aitune, pop_aitune_kwargs
 from wtpsplit.utils import Constants, hash_encode
 
 logger = logging.getLogger(__name__)
+
+_INDUCTOR_ALIASES = {"inductor", "torchinductor", "torch_inductor", "default"}
+_AITUNE_ALIASES = {"aitune", "ai_tune"}
+
+
+def normalize_optimize_backend(backend: Optional[str]) -> str:
+    """Map public ``optimize(backend=...)`` names onto ``inductor`` or ``aitune``."""
+    key = (backend or "inductor").lower().replace("-", "_")
+    if key in _INDUCTOR_ALIASES:
+        return "inductor"
+    if key in _AITUNE_ALIASES:
+        return "aitune"
+    if key in {"none", "off", "eager"}:
+        raise ValueError(
+            f"backend={backend!r} is not an optimized backend. "
+            "Omit optimize() for eager PyTorch, or pass backend='inductor' / 'aitune'."
+        )
+    return key
+
+
+def _module_device(module):
+    """Device of a plain, ``torch.compile``d, or AITune-wrapped module."""
+    device = getattr(module, "device", None)
+    if getattr(device, "type", None):
+        return device
+    try:
+        return next(module.parameters()).device
+    except StopIteration as exc:
+        raise RuntimeError("Cannot infer model device: the module has no parameters.") from exc
+
+
+def logits_from_model_output(output):
+    """Read logits from a Hugging Face dict/output or from a compiled tuple."""
+    if isinstance(output, (tuple, list)):
+        if not output:
+            raise RuntimeError("Model forward returned an empty sequence; expected logits.")
+        return output[0]
+    logits = getattr(output, "logits", None)
+    if logits is not None:
+        return logits
+    try:
+        return output["logits"]
+    except Exception as exc:
+        raise TypeError(
+            "Model forward did not return logits. Expected a dict-like output or a tuple whose first item is logits."
+        ) from exc
 
 
 class BertCharORTWrapper:
@@ -69,7 +115,7 @@ class PyTorchWrapper:
         self,
         *,
         backend: str = "inductor",
-        mode: str = "reduce-overhead",
+        mode: Optional[str] = None,
         fullgraph: bool = False,
         dynamic: bool = True,
         **compile_kwargs,
@@ -77,18 +123,19 @@ class PyTorchWrapper:
         """Compile the underlying Hugging Face model with :func:`torch.compile` (TorchInductor by default).
 
         Call after moving the model to the target device and changing dtype (e.g. ``half()``), so the
-        compiled graph matches inference.
+        compiled graph matches inference. A second call is ignored.
 
-        Performance notes (outside this method): on CUDA, ``torch.set_float32_matmul_precision("high")``
-        enables TF32 for matmuls (Ampere+), which is often faster with minimal accuracy impact for
-        inference. Larger ``batch_size`` in ``split`` / ``predict_proba`` improves GPU utilization until
-        memory-bound. Expect a slow first forward after compile (graph build); warm up before benchmarking.
+        Chunk length and the last batch size vary across ``split`` calls, so ``dynamic=True`` is the
+        default. ``mode="reduce-overhead"`` enables CUDA graphs and fights those varying shapes; pass
+        it only when every forward uses the same batch and sequence length. ``None`` lets Inductor
+        pick its default mode.
 
         Args:
             backend: ``"inductor"`` for TorchInductor (aliases: ``"torchinductor"``, ``"torch_inductor"``),
                 or ``"aitune"`` for NVIDIA AITune (CUDA only; requires ``pip install wtpsplit[aitune]``).
-            mode: Compilation mode (e.g. ``"reduce-overhead"``, ``"max-autotune"``).
-            fullgraph: Passed to :func:`torch.compile`.
+            mode: Compilation mode (``"default"``, ``"reduce-overhead"``, ``"max-autotune"``,
+                ``"max-autotune-no-cudagraphs"``). ``None`` uses the backend default.
+            fullgraph: Passed to :func:`torch.compile` and to AITune's Inductor backend.
             dynamic: If ``True`` (default), allow varying sequence lengths across chunks.
             **compile_kwargs: For ``inductor``, passed to :func:`torch.compile`. For ``aitune``, optional:
                 ``aitune_strategy`` (``"first_wins"``, ``"inductor_only"``, ``"highest_throughput"``),
@@ -100,30 +147,33 @@ class PyTorchWrapper:
             raise ImportError("`torch` must be installed to use optimize().") from None
 
         if self._torch_compiled:
+            logger.warning("optimize() was already applied; keeping the existing compiled model.")
             return self
 
-        key = (backend or "inductor").lower().replace("-", "_")
+        key = normalize_optimize_backend(backend)
 
-        if key in ("aitune", "ai_tune"):
+        if key == "aitune":
             aitune_kwargs = pop_aitune_kwargs(compile_kwargs)
             if compile_kwargs:
                 raise TypeError(f"Unexpected keyword arguments for backend='aitune': {sorted(compile_kwargs)}")
-            self.model = apply_aitune(self.model, **aitune_kwargs)
+            self.model.eval()
+            self.model = apply_aitune(
+                self.model, mode=mode, fullgraph=fullgraph, dynamic=dynamic, **aitune_kwargs
+            )
             self._torch_compiled = True
             return self
 
         if not hasattr(torch, "compile"):
             raise RuntimeError("torch.compile requires PyTorch 2.0 or newer.")
 
-        if key in ("torch_inductor", "torchinductor"):
-            key = "inductor"
-
-        compile_backend = None if key in ("default", "none") else key
+        self.model.eval()
+        compile_kwargs = dict(compile_kwargs)
+        if mode is not None:
+            compile_kwargs["mode"] = mode
 
         self.model = torch.compile(
             self.model,
-            backend=compile_backend,
-            mode=mode,
+            backend=key,
             fullgraph=fullgraph,
             dynamic=dynamic,
             **compile_kwargs,
@@ -137,9 +187,9 @@ class PyTorchWrapper:
         except ImportError:
             raise ImportError("`torch` must be installed to use PyTorch models!")
 
-        # inference_mode: stricter than no_grad(); best default for token-classification inference only.
+        # inference_mode: stricter than no_grad(); this wrapper is inference-only.
         with torch.inference_mode():
-            device = self.model.device
+            device = _module_device(self.model)
             forward_kwargs = {
                 "attention_mask": torch.from_numpy(attention_mask).to(device),
             }
@@ -150,7 +200,7 @@ class PyTorchWrapper:
             if language_ids is not None:
                 forward_kwargs["language_ids"] = torch.from_numpy(language_ids).to(device)
 
-            logits = self.model(**forward_kwargs)["logits"].cpu().numpy()
+            logits = logits_from_model_output(self.model(**forward_kwargs)).detach().cpu().numpy()
 
         return {"logits": logits}
 

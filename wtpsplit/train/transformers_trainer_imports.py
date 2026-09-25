@@ -1,11 +1,15 @@
-"""Stable imports for custom ``Trainer`` subclasses on **transformers 4.x and 5.x**.
+"""Stable imports for custom ``Trainer`` subclasses on **transformers 4.29 through 5.x**.
 
 In v5, many symbols are no longer re-exported from ``transformers.trainer``; importing from the
-same public submodules used internally works on both versions (``integrations.deepspeed``,
-``pytorch_utils``, ``trainer_pt_utils``, etc.).
+same public submodules used internally works on both versions (``pytorch_utils``,
+``trainer_pt_utils``, etc.). ``deepspeed_init`` lives in ``transformers.deepspeed`` on 4.29
+and in ``transformers.integrations.deepspeed`` on later releases.
 """
 
-from transformers.integrations.deepspeed import deepspeed_init
+try:
+    from transformers.integrations.deepspeed import deepspeed_init
+except ImportError:  # transformers 4.29
+    from transformers.deepspeed import deepspeed_init
 from transformers.modeling_utils import unwrap_model
 from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 from transformers.trainer import (

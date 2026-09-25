@@ -39,6 +39,37 @@ def test_split_torch():
     assert splits == ["This is a test sentence ", "This is another test sentence."]
 
 
+def test_normalize_optimize_backend():
+    from wtpsplit.extract import logits_from_model_output, normalize_optimize_backend
+
+    assert normalize_optimize_backend("torchinductor") == "inductor"
+    assert normalize_optimize_backend("torch-inductor") == "inductor"
+    assert normalize_optimize_backend("AITune") == "aitune"
+    with pytest.raises(ValueError):
+        normalize_optimize_backend("eager")
+
+    class _Out(dict):
+        pass
+
+    out = _Out(logits="from-dict")
+    assert logits_from_model_output(out) == "from-dict"
+
+    class _Attr:
+        logits = "from-attr"
+
+    assert logits_from_model_output(_Attr()) == "from-attr"
+    assert logits_from_model_output(("from-tuple", "rest")) == "from-tuple"
+
+
+def test_pop_aitune_kwargs_leaves_compile_options():
+    from wtpsplit.aitune_integration import pop_aitune_kwargs
+
+    kwargs = {"mode": "default", "aitune_strategy": "inductor_only", "aitune_max_batches": 2}
+    popped = pop_aitune_kwargs(kwargs)
+    assert popped == {"aitune_strategy": "inductor_only", "aitune_max_batches": 2}
+    assert kwargs == {"mode": "default"}
+
+
 def test_optimize_torch_inductor():
     import torch
 
