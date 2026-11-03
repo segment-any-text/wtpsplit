@@ -1,42 +1,6 @@
-from transformers import AutoConfig, BertConfig, CanineConfig, XLMRobertaConfig
+from transformers import XLMRobertaConfig
 
-
-class LACanineConfig(CanineConfig):
-    model_type = "la-canine"
-
-    def __init__(
-        self,
-        n_languages=None,
-        ngram_order=1,
-        bottleneck_factor=2,
-        language_adapter="on",
-        lookahead=None,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-
-        self.n_languages = n_languages
-        self.ngram_order = ngram_order
-        self.language_adapter = language_adapter  # 'on', 'off', 'shared'
-        self.bottleneck_factor = bottleneck_factor
-
-        self.lookahead = lookahead
-        self.lookahead_block_size = 1
-
-
-class BertCharConfig(BertConfig):
-    model_type = "bert-char"
-
-    def __init__(
-        self,
-        num_hash_buckets=8192,
-        num_hash_functions=8,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-
-        self.num_hash_buckets = num_hash_buckets
-        self.num_hash_functions = num_hash_functions
+from wtpsplit._inference import validate_input_line_breaks
 
 
 class SubwordXLMConfig(XLMRobertaConfig):
@@ -44,6 +8,8 @@ class SubwordXLMConfig(XLMRobertaConfig):
 
     Args:
         XLMRobertaConfig: Base class.
+        input_line_breaks: ``"preserve"`` (default; released checkpoints) or ``"space"``.
+            With ``"space"``, ``SaT`` maps each input LF/CR to a space before encoding.
     """
 
     model_type = "xlm-token"
@@ -53,14 +19,39 @@ class SubwordXLMConfig(XLMRobertaConfig):
         self,
         lookahead=None,
         lookahead_split_layers=None,
+        use_character_head=False,
+        balance_character_loss=False,
+        balance_boundary_loss=None,
+        character_head_init="identity",
+        character_head_project_tokens_first=False,
+        input_line_breaks="preserve",
         **kwargs,
     ):
         super().__init__(**kwargs)
+        if character_head_init not in {"identity", "random"}:
+            raise ValueError("character_head_init must be 'identity' or 'random'")
         self.mixture_name = "xlm-token"
         self.lookahead = lookahead
         self.lookahead_split_layers = lookahead_split_layers
+        self.use_character_head = use_character_head
+        self.balance_character_loss = balance_character_loss
+        self.balance_boundary_loss = balance_boundary_loss
+        self.character_head_init = character_head_init
+        self.character_head_project_tokens_first = character_head_project_tokens_first
+        self.input_line_breaks = validate_input_line_breaks(input_line_breaks)
 
 
-AutoConfig.register("bert-char", BertCharConfig)
-AutoConfig.register("la-canine", LACanineConfig)
-AutoConfig.register("xlm-token", SubwordXLMConfig)
+_LEGACY_CONFIGS = {"BertCharConfig", "LACanineConfig"}
+
+
+def __getattr__(name: str):
+    if name in _LEGACY_CONFIGS:
+        from wtpsplit.legacy import configs as legacy_configs
+
+        return getattr(legacy_configs, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+from wtpsplit.model_registry import register_sat_configs  # noqa: E402
+
+register_sat_configs()

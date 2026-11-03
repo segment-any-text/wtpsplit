@@ -1,3 +1,5 @@
+> **Note:** See [OVERVIEW.md](OVERVIEW.md) for the v3 architecture, 200+ language & ASR results, and v3 inference pipeline usage.
+
 <h1 align="center">wtpsplit🪓</h1>
 <h3 align="center">Segment any Text - Robustly, Efficiently, Adaptably⚡</h3>
 

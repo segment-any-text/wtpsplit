@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 import os
@@ -9,14 +10,54 @@ from pathlib import Path
 from typing import List
 
 import numpy as np
-import pandas as pd
-from mosestokenizer import MosesTokenizer
 from transformers import AutoTokenizer
 
 # same as in CANINE
 PRIMES = [31, 43, 59, 61, 73, 97, 103, 113, 137, 149, 157, 173, 181, 193, 211, 223]
 
 logger = logging.getLogger(__name__)
+
+
+class _LanguageInfoLoc:
+    """Small subset of pandas' ``.loc`` used by the research scripts."""
+
+    def __init__(self, rows):
+        self._rows = rows
+
+    def __getitem__(self, key):
+        language, column = key
+        return self._rows[language][column]
+
+
+class LanguageInfo:
+    """Dependency-free table for the bundled language metadata.
+
+    Historically ``Constants.LANGINFO`` was a pandas DataFrame, which made
+    pandas a mandatory dependency for every inference-only import.  The codebase
+    only relies on ``index``, ``iterrows()``, and two-dimensional ``loc``.
+    Providing those operations here keeps the existing research API while
+    removing pandas from the core runtime.
+    """
+
+    def __init__(self, rows):
+        self._rows = rows
+        self.index = tuple(rows)
+        self.loc = _LanguageInfoLoc(rows)
+
+    def iterrows(self):
+        return iter(self._rows.items())
+
+
+def _read_language_info(path):
+    rows = {}
+    with open(path, newline="", encoding="utf-8") as file:
+        for row in csv.DictReader(file):
+            language = row.pop("")
+            rows[language] = {
+                key: None if value == "" else value == "True" if value in {"True", "False"} else value
+                for key, value in row.items()
+            }
+    return LanguageInfo(rows)
 
 
 class ConstantsClass:
@@ -35,13 +76,17 @@ class ConstantsClass:
 
     @cached_property
     def CACHE_DIR(self):
-        CACHE_DIR = self.ROOT_DIR / ".cache"
-        CACHE_DIR.mkdir(exist_ok=True)
-        return CACHE_DIR
+        if configured := os.environ.get("WTPSPLIT_CACHE"):
+            cache_dir = Path(configured).expanduser()
+        else:
+            cache_root = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+            cache_dir = cache_root / "wtpsplit"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        return cache_dir
 
     @cached_property
     def LANGINFO(self):
-        return pd.read_csv(os.path.join(self.ROOT_DIR, "data", "language_info.csv"), index_col=0)
+        return _read_language_info(os.path.join(self.ROOT_DIR, "data", "language_info.csv"))
 
     @property
     def PUNCTUATION_CHARS(self):
@@ -92,7 +137,6 @@ class LabelArgs:
             Constants.set_punctuation_file(self.custom_punctuation_file)
         else:
             Constants.set_punctuation_file("punctuation.txt")
-        self.auxiliary_chars = Constants.DEFAULT_PUNCTUATION_FILE
 
 
 def get_label_dict(label_args):
@@ -182,6 +226,10 @@ def corrupt(text: str, do_lowercase: bool, do_remove_punct: bool):
 
 
 def corrupt_asr(text: str, lang):
+    # Training-only dependency: importing wtpsplit for inference should not
+    # require mosestokenizer (or its docopt dependency).
+    from mosestokenizer import MosesTokenizer
+
     if text is None:
         return None
 
@@ -206,7 +254,7 @@ def corrupt_asr(text: str, lang):
         corrupted_sentences = [
             tokenizer.detokenize(corrupted_tokens).lower() for corrupted_tokens in corrupted_tokenized_sentences
         ]
-    except:  # noqa
+    except Exception:
         corrupted_sentences = [
             "".join([char for char in sentence if char not in Constants.PUNCTUATION_CHARS]).lower()
             for sentence in sentences
@@ -214,6 +262,43 @@ def corrupt_asr(text: str, lang):
         return corrupted_sentences
 
     return corrupted_sentences
+
+
+def _strip_join_cue(input_ids, labels, block_ids, j, tokenizer, label_dict):
+    """Drop the SentencePiece word-start cue at position ``j`` and nothing else.
+
+    A standalone ``▁`` piece is pure whitespace and is removed. For ``▁X`` the
+    unprefixed piece ``X`` replaces it when it exists; otherwise ``X`` is split
+    by the tokenizer's own subword model (no added prefix), so lexical content
+    survives. Labels follow ``label()``: each position labels the next token,
+    and the original label moves to the last replacement piece.
+    """
+    if tokenizer.convert_ids_to_tokens(input_ids[j]) == "▁":
+        del input_ids[j]
+        del labels[j]
+        del block_ids[j]
+        if j >= len(input_ids):
+            return
+    piece = tokenizer.convert_ids_to_tokens(input_ids[j])
+    if not piece.startswith("▁"):
+        return
+    if piece == "▁":
+        del input_ids[j]
+        del labels[j]
+        del block_ids[j]
+        return
+    remainder = piece[1:]
+    remainder_id = tokenizer.convert_tokens_to_ids(remainder)
+    if remainder_id != tokenizer.unk_token_id:
+        input_ids[j] = remainder_id
+        return
+    ids = [token.id for token in tokenizer.backend_tokenizer.model.tokenize(remainder)]
+    if not ids:
+        raise ValueError(f"Cannot retokenize {remainder!r}")
+    new_labels = [label_dict.get(token_id, 0) for token_id in ids[1:]] + [labels[j]]
+    input_ids[j : j + 1] = ids
+    labels[j : j + 1] = new_labels
+    block_ids[j : j + 1] = [block_ids[j]] * len(ids)
 
 
 def corrupt_training(
@@ -225,7 +310,21 @@ def corrupt_training(
     pack_samples=False,
     min_length=None,
     tokenizer=None,
+    separator=None,
+    cue_removal="legacy",
 ):
+    """Remove newline (and some auxiliary) tokens and label their positions.
+
+    ``separator`` overrides the ``Constants.SEPARATORS`` lookup for ``lang``
+    (``None`` keeps the legacy lookup, which defaults to a space for IDs absent
+    from ``language_info.csv``). ``cue_removal`` controls how the no-space
+    branch strips the SentencePiece word-start cue that follows a removed
+    newline: ``"legacy"`` deletes the next token when its unprefixed form is
+    not a vocabulary piece; ``"content_preserving"`` retokenizes that remainder
+    instead, so no lexical content is lost.
+    """
+    if cue_removal not in ("legacy", "content_preserving"):
+        raise ValueError(f"Unknown cue_removal {cue_removal!r}")
     input_ids = input_ids.copy()
     block_ids = block_ids.copy()
     if random.random() < label_args.corrupt_entire_chunk_prob:
@@ -262,7 +361,8 @@ def corrupt_training(
 
     labels = label(input_ids, label_dict)
 
-    separator = Constants.SEPARATORS[lang]
+    if separator is None:
+        separator = Constants.SEPARATORS[lang]
 
     try:
         i = next(index for index, label in enumerate(labels) if label != 0)
@@ -309,34 +409,37 @@ def corrupt_training(
                         # tokenizer.decode() retains the space that leaks the information
                         # so we need to get the position within the tokenized text and then remove the space
                         # (so there is no more space when fed into the tokenizer call)
-                        if input_ids[i + 1] == tokenizer.convert_tokens_to_ids("▁"):
-                            # remove artificial space
-                            del input_ids[i + 1]
-                            del labels[i + 1]
-                            del block_ids[i + 1]
-                        if i + 1 < len(input_ids):
-                            next_token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
-                            if next_token.startswith("▁"):
-                                # next token starts with _ --> remove the _ from the token and re-tokenize
-                                remove_next = False
-                                remaining_token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
-                                if len(remaining_token) > 1:
-                                    # ▁Test --> Test
-                                    remaining_token = remaining_token[1:]
-                                else:
-                                    # ▁ --> remove
-                                    remove_next = True
-                                remaining_id = tokenizer.convert_tokens_to_ids(remaining_token)
-                                # replace the token with the remaining token
-                                if remaining_id != tokenizer.unk_token_id:
-                                    input_ids[i + 1] = remaining_id
-                                else:
-                                    # UNK token, remove it
-                                    remove_next = True
-                                if remove_next:
-                                    del input_ids[i + 1]
-                                    del labels[i + 1]
-                                    del block_ids[i + 1]
+                        if cue_removal == "content_preserving":
+                            _strip_join_cue(input_ids, labels, block_ids, i + 1, tokenizer, label_dict)
+                        else:
+                            if input_ids[i + 1] == tokenizer.convert_tokens_to_ids("▁"):
+                                # remove artificial space
+                                del input_ids[i + 1]
+                                del labels[i + 1]
+                                del block_ids[i + 1]
+                            if i + 1 < len(input_ids):
+                                next_token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
+                                if next_token.startswith("▁"):
+                                    # next token starts with _ --> remove the _ from the token and re-tokenize
+                                    remove_next = False
+                                    remaining_token = tokenizer.convert_ids_to_tokens(input_ids[i + 1])
+                                    if len(remaining_token) > 1:
+                                        # ▁Test --> Test
+                                        remaining_token = remaining_token[1:]
+                                    else:
+                                        # ▁ --> remove
+                                        remove_next = True
+                                    remaining_id = tokenizer.convert_tokens_to_ids(remaining_token)
+                                    # replace the token with the remaining token
+                                    if remaining_id != tokenizer.unk_token_id:
+                                        input_ids[i + 1] = remaining_id
+                                    else:
+                                        # UNK token, remove it
+                                        remove_next = True
+                                    if remove_next:
+                                        del input_ids[i + 1]
+                                        del labels[i + 1]
+                                        del block_ids[i + 1]
 
         elif label_args.use_auxiliary and labels[i] > Constants.AUX_OFFSET:  # auxiliary
             if pack_samples:
@@ -460,7 +563,7 @@ if __name__ == "__main__":
     # test corrupt function
     from tokenizers import AddedToken
 
-    tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
+    tokenizer = AutoTokenizer.from_pretrained("facebookAI/xlm-roberta-base")
     tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
     text = "That's right, Five!\n!\n!!!\n!\n Always lay the!Blame on others!"
     input_ids = tokenizer(text)["input_ids"]

@@ -7,7 +7,12 @@ from transformers import AutoTokenizer
 from tokenizers import AddedToken
 
 from wtpsplit.utils import Constants, hash_encode
-from wtpsplit.extract import BertCharORTWrapper
+from wtpsplit.extract import (
+    CHAR_MODEL_TYPES,
+    DEFAULT_TOKENIZERS,
+    BertCharORTWrapper,
+    extract,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +30,28 @@ def extract_batched(
     Like extract.py, but does not split the input into chunks of block_size.
     Instead, it processes the input in batches. So each input batch must be smaller than block_size.
     """
-    if "xlm" in model.config.model_type:
+    if getattr(model.config, "use_character_head", False):
+        tokenizer = AutoTokenizer.from_pretrained(
+            DEFAULT_TOKENIZERS.get(model.config.model_type, "facebookAI/xlm-roberta-base")
+        )
+        logits, _, _, _ = extract(
+            batch_of_texts,
+            model,
+            stride=max(block_size // 2, 1),
+            max_block_size=block_size,
+            batch_size=batch_size,
+            lang_code=lang_code,
+            pad_last_batch=pad_last_batch,
+            tokenizer=tokenizer,
+            verbose=verbose,
+        )
+        return logits, [len(text) for text in batch_of_texts], tokenizer
+
+    if model.config.model_type not in CHAR_MODEL_TYPES:
         use_subwords = True
-        tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
+        tokenizer = AutoTokenizer.from_pretrained(
+            DEFAULT_TOKENIZERS.get(model.config.model_type, "facebookAI/xlm-roberta-base")
+        )
         tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
         tokens = tokenizer(
             batch_of_texts,
