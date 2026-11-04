@@ -11,16 +11,18 @@ import math
 import warnings
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 import numpy as np
+from numpy.typing import NDArray
 
 from wtpsplit.utils import indices_to_sentences
 from wtpsplit.utils.constraints import _enforce_segment_constraints, constrained_segmentation
 from wtpsplit.utils.priors import create_prior_function
 
 T = TypeVar("T")
-ProbabilityPair = tuple[np.ndarray, np.ndarray]
+FloatArray = NDArray[Any]
+ProbabilityPair = tuple[FloatArray, FloatArray]
 
 # How the model encoder sees input line breaks. "preserve" feeds the text unchanged (every
 # released SaT/SaT-SM/WtP checkpoint). "space" replaces each LF/CR with one space before
@@ -70,12 +72,14 @@ def iter_probabilities(
     *,
     outer_batch_size: int,
     remove_whitespace_before_inference: bool,
-    extract_logits: Callable[[list[str]], list[np.ndarray]],
-    probability_fn: Callable[[np.ndarray], ProbabilityPair],
+    extract_logits: Callable[[list[str]], list[FloatArray]],
+    probability_fn: Callable[[FloatArray], ProbabilityPair],
     return_paragraph_probabilities: bool,
-) -> Iterator[np.ndarray | ProbabilityPair]:
+    outputs_are_probabilities: bool = False,
+) -> Iterator[FloatArray | ProbabilityPair]:
     """Run shared outer batching and restore spaces removed before inference."""
     n_outer_batches = math.ceil(len(texts) / outer_batch_size)
+    empty_sentinel = np.zeros((1, 1), dtype=np.float32) if outputs_are_probabilities else np.full((1, 1), -np.inf)
 
     for outer_batch_idx in range(n_outer_batches):
         start = outer_batch_idx * outer_batch_size
@@ -86,8 +90,8 @@ def iter_probabilities(
 
         for text in outer_batch_texts:
             if remove_whitespace_before_inference:
-                positions = []
-                input_characters = []
+                positions: list[int] = []
+                input_characters: list[str] = []
                 for character in text:
                     if character == " ":
                         positions.append(len(input_characters) + len(positions))
@@ -104,7 +108,7 @@ def iter_probabilities(
         outer_batch_logits = extract_logits(nonempty_texts) if nonempty_texts else []
 
         for i in empty_string_indices:
-            outer_batch_logits.insert(i, np.full((1, 1), -np.inf))
+            outer_batch_logits.insert(i, empty_sentinel)
 
         for i, logits in enumerate(outer_batch_logits):
             sentence_probs, newline_probs = probability_fn(logits)
@@ -174,7 +178,7 @@ class DecodedText:
 
 def _decode_unit(
     text: str,
-    probabilities: np.ndarray,
+    probabilities: FloatArray,
     *,
     sentence_threshold: float,
     strip_whitespace: bool,
@@ -193,14 +197,14 @@ def _decode_unit(
             strip_whitespace=strip_whitespace,
         )
 
-    local_prior_kwargs = {} if prior_kwargs is None else prior_kwargs.copy()
+    local_prior_kwargs: dict[str, Any] = {} if prior_kwargs is None else prior_kwargs.copy()
     if max_length is not None:
         local_prior_kwargs["max_length"] = max_length
     if language and "lang_code" not in local_prior_kwargs and "target_length" not in local_prior_kwargs:
         local_prior_kwargs["lang_code"] = language
 
-    prior_fn = create_prior_function(prior_type, local_prior_kwargs)
-    boundaries = constrained_segmentation(
+    prior_fn = cast(Callable[..., Any], create_prior_function)(prior_type, local_prior_kwargs)
+    boundaries: list[int] = cast(Callable[..., list[int]], constrained_segmentation)(
         probabilities,
         prior_fn,
         min_length=min_length,
@@ -209,7 +213,7 @@ def _decode_unit(
         use_negative_evidence=use_negative_evidence,
     )
     indices = [boundary - 1 for boundary in boundaries]
-    return _enforce_segment_constraints(
+    return cast(Callable[..., list[str]], _enforce_segment_constraints)(
         text,
         indices,
         min_length,
@@ -220,7 +224,7 @@ def _decode_unit(
 
 def decode_probabilities(
     text: str,
-    probabilities: np.ndarray | ProbabilityPair,
+    probabilities: FloatArray | ProbabilityPair,
     *,
     sentence_threshold: float,
     paragraph_threshold: float,
@@ -237,9 +241,9 @@ def decode_probabilities(
 ) -> DecodedText:
     """Decode model probabilities without depending on a model implementation."""
     if do_paragraph_segmentation:
-        sentence_probs, newline_probs = probabilities
+        sentence_probs, newline_probs = cast(ProbabilityPair, probabilities)
         offset = 0
-        paragraphs = []
+        paragraphs: list[list[str]] = []
         for paragraph in indices_to_sentences(text, np.where(newline_probs > paragraph_threshold)[0]):
             paragraph_probs = sentence_probs[offset : offset + len(paragraph)]
             paragraphs.append(
@@ -263,7 +267,7 @@ def decode_probabilities(
             paragraphs=paragraphs,
         )
 
-    sentence_probs = probabilities
+    sentence_probs = cast(FloatArray, probabilities)
     sentences = _decode_unit(
         text,
         sentence_probs,

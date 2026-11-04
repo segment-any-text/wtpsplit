@@ -8,6 +8,7 @@ import numpy as np
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 
+from wtpsplit._host_kernels import pack_subword_windows, stitch_subword_logits
 from wtpsplit.char_head import build_char_inputs
 from wtpsplit.utils import Constants, hash_encode
 
@@ -397,32 +398,28 @@ def extract(
         use_subwords = False
 
     text_lengths = [len(text) for text in batch_of_texts]
-    # reduce block size if possible
-    block_size = min(max_block_size, max(text_lengths))
-    if use_subwords:
-        # account for CLS and SEP tokens
-        block_size = min(block_size, max_content_block_size(model.config))
-
-    # make sure block_size is a multiple of downsampling rate
     downsampling_rate = getattr(model.config, "downsampling_rate", 1)
-    block_size = math.ceil(block_size / downsampling_rate) * downsampling_rate
 
-    # total number of forward passes
-    num_chunks = sum(math.ceil(max(length - block_size, 0) / stride) + 1 for length in text_lengths)
-
-    # preallocate a buffer for all input hashes & attention masks
-    if not use_subwords:
+    if use_subwords:
+        eff_max_block = min(max_block_size, max_content_block_size(model.config))
+        input_ids, attention_mask, locs, block_size = pack_subword_windows(
+            batch_of_texts,
+            block_size=eff_max_block,
+            stride=stride,
+            downsampling_rate=downsampling_rate,
+            cls_id=cls_token_id,
+            sep_id=sep_token_id,
+        )
+        num_chunks = len(locs)
+    else:
+        # reduce block size if possible
+        block_size = min(max_block_size, max(text_lengths))
+        block_size = math.ceil(block_size / downsampling_rate) * downsampling_rate
+        num_chunks = sum(math.ceil(max(length - block_size, 0) / stride) + 1 for length in text_lengths)
         input_hashes = np.zeros((num_chunks, block_size, model.config.num_hash_functions), dtype=np.int64)
         attention_mask = np.zeros((num_chunks, block_size), dtype=np.float32)
-    else:
-        input_ids = np.zeros((num_chunks, block_size + 2), dtype=np.int64)
-        attention_mask = np.zeros((num_chunks, block_size + 2), dtype=np.float32)
+        locs = np.zeros((num_chunks, 3), dtype=np.int32)
 
-    # locs keep track of the location of every chunk with a 3-tuple (text_idx, char_start, char_end) that indexes
-    # back into the batch_of_texts
-    locs = np.zeros((num_chunks, 3), dtype=np.int32)
-
-    if not use_subwords:
         # this is equivalent to (but faster than) np.array([ord(c) for c in "".join(batch_of_texts)])
         codec = "utf-32-le" if sys.byteorder == "little" else "utf-32-be"
         ordinals = np.frombuffer(bytearray("".join(batch_of_texts), encoding=codec), dtype=np.int32)
@@ -430,51 +427,26 @@ def extract(
         flat_hashed_ids = hash_encode(
             ordinals, num_hashes=model.config.num_hash_functions, num_buckets=model.config.num_hash_buckets
         )
-    # note that ordinals and flat_hashed_ids have the same length
-    offset = 0
-    current_chunk = 0
-
-    # create chunks
-    for i in range(len(batch_of_texts)):
-        for j in range(0, text_lengths[i], stride):
-            # for every chunk, assign input hashes, attention mask and loc
-            start, end = j, j + block_size
-            done = False
-
-            if end >= text_lengths[i]:
-                end = text_lengths[i]
-                start = max(end - block_size, 0)
-                done = True
-
-            if not use_subwords:
+        offset = 0
+        current_chunk = 0
+        for i in range(len(batch_of_texts)):
+            for j in range(0, text_lengths[i], stride):
+                start, end = j, j + block_size
+                done = False
+                if end >= text_lengths[i]:
+                    end = text_lengths[i]
+                    start = max(end - block_size, 0)
+                    done = True
                 input_hashes[current_chunk, : end - start] = flat_hashed_ids[offset + start : offset + end]
                 attention_mask[current_chunk, : end - start] = 1
-            else:
-                chunk = [cls_token_id] + batch_of_texts[i][start:end] + [sep_token_id]
-                input_ids[current_chunk, : len(chunk)] = chunk
-                attention_mask[current_chunk, : len(chunk)] = 1
+                locs[current_chunk, :] = [i, start, end]
+                current_chunk += 1
+                if done:
+                    break
+            offset += text_lengths[i]
+        assert current_chunk == num_chunks
 
-            locs[current_chunk, :] = [i, start, end]
-            current_chunk += 1
-
-            if done:
-                break
-
-        offset += text_lengths[i]
-
-    assert current_chunk == num_chunks
     n_batches = math.ceil(len(attention_mask) / batch_size)
-
-    # containers for the final logits
-    all_logits = [
-        np.zeros(
-            (length, model.config.num_labels),
-            dtype=np.float16,
-        )
-        for length in text_lengths
-    ]
-    # container for the number of chunks that any character was part of (to average chunk predictions)
-    all_counts = [np.zeros(length, dtype=np.float16) for length in text_lengths]
 
     uses_lang_adapters = getattr(model.config, "language_adapter", "off") == "on"
     if uses_lang_adapters:
@@ -491,46 +463,65 @@ def extract(
     else:
         language_ids = None
 
-    # compute weights for the given weighting scheme
+    if use_subwords:
+        raw_batches = []
+        for batch_idx in tqdm(range(n_batches), disable=not verbose):
+            start, end = batch_idx * batch_size, min(len(attention_mask), (batch_idx + 1) * batch_size)
+            batch_input_ids = input_ids[start:end]
+            batch_attention_mask = attention_mask[start:end]
+            if len(batch_attention_mask) < batch_size and pad_last_batch:
+                n_missing = batch_size - len(batch_attention_mask)
+                batch_input_ids = np.pad(batch_input_ids, ((0, n_missing), (0, 0)), constant_values=pad_token_id)
+                batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
+            kwargs = {"language_ids": language_ids[: len(batch_attention_mask)]} if uses_lang_adapters else {}
+            kwargs["input_ids"] = batch_input_ids
+            logits = model(attention_mask=batch_attention_mask, **kwargs)["logits"]
+            raw_batches.append(logits[: end - start])
+
+        all_logits = stitch_subword_logits(
+            raw_batches,
+            locs,
+            text_lengths,
+            block_size=block_size,
+            num_labels=model.config.num_labels,
+            weighting=weighting,
+            strip_cls_sep=True,
+        )
+        return all_logits, offset_mapping, tokenizer, tokens
+
+    # containers for the final logits (character-level WtP path)
+    all_logits = [
+        np.zeros(
+            (length, model.config.num_labels),
+            dtype=np.float16,
+        )
+        for length in text_lengths
+    ]
+    all_counts = [np.zeros(length, dtype=np.float16) for length in text_lengths]
+
     if weighting == "uniform":
         weights = np.ones(block_size, dtype=np.float16)
     elif weighting == "hat":
         x = np.linspace(-(1 - 1 / block_size), 1 - 1 / block_size, block_size, dtype=np.float16)
         weights = 1 - np.abs(x)
 
-    # forward passes through all chunks
     for batch_idx in tqdm(range(n_batches), disable=not verbose):
         start, end = batch_idx * batch_size, min(len(attention_mask), (batch_idx + 1) * batch_size)
-
-        if not use_subwords:
-            batch_input_hashes = input_hashes[start:end]
-        else:
-            batch_input_ids = input_ids[start:end]
+        batch_input_hashes = input_hashes[start:end]
         batch_attention_mask = attention_mask[start:end]
 
         if len(batch_attention_mask) < batch_size and pad_last_batch:
             n_missing = batch_size - len(batch_attention_mask)
-
-            if not use_subwords:
-                batch_input_hashes = np.pad(batch_input_hashes, ((0, n_missing), (0, 0), (0, 0)))
-            else:
-                # Pad with the specific pad_token_id for the tokenizer
-                batch_input_ids = np.pad(batch_input_ids, ((0, n_missing), (0, 0)), constant_values=pad_token_id)
+            batch_input_hashes = np.pad(batch_input_hashes, ((0, n_missing), (0, 0), (0, 0)))
             batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
 
         kwargs = {"language_ids": language_ids[: len(batch_attention_mask)]} if uses_lang_adapters else {}
-        if use_subwords:
-            kwargs["input_ids"] = batch_input_ids
-        else:
-            kwargs["hashed_ids"] = batch_input_hashes
+        kwargs["hashed_ids"] = batch_input_hashes
 
         logits = model(
             attention_mask=batch_attention_mask,
             **kwargs,
         )["logits"]
-
-        if use_subwords:
-            logits = logits[:, 1:-1, :]  # remove CLS and SEP tokens
 
         for i in range(start, end):
             original_idx, start_char_idx, end_char_idx = locs[i]
@@ -538,12 +529,11 @@ def extract(
             all_logits[original_idx][start_char_idx:end_char_idx] += weights[:n, np.newaxis] * logits[i - start, :n]
             all_counts[original_idx][start_char_idx:end_char_idx] += weights[:n]
 
-    # so far, logits are summed, so we average them here
     all_logits = [(logits / counts[:, None]).astype(np.float16) for logits, counts in zip(all_logits, all_counts)]
 
     return (
         all_logits,
-        offset_mapping if use_subwords else None,
-        tokenizer if use_subwords else None,
-        tokens if use_subwords else None,
+        None,
+        None,
+        None,
     )

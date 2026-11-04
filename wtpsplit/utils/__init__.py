@@ -4,12 +4,14 @@ import logging
 import os
 import random
 from collections import defaultdict
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path
-from typing import List
+from typing import Any, List
 
 import numpy as np
+from numpy.typing import NDArray
 from transformers import AutoTokenizer
 
 # same as in CANINE
@@ -176,7 +178,7 @@ def get_subword_label_dict(label_args, tokenizer):
     return label_dict
 
 
-def sigmoid(x):
+def sigmoid(x: NDArray[Any]) -> NDArray[Any]:
     return 1 / (1 + np.exp(-x.astype(np.float32)))  # fp32 for better precision
 
 
@@ -469,36 +471,39 @@ def corrupt_training(
     return input_ids, block_ids, labels
 
 
-def indices_to_sentences(text, indices, strip_whitespace=False):
-    sentences = []
+def indices_to_sentences(text: str, indices: Iterable[int], strip_whitespace: bool = False) -> list[str]:
+    sentences: list[str] = []
+    append = sentences.append
+    text_len = len(text)
 
     offset = 0
     idx = 0
-    for idx in indices:
-        idx = idx + 1
-        while idx < len(text) and text[idx].isspace():
-            idx += 1
-
-        sentence = text[offset:idx]
-        if strip_whitespace:
-            # NB: I would have thought that this is slower than
-            # adjusting the start and end indices since there are
-            # two string copies, but it seems to be faster
-            # (at least on short strings). more reason to port to Rust?
-            sentence = sentence.strip()
-
-        if len(sentence) > 0:
-            sentences.append(sentence)
-
-        offset = idx
-
-    if idx != len(text):
-        last_sentence = text[idx:]
-        if strip_whitespace:
-            last_sentence = last_sentence.strip()
-
-        if len(last_sentence) > 0:
-            sentences.append(last_sentence)
+    if strip_whitespace:
+        for idx in indices:
+            idx = idx + 1
+            while idx < text_len and text[idx].isspace():
+                idx += 1
+            sentence = text[offset:idx].strip()
+            if sentence:
+                append(sentence)
+            offset = idx
+        if idx != text_len:
+            last_sentence = text[idx:].strip()
+            if last_sentence:
+                append(last_sentence)
+    else:
+        for idx in indices:
+            idx = idx + 1
+            while idx < text_len and text[idx].isspace():
+                idx += 1
+            sentence = text[offset:idx]
+            if sentence:
+                append(sentence)
+            offset = idx
+        if idx != text_len:
+            last_sentence = text[idx:]
+            if last_sentence:
+                append(last_sentence)
 
     return sentences
 
@@ -536,7 +541,11 @@ def reconstruct_sentences(text, partial_sentences):
     return fixed_sentences
 
 
-def get_token_spans(offsets_mapping, tokens, special_tokens):
+def get_token_spans(
+    offsets_mapping: Sequence[tuple[int, int]],
+    tokens: Sequence[int],
+    special_tokens: Sequence[Any],
+) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
     # Filter out special tokens and get their character start and end positions
     valid_indices = np.array(
         [idx for idx, token in enumerate(tokens) if idx < len(offsets_mapping) and token not in special_tokens]
@@ -545,7 +554,13 @@ def get_token_spans(offsets_mapping, tokens, special_tokens):
     return valid_indices, valid_offsets
 
 
-def token_to_char_probs(text, tokens, token_logits, special_tokens, offsets_mapping):
+def token_to_char_probs(
+    text: str,
+    tokens: Sequence[int],
+    token_logits: NDArray[Any],
+    special_tokens: Sequence[Any],
+    offsets_mapping: Sequence[tuple[int, int]],
+) -> NDArray[np.float64]:
     """Map from token probabilities to character probabilities"""
     char_probs = np.full((len(text), token_logits.shape[1]), -np.inf)  # Initialize with very low numbers
 

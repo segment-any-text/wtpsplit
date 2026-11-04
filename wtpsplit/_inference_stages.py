@@ -7,15 +7,16 @@ These functions do not load models, create workers or change runtime settings.
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol, TypedDict, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
+from wtpsplit._host_kernels import pack_subword_windows, project_subword_proba, stitch_subword_logits
 from wtpsplit._inference_features import BatchFeatures, CharacterWindow
-from wtpsplit.utils import Constants, get_token_spans, sigmoid
+from wtpsplit.utils import Constants, sigmoid
 
 Array = NDArray[np.number[Any]]
 ModelBatch = dict[str, Array]
@@ -176,30 +177,15 @@ def _prepare_char(
 def _prepare_subword(ids: list[list[int]], spec: InferenceSpec) -> tuple[list[ModelBatch], NDArray[np.int32], int]:
     if not ids:
         return [], np.empty((0, 3), dtype=np.int32), 0
-    lengths = list(map(len, ids))
-    block = min(spec.block_size, max(lengths), spec.content)
-    block = math.ceil(block / spec.downsampling_rate) * spec.downsampling_rate
-    count = sum(math.ceil(max(length - block, 0) / spec.stride) + 1 for length in lengths)
-    input_ids = np.zeros((count, block + 2), dtype=np.int64)
-    attention = np.zeros_like(input_ids, dtype=np.float32)
-    locations = np.zeros((count, 3), dtype=np.int32)
-    cursor = 0
-    for index, tokens in enumerate(ids):
-        for start in range(0, len(tokens), spec.stride):
-            end = start + block
-            done = end >= len(tokens)
-            if done:
-                end = len(tokens)
-                start = max(end - block, 0)
-            sequence = [spec.cls_id, *tokens[start:end], spec.sep_id]
-            input_ids[cursor, : len(sequence)] = sequence
-            attention[cursor, : len(sequence)] = 1
-            locations[cursor] = index, start, end
-            cursor += 1
-            if done:
-                break
-    if cursor != count:
-        raise ValueError("Window count differs from the preallocation")
+    input_ids, attention, locations, block = pack_subword_windows(
+        ids,
+        block_size=min(spec.block_size, spec.content),
+        stride=spec.stride,
+        downsampling_rate=spec.downsampling_rate,
+        cls_id=spec.cls_id,
+        sep_id=spec.sep_id,
+    )
+    count = len(locations)
     return (
         [
             dict(input_ids=input_ids[s : s + spec.batch_size], attention_mask=attention[s : s + spec.batch_size])
@@ -219,47 +205,61 @@ def _weights(length: int, weighting: str, dtype: type[np.float16] | type[np.floa
 
 def finish(state: RequestState, logits: Sequence[Array], spec: InferenceSpec) -> list[NDArray[np.float32]]:
     """Reduce in window order, round as the extractor does, and retain all positions."""
+    probabilities: list[NDArray[np.float32]] = [np.zeros(n, dtype="<f4") for n in state.original_lengths]
+    if spec.kind == "subword":
+        stitched = stitch_subword_logits(
+            logits,
+            cast(NDArray[np.int32], state.locations),
+            state.lengths,
+            block_size=state.block_size,
+            num_labels=spec.num_labels,
+            weighting=spec.weighting,
+            strip_cls_sep=True,
+            batch_size=spec.batch_size,
+        )
+        for local, original in enumerate(state.nonempty_indices):
+            probability = project_subword_proba(
+                state.original_lengths[original],
+                state.input_ids[local],
+                stitched[local],
+                state.offsets[local],
+                spec.special_tokens,
+            )
+            if (
+                len(probability) != state.original_lengths[original]
+                or not np.isfinite(probability).all()
+                or np.any((probability < 0) | (probability > 1))
+            ):
+                raise ValueError("Invalid character probability vector")
+            probabilities[original] = probability
+        return probabilities
+
     expected = math.ceil(len(state.locations) / spec.batch_size)
     if len(logits) != expected:
         raise ValueError("Wrong number of forward batches")
-    dtype = np.float32 if spec.kind == "char" else np.float16
-    accumulated = [np.zeros((n, spec.num_labels), dtype=dtype) for n in state.lengths]
-    counts: list[Array] = [np.zeros(n, dtype=dtype) for n in state.lengths]
-    weights = _weights(state.block_size, spec.weighting, np.float16) if spec.kind == "subword" else None
+    accumulated = [np.zeros((n, spec.num_labels), dtype=np.float32) for n in state.lengths]
+    counts: list[NDArray[np.float32]] = [np.zeros(n, dtype=np.float32) for n in state.lengths]
     cursor = 0
     for values in logits:
         real = min(spec.batch_size, len(state.locations) - cursor)
         if values.ndim != 3 or len(values) != real or values.shape[2] != spec.num_labels:
             raise ValueError("Forward logits do not match prepared batch geometry")
-        values = values[:, 1:-1, :] if spec.kind == "subword" else values
         for row in range(real):
             index, start, end = state.locations[cursor + row]
             n = int(end - start)
             if values.shape[1] < n:
                 raise ValueError("Forward logits are shorter than their window")
-            local_weights = _weights(n, spec.weighting, np.float32) if weights is None else weights[:n]
+            local_weights = _weights(n, spec.weighting, np.float32)
             accumulated[index][start:end] += values[row, :n] * local_weights[:, None]
             counts[index][start:end] += local_weights
         cursor += real
-    probabilities: list[NDArray[np.float32]] = [np.zeros(n, dtype="<f4") for n in state.original_lengths]
     for local, original in enumerate(state.nonempty_indices):
-        if spec.kind == "char":
-            covered = counts[local] > 0
-            accumulated[local][covered] /= counts[local][covered, None]
-            accumulated[local][~covered] = -12.0
-            rounded = accumulated[local].astype(np.float16)
-        else:
-            rounded = (accumulated[local] / counts[local][:, None]).astype(np.float16)
-            projected = np.full((state.original_lengths[original], spec.num_labels), -np.inf)
-            valid, spans = cast(
-                Callable[[list[tuple[int, int]], list[int], list[str]], tuple[NDArray[np.int64], NDArray[np.int64]]],
-                get_token_spans,
-            )(state.offsets[local], state.input_ids[local], list(spec.special_tokens))
-            projected[spans[:, 1] - 1] = rounded[valid]
-            rounded = projected
-        probability = np.asarray(
-            cast(Callable[[Array], Array], sigmoid)(rounded[:, Constants.NEWLINE_INDEX]), dtype="<f4"
-        )
+        covered = counts[local] > 0
+        accumulated[local][covered] /= counts[local][covered, None]
+        accumulated[local][~covered] = -12.0
+        rounded = accumulated[local].astype(np.float16)
+        with np.errstate(over="ignore"):
+            probability = np.asarray(sigmoid(rounded[:, Constants.NEWLINE_INDEX]), dtype="<f4")
         if (
             len(probability) != state.original_lengths[original]
             or not np.isfinite(probability).all()

@@ -1,14 +1,22 @@
 from __future__ import annotations
 
+import math
 import os
 import warnings
 from pathlib import Path
 from typing import Literal
 
+import numpy as np
 from huggingface_hub import hf_hub_download
 from transformers import AutoConfig, AutoModelForTokenClassification, AutoTokenizer
 from transformers.utils.hub import cached_file
 
+from wtpsplit._host_kernels import (
+    decode_subword_split,
+    exact_float16_logit_threshold,
+    extract_subword_logits_fast,
+    project_subword_proba,
+)
 from wtpsplit._inference import (
     decode_probabilities,
     iter_probabilities,
@@ -23,7 +31,14 @@ from wtpsplit.constants import (
     calibrated_threshold_for_checkpoint,
     default_threshold_for_checkpoint,
 )
-from wtpsplit.extract import DEFAULT_TOKENIZERS, SaTORTWrapper, PyTorchWrapper, extract
+from wtpsplit.extract import (
+    CHAR_MODEL_TYPES,
+    DEFAULT_TOKENIZERS,
+    PyTorchWrapper,
+    SaTORTWrapper,
+    extract,
+    max_content_block_size,
+)
 from wtpsplit.model_registry import register_sat_configs, register_sat_models
 from wtpsplit.segmentation import Segmentation, boundary_confidences, sentence_spans
 from wtpsplit.utils import Constants, sigmoid, token_to_char_probs
@@ -606,7 +621,37 @@ class SaT:
         if line_breaks != "preserve":
             texts = [normalize_input_line_breaks(text, line_breaks) for text in texts]
 
+        use_char_head = bool(getattr(self.model.config, "use_character_head", False))
+        is_subword_proba = not use_char_head and self.model.config.model_type not in CHAR_MODEL_TYPES
+        can_fast_subword_proba = (
+            is_subword_proba
+            and getattr(self.model.config, "language_adapter", "off") != "on"
+            and self.tokenizer is not None
+            and not verbose
+        )
         def extract_logits(input_texts):
+            if can_fast_subword_proba:
+                outer_batch_logits, encoded_batch = extract_subword_logits_fast(
+                    input_texts,
+                    self.model,
+                    self.tokenizer,
+                    stride=stride,
+                    max_block_size=block_size,
+                    batch_size=batch_size,
+                    pad_last_batch=pad_last_batch,
+                    weighting=weighting,
+                    max_content_block=max_content_block_size(self.model.config),
+                )
+                return [
+                    project_subword_proba(
+                        len(text),
+                        encoded_batch.token_arrays[i],
+                        outer_batch_logits[i],
+                        encoded_batch.offsets_or_encoding(i),
+                        self.special_tokens,
+                    )[:, None]
+                    for i, text in enumerate(input_texts)
+                ]
             outer_batch_logits, _, _, tokenizer_output = extract(
                 input_texts,
                 self.model,
@@ -620,10 +665,21 @@ class SaT:
                 character_preprocessing=getattr(self, "character_preprocessing", "reference"),
                 trim_padding=getattr(self, "trim_padding", True),
             )
-            if getattr(self.model.config, "use_character_head", False):
+            if use_char_head:
                 return [
                     logits[: len(text)]
                     for text, logits in zip(input_texts, outer_batch_logits)
+                ]
+            if is_subword_proba:
+                return [
+                    project_subword_proba(
+                        len(text),
+                        tokenizer_output["input_ids"][i],
+                        outer_batch_logits[i],
+                        tokenizer_output["offset_mapping"][i],
+                        self.special_tokens,
+                    )[:, None]
+                    for i, text in enumerate(input_texts)
                 ]
             return [
                 token_to_char_probs(
@@ -637,7 +693,11 @@ class SaT:
             ]
 
         def probability_fn(logits):
-            probabilities = sigmoid(logits[:, Constants.NEWLINE_INDEX])
+            if is_subword_proba:
+                probabilities = logits[:, 0]
+                return probabilities, probabilities
+            with np.errstate(over="ignore"):
+                probabilities = sigmoid(logits[:, Constants.NEWLINE_INDEX])
             return probabilities, probabilities
 
         yield from iter_probabilities(
@@ -647,6 +707,7 @@ class SaT:
             extract_logits=extract_logits,
             probability_fn=probability_fn,
             return_paragraph_probabilities=return_paragraph_probabilities,
+            outputs_are_probabilities=is_subword_proba,
         )
 
     def segment(
@@ -719,6 +780,31 @@ class SaT:
             lazy=lazy,
         )
 
+    def _resolve_sentence_threshold(self, threshold: float | None) -> float:
+        if threshold is not None:
+            return threshold
+        exported_threshold = getattr(self.model.config, "sat_export_default_threshold", None)
+        if exported_threshold is not None and not self.use_lora:
+            return float(exported_threshold)
+        model_str = self.model_name_or_model
+        if not isinstance(model_str, str):
+            warnings.warn(
+                f"get_default_threshold received non-string argument: {type(model_str)}. Using base default."
+            )
+            return DEFAULT_SENTENCE_THRESHOLD
+        if self.use_lora:
+            return 0.5
+        resolved = default_threshold_for_checkpoint(model_str)
+        if resolved is None:
+            warnings.warn(
+                f"{model_str!r} is not a recognised sat-* checkpoint name, so the operating point "
+                f"falls back to {DEFAULT_SENTENCE_THRESHOLD}. If this is a fine-tune or a renamed "
+                "checkpoint, pass threshold= explicitly.",
+                stacklevel=3,
+            )
+            return DEFAULT_SENTENCE_THRESHOLD
+        return resolved
+
     def split(
         self,
         text_or_texts,
@@ -744,44 +830,183 @@ class SaT:
         use_negative_evidence: bool = True,
         lazy: bool = False,
     ):
-        """Return sentence strings.
+        """Return sentence strings."""
+        if treat_newline_as_space is not None:
+            warnings.warn(
+                "treat_newline_as_space is deprecated and will be removed in a future release. "
+                "Use split_on_input_newlines with inverse bools instead.",
+                DeprecationWarning,
+            )
+            split_on_input_newlines = not treat_newline_as_space
 
-        This compatibility wrapper delegates to :meth:`segment`; new code can
-        call that method to also receive source spans and boundary probabilities.
-        """
-        result = self.segment(
-            text_or_texts,
+        validate_segmentation_options(
             threshold=threshold,
-            stride=stride,
-            block_size=block_size,
-            batch_size=batch_size,
-            pad_last_batch=pad_last_batch,
-            weighting=weighting,
-            remove_whitespace_before_inference=remove_whitespace_before_inference,
-            outer_batch_size=outer_batch_size,
-            paragraph_threshold=paragraph_threshold,
-            strip_whitespace=strip_whitespace,
-            do_paragraph_segmentation=do_paragraph_segmentation,
-            split_on_input_newlines=split_on_input_newlines,
-            treat_newline_as_space=treat_newline_as_space,
-            verbose=verbose,
             min_length=min_length,
             max_length=max_length,
             prior_type=prior_type,
-            prior_kwargs=prior_kwargs,
             algorithm=algorithm,
-            use_negative_evidence=use_negative_evidence,
+            split_on_input_newlines=split_on_input_newlines,
+        )
+
+        return resolve_text_input(
+            text_or_texts,
+            lambda texts: self._split(
+                texts,
+                threshold=threshold,
+                stride=stride,
+                block_size=block_size,
+                batch_size=batch_size,
+                pad_last_batch=pad_last_batch,
+                weighting=weighting,
+                remove_whitespace_before_inference=remove_whitespace_before_inference,
+                outer_batch_size=outer_batch_size,
+                paragraph_threshold=paragraph_threshold,
+                strip_whitespace=strip_whitespace,
+                do_paragraph_segmentation=do_paragraph_segmentation,
+                split_on_input_newlines=split_on_input_newlines,
+                verbose=verbose,
+                min_length=min_length,
+                max_length=max_length,
+                prior_type=prior_type,
+                prior_kwargs=prior_kwargs,
+                algorithm=algorithm,
+                use_negative_evidence=use_negative_evidence,
+            ),
             lazy=lazy,
         )
 
-        def sentence_output(segmentation):
-            return segmentation.paragraphs if segmentation.paragraphs is not None else segmentation.sentences
+    def _split(
+        self,
+        texts,
+        threshold: float | None,
+        stride: int,
+        block_size: int,
+        batch_size: int,
+        pad_last_batch: bool,
+        weighting: Literal["uniform", "hat"],
+        paragraph_threshold: float,
+        remove_whitespace_before_inference: bool,
+        outer_batch_size: int,
+        do_paragraph_segmentation: bool,
+        split_on_input_newlines: bool,
+        min_length: int,
+        max_length: int | None,
+        strip_whitespace: bool,
+        verbose: bool,
+        prior_type: str,
+        prior_kwargs: dict | None,
+        algorithm: str,
+        use_negative_evidence: bool = True,
+    ):
+        sentence_threshold = self._resolve_sentence_threshold(threshold)
 
-        if isinstance(result, Segmentation):
-            return sentence_output(result)
-        if lazy:
-            return (sentence_output(segmentation) for segmentation in result)
-        return [sentence_output(segmentation) for segmentation in result]
+        can_fast_subword_split = (
+            not do_paragraph_segmentation
+            and max_length is None
+            and min_length <= 1
+            and not remove_whitespace_before_inference
+            and not getattr(self.model.config, "use_character_head", False)
+            and self.model.config.model_type not in CHAR_MODEL_TYPES
+            and getattr(self.model.config, "language_adapter", "off") != "on"
+            and self.tokenizer is not None
+            and not verbose
+        )
+
+        if can_fast_subword_split:
+            z_min = exact_float16_logit_threshold(sentence_threshold)
+            line_breaks = self.__dict__.get("input_line_breaks", "preserve")
+            max_content_block = max_content_block_size(self.model.config)
+            n_outer = math.ceil(len(texts) / outer_batch_size)
+
+            for outer_idx in range(n_outer):
+                start = outer_idx * outer_batch_size
+                end = min((outer_idx + 1) * outer_batch_size, len(texts))
+                outer_orig = texts[start:end]
+                outer_in = (
+                    [normalize_input_line_breaks(t, line_breaks) for t in outer_orig]
+                    if line_breaks != "preserve"
+                    else outer_orig
+                )
+                nonempty_map = [i for i, t in enumerate(outer_in) if t.strip()]
+                nonempty_texts = [outer_in[i] for i in nonempty_map]
+
+                if nonempty_texts:
+                    stitched_logits, encoded_batch = extract_subword_logits_fast(
+                        nonempty_texts,
+                        self.model,
+                        self.tokenizer,
+                        stride=stride,
+                        max_block_size=block_size,
+                        batch_size=batch_size,
+                        pad_last_batch=pad_last_batch,
+                        weighting=weighting,
+                        max_content_block=max_content_block,
+                    )
+                else:
+                    stitched_logits = []
+                    encoded_batch = None
+
+                nonempty_cursor = 0
+                for doc_i, orig_text in enumerate(outer_orig):
+                    if split_on_input_newlines is False:
+                        warnings.warn(
+                            "split_on_input_newlines=False disables forced splitting at input newlines. "
+                            "This option does not replace newlines with spaces; the model may still "
+                            "predict boundaries around them. Returned segments may contain input newlines.",
+                            UserWarning,
+                            stacklevel=2,
+                        )
+                    if doc_i in nonempty_map and encoded_batch is not None:
+                        tok_logits = stitched_logits[nonempty_cursor]
+                        off_or_enc = encoded_batch.offsets_or_encoding(nonempty_cursor)
+                        nonempty_cursor += 1
+                    else:
+                        tok_logits = np.empty((0, 1), dtype=np.float16)
+                        off_or_enc = []
+
+                    yield decode_subword_split(
+                        orig_text,
+                        tok_logits,
+                        off_or_enc,
+                        z_min=z_min,
+                        strip_whitespace=strip_whitespace,
+                        split_on_input_newlines=bool(split_on_input_newlines),
+                    )
+            return
+
+        for text, probs in zip(
+            texts,
+            self.predict_proba(
+                texts,
+                stride=stride,
+                block_size=block_size,
+                batch_size=batch_size,
+                pad_last_batch=pad_last_batch,
+                weighting=weighting,
+                remove_whitespace_before_inference=remove_whitespace_before_inference,
+                outer_batch_size=outer_batch_size,
+                return_paragraph_probabilities=do_paragraph_segmentation,
+                verbose=verbose,
+                lazy=True,
+            ),
+        ):
+            decoded = decode_probabilities(
+                text,
+                probs,
+                sentence_threshold=sentence_threshold,
+                paragraph_threshold=paragraph_threshold,
+                strip_whitespace=strip_whitespace,
+                do_paragraph_segmentation=do_paragraph_segmentation,
+                split_on_input_newlines=split_on_input_newlines,
+                min_length=min_length,
+                max_length=max_length,
+                prior_type=prior_type,
+                prior_kwargs=prior_kwargs,
+                algorithm=algorithm,
+                use_negative_evidence=use_negative_evidence,
+                language=self.language,
+            )
+            yield decoded.paragraphs if decoded.paragraphs is not None else decoded.sentences
 
     def _segment(
         self,
@@ -806,31 +1031,7 @@ class SaT:
         algorithm: str,
         use_negative_evidence: bool = True,
     ):
-        def get_default_threshold(model_str: str):
-            exported_threshold = getattr(self.model.config, "sat_export_default_threshold", None)
-            if exported_threshold is not None and not self.use_lora:
-                return float(exported_threshold)
-            # basic type check for safety
-            if not isinstance(model_str, str):
-                warnings.warn(
-                    f"get_default_threshold received non-string argument: {type(model_str)}. Using base default."
-                )
-                return DEFAULT_SENTENCE_THRESHOLD
-            if self.use_lora:
-                return 0.5
-            resolved = default_threshold_for_checkpoint(model_str)
-            if resolved is None:
-                warnings.warn(
-                    f"{model_str!r} is not a recognised sat-* checkpoint name, so the operating point "
-                    f"falls back to {DEFAULT_SENTENCE_THRESHOLD}. If this is a fine-tune or a renamed "
-                    "checkpoint, pass threshold= explicitly.",
-                    stacklevel=2,
-                )
-                return DEFAULT_SENTENCE_THRESHOLD
-            return resolved
-
-        default_threshold = get_default_threshold(self.model_name_or_model)
-        sentence_threshold = threshold if threshold is not None else default_threshold
+        sentence_threshold = self._resolve_sentence_threshold(threshold)
 
         for text, probs in zip(
             texts,
