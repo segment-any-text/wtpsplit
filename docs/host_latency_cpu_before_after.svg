@@ -1,0 +1,1623 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2480 865" width="2480" height="865" style="font-family:DejaVu Sans,Arial,Helvetica,sans-serif;">
+<defs>
+  <pattern id="diagHatch" width="7" height="7" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+    <rect width="7" height="7" fill="#e3ebf2"/>
+    <line x1="0" y1="0" x2="0" y2="7" stroke="#6c7a89" stroke-width="2.0"/>
+  </pattern>
+</defs>
+<rect width="2480" height="865" fill="#ffffff"/>
+<text x="58" y="42" font-size="21.0" font-weight="700" fill="#111111">SaT &amp; v3 CPU Full-Pass Latency: Cold (1-Batch, No Prior Inputs) vs. Warmed + Multi-Batch Streaming &amp; INT8</text>
+<rect x="58" y="62" width="22" height="12" fill="#6baed6"/>
+<text x="86" y="72" font-size="12.0" fill="#222222">Tokenization (host: Cold vs. Warmed)</text>
+<rect x="360" y="62" width="22" height="12" fill="#2b6cb0"/>
+<text x="388" y="72" font-size="12.0" fill="#222222">SaT 3L model (forward)</text>
+<rect x="718" y="62" width="22" height="12" fill="#e69f00"/>
+<text x="746" y="72" font-size="12.0" fill="#222222">Char feature assembly</text>
+<rect x="962" y="62" width="22" height="12" fill="#8e44ad"/>
+<text x="990" y="72" font-size="12.0" fill="#222222">CharHead (dense vs. sparse)</text>
+<rect x="1185" y="62" width="22" height="12" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="1.0"/>
+<text x="1213" y="72" font-size="12.0" fill="#222222">Other host work (windowing, stitching, D2H)</text>
+<text x="1525" y="72" font-size="11.8" font-style="italic" fill="#475569">Cold (dashed) = 1 batch, no prior inputs | Warmed (solid) = warmed cache + multi-batch streaming | All × vs. Subword Legacy (1.0×)</text>
+<text x="80.0" y="122.0" font-size="15.5" font-weight="600" fill="#111111">English</text>
+<text x="34.0" y="240.0" font-size="13" fill="#222222" text-anchor="middle" transform="rotate(-90 34.0 240.0)">ms / full pass (CPU)</text>
+<line x1="80.0" y1="346.0" x2="498.0" y2="346.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="76.0" y1="346.0" x2="80.0" y2="346.0" stroke="#333333" stroke-width="1.1"/>
+<text x="72.0" y="350.5" font-size="11.5" fill="#222222" text-anchor="end">0</text>
+<line x1="80.0" y1="293.0" x2="498.0" y2="293.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="76.0" y1="293.0" x2="80.0" y2="293.0" stroke="#333333" stroke-width="1.1"/>
+<text x="72.0" y="297.5" font-size="11.5" fill="#222222" text-anchor="end">400</text>
+<line x1="80.0" y1="240.0" x2="498.0" y2="240.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="76.0" y1="240.0" x2="80.0" y2="240.0" stroke="#333333" stroke-width="1.1"/>
+<text x="72.0" y="244.5" font-size="11.5" fill="#222222" text-anchor="end">800</text>
+<line x1="80.0" y1="187.0" x2="498.0" y2="187.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="76.0" y1="187.0" x2="80.0" y2="187.0" stroke="#333333" stroke-width="1.1"/>
+<text x="72.0" y="191.5" font-size="11.5" fill="#222222" text-anchor="end">1200</text>
+<line x1="80.0" y1="134.0" x2="498.0" y2="134.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="76.0" y1="134.0" x2="80.0" y2="134.0" stroke="#333333" stroke-width="1.1"/>
+<text x="72.0" y="138.5" font-size="11.5" fill="#222222" text-anchor="end">1600</text>
+<line x1="241.5" y1="138.0" x2="241.5" y2="346.0" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3,3"/>
+<rect x="85.0" y="343.0" width="17.2" height="3.0" fill="#6baed6"/>
+<rect x="85.0" y="314.1" width="17.2" height="28.9" fill="#2b6cb0"/>
+<rect x="85.0" y="310.8" width="17.2" height="3.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="93.6" y1="309.4" x2="93.6" y2="312.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="91.4" y1="309.4" x2="95.8" y2="309.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="91.4" y1="312.2" x2="95.8" y2="312.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="93.6" y1="346.0" x2="93.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="95.6" y="358.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 95.6 358.5)">Subword Legacy</text>
+<rect x="110.8" y="344.7" width="17.2" height="1.3" fill="#6baed6"/>
+<rect x="110.8" y="328.5" width="17.2" height="16.2" fill="#2b6cb0"/>
+<rect x="110.8" y="328.1" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="110.8" y="328.1" width="17.2" height="17.9" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="119.4" y1="326.7" x2="119.4" y2="329.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="117.2" y1="326.7" x2="121.6" y2="326.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="117.2" y1="329.5" x2="121.6" y2="329.5" stroke="#222222" stroke-width="0.9"/>
+<text x="119.4" y="323.3" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">2.0×</text>
+<line x1="119.4" y1="346.0" x2="119.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="121.4" y="358.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 121.4 358.5)">[bitwise] (Cold)</text>
+<rect x="136.6" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="136.6" y="329.4" width="17.2" height="16.2" fill="#2b6cb0"/>
+<rect x="136.6" y="329.1" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="136.6" y="329.1" width="17.2" height="16.9" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="145.2" y1="327.7" x2="145.2" y2="330.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="143.0" y1="327.7" x2="147.4" y2="327.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="143.0" y1="330.5" x2="147.4" y2="330.5" stroke="#222222" stroke-width="0.9"/>
+<text x="145.2" y="324.3" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">2.1×</text>
+<line x1="145.2" y1="346.0" x2="145.2" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="147.2" y="358.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 147.2 358.5)">[bitwise] (Warmed)</text>
+<rect x="162.4" y="344.7" width="17.2" height="1.3" fill="#6baed6"/>
+<rect x="162.4" y="338.6" width="17.2" height="6.1" fill="#2b6cb0"/>
+<rect x="162.4" y="338.3" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="162.4" y="338.3" width="17.2" height="7.7" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="171.0" y1="336.9" x2="171.0" y2="339.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="168.8" y1="336.9" x2="173.2" y2="336.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="168.8" y1="339.7" x2="173.2" y2="339.7" stroke="#222222" stroke-width="0.9"/>
+<text x="171.0" y="333.5" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">4.6×</text>
+<line x1="171.0" y1="346.0" x2="171.0" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="173.0" y="358.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 173.0 358.5)">[equiv] (Cold)</text>
+<rect x="188.2" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="188.2" y="339.8" width="17.2" height="5.8" fill="#2b6cb0"/>
+<rect x="188.2" y="339.5" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="188.2" y="339.5" width="17.2" height="6.5" fill="none" stroke="#0f766e" stroke-width="1.35"/>
+<line x1="196.8" y1="338.1" x2="196.8" y2="340.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="194.6" y1="338.1" x2="199.0" y2="338.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="194.6" y1="340.9" x2="199.0" y2="340.9" stroke="#222222" stroke-width="0.9"/>
+<text x="196.8" y="334.7" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.4×</text>
+<line x1="196.8" y1="346.0" x2="196.8" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="198.8" y="358.5" font-size="7.8" font-weight="700" fill="#0f766e" text-anchor="end" transform="rotate(-38 198.8 358.5)">[equiv] (Warmed)</text>
+<rect x="214.0" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="214.0" y="341.5" width="17.2" height="4.1" fill="#2b6cb0"/>
+<rect x="214.0" y="341.2" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="214.0" y="341.2" width="17.2" height="4.8" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="222.6" y1="339.8" x2="222.6" y2="342.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="220.4" y1="339.8" x2="224.8" y2="339.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="220.4" y1="342.6" x2="224.8" y2="342.6" stroke="#222222" stroke-width="0.9"/>
+<text x="222.6" y="336.4" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">7.4×</text>
+<line x1="222.6" y1="346.0" x2="222.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="224.6" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 224.6 358.5)">+Compile / INT8 (Warmed)</text>
+<rect x="251.0" y="343.0" width="17.2" height="3.0" fill="#6baed6"/>
+<rect x="251.0" y="314.1" width="17.2" height="28.9" fill="#2b6cb0"/>
+<rect x="251.0" y="310.0" width="17.2" height="4.1" fill="#e69f00"/>
+<rect x="251.0" y="236.3" width="17.2" height="73.7" fill="#8e44ad"/>
+<rect x="251.0" y="233.0" width="17.2" height="3.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="259.6" y1="231.6" x2="259.6" y2="234.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="257.4" y1="231.6" x2="261.8" y2="231.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="257.4" y1="234.4" x2="261.8" y2="234.4" stroke="#222222" stroke-width="0.9"/>
+<text x="259.6" y="228.2" font-size="7.4" font-weight="700" fill="#64748b" text-anchor="middle">0.31×</text>
+<line x1="259.6" y1="346.0" x2="259.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="261.6" y="358.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 261.6 358.5)">v3 Legacy (Dense)</text>
+<rect x="276.8" y="344.7" width="17.2" height="1.3" fill="#6baed6"/>
+<rect x="276.8" y="328.5" width="17.2" height="16.2" fill="#2b6cb0"/>
+<rect x="276.8" y="327.8" width="17.2" height="0.7" fill="#e69f00"/>
+<rect x="276.8" y="297.6" width="17.2" height="30.2" fill="#8e44ad"/>
+<rect x="276.8" y="297.3" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="276.8" y="297.3" width="17.2" height="48.7" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="285.4" y1="295.9" x2="285.4" y2="298.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="283.2" y1="295.9" x2="287.6" y2="295.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="283.2" y1="298.7" x2="287.6" y2="298.7" stroke="#222222" stroke-width="0.9"/>
+<text x="285.4" y="292.5" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">0.72×</text>
+<line x1="285.4" y1="346.0" x2="285.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="287.4" y="358.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 287.4 358.5)">v3 [bitwise] (Cold)</text>
+<rect x="302.6" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="302.6" y="329.4" width="17.2" height="16.2" fill="#2b6cb0"/>
+<rect x="302.6" y="328.9" width="17.2" height="0.5" fill="#e69f00"/>
+<rect x="302.6" y="298.7" width="17.2" height="30.2" fill="#8e44ad"/>
+<rect x="302.6" y="298.4" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="302.6" y="298.4" width="17.2" height="47.6" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="311.2" y1="297.0" x2="311.2" y2="299.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="309.0" y1="297.0" x2="313.4" y2="297.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="309.0" y1="299.8" x2="313.4" y2="299.8" stroke="#222222" stroke-width="0.9"/>
+<text x="311.2" y="293.6" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">0.74×</text>
+<line x1="311.2" y1="346.0" x2="311.2" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="313.2" y="358.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 313.2 358.5)">v3 [bitwise] (Warmed)</text>
+<rect x="328.4" y="344.7" width="17.2" height="1.3" fill="#6baed6"/>
+<rect x="328.4" y="338.6" width="17.2" height="6.1" fill="#2b6cb0"/>
+<rect x="328.4" y="338.0" width="17.2" height="0.6" fill="#e69f00"/>
+<rect x="328.4" y="329.9" width="17.2" height="8.1" fill="#8e44ad"/>
+<rect x="328.4" y="329.6" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="328.4" y="329.6" width="17.2" height="16.4" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="337.0" y1="328.2" x2="337.0" y2="331.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="334.8" y1="328.2" x2="339.2" y2="328.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="334.8" y1="331.0" x2="339.2" y2="331.0" stroke="#222222" stroke-width="0.9"/>
+<text x="337.0" y="324.8" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">2.1×</text>
+<line x1="337.0" y1="346.0" x2="337.0" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="339.0" y="358.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 339.0 358.5)">v3 [equiv] (Cold)</text>
+<rect x="354.2" y="344.7" width="17.2" height="1.3" fill="#6baed6"/>
+<rect x="354.2" y="338.6" width="17.2" height="6.1" fill="#2b6cb0"/>
+<rect x="354.2" y="338.2" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="354.2" y="337.5" width="17.2" height="0.7" fill="#8e44ad"/>
+<rect x="354.2" y="337.2" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="354.2" y="337.2" width="17.2" height="8.8" fill="none" stroke="#047857" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="362.8" y1="335.8" x2="362.8" y2="338.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="360.6" y1="335.8" x2="365.0" y2="335.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="360.6" y1="338.6" x2="365.0" y2="338.6" stroke="#222222" stroke-width="0.9"/>
+<text x="362.8" y="332.4" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.0×</text>
+<line x1="362.8" y1="346.0" x2="362.8" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="364.8" y="358.5" font-size="7.8" font-weight="600" fill="#047857" text-anchor="end" transform="rotate(-38 364.8 358.5)">v3 [sparse] (Cold)</text>
+<rect x="380.0" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="380.0" y="339.8" width="17.2" height="5.8" fill="#2b6cb0"/>
+<rect x="380.0" y="339.5" width="17.2" height="0.3" fill="#e69f00"/>
+<rect x="380.0" y="338.8" width="17.2" height="0.7" fill="#8e44ad"/>
+<rect x="380.0" y="338.5" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="380.0" y="338.5" width="17.2" height="7.5" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="388.6" y1="337.1" x2="388.6" y2="339.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="386.4" y1="337.1" x2="390.8" y2="337.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="386.4" y1="339.9" x2="390.8" y2="339.9" stroke="#222222" stroke-width="0.9"/>
+<text x="388.6" y="333.7" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.7×</text>
+<line x1="388.6" y1="346.0" x2="388.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="390.6" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 390.6 358.5)">v3 [sparse] (Warmed)</text>
+<rect x="405.8" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="405.8" y="341.5" width="17.2" height="4.1" fill="#2b6cb0"/>
+<rect x="405.8" y="341.2" width="17.2" height="0.3" fill="#e69f00"/>
+<rect x="405.8" y="340.6" width="17.2" height="0.6" fill="#8e44ad"/>
+<rect x="405.8" y="340.3" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="405.8" y="340.3" width="17.2" height="5.7" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="414.4" y1="338.9" x2="414.4" y2="341.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="412.2" y1="338.9" x2="416.6" y2="338.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="412.2" y1="341.7" x2="416.6" y2="341.7" stroke="#222222" stroke-width="0.9"/>
+<text x="414.4" y="335.5" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">6.3×</text>
+<line x1="414.4" y1="346.0" x2="414.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="416.4" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 416.4 358.5)">v3 +Compile / INT8 (Warmed)</text>
+<line x1="80.0" y1="134.0" x2="80.0" y2="346.0" stroke="#333333" stroke-width="1.2"/>
+<line x1="80.0" y1="346.0" x2="498.0" y2="346.0" stroke="#333333" stroke-width="1.2"/>
+<text x="556.0" y="122.0" font-size="15.5" font-weight="600" fill="#111111">German</text>
+<line x1="556.0" y1="346.0" x2="974.0" y2="346.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="552.0" y1="346.0" x2="556.0" y2="346.0" stroke="#333333" stroke-width="1.1"/>
+<text x="548.0" y="350.5" font-size="11.5" fill="#222222" text-anchor="end">0</text>
+<line x1="556.0" y1="293.0" x2="974.0" y2="293.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="552.0" y1="293.0" x2="556.0" y2="293.0" stroke="#333333" stroke-width="1.1"/>
+<text x="548.0" y="297.5" font-size="11.5" fill="#222222" text-anchor="end">400</text>
+<line x1="556.0" y1="240.0" x2="974.0" y2="240.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="552.0" y1="240.0" x2="556.0" y2="240.0" stroke="#333333" stroke-width="1.1"/>
+<text x="548.0" y="244.5" font-size="11.5" fill="#222222" text-anchor="end">800</text>
+<line x1="556.0" y1="187.0" x2="974.0" y2="187.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="552.0" y1="187.0" x2="556.0" y2="187.0" stroke="#333333" stroke-width="1.1"/>
+<text x="548.0" y="191.5" font-size="11.5" fill="#222222" text-anchor="end">1200</text>
+<line x1="556.0" y1="134.0" x2="974.0" y2="134.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="552.0" y1="134.0" x2="556.0" y2="134.0" stroke="#333333" stroke-width="1.1"/>
+<text x="548.0" y="138.5" font-size="11.5" fill="#222222" text-anchor="end">1600</text>
+<line x1="717.5" y1="138.0" x2="717.5" y2="346.0" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3,3"/>
+<rect x="561.0" y="343.0" width="17.2" height="3.0" fill="#6baed6"/>
+<rect x="561.0" y="312.6" width="17.2" height="30.3" fill="#2b6cb0"/>
+<rect x="561.0" y="309.3" width="17.2" height="3.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="569.6" y1="307.9" x2="569.6" y2="310.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="567.4" y1="307.9" x2="571.8" y2="307.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="567.4" y1="310.7" x2="571.8" y2="310.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="569.6" y1="346.0" x2="569.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="571.6" y="358.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 571.6 358.5)">Subword Legacy</text>
+<rect x="586.8" y="345.0" width="17.2" height="1.0" fill="#6baed6"/>
+<rect x="586.8" y="328.0" width="17.2" height="17.0" fill="#2b6cb0"/>
+<rect x="586.8" y="327.7" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="586.8" y="327.7" width="17.2" height="18.3" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="595.4" y1="326.3" x2="595.4" y2="329.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="593.2" y1="326.3" x2="597.6" y2="326.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="593.2" y1="329.1" x2="597.6" y2="329.1" stroke="#222222" stroke-width="0.9"/>
+<text x="595.4" y="322.9" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">2.0×</text>
+<line x1="595.4" y1="346.0" x2="595.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="597.4" y="358.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 597.4 358.5)">[bitwise] (Cold)</text>
+<rect x="612.6" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="612.6" y="328.6" width="17.2" height="17.0" fill="#2b6cb0"/>
+<rect x="612.6" y="328.3" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="612.6" y="328.3" width="17.2" height="17.7" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="621.2" y1="326.9" x2="621.2" y2="329.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="619.0" y1="326.9" x2="623.4" y2="326.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="619.0" y1="329.7" x2="623.4" y2="329.7" stroke="#222222" stroke-width="0.9"/>
+<text x="621.2" y="323.5" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">2.1×</text>
+<line x1="621.2" y1="346.0" x2="621.2" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="623.2" y="358.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 623.2 358.5)">[bitwise] (Warmed)</text>
+<rect x="638.4" y="345.0" width="17.2" height="1.0" fill="#6baed6"/>
+<rect x="638.4" y="338.6" width="17.2" height="6.4" fill="#2b6cb0"/>
+<rect x="638.4" y="338.3" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="638.4" y="338.3" width="17.2" height="7.7" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="647.0" y1="336.9" x2="647.0" y2="339.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="644.8" y1="336.9" x2="649.2" y2="336.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="644.8" y1="339.7" x2="649.2" y2="339.7" stroke="#222222" stroke-width="0.9"/>
+<text x="647.0" y="333.5" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">4.8×</text>
+<line x1="647.0" y1="346.0" x2="647.0" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="649.0" y="358.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 649.0 358.5)">[equiv] (Cold)</text>
+<rect x="664.2" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="664.2" y="339.5" width="17.2" height="6.1" fill="#2b6cb0"/>
+<rect x="664.2" y="339.2" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="664.2" y="339.2" width="17.2" height="6.8" fill="none" stroke="#0f766e" stroke-width="1.35"/>
+<line x1="672.8" y1="337.8" x2="672.8" y2="340.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="670.6" y1="337.8" x2="675.0" y2="337.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="670.6" y1="340.6" x2="675.0" y2="340.6" stroke="#222222" stroke-width="0.9"/>
+<text x="672.8" y="334.4" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.4×</text>
+<line x1="672.8" y1="346.0" x2="672.8" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="674.8" y="358.5" font-size="7.8" font-weight="700" fill="#0f766e" text-anchor="end" transform="rotate(-38 674.8 358.5)">[equiv] (Warmed)</text>
+<rect x="690.0" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="690.0" y="341.4" width="17.2" height="4.2" fill="#2b6cb0"/>
+<rect x="690.0" y="341.1" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="690.0" y="341.1" width="17.2" height="4.9" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="698.6" y1="339.7" x2="698.6" y2="342.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="696.4" y1="339.7" x2="700.8" y2="339.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="696.4" y1="342.5" x2="700.8" y2="342.5" stroke="#222222" stroke-width="0.9"/>
+<text x="698.6" y="336.3" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">7.5×</text>
+<line x1="698.6" y1="346.0" x2="698.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="700.6" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 700.6 358.5)">+Compile / INT8 (Warmed)</text>
+<rect x="727.0" y="343.0" width="17.2" height="3.0" fill="#6baed6"/>
+<rect x="727.0" y="312.6" width="17.2" height="30.3" fill="#2b6cb0"/>
+<rect x="727.0" y="308.6" width="17.2" height="4.1" fill="#e69f00"/>
+<rect x="727.0" y="208.8" width="17.2" height="99.8" fill="#8e44ad"/>
+<rect x="727.0" y="205.4" width="17.2" height="3.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="735.6" y1="204.0" x2="735.6" y2="206.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="733.4" y1="204.0" x2="737.8" y2="204.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="733.4" y1="206.8" x2="737.8" y2="206.8" stroke="#222222" stroke-width="0.9"/>
+<text x="735.6" y="200.6" font-size="7.4" font-weight="700" fill="#64748b" text-anchor="middle">0.26×</text>
+<line x1="735.6" y1="346.0" x2="735.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="737.6" y="358.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 737.6 358.5)">v3 Legacy (Dense)</text>
+<rect x="752.8" y="345.0" width="17.2" height="1.0" fill="#6baed6"/>
+<rect x="752.8" y="328.0" width="17.2" height="17.0" fill="#2b6cb0"/>
+<rect x="752.8" y="327.4" width="17.2" height="0.6" fill="#e69f00"/>
+<rect x="752.8" y="286.4" width="17.2" height="40.9" fill="#8e44ad"/>
+<rect x="752.8" y="286.1" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="752.8" y="286.1" width="17.2" height="59.9" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="761.4" y1="284.7" x2="761.4" y2="287.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="759.2" y1="284.7" x2="763.6" y2="284.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="759.2" y1="287.5" x2="763.6" y2="287.5" stroke="#222222" stroke-width="0.9"/>
+<text x="761.4" y="281.3" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">0.61×</text>
+<line x1="761.4" y1="346.0" x2="761.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="763.4" y="358.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 763.4 358.5)">v3 [bitwise] (Cold)</text>
+<rect x="778.6" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="778.6" y="328.6" width="17.2" height="17.0" fill="#2b6cb0"/>
+<rect x="778.6" y="328.1" width="17.2" height="0.5" fill="#e69f00"/>
+<rect x="778.6" y="287.2" width="17.2" height="40.9" fill="#8e44ad"/>
+<rect x="778.6" y="286.9" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="778.6" y="286.9" width="17.2" height="59.1" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="787.2" y1="285.5" x2="787.2" y2="288.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="785.0" y1="285.5" x2="789.4" y2="285.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="785.0" y1="288.3" x2="789.4" y2="288.3" stroke="#222222" stroke-width="0.9"/>
+<text x="787.2" y="282.1" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">0.62×</text>
+<line x1="787.2" y1="346.0" x2="787.2" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="789.2" y="358.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 789.2 358.5)">v3 [bitwise] (Warmed)</text>
+<rect x="804.4" y="345.0" width="17.2" height="1.0" fill="#6baed6"/>
+<rect x="804.4" y="338.6" width="17.2" height="6.4" fill="#2b6cb0"/>
+<rect x="804.4" y="338.0" width="17.2" height="0.6" fill="#e69f00"/>
+<rect x="804.4" y="327.0" width="17.2" height="11.0" fill="#8e44ad"/>
+<rect x="804.4" y="326.7" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="804.4" y="326.7" width="17.2" height="19.3" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="813.0" y1="325.3" x2="813.0" y2="328.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="810.8" y1="325.3" x2="815.2" y2="325.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="810.8" y1="328.1" x2="815.2" y2="328.1" stroke="#222222" stroke-width="0.9"/>
+<text x="813.0" y="321.9" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">1.9×</text>
+<line x1="813.0" y1="346.0" x2="813.0" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="815.0" y="358.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 815.0 358.5)">v3 [equiv] (Cold)</text>
+<rect x="830.2" y="345.0" width="17.2" height="1.0" fill="#6baed6"/>
+<rect x="830.2" y="338.6" width="17.2" height="6.4" fill="#2b6cb0"/>
+<rect x="830.2" y="338.3" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="830.2" y="337.5" width="17.2" height="0.8" fill="#8e44ad"/>
+<rect x="830.2" y="337.2" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="830.2" y="337.2" width="17.2" height="8.8" fill="none" stroke="#047857" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="838.8" y1="335.8" x2="838.8" y2="338.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="836.6" y1="335.8" x2="841.0" y2="335.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="836.6" y1="338.6" x2="841.0" y2="338.6" stroke="#222222" stroke-width="0.9"/>
+<text x="838.8" y="332.4" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.2×</text>
+<line x1="838.8" y1="346.0" x2="838.8" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="840.8" y="358.5" font-size="7.8" font-weight="600" fill="#047857" text-anchor="end" transform="rotate(-38 840.8 358.5)">v3 [sparse] (Cold)</text>
+<rect x="856.0" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="856.0" y="339.5" width="17.2" height="6.1" fill="#2b6cb0"/>
+<rect x="856.0" y="339.2" width="17.2" height="0.3" fill="#e69f00"/>
+<rect x="856.0" y="338.5" width="17.2" height="0.8" fill="#8e44ad"/>
+<rect x="856.0" y="338.2" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="856.0" y="338.2" width="17.2" height="7.8" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="864.6" y1="336.8" x2="864.6" y2="339.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="862.4" y1="336.8" x2="866.8" y2="336.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="862.4" y1="339.6" x2="866.8" y2="339.6" stroke="#222222" stroke-width="0.9"/>
+<text x="864.6" y="333.4" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.7×</text>
+<line x1="864.6" y1="346.0" x2="864.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="866.6" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 866.6 358.5)">v3 [sparse] (Warmed)</text>
+<rect x="881.8" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="881.8" y="341.4" width="17.2" height="4.2" fill="#2b6cb0"/>
+<rect x="881.8" y="341.1" width="17.2" height="0.3" fill="#e69f00"/>
+<rect x="881.8" y="340.4" width="17.2" height="0.6" fill="#8e44ad"/>
+<rect x="881.8" y="340.1" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="881.8" y="340.1" width="17.2" height="5.9" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="890.4" y1="338.7" x2="890.4" y2="341.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="888.2" y1="338.7" x2="892.6" y2="338.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="888.2" y1="341.5" x2="892.6" y2="341.5" stroke="#222222" stroke-width="0.9"/>
+<text x="890.4" y="335.3" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">6.3×</text>
+<line x1="890.4" y1="346.0" x2="890.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="892.4" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 892.4 358.5)">v3 +Compile / INT8 (Warmed)</text>
+<line x1="556.0" y1="134.0" x2="556.0" y2="346.0" stroke="#333333" stroke-width="1.2"/>
+<line x1="556.0" y1="346.0" x2="974.0" y2="346.0" stroke="#333333" stroke-width="1.2"/>
+<text x="1032.0" y="122.0" font-size="15.5" font-weight="600" fill="#111111">Amharic</text>
+<line x1="1032.0" y1="346.0" x2="1450.0" y2="346.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1028.0" y1="346.0" x2="1032.0" y2="346.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1024.0" y="350.5" font-size="11.5" fill="#222222" text-anchor="end">0</text>
+<line x1="1032.0" y1="293.0" x2="1450.0" y2="293.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1028.0" y1="293.0" x2="1032.0" y2="293.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1024.0" y="297.5" font-size="11.5" fill="#222222" text-anchor="end">400</text>
+<line x1="1032.0" y1="240.0" x2="1450.0" y2="240.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1028.0" y1="240.0" x2="1032.0" y2="240.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1024.0" y="244.5" font-size="11.5" fill="#222222" text-anchor="end">800</text>
+<line x1="1032.0" y1="187.0" x2="1450.0" y2="187.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1028.0" y1="187.0" x2="1032.0" y2="187.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1024.0" y="191.5" font-size="11.5" fill="#222222" text-anchor="end">1200</text>
+<line x1="1032.0" y1="134.0" x2="1450.0" y2="134.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1028.0" y1="134.0" x2="1032.0" y2="134.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1024.0" y="138.5" font-size="11.5" fill="#222222" text-anchor="end">1600</text>
+<line x1="1193.5" y1="138.0" x2="1193.5" y2="346.0" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3,3"/>
+<rect x="1037.0" y="342.3" width="17.2" height="3.7" fill="#6baed6"/>
+<rect x="1037.0" y="302.4" width="17.2" height="40.0" fill="#2b6cb0"/>
+<rect x="1037.0" y="298.3" width="17.2" height="4.1" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="1045.6" y1="296.9" x2="1045.6" y2="299.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1043.4" y1="296.9" x2="1047.8" y2="296.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="1043.4" y1="299.7" x2="1047.8" y2="299.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1045.6" y1="346.0" x2="1045.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1047.6" y="358.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 1047.6 358.5)">Subword Legacy</text>
+<rect x="1062.8" y="345.0" width="17.2" height="1.0" fill="#6baed6"/>
+<rect x="1062.8" y="322.6" width="17.2" height="22.4" fill="#2b6cb0"/>
+<rect x="1062.8" y="322.0" width="17.2" height="0.6" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1062.8" y="322.0" width="17.2" height="24.0" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1071.4" y1="320.6" x2="1071.4" y2="323.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1069.2" y1="320.6" x2="1073.6" y2="320.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1069.2" y1="323.4" x2="1073.6" y2="323.4" stroke="#222222" stroke-width="0.9"/>
+<text x="1071.4" y="317.2" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">2.0×</text>
+<line x1="1071.4" y1="346.0" x2="1071.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1073.4" y="358.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 1073.4 358.5)">[bitwise] (Cold)</text>
+<rect x="1088.6" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="1088.6" y="323.2" width="17.2" height="22.4" fill="#2b6cb0"/>
+<rect x="1088.6" y="322.7" width="17.2" height="0.5" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1088.6" y="322.7" width="17.2" height="23.3" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="1097.2" y1="321.3" x2="1097.2" y2="324.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="1095.0" y1="321.3" x2="1099.4" y2="321.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="1095.0" y1="324.1" x2="1099.4" y2="324.1" stroke="#222222" stroke-width="0.9"/>
+<text x="1097.2" y="317.9" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">2.0×</text>
+<line x1="1097.2" y1="346.0" x2="1097.2" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1099.2" y="358.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 1099.2 358.5)">[bitwise] (Warmed)</text>
+<rect x="1114.4" y="345.0" width="17.2" height="1.0" fill="#6baed6"/>
+<rect x="1114.4" y="336.6" width="17.2" height="8.4" fill="#2b6cb0"/>
+<rect x="1114.4" y="336.0" width="17.2" height="0.6" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1114.4" y="336.0" width="17.2" height="10.0" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1123.0" y1="334.6" x2="1123.0" y2="337.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1120.8" y1="334.6" x2="1125.2" y2="334.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1120.8" y1="337.4" x2="1125.2" y2="337.4" stroke="#222222" stroke-width="0.9"/>
+<text x="1123.0" y="331.2" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">4.8×</text>
+<line x1="1123.0" y1="346.0" x2="1123.0" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1125.0" y="358.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 1125.0 358.5)">[equiv] (Cold)</text>
+<rect x="1140.2" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="1140.2" y="337.6" width="17.2" height="8.0" fill="#2b6cb0"/>
+<rect x="1140.2" y="337.1" width="17.2" height="0.5" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1140.2" y="337.1" width="17.2" height="8.9" fill="none" stroke="#0f766e" stroke-width="1.35"/>
+<line x1="1148.8" y1="335.7" x2="1148.8" y2="338.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="1146.6" y1="335.7" x2="1151.0" y2="335.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1146.6" y1="338.5" x2="1151.0" y2="338.5" stroke="#222222" stroke-width="0.9"/>
+<text x="1148.8" y="332.3" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.4×</text>
+<line x1="1148.8" y1="346.0" x2="1148.8" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1150.8" y="358.5" font-size="7.8" font-weight="700" fill="#0f766e" text-anchor="end" transform="rotate(-38 1150.8 358.5)">[equiv] (Warmed)</text>
+<rect x="1166.0" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="1166.0" y="340.0" width="17.2" height="5.6" fill="#2b6cb0"/>
+<rect x="1166.0" y="339.5" width="17.2" height="0.5" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1166.0" y="339.5" width="17.2" height="6.5" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="1174.6" y1="338.1" x2="1174.6" y2="340.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="1172.4" y1="338.1" x2="1176.8" y2="338.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="1172.4" y1="340.9" x2="1176.8" y2="340.9" stroke="#222222" stroke-width="0.9"/>
+<text x="1174.6" y="334.7" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">7.3×</text>
+<line x1="1174.6" y1="346.0" x2="1174.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1176.6" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 1176.6 358.5)">+Compile / INT8 (Warmed)</text>
+<rect x="1203.0" y="342.3" width="17.2" height="3.7" fill="#6baed6"/>
+<rect x="1203.0" y="302.4" width="17.2" height="40.0" fill="#2b6cb0"/>
+<rect x="1203.0" y="298.4" width="17.2" height="4.0" fill="#e69f00"/>
+<rect x="1203.0" y="247.9" width="17.2" height="50.5" fill="#8e44ad"/>
+<rect x="1203.0" y="243.8" width="17.2" height="4.1" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="1211.6" y1="242.4" x2="1211.6" y2="245.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="1209.4" y1="242.4" x2="1213.8" y2="242.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1209.4" y1="245.2" x2="1213.8" y2="245.2" stroke="#222222" stroke-width="0.9"/>
+<text x="1211.6" y="239.0" font-size="7.4" font-weight="700" fill="#64748b" text-anchor="middle">0.47×</text>
+<line x1="1211.6" y1="346.0" x2="1211.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1213.6" y="358.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 1213.6 358.5)">v3 Legacy (Dense)</text>
+<rect x="1228.8" y="345.0" width="17.2" height="1.0" fill="#6baed6"/>
+<rect x="1228.8" y="322.6" width="17.2" height="22.4" fill="#2b6cb0"/>
+<rect x="1228.8" y="322.0" width="17.2" height="0.6" fill="#e69f00"/>
+<rect x="1228.8" y="301.3" width="17.2" height="20.7" fill="#8e44ad"/>
+<rect x="1228.8" y="300.7" width="17.2" height="0.6" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1228.8" y="300.7" width="17.2" height="45.3" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1237.4" y1="299.3" x2="1237.4" y2="302.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="1235.2" y1="299.3" x2="1239.6" y2="299.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="1235.2" y1="302.1" x2="1239.6" y2="302.1" stroke="#222222" stroke-width="0.9"/>
+<text x="1237.4" y="295.9" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">1.05×</text>
+<line x1="1237.4" y1="346.0" x2="1237.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1239.4" y="358.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 1239.4 358.5)">v3 [bitwise] (Cold)</text>
+<rect x="1254.6" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="1254.6" y="323.2" width="17.2" height="22.4" fill="#2b6cb0"/>
+<rect x="1254.6" y="322.7" width="17.2" height="0.5" fill="#e69f00"/>
+<rect x="1254.6" y="302.0" width="17.2" height="20.7" fill="#8e44ad"/>
+<rect x="1254.6" y="301.5" width="17.2" height="0.5" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1254.6" y="301.5" width="17.2" height="44.5" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="1263.2" y1="300.1" x2="1263.2" y2="302.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="1261.0" y1="300.1" x2="1265.4" y2="300.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="1261.0" y1="302.9" x2="1265.4" y2="302.9" stroke="#222222" stroke-width="0.9"/>
+<text x="1263.2" y="296.7" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">1.07×</text>
+<line x1="1263.2" y1="346.0" x2="1263.2" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1265.2" y="358.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 1265.2 358.5)">v3 [bitwise] (Warmed)</text>
+<rect x="1280.4" y="345.0" width="17.2" height="1.0" fill="#6baed6"/>
+<rect x="1280.4" y="336.6" width="17.2" height="8.4" fill="#2b6cb0"/>
+<rect x="1280.4" y="336.0" width="17.2" height="0.6" fill="#e69f00"/>
+<rect x="1280.4" y="330.5" width="17.2" height="5.6" fill="#8e44ad"/>
+<rect x="1280.4" y="329.8" width="17.2" height="0.6" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1280.4" y="329.8" width="17.2" height="16.2" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1289.0" y1="328.4" x2="1289.0" y2="331.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="1286.8" y1="328.4" x2="1291.2" y2="328.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1286.8" y1="331.2" x2="1291.2" y2="331.2" stroke="#222222" stroke-width="0.9"/>
+<text x="1289.0" y="325.0" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">3.0×</text>
+<line x1="1289.0" y1="346.0" x2="1289.0" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1291.0" y="358.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 1291.0 358.5)">v3 [equiv] (Cold)</text>
+<rect x="1306.2" y="345.0" width="17.2" height="1.0" fill="#6baed6"/>
+<rect x="1306.2" y="336.6" width="17.2" height="8.4" fill="#2b6cb0"/>
+<rect x="1306.2" y="336.2" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="1306.2" y="335.4" width="17.2" height="0.8" fill="#8e44ad"/>
+<rect x="1306.2" y="334.8" width="17.2" height="0.6" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1306.2" y="334.8" width="17.2" height="11.2" fill="none" stroke="#047857" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1314.8" y1="333.4" x2="1314.8" y2="336.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="1312.6" y1="333.4" x2="1317.0" y2="333.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1312.6" y1="336.2" x2="1317.0" y2="336.2" stroke="#222222" stroke-width="0.9"/>
+<text x="1314.8" y="330.0" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.3×</text>
+<line x1="1314.8" y1="346.0" x2="1314.8" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1316.8" y="358.5" font-size="7.8" font-weight="600" fill="#047857" text-anchor="end" transform="rotate(-38 1316.8 358.5)">v3 [sparse] (Cold)</text>
+<rect x="1332.0" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="1332.0" y="337.6" width="17.2" height="8.0" fill="#2b6cb0"/>
+<rect x="1332.0" y="337.3" width="17.2" height="0.3" fill="#e69f00"/>
+<rect x="1332.0" y="336.5" width="17.2" height="0.8" fill="#8e44ad"/>
+<rect x="1332.0" y="336.0" width="17.2" height="0.5" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1332.0" y="336.0" width="17.2" height="10.0" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="1340.6" y1="334.6" x2="1340.6" y2="337.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1338.4" y1="334.6" x2="1342.8" y2="334.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1338.4" y1="337.4" x2="1342.8" y2="337.4" stroke="#222222" stroke-width="0.9"/>
+<text x="1340.6" y="331.2" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.8×</text>
+<line x1="1340.6" y1="346.0" x2="1340.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1342.6" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 1342.6 358.5)">v3 [sparse] (Warmed)</text>
+<rect x="1357.8" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="1357.8" y="340.0" width="17.2" height="5.6" fill="#2b6cb0"/>
+<rect x="1357.8" y="339.7" width="17.2" height="0.3" fill="#e69f00"/>
+<rect x="1357.8" y="339.0" width="17.2" height="0.7" fill="#8e44ad"/>
+<rect x="1357.8" y="338.5" width="17.2" height="0.5" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1357.8" y="338.5" width="17.2" height="7.5" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="1366.4" y1="337.1" x2="1366.4" y2="339.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="1364.2" y1="337.1" x2="1368.6" y2="337.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="1364.2" y1="339.9" x2="1368.6" y2="339.9" stroke="#222222" stroke-width="0.9"/>
+<text x="1366.4" y="333.7" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">6.4×</text>
+<line x1="1366.4" y1="346.0" x2="1366.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1368.4" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 1368.4 358.5)">v3 +Compile / INT8 (Warmed)</text>
+<line x1="1032.0" y1="134.0" x2="1032.0" y2="346.0" stroke="#333333" stroke-width="1.2"/>
+<line x1="1032.0" y1="346.0" x2="1450.0" y2="346.0" stroke="#333333" stroke-width="1.2"/>
+<text x="1508.0" y="122.0" font-size="15.5" font-weight="600" fill="#111111">Yoruba</text>
+<line x1="1508.0" y1="346.0" x2="1926.0" y2="346.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1504.0" y1="346.0" x2="1508.0" y2="346.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1500.0" y="350.5" font-size="11.5" fill="#222222" text-anchor="end">0</text>
+<line x1="1508.0" y1="293.0" x2="1926.0" y2="293.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1504.0" y1="293.0" x2="1508.0" y2="293.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1500.0" y="297.5" font-size="11.5" fill="#222222" text-anchor="end">400</text>
+<line x1="1508.0" y1="240.0" x2="1926.0" y2="240.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1504.0" y1="240.0" x2="1508.0" y2="240.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1500.0" y="244.5" font-size="11.5" fill="#222222" text-anchor="end">800</text>
+<line x1="1508.0" y1="187.0" x2="1926.0" y2="187.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1504.0" y1="187.0" x2="1508.0" y2="187.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1500.0" y="191.5" font-size="11.5" fill="#222222" text-anchor="end">1200</text>
+<line x1="1508.0" y1="134.0" x2="1926.0" y2="134.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1504.0" y1="134.0" x2="1508.0" y2="134.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1500.0" y="138.5" font-size="11.5" fill="#222222" text-anchor="end">1600</text>
+<line x1="1669.5" y1="138.0" x2="1669.5" y2="346.0" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3,3"/>
+<rect x="1513.0" y="340.3" width="17.2" height="5.7" fill="#6baed6"/>
+<rect x="1513.0" y="268.0" width="17.2" height="72.3" fill="#2b6cb0"/>
+<rect x="1513.0" y="257.8" width="17.2" height="10.2" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="1521.6" y1="256.4" x2="1521.6" y2="259.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="1519.4" y1="256.4" x2="1523.8" y2="256.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1519.4" y1="259.2" x2="1523.8" y2="259.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="1521.6" y1="346.0" x2="1521.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1523.6" y="358.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 1523.6 358.5)">Subword Legacy</text>
+<rect x="1538.8" y="344.6" width="17.2" height="1.4" fill="#6baed6"/>
+<rect x="1538.8" y="304.1" width="17.2" height="40.5" fill="#2b6cb0"/>
+<rect x="1538.8" y="303.0" width="17.2" height="1.2" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1538.8" y="303.0" width="17.2" height="43.0" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1547.4" y1="301.6" x2="1547.4" y2="304.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1545.2" y1="301.6" x2="1549.6" y2="301.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1545.2" y1="304.4" x2="1549.6" y2="304.4" stroke="#222222" stroke-width="0.9"/>
+<text x="1547.4" y="298.2" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">2.0×</text>
+<line x1="1547.4" y1="346.0" x2="1547.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1549.4" y="358.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 1549.4 358.5)">[bitwise] (Cold)</text>
+<rect x="1564.6" y="345.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="1564.6" y="305.0" width="17.2" height="40.5" fill="#2b6cb0"/>
+<rect x="1564.6" y="304.0" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1564.6" y="304.0" width="17.2" height="42.0" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="1573.2" y1="302.6" x2="1573.2" y2="305.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1571.0" y1="302.6" x2="1575.4" y2="302.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1571.0" y1="305.4" x2="1575.4" y2="305.4" stroke="#222222" stroke-width="0.9"/>
+<text x="1573.2" y="299.2" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">2.1×</text>
+<line x1="1573.2" y1="346.0" x2="1573.2" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1575.2" y="358.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 1575.2 358.5)">[bitwise] (Warmed)</text>
+<rect x="1590.4" y="344.6" width="17.2" height="1.4" fill="#6baed6"/>
+<rect x="1590.4" y="329.4" width="17.2" height="15.2" fill="#2b6cb0"/>
+<rect x="1590.4" y="328.3" width="17.2" height="1.2" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1590.4" y="328.3" width="17.2" height="17.7" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1599.0" y1="326.9" x2="1599.0" y2="329.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1596.8" y1="326.9" x2="1601.2" y2="326.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="1596.8" y1="329.7" x2="1601.2" y2="329.7" stroke="#222222" stroke-width="0.9"/>
+<text x="1599.0" y="323.5" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.0×</text>
+<line x1="1599.0" y1="346.0" x2="1599.0" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1601.0" y="358.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 1601.0 358.5)">[equiv] (Cold)</text>
+<rect x="1616.2" y="345.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="1616.2" y="331.0" width="17.2" height="14.5" fill="#2b6cb0"/>
+<rect x="1616.2" y="330.1" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1616.2" y="330.1" width="17.2" height="15.9" fill="none" stroke="#0f766e" stroke-width="1.35"/>
+<line x1="1624.8" y1="328.7" x2="1624.8" y2="331.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="1622.6" y1="328.7" x2="1627.0" y2="328.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1622.6" y1="331.5" x2="1627.0" y2="331.5" stroke="#222222" stroke-width="0.9"/>
+<text x="1624.8" y="325.3" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.5×</text>
+<line x1="1624.8" y1="346.0" x2="1624.8" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1626.8" y="358.5" font-size="7.8" font-weight="700" fill="#0f766e" text-anchor="end" transform="rotate(-38 1626.8 358.5)">[equiv] (Warmed)</text>
+<rect x="1642.0" y="345.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="1642.0" y="335.4" width="17.2" height="10.1" fill="#2b6cb0"/>
+<rect x="1642.0" y="334.4" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1642.0" y="334.4" width="17.2" height="11.6" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="1650.6" y1="333.0" x2="1650.6" y2="335.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="1648.4" y1="333.0" x2="1652.8" y2="333.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="1648.4" y1="335.8" x2="1652.8" y2="335.8" stroke="#222222" stroke-width="0.9"/>
+<text x="1650.6" y="329.6" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">7.6×</text>
+<line x1="1650.6" y1="346.0" x2="1650.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1652.6" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 1652.6 358.5)">+Compile / INT8 (Warmed)</text>
+<rect x="1679.0" y="340.3" width="17.2" height="5.7" fill="#6baed6"/>
+<rect x="1679.0" y="268.0" width="17.2" height="72.3" fill="#2b6cb0"/>
+<rect x="1679.0" y="262.1" width="17.2" height="5.8" fill="#e69f00"/>
+<rect x="1679.0" y="177.3" width="17.2" height="84.9" fill="#8e44ad"/>
+<rect x="1679.0" y="167.1" width="17.2" height="10.2" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="1687.6" y1="165.7" x2="1687.6" y2="168.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="1685.4" y1="165.7" x2="1689.8" y2="165.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1685.4" y1="168.5" x2="1689.8" y2="168.5" stroke="#222222" stroke-width="0.9"/>
+<text x="1687.6" y="162.3" font-size="7.4" font-weight="700" fill="#64748b" text-anchor="middle">0.49×</text>
+<line x1="1687.6" y1="346.0" x2="1687.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1689.6" y="358.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 1689.6 358.5)">v3 Legacy (Dense)</text>
+<rect x="1704.8" y="344.6" width="17.2" height="1.4" fill="#6baed6"/>
+<rect x="1704.8" y="304.1" width="17.2" height="40.5" fill="#2b6cb0"/>
+<rect x="1704.8" y="303.2" width="17.2" height="0.9" fill="#e69f00"/>
+<rect x="1704.8" y="268.4" width="17.2" height="34.8" fill="#8e44ad"/>
+<rect x="1704.8" y="267.2" width="17.2" height="1.2" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1704.8" y="267.2" width="17.2" height="78.8" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1713.4" y1="265.8" x2="1713.4" y2="268.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1711.2" y1="265.8" x2="1715.6" y2="265.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="1711.2" y1="268.6" x2="1715.6" y2="268.6" stroke="#222222" stroke-width="0.9"/>
+<text x="1713.4" y="262.4" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">1.12×</text>
+<line x1="1713.4" y1="346.0" x2="1713.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1715.4" y="358.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 1715.4 358.5)">v3 [bitwise] (Cold)</text>
+<rect x="1730.6" y="345.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="1730.6" y="305.0" width="17.2" height="40.5" fill="#2b6cb0"/>
+<rect x="1730.6" y="304.3" width="17.2" height="0.7" fill="#e69f00"/>
+<rect x="1730.6" y="269.5" width="17.2" height="34.8" fill="#8e44ad"/>
+<rect x="1730.6" y="268.6" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1730.6" y="268.6" width="17.2" height="77.4" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="1739.2" y1="267.2" x2="1739.2" y2="270.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="1737.0" y1="267.2" x2="1741.4" y2="267.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="1737.0" y1="270.0" x2="1741.4" y2="270.0" stroke="#222222" stroke-width="0.9"/>
+<text x="1739.2" y="263.8" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">1.14×</text>
+<line x1="1739.2" y1="346.0" x2="1739.2" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1741.2" y="358.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 1741.2 358.5)">v3 [bitwise] (Warmed)</text>
+<rect x="1756.4" y="344.6" width="17.2" height="1.4" fill="#6baed6"/>
+<rect x="1756.4" y="329.4" width="17.2" height="15.2" fill="#2b6cb0"/>
+<rect x="1756.4" y="328.6" width="17.2" height="0.9" fill="#e69f00"/>
+<rect x="1756.4" y="319.2" width="17.2" height="9.3" fill="#8e44ad"/>
+<rect x="1756.4" y="318.1" width="17.2" height="1.2" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1756.4" y="318.1" width="17.2" height="27.9" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1765.0" y1="316.7" x2="1765.0" y2="319.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="1762.8" y1="316.7" x2="1767.2" y2="316.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1762.8" y1="319.5" x2="1767.2" y2="319.5" stroke="#222222" stroke-width="0.9"/>
+<text x="1765.0" y="313.3" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">3.2×</text>
+<line x1="1765.0" y1="346.0" x2="1765.0" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1767.0" y="358.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 1767.0 358.5)">v3 [equiv] (Cold)</text>
+<rect x="1782.2" y="344.6" width="17.2" height="1.4" fill="#6baed6"/>
+<rect x="1782.2" y="329.4" width="17.2" height="15.2" fill="#2b6cb0"/>
+<rect x="1782.2" y="328.9" width="17.2" height="0.5" fill="#e69f00"/>
+<rect x="1782.2" y="326.6" width="17.2" height="2.3" fill="#8e44ad"/>
+<rect x="1782.2" y="325.4" width="17.2" height="1.2" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1782.2" y="325.4" width="17.2" height="20.6" fill="none" stroke="#047857" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1790.8" y1="324.0" x2="1790.8" y2="326.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="1788.6" y1="324.0" x2="1793.0" y2="324.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="1788.6" y1="326.8" x2="1793.0" y2="326.8" stroke="#222222" stroke-width="0.9"/>
+<text x="1790.8" y="320.6" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.3×</text>
+<line x1="1790.8" y1="346.0" x2="1790.8" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1792.8" y="358.5" font-size="7.8" font-weight="600" fill="#047857" text-anchor="end" transform="rotate(-38 1792.8 358.5)">v3 [sparse] (Cold)</text>
+<rect x="1808.0" y="345.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="1808.0" y="331.0" width="17.2" height="14.5" fill="#2b6cb0"/>
+<rect x="1808.0" y="330.6" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="1808.0" y="328.3" width="17.2" height="2.3" fill="#8e44ad"/>
+<rect x="1808.0" y="327.4" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1808.0" y="327.4" width="17.2" height="18.6" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="1816.6" y1="326.0" x2="1816.6" y2="328.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="1814.4" y1="326.0" x2="1818.8" y2="326.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="1814.4" y1="328.8" x2="1818.8" y2="328.8" stroke="#222222" stroke-width="0.9"/>
+<text x="1816.6" y="322.6" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.7×</text>
+<line x1="1816.6" y1="346.0" x2="1816.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1818.6" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 1818.6 358.5)">v3 [sparse] (Warmed)</text>
+<rect x="1833.8" y="345.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="1833.8" y="335.4" width="17.2" height="10.1" fill="#2b6cb0"/>
+<rect x="1833.8" y="335.0" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="1833.8" y="333.1" width="17.2" height="1.9" fill="#8e44ad"/>
+<rect x="1833.8" y="332.1" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1833.8" y="332.1" width="17.2" height="13.9" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="1842.4" y1="330.7" x2="1842.4" y2="333.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="1840.2" y1="330.7" x2="1844.6" y2="330.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1840.2" y1="333.5" x2="1844.6" y2="333.5" stroke="#222222" stroke-width="0.9"/>
+<text x="1842.4" y="327.3" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">6.4×</text>
+<line x1="1842.4" y1="346.0" x2="1842.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1844.4" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 1844.4 358.5)">v3 +Compile / INT8 (Warmed)</text>
+<line x1="1508.0" y1="134.0" x2="1508.0" y2="346.0" stroke="#333333" stroke-width="1.2"/>
+<line x1="1508.0" y1="346.0" x2="1926.0" y2="346.0" stroke="#333333" stroke-width="1.2"/>
+<text x="1984.0" y="122.0" font-size="15.5" font-weight="600" fill="#111111">Odia</text>
+<line x1="1984.0" y1="346.0" x2="2402.0" y2="346.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1980.0" y1="346.0" x2="1984.0" y2="346.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1976.0" y="350.5" font-size="11.5" fill="#222222" text-anchor="end">0</text>
+<line x1="1984.0" y1="293.0" x2="2402.0" y2="293.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1980.0" y1="293.0" x2="1984.0" y2="293.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1976.0" y="297.5" font-size="11.5" fill="#222222" text-anchor="end">400</text>
+<line x1="1984.0" y1="240.0" x2="2402.0" y2="240.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1980.0" y1="240.0" x2="1984.0" y2="240.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1976.0" y="244.5" font-size="11.5" fill="#222222" text-anchor="end">800</text>
+<line x1="1984.0" y1="187.0" x2="2402.0" y2="187.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1980.0" y1="187.0" x2="1984.0" y2="187.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1976.0" y="191.5" font-size="11.5" fill="#222222" text-anchor="end">1200</text>
+<line x1="1984.0" y1="134.0" x2="2402.0" y2="134.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1980.0" y1="134.0" x2="1984.0" y2="134.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1976.0" y="138.5" font-size="11.5" fill="#222222" text-anchor="end">1600</text>
+<line x1="2145.5" y1="138.0" x2="2145.5" y2="346.0" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3,3"/>
+<rect x="1989.0" y="341.9" width="17.2" height="4.1" fill="#6baed6"/>
+<rect x="1989.0" y="306.1" width="17.2" height="35.8" fill="#2b6cb0"/>
+<rect x="1989.0" y="301.6" width="17.2" height="4.5" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="1997.6" y1="300.2" x2="1997.6" y2="303.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="1995.4" y1="300.2" x2="1999.8" y2="300.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="1995.4" y1="303.0" x2="1999.8" y2="303.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="1997.6" y1="346.0" x2="1997.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1999.6" y="358.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 1999.6 358.5)">Subword Legacy</text>
+<rect x="2014.8" y="345.1" width="17.2" height="0.9" fill="#6baed6"/>
+<rect x="2014.8" y="325.0" width="17.2" height="20.1" fill="#2b6cb0"/>
+<rect x="2014.8" y="324.6" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2014.8" y="324.6" width="17.2" height="21.4" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="2023.4" y1="323.2" x2="2023.4" y2="326.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="2021.2" y1="323.2" x2="2025.6" y2="323.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="2021.2" y1="326.0" x2="2025.6" y2="326.0" stroke="#222222" stroke-width="0.9"/>
+<text x="2023.4" y="319.8" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">2.1×</text>
+<line x1="2023.4" y1="346.0" x2="2023.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2025.4" y="358.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 2025.4 358.5)">[bitwise] (Cold)</text>
+<rect x="2040.6" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="2040.6" y="325.6" width="17.2" height="20.1" fill="#2b6cb0"/>
+<rect x="2040.6" y="325.3" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2040.6" y="325.3" width="17.2" height="20.7" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="2049.2" y1="323.9" x2="2049.2" y2="326.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="2047.0" y1="323.9" x2="2051.4" y2="323.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="2047.0" y1="326.7" x2="2051.4" y2="326.7" stroke="#222222" stroke-width="0.9"/>
+<text x="2049.2" y="320.5" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">2.1×</text>
+<line x1="2049.2" y1="346.0" x2="2049.2" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2051.2" y="358.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 2051.2 358.5)">[bitwise] (Warmed)</text>
+<rect x="2066.4" y="345.1" width="17.2" height="0.9" fill="#6baed6"/>
+<rect x="2066.4" y="337.5" width="17.2" height="7.5" fill="#2b6cb0"/>
+<rect x="2066.4" y="337.2" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2066.4" y="337.2" width="17.2" height="8.8" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="2075.0" y1="335.8" x2="2075.0" y2="338.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="2072.8" y1="335.8" x2="2077.2" y2="335.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="2072.8" y1="338.6" x2="2077.2" y2="338.6" stroke="#222222" stroke-width="0.9"/>
+<text x="2075.0" y="332.4" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.0×</text>
+<line x1="2075.0" y1="346.0" x2="2075.0" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2077.0" y="358.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 2077.0 358.5)">[equiv] (Cold)</text>
+<rect x="2092.2" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="2092.2" y="338.5" width="17.2" height="7.2" fill="#2b6cb0"/>
+<rect x="2092.2" y="338.2" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2092.2" y="338.2" width="17.2" height="7.8" fill="none" stroke="#0f766e" stroke-width="1.35"/>
+<line x1="2100.8" y1="336.8" x2="2100.8" y2="339.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="2098.6" y1="336.8" x2="2103.0" y2="336.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="2098.6" y1="339.6" x2="2103.0" y2="339.6" stroke="#222222" stroke-width="0.9"/>
+<text x="2100.8" y="333.4" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.7×</text>
+<line x1="2100.8" y1="346.0" x2="2100.8" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2102.8" y="358.5" font-size="7.8" font-weight="700" fill="#0f766e" text-anchor="end" transform="rotate(-38 2102.8 358.5)">[equiv] (Warmed)</text>
+<rect x="2118.0" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="2118.0" y="340.6" width="17.2" height="5.0" fill="#2b6cb0"/>
+<rect x="2118.0" y="340.3" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2118.0" y="340.3" width="17.2" height="5.7" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="2126.6" y1="338.9" x2="2126.6" y2="341.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="2124.4" y1="338.9" x2="2128.8" y2="338.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="2124.4" y1="341.7" x2="2128.8" y2="341.7" stroke="#222222" stroke-width="0.9"/>
+<text x="2126.6" y="335.5" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">7.8×</text>
+<line x1="2126.6" y1="346.0" x2="2126.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2128.6" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 2128.6 358.5)">+Compile / INT8 (Warmed)</text>
+<rect x="2155.0" y="341.9" width="17.2" height="4.1" fill="#6baed6"/>
+<rect x="2155.0" y="306.1" width="17.2" height="35.8" fill="#2b6cb0"/>
+<rect x="2155.0" y="301.8" width="17.2" height="4.3" fill="#e69f00"/>
+<rect x="2155.0" y="236.2" width="17.2" height="65.6" fill="#8e44ad"/>
+<rect x="2155.0" y="231.7" width="17.2" height="4.5" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="2163.6" y1="230.3" x2="2163.6" y2="233.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="2161.4" y1="230.3" x2="2165.8" y2="230.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="2161.4" y1="233.1" x2="2165.8" y2="233.1" stroke="#222222" stroke-width="0.9"/>
+<text x="2163.6" y="226.9" font-size="7.4" font-weight="700" fill="#64748b" text-anchor="middle">0.39×</text>
+<line x1="2163.6" y1="346.0" x2="2163.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2165.6" y="358.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 2165.6 358.5)">v3 Legacy (Dense)</text>
+<rect x="2180.8" y="345.1" width="17.2" height="0.9" fill="#6baed6"/>
+<rect x="2180.8" y="325.0" width="17.2" height="20.1" fill="#2b6cb0"/>
+<rect x="2180.8" y="324.3" width="17.2" height="0.7" fill="#e69f00"/>
+<rect x="2180.8" y="297.4" width="17.2" height="26.9" fill="#8e44ad"/>
+<rect x="2180.8" y="297.0" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2180.8" y="297.0" width="17.2" height="49.0" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="2189.4" y1="295.6" x2="2189.4" y2="298.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="2187.2" y1="295.6" x2="2191.6" y2="295.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="2187.2" y1="298.4" x2="2191.6" y2="298.4" stroke="#222222" stroke-width="0.9"/>
+<text x="2189.4" y="292.2" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">0.91×</text>
+<line x1="2189.4" y1="346.0" x2="2189.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2191.4" y="358.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 2191.4 358.5)">v3 [bitwise] (Cold)</text>
+<rect x="2206.6" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="2206.6" y="325.6" width="17.2" height="20.1" fill="#2b6cb0"/>
+<rect x="2206.6" y="325.1" width="17.2" height="0.5" fill="#e69f00"/>
+<rect x="2206.6" y="298.2" width="17.2" height="26.9" fill="#8e44ad"/>
+<rect x="2206.6" y="297.9" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2206.6" y="297.9" width="17.2" height="48.1" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="2215.2" y1="296.5" x2="2215.2" y2="299.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="2213.0" y1="296.5" x2="2217.4" y2="296.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="2213.0" y1="299.3" x2="2217.4" y2="299.3" stroke="#222222" stroke-width="0.9"/>
+<text x="2215.2" y="293.1" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">0.92×</text>
+<line x1="2215.2" y1="346.0" x2="2215.2" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2217.2" y="358.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 2217.2 358.5)">v3 [bitwise] (Warmed)</text>
+<rect x="2232.4" y="345.1" width="17.2" height="0.9" fill="#6baed6"/>
+<rect x="2232.4" y="337.5" width="17.2" height="7.5" fill="#2b6cb0"/>
+<rect x="2232.4" y="336.9" width="17.2" height="0.6" fill="#e69f00"/>
+<rect x="2232.4" y="329.7" width="17.2" height="7.2" fill="#8e44ad"/>
+<rect x="2232.4" y="329.3" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2232.4" y="329.3" width="17.2" height="16.7" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="2241.0" y1="327.9" x2="2241.0" y2="330.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="2238.8" y1="327.9" x2="2243.2" y2="327.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="2238.8" y1="330.7" x2="2243.2" y2="330.7" stroke="#222222" stroke-width="0.9"/>
+<text x="2241.0" y="324.5" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">2.7×</text>
+<line x1="2241.0" y1="346.0" x2="2241.0" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2243.0" y="358.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 2243.0 358.5)">v3 [equiv] (Cold)</text>
+<rect x="2258.2" y="345.1" width="17.2" height="0.9" fill="#6baed6"/>
+<rect x="2258.2" y="337.5" width="17.2" height="7.5" fill="#2b6cb0"/>
+<rect x="2258.2" y="337.2" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="2258.2" y="336.0" width="17.2" height="1.2" fill="#8e44ad"/>
+<rect x="2258.2" y="335.6" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2258.2" y="335.6" width="17.2" height="10.4" fill="none" stroke="#047857" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="2266.8" y1="334.2" x2="2266.8" y2="337.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="2264.6" y1="334.2" x2="2269.0" y2="334.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="2264.6" y1="337.0" x2="2269.0" y2="337.0" stroke="#222222" stroke-width="0.9"/>
+<text x="2266.8" y="330.8" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.3×</text>
+<line x1="2266.8" y1="346.0" x2="2266.8" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2268.8" y="358.5" font-size="7.8" font-weight="600" fill="#047857" text-anchor="end" transform="rotate(-38 2268.8 358.5)">v3 [sparse] (Cold)</text>
+<rect x="2284.0" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="2284.0" y="338.5" width="17.2" height="7.2" fill="#2b6cb0"/>
+<rect x="2284.0" y="338.2" width="17.2" height="0.3" fill="#e69f00"/>
+<rect x="2284.0" y="337.0" width="17.2" height="1.2" fill="#8e44ad"/>
+<rect x="2284.0" y="336.7" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2284.0" y="336.7" width="17.2" height="9.3" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="2292.6" y1="335.3" x2="2292.6" y2="338.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="2290.4" y1="335.3" x2="2294.8" y2="335.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="2290.4" y1="338.1" x2="2294.8" y2="338.1" stroke="#222222" stroke-width="0.9"/>
+<text x="2292.6" y="331.9" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.8×</text>
+<line x1="2292.6" y1="346.0" x2="2292.6" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2294.6" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 2294.6 358.5)">v3 [sparse] (Warmed)</text>
+<rect x="2309.8" y="345.6" width="17.2" height="0.4" fill="#6baed6"/>
+<rect x="2309.8" y="340.6" width="17.2" height="5.0" fill="#2b6cb0"/>
+<rect x="2309.8" y="340.3" width="17.2" height="0.3" fill="#e69f00"/>
+<rect x="2309.8" y="339.3" width="17.2" height="1.0" fill="#8e44ad"/>
+<rect x="2309.8" y="339.0" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2309.8" y="339.0" width="17.2" height="7.0" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="2318.4" y1="337.6" x2="2318.4" y2="340.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="2316.2" y1="337.6" x2="2320.6" y2="337.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="2316.2" y1="340.4" x2="2320.6" y2="340.4" stroke="#222222" stroke-width="0.9"/>
+<text x="2318.4" y="334.2" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">6.4×</text>
+<line x1="2318.4" y1="346.0" x2="2318.4" y2="350.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2320.4" y="358.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 2320.4 358.5)">v3 +Compile / INT8 (Warmed)</text>
+<line x1="1984.0" y1="134.0" x2="1984.0" y2="346.0" stroke="#333333" stroke-width="1.2"/>
+<line x1="1984.0" y1="346.0" x2="2402.0" y2="346.0" stroke="#333333" stroke-width="1.2"/>
+<text x="80.0" y="510.0" font-size="15.5" font-weight="600" fill="#111111">Punjabi</text>
+<text x="34.0" y="628.0" font-size="13" fill="#222222" text-anchor="middle" transform="rotate(-90 34.0 628.0)">ms / full pass (CPU)</text>
+<line x1="80.0" y1="734.0" x2="498.0" y2="734.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="76.0" y1="734.0" x2="80.0" y2="734.0" stroke="#333333" stroke-width="1.1"/>
+<text x="72.0" y="738.5" font-size="11.5" fill="#222222" text-anchor="end">0</text>
+<line x1="80.0" y1="681.0" x2="498.0" y2="681.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="76.0" y1="681.0" x2="80.0" y2="681.0" stroke="#333333" stroke-width="1.1"/>
+<text x="72.0" y="685.5" font-size="11.5" fill="#222222" text-anchor="end">400</text>
+<line x1="80.0" y1="628.0" x2="498.0" y2="628.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="76.0" y1="628.0" x2="80.0" y2="628.0" stroke="#333333" stroke-width="1.1"/>
+<text x="72.0" y="632.5" font-size="11.5" fill="#222222" text-anchor="end">800</text>
+<line x1="80.0" y1="575.0" x2="498.0" y2="575.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="76.0" y1="575.0" x2="80.0" y2="575.0" stroke="#333333" stroke-width="1.1"/>
+<text x="72.0" y="579.5" font-size="11.5" fill="#222222" text-anchor="end">1200</text>
+<line x1="80.0" y1="522.0" x2="498.0" y2="522.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="76.0" y1="522.0" x2="80.0" y2="522.0" stroke="#333333" stroke-width="1.1"/>
+<text x="72.0" y="526.5" font-size="11.5" fill="#222222" text-anchor="end">1600</text>
+<line x1="241.5" y1="526.0" x2="241.5" y2="734.0" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3,3"/>
+<rect x="85.0" y="729.6" width="17.2" height="4.4" fill="#6baed6"/>
+<rect x="85.0" y="693.7" width="17.2" height="35.8" fill="#2b6cb0"/>
+<rect x="85.0" y="688.5" width="17.2" height="5.2" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="93.6" y1="687.1" x2="93.6" y2="689.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="91.4" y1="687.1" x2="95.8" y2="687.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="91.4" y1="689.9" x2="95.8" y2="689.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="93.6" y1="734.0" x2="93.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="95.6" y="746.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 95.6 746.5)">Subword Legacy</text>
+<rect x="110.8" y="732.5" width="17.2" height="1.5" fill="#6baed6"/>
+<rect x="110.8" y="712.4" width="17.2" height="20.1" fill="#2b6cb0"/>
+<rect x="110.8" y="712.0" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="110.8" y="712.0" width="17.2" height="22.0" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="119.4" y1="710.6" x2="119.4" y2="713.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="117.2" y1="710.6" x2="121.6" y2="710.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="117.2" y1="713.4" x2="121.6" y2="713.4" stroke="#222222" stroke-width="0.9"/>
+<text x="119.4" y="707.2" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">2.1×</text>
+<line x1="119.4" y1="734.0" x2="119.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="121.4" y="746.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 121.4 746.5)">[bitwise] (Cold)</text>
+<rect x="136.6" y="733.4" width="17.2" height="0.6" fill="#6baed6"/>
+<rect x="136.6" y="713.4" width="17.2" height="20.1" fill="#2b6cb0"/>
+<rect x="136.6" y="713.0" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="136.6" y="713.0" width="17.2" height="21.0" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="145.2" y1="711.6" x2="145.2" y2="714.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="143.0" y1="711.6" x2="147.4" y2="711.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="143.0" y1="714.4" x2="147.4" y2="714.4" stroke="#222222" stroke-width="0.9"/>
+<text x="145.2" y="708.2" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">2.2×</text>
+<line x1="145.2" y1="734.0" x2="145.2" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="147.2" y="746.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 147.2 746.5)">[bitwise] (Warmed)</text>
+<rect x="162.4" y="732.5" width="17.2" height="1.5" fill="#6baed6"/>
+<rect x="162.4" y="725.0" width="17.2" height="7.5" fill="#2b6cb0"/>
+<rect x="162.4" y="724.5" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="162.4" y="724.5" width="17.2" height="9.5" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="171.0" y1="723.1" x2="171.0" y2="725.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="168.8" y1="723.1" x2="173.2" y2="723.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="168.8" y1="725.9" x2="173.2" y2="725.9" stroke="#222222" stroke-width="0.9"/>
+<text x="171.0" y="719.7" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">4.8×</text>
+<line x1="171.0" y1="734.0" x2="171.0" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="173.0" y="746.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 173.0 746.5)">[equiv] (Cold)</text>
+<rect x="188.2" y="733.4" width="17.2" height="0.6" fill="#6baed6"/>
+<rect x="188.2" y="726.2" width="17.2" height="7.2" fill="#2b6cb0"/>
+<rect x="188.2" y="725.9" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="188.2" y="725.9" width="17.2" height="8.1" fill="none" stroke="#0f766e" stroke-width="1.35"/>
+<line x1="196.8" y1="724.5" x2="196.8" y2="727.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="194.6" y1="724.5" x2="199.0" y2="724.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="194.6" y1="727.3" x2="199.0" y2="727.3" stroke="#222222" stroke-width="0.9"/>
+<text x="196.8" y="721.1" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.6×</text>
+<line x1="196.8" y1="734.0" x2="196.8" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="198.8" y="746.5" font-size="7.8" font-weight="700" fill="#0f766e" text-anchor="end" transform="rotate(-38 198.8 746.5)">[equiv] (Warmed)</text>
+<rect x="214.0" y="733.4" width="17.2" height="0.6" fill="#6baed6"/>
+<rect x="214.0" y="728.4" width="17.2" height="5.0" fill="#2b6cb0"/>
+<rect x="214.0" y="728.1" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="214.0" y="728.1" width="17.2" height="5.9" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="222.6" y1="726.7" x2="222.6" y2="729.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="220.4" y1="726.7" x2="224.8" y2="726.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="220.4" y1="729.5" x2="224.8" y2="729.5" stroke="#222222" stroke-width="0.9"/>
+<text x="222.6" y="723.3" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">7.7×</text>
+<line x1="222.6" y1="734.0" x2="222.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="224.6" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 224.6 746.5)">+Compile / INT8 (Warmed)</text>
+<rect x="251.0" y="729.6" width="17.2" height="4.4" fill="#6baed6"/>
+<rect x="251.0" y="693.7" width="17.2" height="35.8" fill="#2b6cb0"/>
+<rect x="251.0" y="689.2" width="17.2" height="4.5" fill="#e69f00"/>
+<rect x="251.0" y="612.1" width="17.2" height="77.1" fill="#8e44ad"/>
+<rect x="251.0" y="606.8" width="17.2" height="5.2" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="259.6" y1="605.4" x2="259.6" y2="608.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="257.4" y1="605.4" x2="261.8" y2="605.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="257.4" y1="608.2" x2="261.8" y2="608.2" stroke="#222222" stroke-width="0.9"/>
+<text x="259.6" y="602.0" font-size="7.4" font-weight="700" fill="#64748b" text-anchor="middle">0.36×</text>
+<line x1="259.6" y1="734.0" x2="259.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="261.6" y="746.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 261.6 746.5)">v3 Legacy (Dense)</text>
+<rect x="276.8" y="732.5" width="17.2" height="1.5" fill="#6baed6"/>
+<rect x="276.8" y="712.4" width="17.2" height="20.1" fill="#2b6cb0"/>
+<rect x="276.8" y="711.7" width="17.2" height="0.7" fill="#e69f00"/>
+<rect x="276.8" y="680.1" width="17.2" height="31.6" fill="#8e44ad"/>
+<rect x="276.8" y="679.7" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="276.8" y="679.7" width="17.2" height="54.3" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="285.4" y1="678.3" x2="285.4" y2="681.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="283.2" y1="678.3" x2="287.6" y2="678.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="283.2" y1="681.1" x2="287.6" y2="681.1" stroke="#222222" stroke-width="0.9"/>
+<text x="285.4" y="674.9" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">0.84×</text>
+<line x1="285.4" y1="734.0" x2="285.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="287.4" y="746.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 287.4 746.5)">v3 [bitwise] (Cold)</text>
+<rect x="302.6" y="733.4" width="17.2" height="0.6" fill="#6baed6"/>
+<rect x="302.6" y="713.4" width="17.2" height="20.1" fill="#2b6cb0"/>
+<rect x="302.6" y="712.8" width="17.2" height="0.5" fill="#e69f00"/>
+<rect x="302.6" y="681.2" width="17.2" height="31.6" fill="#8e44ad"/>
+<rect x="302.6" y="680.8" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="302.6" y="680.8" width="17.2" height="53.2" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="311.2" y1="679.4" x2="311.2" y2="682.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="309.0" y1="679.4" x2="313.4" y2="679.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="309.0" y1="682.2" x2="313.4" y2="682.2" stroke="#222222" stroke-width="0.9"/>
+<text x="311.2" y="676.0" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">0.86×</text>
+<line x1="311.2" y1="734.0" x2="311.2" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="313.2" y="746.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 313.2 746.5)">v3 [bitwise] (Warmed)</text>
+<rect x="328.4" y="732.5" width="17.2" height="1.5" fill="#6baed6"/>
+<rect x="328.4" y="725.0" width="17.2" height="7.5" fill="#2b6cb0"/>
+<rect x="328.4" y="724.3" width="17.2" height="0.7" fill="#e69f00"/>
+<rect x="328.4" y="715.8" width="17.2" height="8.5" fill="#8e44ad"/>
+<rect x="328.4" y="715.4" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="328.4" y="715.4" width="17.2" height="18.6" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="337.0" y1="714.0" x2="337.0" y2="716.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="334.8" y1="714.0" x2="339.2" y2="714.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="334.8" y1="716.8" x2="339.2" y2="716.8" stroke="#222222" stroke-width="0.9"/>
+<text x="337.0" y="710.6" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">2.4×</text>
+<line x1="337.0" y1="734.0" x2="337.0" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="339.0" y="746.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 339.0 746.5)">v3 [equiv] (Cold)</text>
+<rect x="354.2" y="732.5" width="17.2" height="1.5" fill="#6baed6"/>
+<rect x="354.2" y="725.0" width="17.2" height="7.5" fill="#2b6cb0"/>
+<rect x="354.2" y="724.6" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="354.2" y="723.2" width="17.2" height="1.3" fill="#8e44ad"/>
+<rect x="354.2" y="722.8" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="354.2" y="722.8" width="17.2" height="11.2" fill="none" stroke="#047857" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="362.8" y1="721.4" x2="362.8" y2="724.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="360.6" y1="721.4" x2="365.0" y2="721.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="360.6" y1="724.2" x2="365.0" y2="724.2" stroke="#222222" stroke-width="0.9"/>
+<text x="362.8" y="718.0" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.1×</text>
+<line x1="362.8" y1="734.0" x2="362.8" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="364.8" y="746.5" font-size="7.8" font-weight="600" fill="#047857" text-anchor="end" transform="rotate(-38 364.8 746.5)">v3 [sparse] (Cold)</text>
+<rect x="380.0" y="733.4" width="17.2" height="0.6" fill="#6baed6"/>
+<rect x="380.0" y="726.2" width="17.2" height="7.2" fill="#2b6cb0"/>
+<rect x="380.0" y="725.9" width="17.2" height="0.3" fill="#e69f00"/>
+<rect x="380.0" y="724.6" width="17.2" height="1.3" fill="#8e44ad"/>
+<rect x="380.0" y="724.3" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="380.0" y="724.3" width="17.2" height="9.7" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="388.6" y1="722.9" x2="388.6" y2="725.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="386.4" y1="722.9" x2="390.8" y2="722.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="386.4" y1="725.7" x2="390.8" y2="725.7" stroke="#222222" stroke-width="0.9"/>
+<text x="388.6" y="719.5" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.7×</text>
+<line x1="388.6" y1="734.0" x2="388.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="390.6" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 390.6 746.5)">v3 [sparse] (Warmed)</text>
+<rect x="405.8" y="733.4" width="17.2" height="0.6" fill="#6baed6"/>
+<rect x="405.8" y="728.4" width="17.2" height="5.0" fill="#2b6cb0"/>
+<rect x="405.8" y="728.1" width="17.2" height="0.3" fill="#e69f00"/>
+<rect x="405.8" y="727.0" width="17.2" height="1.1" fill="#8e44ad"/>
+<rect x="405.8" y="726.7" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="405.8" y="726.7" width="17.2" height="7.3" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="414.4" y1="725.3" x2="414.4" y2="728.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="412.2" y1="725.3" x2="416.6" y2="725.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="412.2" y1="728.1" x2="416.6" y2="728.1" stroke="#222222" stroke-width="0.9"/>
+<text x="414.4" y="721.9" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">6.2×</text>
+<line x1="414.4" y1="734.0" x2="414.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="416.4" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 416.4 746.5)">v3 +Compile / INT8 (Warmed)</text>
+<line x1="80.0" y1="522.0" x2="80.0" y2="734.0" stroke="#333333" stroke-width="1.2"/>
+<line x1="80.0" y1="734.0" x2="498.0" y2="734.0" stroke="#333333" stroke-width="1.2"/>
+<text x="556.0" y="510.0" font-size="15.5" font-weight="600" fill="#111111">Burmese</text>
+<line x1="556.0" y1="734.0" x2="974.0" y2="734.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="552.0" y1="734.0" x2="556.0" y2="734.0" stroke="#333333" stroke-width="1.1"/>
+<text x="548.0" y="738.5" font-size="11.5" fill="#222222" text-anchor="end">0</text>
+<line x1="556.0" y1="681.0" x2="974.0" y2="681.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="552.0" y1="681.0" x2="556.0" y2="681.0" stroke="#333333" stroke-width="1.1"/>
+<text x="548.0" y="685.5" font-size="11.5" fill="#222222" text-anchor="end">400</text>
+<line x1="556.0" y1="628.0" x2="974.0" y2="628.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="552.0" y1="628.0" x2="556.0" y2="628.0" stroke="#333333" stroke-width="1.1"/>
+<text x="548.0" y="632.5" font-size="11.5" fill="#222222" text-anchor="end">800</text>
+<line x1="556.0" y1="575.0" x2="974.0" y2="575.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="552.0" y1="575.0" x2="556.0" y2="575.0" stroke="#333333" stroke-width="1.1"/>
+<text x="548.0" y="579.5" font-size="11.5" fill="#222222" text-anchor="end">1200</text>
+<line x1="556.0" y1="522.0" x2="974.0" y2="522.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="552.0" y1="522.0" x2="556.0" y2="522.0" stroke="#333333" stroke-width="1.1"/>
+<text x="548.0" y="526.5" font-size="11.5" fill="#222222" text-anchor="end">1600</text>
+<line x1="717.5" y1="526.0" x2="717.5" y2="734.0" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3,3"/>
+<rect x="561.0" y="729.5" width="17.2" height="4.5" fill="#6baed6"/>
+<rect x="561.0" y="686.8" width="17.2" height="42.7" fill="#2b6cb0"/>
+<rect x="561.0" y="681.0" width="17.2" height="5.7" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="569.6" y1="679.6" x2="569.6" y2="682.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="567.4" y1="679.6" x2="571.8" y2="679.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="567.4" y1="682.4" x2="571.8" y2="682.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="569.6" y1="734.0" x2="569.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="571.6" y="746.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 571.6 746.5)">Subword Legacy</text>
+<rect x="586.8" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="586.8" y="709.5" width="17.2" height="23.9" fill="#2b6cb0"/>
+<rect x="586.8" y="709.0" width="17.2" height="0.5" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="586.8" y="709.0" width="17.2" height="25.0" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="595.4" y1="707.6" x2="595.4" y2="710.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="593.2" y1="707.6" x2="597.6" y2="707.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="593.2" y1="710.4" x2="597.6" y2="710.4" stroke="#222222" stroke-width="0.9"/>
+<text x="595.4" y="704.2" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">2.1×</text>
+<line x1="595.4" y1="734.0" x2="595.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="597.4" y="746.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 597.4 746.5)">[bitwise] (Cold)</text>
+<rect x="612.6" y="733.7" width="17.2" height="0.3" fill="#6baed6"/>
+<rect x="612.6" y="709.8" width="17.2" height="23.9" fill="#2b6cb0"/>
+<rect x="612.6" y="709.4" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="612.6" y="709.4" width="17.2" height="24.6" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="621.2" y1="708.0" x2="621.2" y2="710.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="619.0" y1="708.0" x2="623.4" y2="708.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="619.0" y1="710.8" x2="623.4" y2="710.8" stroke="#222222" stroke-width="0.9"/>
+<text x="621.2" y="704.6" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">2.2×</text>
+<line x1="621.2" y1="734.0" x2="621.2" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="623.2" y="746.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 623.2 746.5)">[bitwise] (Warmed)</text>
+<rect x="638.4" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="638.4" y="724.5" width="17.2" height="9.0" fill="#2b6cb0"/>
+<rect x="638.4" y="724.0" width="17.2" height="0.5" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="638.4" y="724.0" width="17.2" height="10.0" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="647.0" y1="722.6" x2="647.0" y2="725.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="644.8" y1="722.6" x2="649.2" y2="722.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="644.8" y1="725.4" x2="649.2" y2="725.4" stroke="#222222" stroke-width="0.9"/>
+<text x="647.0" y="719.2" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.3×</text>
+<line x1="647.0" y1="734.0" x2="647.0" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="649.0" y="746.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 649.0 746.5)">[equiv] (Cold)</text>
+<rect x="664.2" y="733.7" width="17.2" height="0.3" fill="#6baed6"/>
+<rect x="664.2" y="725.2" width="17.2" height="8.5" fill="#2b6cb0"/>
+<rect x="664.2" y="724.7" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="664.2" y="724.7" width="17.2" height="9.3" fill="none" stroke="#0f766e" stroke-width="1.35"/>
+<line x1="672.8" y1="723.3" x2="672.8" y2="726.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="670.6" y1="723.3" x2="675.0" y2="723.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="670.6" y1="726.1" x2="675.0" y2="726.1" stroke="#222222" stroke-width="0.9"/>
+<text x="672.8" y="719.9" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.8×</text>
+<line x1="672.8" y1="734.0" x2="672.8" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="674.8" y="746.5" font-size="7.8" font-weight="700" fill="#0f766e" text-anchor="end" transform="rotate(-38 674.8 746.5)">[equiv] (Warmed)</text>
+<rect x="690.0" y="733.7" width="17.2" height="0.3" fill="#6baed6"/>
+<rect x="690.0" y="727.7" width="17.2" height="6.0" fill="#2b6cb0"/>
+<rect x="690.0" y="727.3" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="690.0" y="727.3" width="17.2" height="6.7" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="698.6" y1="725.9" x2="698.6" y2="728.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="696.4" y1="725.9" x2="700.8" y2="725.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="696.4" y1="728.7" x2="700.8" y2="728.7" stroke="#222222" stroke-width="0.9"/>
+<text x="698.6" y="722.5" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">8.1×</text>
+<line x1="698.6" y1="734.0" x2="698.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="700.6" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 700.6 746.5)">+Compile / INT8 (Warmed)</text>
+<rect x="727.0" y="729.5" width="17.2" height="4.5" fill="#6baed6"/>
+<rect x="727.0" y="686.8" width="17.2" height="42.7" fill="#2b6cb0"/>
+<rect x="727.0" y="681.4" width="17.2" height="5.3" fill="#e69f00"/>
+<rect x="727.0" y="573.1" width="17.2" height="108.3" fill="#8e44ad"/>
+<rect x="727.0" y="567.4" width="17.2" height="5.7" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="735.6" y1="566.0" x2="735.6" y2="568.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="733.4" y1="566.0" x2="737.8" y2="566.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="733.4" y1="568.8" x2="737.8" y2="568.8" stroke="#222222" stroke-width="0.9"/>
+<text x="735.6" y="562.6" font-size="7.4" font-weight="700" fill="#64748b" text-anchor="middle">0.32×</text>
+<line x1="735.6" y1="734.0" x2="735.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="737.6" y="746.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 737.6 746.5)">v3 Legacy (Dense)</text>
+<rect x="752.8" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="752.8" y="709.5" width="17.2" height="23.9" fill="#2b6cb0"/>
+<rect x="752.8" y="708.7" width="17.2" height="0.9" fill="#e69f00"/>
+<rect x="752.8" y="664.3" width="17.2" height="44.4" fill="#8e44ad"/>
+<rect x="752.8" y="663.8" width="17.2" height="0.5" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="752.8" y="663.8" width="17.2" height="70.2" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="761.4" y1="662.4" x2="761.4" y2="665.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="759.2" y1="662.4" x2="763.6" y2="662.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="759.2" y1="665.2" x2="763.6" y2="665.2" stroke="#222222" stroke-width="0.9"/>
+<text x="761.4" y="659.0" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">0.75×</text>
+<line x1="761.4" y1="734.0" x2="761.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="763.4" y="746.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 763.4 746.5)">v3 [bitwise] (Cold)</text>
+<rect x="778.6" y="733.7" width="17.2" height="0.3" fill="#6baed6"/>
+<rect x="778.6" y="709.8" width="17.2" height="23.9" fill="#2b6cb0"/>
+<rect x="778.6" y="709.1" width="17.2" height="0.6" fill="#e69f00"/>
+<rect x="778.6" y="664.7" width="17.2" height="44.4" fill="#8e44ad"/>
+<rect x="778.6" y="664.3" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="778.6" y="664.3" width="17.2" height="69.7" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="787.2" y1="662.9" x2="787.2" y2="665.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="785.0" y1="662.9" x2="789.4" y2="662.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="785.0" y1="665.7" x2="789.4" y2="665.7" stroke="#222222" stroke-width="0.9"/>
+<text x="787.2" y="659.5" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">0.76×</text>
+<line x1="787.2" y1="734.0" x2="787.2" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="789.2" y="746.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 789.2 746.5)">v3 [bitwise] (Warmed)</text>
+<rect x="804.4" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="804.4" y="724.5" width="17.2" height="9.0" fill="#2b6cb0"/>
+<rect x="804.4" y="723.7" width="17.2" height="0.8" fill="#e69f00"/>
+<rect x="804.4" y="711.8" width="17.2" height="11.9" fill="#8e44ad"/>
+<rect x="804.4" y="711.3" width="17.2" height="0.5" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="804.4" y="711.3" width="17.2" height="22.7" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="813.0" y1="709.9" x2="813.0" y2="712.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="810.8" y1="709.9" x2="815.2" y2="709.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="810.8" y1="712.7" x2="815.2" y2="712.7" stroke="#222222" stroke-width="0.9"/>
+<text x="813.0" y="706.5" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">2.3×</text>
+<line x1="813.0" y1="734.0" x2="813.0" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="815.0" y="746.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 815.0 746.5)">v3 [equiv] (Cold)</text>
+<rect x="830.2" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="830.2" y="724.5" width="17.2" height="9.0" fill="#2b6cb0"/>
+<rect x="830.2" y="724.0" width="17.2" height="0.5" fill="#e69f00"/>
+<rect x="830.2" y="722.5" width="17.2" height="1.5" fill="#8e44ad"/>
+<rect x="830.2" y="722.0" width="17.2" height="0.5" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="830.2" y="722.0" width="17.2" height="12.0" fill="none" stroke="#047857" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="838.8" y1="720.6" x2="838.8" y2="723.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="836.6" y1="720.6" x2="841.0" y2="720.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="836.6" y1="723.4" x2="841.0" y2="723.4" stroke="#222222" stroke-width="0.9"/>
+<text x="838.8" y="717.2" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.4×</text>
+<line x1="838.8" y1="734.0" x2="838.8" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="840.8" y="746.5" font-size="7.8" font-weight="600" fill="#047857" text-anchor="end" transform="rotate(-38 840.8 746.5)">v3 [sparse] (Cold)</text>
+<rect x="856.0" y="733.7" width="17.2" height="0.3" fill="#6baed6"/>
+<rect x="856.0" y="725.2" width="17.2" height="8.5" fill="#2b6cb0"/>
+<rect x="856.0" y="724.8" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="856.0" y="723.3" width="17.2" height="1.5" fill="#8e44ad"/>
+<rect x="856.0" y="722.9" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="856.0" y="722.9" width="17.2" height="11.1" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="864.6" y1="721.5" x2="864.6" y2="724.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="862.4" y1="721.5" x2="866.8" y2="721.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="862.4" y1="724.3" x2="866.8" y2="724.3" stroke="#222222" stroke-width="0.9"/>
+<text x="864.6" y="718.1" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.8×</text>
+<line x1="864.6" y1="734.0" x2="864.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="866.6" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 866.6 746.5)">v3 [sparse] (Warmed)</text>
+<rect x="881.8" y="733.7" width="17.2" height="0.3" fill="#6baed6"/>
+<rect x="881.8" y="727.7" width="17.2" height="6.0" fill="#2b6cb0"/>
+<rect x="881.8" y="727.3" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="881.8" y="726.1" width="17.2" height="1.2" fill="#8e44ad"/>
+<rect x="881.8" y="725.7" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="881.8" y="725.7" width="17.2" height="8.3" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="890.4" y1="724.3" x2="890.4" y2="727.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="888.2" y1="724.3" x2="892.6" y2="724.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="888.2" y1="727.1" x2="892.6" y2="727.1" stroke="#222222" stroke-width="0.9"/>
+<text x="890.4" y="720.9" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">6.5×</text>
+<line x1="890.4" y1="734.0" x2="890.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="892.4" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 892.4 746.5)">v3 +Compile / INT8 (Warmed)</text>
+<line x1="556.0" y1="522.0" x2="556.0" y2="734.0" stroke="#333333" stroke-width="1.2"/>
+<line x1="556.0" y1="734.0" x2="974.0" y2="734.0" stroke="#333333" stroke-width="1.2"/>
+<text x="1032.0" y="510.0" font-size="15.5" font-weight="600" fill="#111111">Igbo</text>
+<line x1="1032.0" y1="734.0" x2="1450.0" y2="734.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1028.0" y1="734.0" x2="1032.0" y2="734.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1024.0" y="738.5" font-size="11.5" fill="#222222" text-anchor="end">0</text>
+<line x1="1032.0" y1="681.0" x2="1450.0" y2="681.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1028.0" y1="681.0" x2="1032.0" y2="681.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1024.0" y="685.5" font-size="11.5" fill="#222222" text-anchor="end">400</text>
+<line x1="1032.0" y1="628.0" x2="1450.0" y2="628.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1028.0" y1="628.0" x2="1032.0" y2="628.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1024.0" y="632.5" font-size="11.5" fill="#222222" text-anchor="end">800</text>
+<line x1="1032.0" y1="575.0" x2="1450.0" y2="575.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1028.0" y1="575.0" x2="1032.0" y2="575.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1024.0" y="579.5" font-size="11.5" fill="#222222" text-anchor="end">1200</text>
+<line x1="1032.0" y1="522.0" x2="1450.0" y2="522.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1028.0" y1="522.0" x2="1032.0" y2="522.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1024.0" y="526.5" font-size="11.5" fill="#222222" text-anchor="end">1600</text>
+<line x1="1193.5" y1="526.0" x2="1193.5" y2="734.0" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3,3"/>
+<rect x="1037.0" y="728.5" width="17.2" height="5.5" fill="#6baed6"/>
+<rect x="1037.0" y="673.4" width="17.2" height="55.1" fill="#2b6cb0"/>
+<rect x="1037.0" y="665.1" width="17.2" height="8.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="1045.6" y1="663.7" x2="1045.6" y2="666.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="1043.4" y1="663.7" x2="1047.8" y2="663.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1043.4" y1="666.5" x2="1047.8" y2="666.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="1045.6" y1="734.0" x2="1045.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1047.6" y="746.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 1047.6 746.5)">Subword Legacy</text>
+<rect x="1062.8" y="732.5" width="17.2" height="1.5" fill="#6baed6"/>
+<rect x="1062.8" y="701.7" width="17.2" height="30.9" fill="#2b6cb0"/>
+<rect x="1062.8" y="700.7" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1062.8" y="700.7" width="17.2" height="33.3" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1071.4" y1="699.3" x2="1071.4" y2="702.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="1069.2" y1="699.3" x2="1073.6" y2="699.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="1069.2" y1="702.1" x2="1073.6" y2="702.1" stroke="#222222" stroke-width="0.9"/>
+<text x="1071.4" y="695.9" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">2.1×</text>
+<line x1="1071.4" y1="734.0" x2="1071.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1073.4" y="746.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 1073.4 746.5)">[bitwise] (Cold)</text>
+<rect x="1088.6" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="1088.6" y="702.6" width="17.2" height="30.9" fill="#2b6cb0"/>
+<rect x="1088.6" y="701.9" width="17.2" height="0.7" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1088.6" y="701.9" width="17.2" height="32.1" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="1097.2" y1="700.5" x2="1097.2" y2="703.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="1095.0" y1="700.5" x2="1099.4" y2="700.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="1095.0" y1="703.3" x2="1099.4" y2="703.3" stroke="#222222" stroke-width="0.9"/>
+<text x="1097.2" y="697.1" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">2.1×</text>
+<line x1="1097.2" y1="734.0" x2="1097.2" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1099.2" y="746.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 1099.2 746.5)">[bitwise] (Warmed)</text>
+<rect x="1114.4" y="732.5" width="17.2" height="1.5" fill="#6baed6"/>
+<rect x="1114.4" y="721.0" width="17.2" height="11.6" fill="#2b6cb0"/>
+<rect x="1114.4" y="720.0" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1114.4" y="720.0" width="17.2" height="14.0" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1123.0" y1="718.6" x2="1123.0" y2="721.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1120.8" y1="718.6" x2="1125.2" y2="718.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1120.8" y1="721.4" x2="1125.2" y2="721.4" stroke="#222222" stroke-width="0.9"/>
+<text x="1123.0" y="715.2" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">4.9×</text>
+<line x1="1123.0" y1="734.0" x2="1123.0" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1125.0" y="746.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 1125.0 746.5)">[equiv] (Cold)</text>
+<rect x="1140.2" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="1140.2" y="722.5" width="17.2" height="11.0" fill="#2b6cb0"/>
+<rect x="1140.2" y="721.7" width="17.2" height="0.7" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1140.2" y="721.7" width="17.2" height="12.3" fill="none" stroke="#0f766e" stroke-width="1.35"/>
+<line x1="1148.8" y1="720.3" x2="1148.8" y2="723.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="1146.6" y1="720.3" x2="1151.0" y2="720.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="1146.6" y1="723.1" x2="1151.0" y2="723.1" stroke="#222222" stroke-width="0.9"/>
+<text x="1148.8" y="716.9" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.6×</text>
+<line x1="1148.8" y1="734.0" x2="1148.8" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1150.8" y="746.5" font-size="7.8" font-weight="700" fill="#0f766e" text-anchor="end" transform="rotate(-38 1150.8 746.5)">[equiv] (Warmed)</text>
+<rect x="1166.0" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="1166.0" y="725.8" width="17.2" height="7.7" fill="#2b6cb0"/>
+<rect x="1166.0" y="725.0" width="17.2" height="0.7" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1166.0" y="725.0" width="17.2" height="9.0" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="1174.6" y1="723.6" x2="1174.6" y2="726.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1172.4" y1="723.6" x2="1176.8" y2="723.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1172.4" y1="726.4" x2="1176.8" y2="726.4" stroke="#222222" stroke-width="0.9"/>
+<text x="1174.6" y="720.2" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">7.7×</text>
+<line x1="1174.6" y1="734.0" x2="1174.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1176.6" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 1176.6 746.5)">+Compile / INT8 (Warmed)</text>
+<rect x="1203.0" y="728.5" width="17.2" height="5.5" fill="#6baed6"/>
+<rect x="1203.0" y="673.4" width="17.2" height="55.1" fill="#2b6cb0"/>
+<rect x="1203.0" y="668.0" width="17.2" height="5.4" fill="#e69f00"/>
+<rect x="1203.0" y="580.4" width="17.2" height="87.6" fill="#8e44ad"/>
+<rect x="1203.0" y="572.1" width="17.2" height="8.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="1211.6" y1="570.7" x2="1211.6" y2="573.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="1209.4" y1="570.7" x2="1213.8" y2="570.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1209.4" y1="573.5" x2="1213.8" y2="573.5" stroke="#222222" stroke-width="0.9"/>
+<text x="1211.6" y="567.3" font-size="7.4" font-weight="700" fill="#64748b" text-anchor="middle">0.43×</text>
+<line x1="1211.6" y1="734.0" x2="1211.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1213.6" y="746.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 1213.6 746.5)">v3 Legacy (Dense)</text>
+<rect x="1228.8" y="732.5" width="17.2" height="1.5" fill="#6baed6"/>
+<rect x="1228.8" y="701.7" width="17.2" height="30.9" fill="#2b6cb0"/>
+<rect x="1228.8" y="700.8" width="17.2" height="0.9" fill="#e69f00"/>
+<rect x="1228.8" y="664.9" width="17.2" height="35.9" fill="#8e44ad"/>
+<rect x="1228.8" y="664.0" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1228.8" y="664.0" width="17.2" height="70.0" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1237.4" y1="662.6" x2="1237.4" y2="665.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1235.2" y1="662.6" x2="1239.6" y2="662.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1235.2" y1="665.4" x2="1239.6" y2="665.4" stroke="#222222" stroke-width="0.9"/>
+<text x="1237.4" y="659.2" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">0.98×</text>
+<line x1="1237.4" y1="734.0" x2="1237.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1239.4" y="746.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 1239.4 746.5)">v3 [bitwise] (Cold)</text>
+<rect x="1254.6" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="1254.6" y="702.6" width="17.2" height="30.9" fill="#2b6cb0"/>
+<rect x="1254.6" y="702.0" width="17.2" height="0.7" fill="#e69f00"/>
+<rect x="1254.6" y="666.0" width="17.2" height="35.9" fill="#8e44ad"/>
+<rect x="1254.6" y="665.3" width="17.2" height="0.7" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1254.6" y="665.3" width="17.2" height="68.7" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="1263.2" y1="663.9" x2="1263.2" y2="666.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1261.0" y1="663.9" x2="1265.4" y2="663.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="1261.0" y1="666.7" x2="1265.4" y2="666.7" stroke="#222222" stroke-width="0.9"/>
+<text x="1263.2" y="660.5" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">1.00×</text>
+<line x1="1263.2" y1="734.0" x2="1263.2" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1265.2" y="746.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 1265.2 746.5)">v3 [bitwise] (Warmed)</text>
+<rect x="1280.4" y="732.5" width="17.2" height="1.5" fill="#6baed6"/>
+<rect x="1280.4" y="721.0" width="17.2" height="11.6" fill="#2b6cb0"/>
+<rect x="1280.4" y="720.1" width="17.2" height="0.8" fill="#e69f00"/>
+<rect x="1280.4" y="710.5" width="17.2" height="9.6" fill="#8e44ad"/>
+<rect x="1280.4" y="709.6" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1280.4" y="709.6" width="17.2" height="24.4" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1289.0" y1="708.2" x2="1289.0" y2="711.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="1286.8" y1="708.2" x2="1291.2" y2="708.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="1286.8" y1="711.0" x2="1291.2" y2="711.0" stroke="#222222" stroke-width="0.9"/>
+<text x="1289.0" y="704.8" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">2.8×</text>
+<line x1="1289.0" y1="734.0" x2="1289.0" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1291.0" y="746.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 1291.0 746.5)">v3 [equiv] (Cold)</text>
+<rect x="1306.2" y="732.5" width="17.2" height="1.5" fill="#6baed6"/>
+<rect x="1306.2" y="721.0" width="17.2" height="11.6" fill="#2b6cb0"/>
+<rect x="1306.2" y="720.5" width="17.2" height="0.5" fill="#e69f00"/>
+<rect x="1306.2" y="718.1" width="17.2" height="2.4" fill="#8e44ad"/>
+<rect x="1306.2" y="717.2" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1306.2" y="717.2" width="17.2" height="16.8" fill="none" stroke="#047857" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1314.8" y1="715.8" x2="1314.8" y2="718.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1312.6" y1="715.8" x2="1317.0" y2="715.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="1312.6" y1="718.6" x2="1317.0" y2="718.6" stroke="#222222" stroke-width="0.9"/>
+<text x="1314.8" y="712.4" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.1×</text>
+<line x1="1314.8" y1="734.0" x2="1314.8" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1316.8" y="746.5" font-size="7.8" font-weight="600" fill="#047857" text-anchor="end" transform="rotate(-38 1316.8 746.5)">v3 [sparse] (Cold)</text>
+<rect x="1332.0" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="1332.0" y="722.5" width="17.2" height="11.0" fill="#2b6cb0"/>
+<rect x="1332.0" y="722.1" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="1332.0" y="719.7" width="17.2" height="2.4" fill="#8e44ad"/>
+<rect x="1332.0" y="719.0" width="17.2" height="0.7" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1332.0" y="719.0" width="17.2" height="15.0" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="1340.6" y1="717.6" x2="1340.6" y2="720.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1338.4" y1="717.6" x2="1342.8" y2="717.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1338.4" y1="720.4" x2="1342.8" y2="720.4" stroke="#222222" stroke-width="0.9"/>
+<text x="1340.6" y="714.2" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.6×</text>
+<line x1="1340.6" y1="734.0" x2="1340.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1342.6" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 1342.6 746.5)">v3 [sparse] (Warmed)</text>
+<rect x="1357.8" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="1357.8" y="725.8" width="17.2" height="7.7" fill="#2b6cb0"/>
+<rect x="1357.8" y="725.4" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="1357.8" y="723.5" width="17.2" height="1.9" fill="#8e44ad"/>
+<rect x="1357.8" y="722.7" width="17.2" height="0.7" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1357.8" y="722.7" width="17.2" height="11.3" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="1366.4" y1="721.3" x2="1366.4" y2="724.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="1364.2" y1="721.3" x2="1368.6" y2="721.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="1364.2" y1="724.1" x2="1368.6" y2="724.1" stroke="#222222" stroke-width="0.9"/>
+<text x="1366.4" y="717.9" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">6.1×</text>
+<line x1="1366.4" y1="734.0" x2="1366.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1368.4" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 1368.4 746.5)">v3 +Compile / INT8 (Warmed)</text>
+<line x1="1032.0" y1="522.0" x2="1032.0" y2="734.0" stroke="#333333" stroke-width="1.2"/>
+<line x1="1032.0" y1="734.0" x2="1450.0" y2="734.0" stroke="#333333" stroke-width="1.2"/>
+<text x="1508.0" y="510.0" font-size="15.5" font-weight="600" fill="#111111">Khmer</text>
+<line x1="1508.0" y1="734.0" x2="1926.0" y2="734.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1504.0" y1="734.0" x2="1508.0" y2="734.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1500.0" y="738.5" font-size="11.5" fill="#222222" text-anchor="end">0</text>
+<line x1="1508.0" y1="681.0" x2="1926.0" y2="681.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1504.0" y1="681.0" x2="1508.0" y2="681.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1500.0" y="685.5" font-size="11.5" fill="#222222" text-anchor="end">400</text>
+<line x1="1508.0" y1="628.0" x2="1926.0" y2="628.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1504.0" y1="628.0" x2="1508.0" y2="628.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1500.0" y="632.5" font-size="11.5" fill="#222222" text-anchor="end">800</text>
+<line x1="1508.0" y1="575.0" x2="1926.0" y2="575.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1504.0" y1="575.0" x2="1508.0" y2="575.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1500.0" y="579.5" font-size="11.5" fill="#222222" text-anchor="end">1200</text>
+<line x1="1508.0" y1="522.0" x2="1926.0" y2="522.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1504.0" y1="522.0" x2="1508.0" y2="522.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1500.0" y="526.5" font-size="11.5" fill="#222222" text-anchor="end">1600</text>
+<line x1="1669.5" y1="526.0" x2="1669.5" y2="734.0" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3,3"/>
+<rect x="1513.0" y="730.1" width="17.2" height="3.9" fill="#6baed6"/>
+<rect x="1513.0" y="690.2" width="17.2" height="40.0" fill="#2b6cb0"/>
+<rect x="1513.0" y="685.5" width="17.2" height="4.7" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="1521.6" y1="684.1" x2="1521.6" y2="686.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="1519.4" y1="684.1" x2="1523.8" y2="684.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="1519.4" y1="686.9" x2="1523.8" y2="686.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="1521.6" y1="734.0" x2="1521.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1523.6" y="746.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 1523.6 746.5)">Subword Legacy</text>
+<rect x="1538.8" y="733.4" width="17.2" height="0.6" fill="#6baed6"/>
+<rect x="1538.8" y="711.0" width="17.2" height="22.4" fill="#2b6cb0"/>
+<rect x="1538.8" y="710.6" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1538.8" y="710.6" width="17.2" height="23.4" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1547.4" y1="709.2" x2="1547.4" y2="712.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="1545.2" y1="709.2" x2="1549.6" y2="709.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="1545.2" y1="712.0" x2="1549.6" y2="712.0" stroke="#222222" stroke-width="0.9"/>
+<text x="1547.4" y="705.8" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">2.1×</text>
+<line x1="1547.4" y1="734.0" x2="1547.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1549.4" y="746.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 1549.4 746.5)">[bitwise] (Cold)</text>
+<rect x="1564.6" y="733.7" width="17.2" height="0.3" fill="#6baed6"/>
+<rect x="1564.6" y="711.3" width="17.2" height="22.4" fill="#2b6cb0"/>
+<rect x="1564.6" y="711.0" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1564.6" y="711.0" width="17.2" height="23.0" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="1573.2" y1="709.6" x2="1573.2" y2="712.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1571.0" y1="709.6" x2="1575.4" y2="709.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1571.0" y1="712.4" x2="1575.4" y2="712.4" stroke="#222222" stroke-width="0.9"/>
+<text x="1573.2" y="706.2" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">2.1×</text>
+<line x1="1573.2" y1="734.0" x2="1573.2" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1575.2" y="746.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 1575.2 746.5)">[bitwise] (Warmed)</text>
+<rect x="1590.4" y="733.4" width="17.2" height="0.6" fill="#6baed6"/>
+<rect x="1590.4" y="725.0" width="17.2" height="8.4" fill="#2b6cb0"/>
+<rect x="1590.4" y="724.6" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1590.4" y="724.6" width="17.2" height="9.4" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1599.0" y1="723.2" x2="1599.0" y2="726.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="1596.8" y1="723.2" x2="1601.2" y2="723.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="1596.8" y1="726.0" x2="1601.2" y2="726.0" stroke="#222222" stroke-width="0.9"/>
+<text x="1599.0" y="719.8" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.2×</text>
+<line x1="1599.0" y1="734.0" x2="1599.0" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1601.0" y="746.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 1601.0 746.5)">[equiv] (Cold)</text>
+<rect x="1616.2" y="733.7" width="17.2" height="0.3" fill="#6baed6"/>
+<rect x="1616.2" y="725.7" width="17.2" height="8.0" fill="#2b6cb0"/>
+<rect x="1616.2" y="725.4" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1616.2" y="725.4" width="17.2" height="8.6" fill="none" stroke="#0f766e" stroke-width="1.35"/>
+<line x1="1624.8" y1="724.0" x2="1624.8" y2="726.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="1622.6" y1="724.0" x2="1627.0" y2="724.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="1622.6" y1="726.8" x2="1627.0" y2="726.8" stroke="#222222" stroke-width="0.9"/>
+<text x="1624.8" y="720.6" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.7×</text>
+<line x1="1624.8" y1="734.0" x2="1624.8" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1626.8" y="746.5" font-size="7.8" font-weight="700" fill="#0f766e" text-anchor="end" transform="rotate(-38 1626.8 746.5)">[equiv] (Warmed)</text>
+<rect x="1642.0" y="733.7" width="17.2" height="0.3" fill="#6baed6"/>
+<rect x="1642.0" y="728.1" width="17.2" height="5.6" fill="#2b6cb0"/>
+<rect x="1642.0" y="727.8" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1642.0" y="727.8" width="17.2" height="6.2" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="1650.6" y1="726.4" x2="1650.6" y2="729.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="1648.4" y1="726.4" x2="1652.8" y2="726.4" stroke="#222222" stroke-width="0.9"/>
+<line x1="1648.4" y1="729.2" x2="1652.8" y2="729.2" stroke="#222222" stroke-width="0.9"/>
+<text x="1650.6" y="723.0" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">7.9×</text>
+<line x1="1650.6" y1="734.0" x2="1650.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1652.6" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 1652.6 746.5)">+Compile / INT8 (Warmed)</text>
+<rect x="1679.0" y="730.1" width="17.2" height="3.9" fill="#6baed6"/>
+<rect x="1679.0" y="690.2" width="17.2" height="40.0" fill="#2b6cb0"/>
+<rect x="1679.0" y="685.9" width="17.2" height="4.3" fill="#e69f00"/>
+<rect x="1679.0" y="608.8" width="17.2" height="77.1" fill="#8e44ad"/>
+<rect x="1679.0" y="604.1" width="17.2" height="4.7" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="1687.6" y1="602.7" x2="1687.6" y2="605.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="1685.4" y1="602.7" x2="1689.8" y2="602.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1685.4" y1="605.5" x2="1689.8" y2="605.5" stroke="#222222" stroke-width="0.9"/>
+<text x="1687.6" y="599.3" font-size="7.4" font-weight="700" fill="#64748b" text-anchor="middle">0.37×</text>
+<line x1="1687.6" y1="734.0" x2="1687.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1689.6" y="746.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 1689.6 746.5)">v3 Legacy (Dense)</text>
+<rect x="1704.8" y="733.4" width="17.2" height="0.6" fill="#6baed6"/>
+<rect x="1704.8" y="711.0" width="17.2" height="22.4" fill="#2b6cb0"/>
+<rect x="1704.8" y="710.3" width="17.2" height="0.7" fill="#e69f00"/>
+<rect x="1704.8" y="678.7" width="17.2" height="31.6" fill="#8e44ad"/>
+<rect x="1704.8" y="678.3" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1704.8" y="678.3" width="17.2" height="55.7" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1713.4" y1="676.9" x2="1713.4" y2="679.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1711.2" y1="676.9" x2="1715.6" y2="676.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="1711.2" y1="679.7" x2="1715.6" y2="679.7" stroke="#222222" stroke-width="0.9"/>
+<text x="1713.4" y="673.5" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">0.87×</text>
+<line x1="1713.4" y1="734.0" x2="1713.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1715.4" y="746.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 1715.4 746.5)">v3 [bitwise] (Cold)</text>
+<rect x="1730.6" y="733.7" width="17.2" height="0.3" fill="#6baed6"/>
+<rect x="1730.6" y="711.3" width="17.2" height="22.4" fill="#2b6cb0"/>
+<rect x="1730.6" y="710.8" width="17.2" height="0.5" fill="#e69f00"/>
+<rect x="1730.6" y="679.2" width="17.2" height="31.6" fill="#8e44ad"/>
+<rect x="1730.6" y="678.9" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1730.6" y="678.9" width="17.2" height="55.1" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="1739.2" y1="677.5" x2="1739.2" y2="680.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="1737.0" y1="677.5" x2="1741.4" y2="677.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="1737.0" y1="680.3" x2="1741.4" y2="680.3" stroke="#222222" stroke-width="0.9"/>
+<text x="1739.2" y="674.1" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">0.88×</text>
+<line x1="1739.2" y1="734.0" x2="1739.2" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1741.2" y="746.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 1741.2 746.5)">v3 [bitwise] (Warmed)</text>
+<rect x="1756.4" y="733.4" width="17.2" height="0.6" fill="#6baed6"/>
+<rect x="1756.4" y="725.0" width="17.2" height="8.4" fill="#2b6cb0"/>
+<rect x="1756.4" y="724.4" width="17.2" height="0.6" fill="#e69f00"/>
+<rect x="1756.4" y="715.9" width="17.2" height="8.5" fill="#8e44ad"/>
+<rect x="1756.4" y="715.5" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1756.4" y="715.5" width="17.2" height="18.5" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1765.0" y1="714.1" x2="1765.0" y2="716.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="1762.8" y1="714.1" x2="1767.2" y2="714.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="1762.8" y1="716.9" x2="1767.2" y2="716.9" stroke="#222222" stroke-width="0.9"/>
+<text x="1765.0" y="710.7" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">2.6×</text>
+<line x1="1765.0" y1="734.0" x2="1765.0" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1767.0" y="746.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 1767.0 746.5)">v3 [equiv] (Cold)</text>
+<rect x="1782.2" y="733.4" width="17.2" height="0.6" fill="#6baed6"/>
+<rect x="1782.2" y="725.0" width="17.2" height="8.4" fill="#2b6cb0"/>
+<rect x="1782.2" y="724.6" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="1782.2" y="723.5" width="17.2" height="1.2" fill="#8e44ad"/>
+<rect x="1782.2" y="723.1" width="17.2" height="0.4" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1782.2" y="723.1" width="17.2" height="10.9" fill="none" stroke="#047857" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="1790.8" y1="721.7" x2="1790.8" y2="724.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="1788.6" y1="721.7" x2="1793.0" y2="721.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="1788.6" y1="724.5" x2="1793.0" y2="724.5" stroke="#222222" stroke-width="0.9"/>
+<text x="1790.8" y="718.3" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.4×</text>
+<line x1="1790.8" y1="734.0" x2="1790.8" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1792.8" y="746.5" font-size="7.8" font-weight="600" fill="#047857" text-anchor="end" transform="rotate(-38 1792.8 746.5)">v3 [sparse] (Cold)</text>
+<rect x="1808.0" y="733.7" width="17.2" height="0.3" fill="#6baed6"/>
+<rect x="1808.0" y="725.7" width="17.2" height="8.0" fill="#2b6cb0"/>
+<rect x="1808.0" y="725.4" width="17.2" height="0.3" fill="#e69f00"/>
+<rect x="1808.0" y="724.2" width="17.2" height="1.2" fill="#8e44ad"/>
+<rect x="1808.0" y="723.9" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1808.0" y="723.9" width="17.2" height="10.1" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="1816.6" y1="722.5" x2="1816.6" y2="725.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="1814.4" y1="722.5" x2="1818.8" y2="722.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="1814.4" y1="725.3" x2="1818.8" y2="725.3" stroke="#222222" stroke-width="0.9"/>
+<text x="1816.6" y="719.1" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.9×</text>
+<line x1="1816.6" y1="734.0" x2="1816.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1818.6" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 1818.6 746.5)">v3 [sparse] (Warmed)</text>
+<rect x="1833.8" y="733.7" width="17.2" height="0.3" fill="#6baed6"/>
+<rect x="1833.8" y="728.1" width="17.2" height="5.6" fill="#2b6cb0"/>
+<rect x="1833.8" y="727.8" width="17.2" height="0.3" fill="#e69f00"/>
+<rect x="1833.8" y="726.9" width="17.2" height="1.0" fill="#8e44ad"/>
+<rect x="1833.8" y="726.5" width="17.2" height="0.3" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="1833.8" y="726.5" width="17.2" height="7.5" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="1842.4" y1="725.1" x2="1842.4" y2="727.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="1840.2" y1="725.1" x2="1844.6" y2="725.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="1840.2" y1="727.9" x2="1844.6" y2="727.9" stroke="#222222" stroke-width="0.9"/>
+<text x="1842.4" y="721.7" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">6.6×</text>
+<line x1="1842.4" y1="734.0" x2="1842.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1844.4" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 1844.4 746.5)">v3 +Compile / INT8 (Warmed)</text>
+<line x1="1508.0" y1="522.0" x2="1508.0" y2="734.0" stroke="#333333" stroke-width="1.2"/>
+<line x1="1508.0" y1="734.0" x2="1926.0" y2="734.0" stroke="#333333" stroke-width="1.2"/>
+<text x="1984.0" y="510.0" font-size="15.5" font-weight="600" fill="#111111">Sorani Kurdish</text>
+<line x1="1984.0" y1="734.0" x2="2402.0" y2="734.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1980.0" y1="734.0" x2="1984.0" y2="734.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1976.0" y="738.5" font-size="11.5" fill="#222222" text-anchor="end">0</text>
+<line x1="1984.0" y1="681.0" x2="2402.0" y2="681.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1980.0" y1="681.0" x2="1984.0" y2="681.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1976.0" y="685.5" font-size="11.5" fill="#222222" text-anchor="end">400</text>
+<line x1="1984.0" y1="628.0" x2="2402.0" y2="628.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1980.0" y1="628.0" x2="1984.0" y2="628.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1976.0" y="632.5" font-size="11.5" fill="#222222" text-anchor="end">800</text>
+<line x1="1984.0" y1="575.0" x2="2402.0" y2="575.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1980.0" y1="575.0" x2="1984.0" y2="575.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1976.0" y="579.5" font-size="11.5" fill="#222222" text-anchor="end">1200</text>
+<line x1="1984.0" y1="522.0" x2="2402.0" y2="522.0" stroke="#eeeeee" stroke-width="1"/>
+<line x1="1980.0" y1="522.0" x2="1984.0" y2="522.0" stroke="#333333" stroke-width="1.1"/>
+<text x="1976.0" y="526.5" font-size="11.5" fill="#222222" text-anchor="end">1600</text>
+<line x1="2145.5" y1="526.0" x2="2145.5" y2="734.0" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3,3"/>
+<rect x="1989.0" y="727.7" width="17.2" height="6.3" fill="#6baed6"/>
+<rect x="1989.0" y="645.0" width="17.2" height="82.7" fill="#2b6cb0"/>
+<rect x="1989.0" y="635.2" width="17.2" height="9.8" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="1997.6" y1="633.8" x2="1997.6" y2="636.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1995.4" y1="633.8" x2="1999.8" y2="633.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="1995.4" y1="636.6" x2="1999.8" y2="636.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="1997.6" y1="734.0" x2="1997.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="1999.6" y="746.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 1999.6 746.5)">Subword Legacy</text>
+<rect x="2014.8" y="732.7" width="17.2" height="1.3" fill="#6baed6"/>
+<rect x="2014.8" y="686.4" width="17.2" height="46.3" fill="#2b6cb0"/>
+<rect x="2014.8" y="685.3" width="17.2" height="1.1" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2014.8" y="685.3" width="17.2" height="48.7" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="2023.4" y1="683.9" x2="2023.4" y2="686.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="2021.2" y1="683.9" x2="2025.6" y2="683.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="2021.2" y1="686.7" x2="2025.6" y2="686.7" stroke="#222222" stroke-width="0.9"/>
+<text x="2023.4" y="680.5" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">2.0×</text>
+<line x1="2023.4" y1="734.0" x2="2023.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2025.4" y="746.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 2025.4 746.5)">[bitwise] (Cold)</text>
+<rect x="2040.6" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="2040.6" y="687.2" width="17.2" height="46.3" fill="#2b6cb0"/>
+<rect x="2040.6" y="686.3" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2040.6" y="686.3" width="17.2" height="47.7" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="2049.2" y1="684.9" x2="2049.2" y2="687.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="2047.0" y1="684.9" x2="2051.4" y2="684.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="2047.0" y1="687.7" x2="2051.4" y2="687.7" stroke="#222222" stroke-width="0.9"/>
+<text x="2049.2" y="681.5" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">2.1×</text>
+<line x1="2049.2" y1="734.0" x2="2049.2" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2051.2" y="746.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 2051.2 746.5)">[bitwise] (Warmed)</text>
+<rect x="2066.4" y="732.7" width="17.2" height="1.3" fill="#6baed6"/>
+<rect x="2066.4" y="715.3" width="17.2" height="17.4" fill="#2b6cb0"/>
+<rect x="2066.4" y="714.2" width="17.2" height="1.1" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2066.4" y="714.2" width="17.2" height="19.8" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="2075.0" y1="712.8" x2="2075.0" y2="715.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="2072.8" y1="712.8" x2="2077.2" y2="712.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="2072.8" y1="715.6" x2="2077.2" y2="715.6" stroke="#222222" stroke-width="0.9"/>
+<text x="2075.0" y="709.4" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.0×</text>
+<line x1="2075.0" y1="734.0" x2="2075.0" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2077.0" y="746.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 2077.0 746.5)">[equiv] (Cold)</text>
+<rect x="2092.2" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="2092.2" y="717.0" width="17.2" height="16.5" fill="#2b6cb0"/>
+<rect x="2092.2" y="716.1" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2092.2" y="716.1" width="17.2" height="17.9" fill="none" stroke="#0f766e" stroke-width="1.35"/>
+<line x1="2100.8" y1="714.7" x2="2100.8" y2="717.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="2098.6" y1="714.7" x2="2103.0" y2="714.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="2098.6" y1="717.5" x2="2103.0" y2="717.5" stroke="#222222" stroke-width="0.9"/>
+<text x="2100.8" y="711.3" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">5.5×</text>
+<line x1="2100.8" y1="734.0" x2="2100.8" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2102.8" y="746.5" font-size="7.8" font-weight="700" fill="#0f766e" text-anchor="end" transform="rotate(-38 2102.8 746.5)">[equiv] (Warmed)</text>
+<rect x="2118.0" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="2118.0" y="721.9" width="17.2" height="11.6" fill="#2b6cb0"/>
+<rect x="2118.0" y="721.1" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2118.0" y="721.1" width="17.2" height="12.9" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="2126.6" y1="719.7" x2="2126.6" y2="722.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="2124.4" y1="719.7" x2="2128.8" y2="719.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="2124.4" y1="722.5" x2="2128.8" y2="722.5" stroke="#222222" stroke-width="0.9"/>
+<text x="2126.6" y="716.3" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">7.6×</text>
+<line x1="2126.6" y1="734.0" x2="2126.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2128.6" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 2128.6 746.5)">+Compile / INT8 (Warmed)</text>
+<rect x="2155.0" y="727.7" width="17.2" height="6.3" fill="#6baed6"/>
+<rect x="2155.0" y="645.0" width="17.2" height="82.7" fill="#2b6cb0"/>
+<rect x="2155.0" y="638.9" width="17.2" height="6.1" fill="#e69f00"/>
+<rect x="2155.0" y="553.5" width="17.2" height="85.3" fill="#8e44ad"/>
+<rect x="2155.0" y="543.7" width="17.2" height="9.8" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<line x1="2163.6" y1="542.3" x2="2163.6" y2="545.1" stroke="#222222" stroke-width="0.9"/>
+<line x1="2161.4" y1="542.3" x2="2165.8" y2="542.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="2161.4" y1="545.1" x2="2165.8" y2="545.1" stroke="#222222" stroke-width="0.9"/>
+<text x="2163.6" y="538.9" font-size="7.4" font-weight="700" fill="#64748b" text-anchor="middle">0.52×</text>
+<line x1="2163.6" y1="734.0" x2="2163.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2165.6" y="746.5" font-size="7.8" font-weight="400" fill="#222222" text-anchor="end" transform="rotate(-38 2165.6 746.5)">v3 Legacy (Dense)</text>
+<rect x="2180.8" y="732.7" width="17.2" height="1.3" fill="#6baed6"/>
+<rect x="2180.8" y="686.4" width="17.2" height="46.3" fill="#2b6cb0"/>
+<rect x="2180.8" y="685.4" width="17.2" height="1.0" fill="#e69f00"/>
+<rect x="2180.8" y="650.4" width="17.2" height="35.0" fill="#8e44ad"/>
+<rect x="2180.8" y="649.3" width="17.2" height="1.1" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2180.8" y="649.3" width="17.2" height="84.7" fill="none" stroke="#334155" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="2189.4" y1="647.9" x2="2189.4" y2="650.7" stroke="#222222" stroke-width="0.9"/>
+<line x1="2187.2" y1="647.9" x2="2191.6" y2="647.9" stroke="#222222" stroke-width="0.9"/>
+<line x1="2187.2" y1="650.7" x2="2191.6" y2="650.7" stroke="#222222" stroke-width="0.9"/>
+<text x="2189.4" y="644.5" font-size="7.4" font-weight="700" fill="#334155" text-anchor="middle">1.17×</text>
+<line x1="2189.4" y1="734.0" x2="2189.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2191.4" y="746.5" font-size="7.8" font-weight="600" fill="#334155" text-anchor="end" transform="rotate(-38 2191.4 746.5)">v3 [bitwise] (Cold)</text>
+<rect x="2206.6" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="2206.6" y="687.2" width="17.2" height="46.3" fill="#2b6cb0"/>
+<rect x="2206.6" y="686.5" width="17.2" height="0.7" fill="#e69f00"/>
+<rect x="2206.6" y="651.5" width="17.2" height="35.0" fill="#8e44ad"/>
+<rect x="2206.6" y="650.6" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2206.6" y="650.6" width="17.2" height="83.4" fill="none" stroke="#0f172a" stroke-width="1.35"/>
+<line x1="2215.2" y1="649.2" x2="2215.2" y2="652.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="2213.0" y1="649.2" x2="2217.4" y2="649.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="2213.0" y1="652.0" x2="2217.4" y2="652.0" stroke="#222222" stroke-width="0.9"/>
+<text x="2215.2" y="645.8" font-size="7.4" font-weight="700" fill="#0f172a" text-anchor="middle">1.19×</text>
+<line x1="2215.2" y1="734.0" x2="2215.2" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2217.2" y="746.5" font-size="7.8" font-weight="700" fill="#0f172a" text-anchor="end" transform="rotate(-38 2217.2 746.5)">v3 [bitwise] (Warmed)</text>
+<rect x="2232.4" y="732.7" width="17.2" height="1.3" fill="#6baed6"/>
+<rect x="2232.4" y="715.3" width="17.2" height="17.4" fill="#2b6cb0"/>
+<rect x="2232.4" y="714.4" width="17.2" height="0.9" fill="#e69f00"/>
+<rect x="2232.4" y="705.0" width="17.2" height="9.4" fill="#8e44ad"/>
+<rect x="2232.4" y="703.9" width="17.2" height="1.1" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2232.4" y="703.9" width="17.2" height="30.1" fill="none" stroke="#0f766e" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="2241.0" y1="702.5" x2="2241.0" y2="705.3" stroke="#222222" stroke-width="0.9"/>
+<line x1="2238.8" y1="702.5" x2="2243.2" y2="702.5" stroke="#222222" stroke-width="0.9"/>
+<line x1="2238.8" y1="705.3" x2="2243.2" y2="705.3" stroke="#222222" stroke-width="0.9"/>
+<text x="2241.0" y="699.1" font-size="7.4" font-weight="700" fill="#0f766e" text-anchor="middle">3.3×</text>
+<line x1="2241.0" y1="734.0" x2="2241.0" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2243.0" y="746.5" font-size="7.8" font-weight="600" fill="#0f766e" text-anchor="end" transform="rotate(-38 2243.0 746.5)">v3 [equiv] (Cold)</text>
+<rect x="2258.2" y="732.7" width="17.2" height="1.3" fill="#6baed6"/>
+<rect x="2258.2" y="715.3" width="17.2" height="17.4" fill="#2b6cb0"/>
+<rect x="2258.2" y="714.8" width="17.2" height="0.6" fill="#e69f00"/>
+<rect x="2258.2" y="712.3" width="17.2" height="2.4" fill="#8e44ad"/>
+<rect x="2258.2" y="711.2" width="17.2" height="1.1" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2258.2" y="711.2" width="17.2" height="22.8" fill="none" stroke="#047857" stroke-width="0.95" stroke-dasharray="2,1.5"/>
+<line x1="2266.8" y1="709.8" x2="2266.8" y2="712.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="2264.6" y1="709.8" x2="2269.0" y2="709.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="2264.6" y1="712.6" x2="2269.0" y2="712.6" stroke="#222222" stroke-width="0.9"/>
+<text x="2266.8" y="706.4" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.3×</text>
+<line x1="2266.8" y1="734.0" x2="2266.8" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2268.8" y="746.5" font-size="7.8" font-weight="600" fill="#047857" text-anchor="end" transform="rotate(-38 2268.8 746.5)">v3 [sparse] (Cold)</text>
+<rect x="2284.0" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="2284.0" y="717.0" width="17.2" height="16.5" fill="#2b6cb0"/>
+<rect x="2284.0" y="716.6" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="2284.0" y="714.1" width="17.2" height="2.4" fill="#8e44ad"/>
+<rect x="2284.0" y="713.2" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2284.0" y="713.2" width="17.2" height="20.8" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="2292.6" y1="711.8" x2="2292.6" y2="714.6" stroke="#222222" stroke-width="0.9"/>
+<line x1="2290.4" y1="711.8" x2="2294.8" y2="711.8" stroke="#222222" stroke-width="0.9"/>
+<line x1="2290.4" y1="714.6" x2="2294.8" y2="714.6" stroke="#222222" stroke-width="0.9"/>
+<text x="2292.6" y="708.4" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">4.8×</text>
+<line x1="2292.6" y1="734.0" x2="2292.6" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2294.6" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 2294.6 746.5)">v3 [sparse] (Warmed)</text>
+<rect x="2309.8" y="733.5" width="17.2" height="0.5" fill="#6baed6"/>
+<rect x="2309.8" y="721.9" width="17.2" height="11.6" fill="#2b6cb0"/>
+<rect x="2309.8" y="721.5" width="17.2" height="0.4" fill="#e69f00"/>
+<rect x="2309.8" y="719.5" width="17.2" height="2.0" fill="#8e44ad"/>
+<rect x="2309.8" y="718.6" width="17.2" height="0.9" fill="url(#diagHatch)" stroke="#6c7a89" stroke-width="0.8"/>
+<rect x="2309.8" y="718.6" width="17.2" height="15.4" fill="none" stroke="#047857" stroke-width="1.35"/>
+<line x1="2318.4" y1="717.2" x2="2318.4" y2="720.0" stroke="#222222" stroke-width="0.9"/>
+<line x1="2316.2" y1="717.2" x2="2320.6" y2="717.2" stroke="#222222" stroke-width="0.9"/>
+<line x1="2316.2" y1="720.0" x2="2320.6" y2="720.0" stroke="#222222" stroke-width="0.9"/>
+<text x="2318.4" y="713.8" font-size="7.4" font-weight="700" fill="#047857" text-anchor="middle">6.4×</text>
+<line x1="2318.4" y1="734.0" x2="2318.4" y2="738.0" stroke="#333333" stroke-width="1.0"/>
+<text x="2320.4" y="746.5" font-size="7.8" font-weight="700" fill="#047857" text-anchor="end" transform="rotate(-38 2320.4 746.5)">v3 +Compile / INT8 (Warmed)</text>
+<line x1="1984.0" y1="522.0" x2="1984.0" y2="734.0" stroke="#333333" stroke-width="1.2"/>
+<line x1="1984.0" y1="734.0" x2="2402.0" y2="734.0" stroke="#333333" stroke-width="1.2"/>
+</svg>
