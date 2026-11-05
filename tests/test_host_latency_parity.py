@@ -2456,6 +2456,111 @@ def test_step_c6_subword_broadcast_embeddings_and_doc_dedup_parity() -> None:
     assert b_warm.offsets_or_encoding(0) is b_warm.offsets_or_encoding(3)
 
 
+def test_sat_mode_preset_and_overrides_parity(tmp_path: Any) -> None:
+    """SaT mode='bitwise' | 'equivalent' | 'sparse' and sat.set_mode(...) configure all underlying flags and support explicit overrides."""
+    import importlib
+    from transformers import PreTrainedTokenizerFast
+    from wtpsplit import SaT
+    from wtpsplit.configs import SubwordXLMConfig
+    from wtpsplit.models import SubwordXLMForTokenClassification
+
+    tokenizers_mod: Any = importlib.import_module("tokenizers")
+    backend = tokenizers_mod.Tokenizer(
+        tokenizers_mod.models.WordLevel(
+            {"<s>": 0, "<pad>": 1, "</s>": 2, "<unk>": 3, "hello": 4, "world": 5, ".": 6},
+            unk_token="<unk>",
+        )
+    )
+    backend.pre_tokenizer = tokenizers_mod.pre_tokenizers.WhitespaceSplit()
+    backend.post_processor = tokenizers_mod.processors.TemplateProcessing(
+        single="<s> $A </s>",
+        special_tokens=[("<s>", 0), ("</s>", 2)],
+    )
+    tok: Any = PreTrainedTokenizerFast(  # type: ignore[no-untyped-call]
+        tokenizer_object=backend,
+        pad_token="<pad>",
+        unk_token="<unk>",
+        bos_token="<s>",
+        eos_token="</s>",
+        cls_token="<s>",
+        sep_token="</s>",
+    )
+
+    ckpt_dir = tmp_path / "tiny_v3_ckpt"
+    torch.manual_seed(808)
+    cfg = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+        vocab_size=20,
+        hidden_size=16,
+        num_hidden_layers=2,
+        num_attention_heads=2,
+        intermediate_size=32,
+        num_labels=1,
+        max_position_embeddings=64,
+        lookahead=4,
+        use_character_head=True,
+        character_head_project_tokens_first=False,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+    )
+    m = SubwordXLMForTokenClassification(cfg).eval()  # type: ignore[no-untyped-call]
+    with torch.no_grad():
+        assert m.character_head is not None
+        m.character_head.delta.weight.normal_(std=0.05)
+    m.save_pretrained(ckpt_dir)
+    tok.save_pretrained(ckpt_dir)
+
+    sat: Any = SaT(str(ckpt_dir), tokenizer_name_or_path=str(ckpt_dir), device="cpu")
+    assert sat.mode == "bitwise"
+    assert sat.trim_subword_padding is False
+    assert sat.pack_sequences is False
+    assert sat.fuse_depthwise_delta is False
+    assert sat.gate_logit_threshold is None
+    assert sat.character_preprocessing == "reference"
+    assert sat.model.model.character_head.project_tokens_first is False
+
+    texts = ["hello world . hello world .", "hello ."]
+    p_bit = sat.predict_proba(texts, stride=2, block_size=8, batch_size=2)
+
+    # Switch to mode="equivalent"
+    sat.set_mode("equivalent")
+    assert sat.mode == "equivalent"
+    assert sat.trim_subword_padding is True
+    assert sat.pack_sequences is True
+    assert sat.fuse_depthwise_delta is True
+    assert sat.gate_logit_threshold is None
+    assert sat.character_preprocessing == "exact"
+    assert sat.model.model.character_head.fuse_depthwise_delta is True
+    assert sat.model.model.character_head.project_tokens_first is True
+    p_eq = sat.predict_proba(texts, stride=2, block_size=8, batch_size=2)
+    for a, b in zip(p_bit, p_eq):
+        assert float(np.max(np.abs(a.astype(np.float32) - b.astype(np.float32)))) <= 1e-3
+
+    # Switch to mode="sparse" with an override pack_sequences=False
+    sat.set_mode("sparse", pack_sequences=False, gate_logit_threshold=-2.5)
+    assert sat.mode == "sparse"
+    assert sat.pack_sequences is False
+    assert sat.gate_logit_threshold == -2.5
+    assert sat.model.model.character_head.gate_logit_threshold == -2.5
+    _ = sat.predict_proba(texts, stride=2, block_size=8, batch_size=2)
+
+    # Switch back to mode="bitwise" restores original project_tokens_first=False and character_preprocessing="reference"
+    sat.set_mode("bitwise")
+    assert sat.mode == "bitwise"
+    assert sat.trim_subword_padding is False
+    assert sat.pack_sequences is False
+    assert sat.fuse_depthwise_delta is False
+    assert sat.gate_logit_threshold is None
+    assert sat.character_preprocessing == "reference"
+    assert sat.model.model.character_head.project_tokens_first is False
+    p_bit2 = sat.predict_proba(texts, stride=2, block_size=8, batch_size=2)
+    for a, b in zip(p_bit, p_bit2):
+        assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
+
+    with pytest.raises(ValueError, match="mode must be one of"):
+        sat.set_mode("invalid_mode")
+
+
+
 
 
 

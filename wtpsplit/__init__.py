@@ -226,6 +226,11 @@ def _resolve_sat_tokenizer_name(
     return default_tokenizer
 
 
+VALID_INFERENCE_MODES = ("bitwise", "equivalent", "sparse")
+DEFAULT_SPARSE_CHAR_GATE_THRESHOLD = -4.0
+_UNSET = object()
+
+
 class SaT:
     def __init__(
         self,
@@ -242,14 +247,28 @@ class SaT:
         device=None,
         compile: bool | dict = False,
         *,
+        mode: Literal["bitwise", "equivalent", "sparse"] = "bitwise",
         style_or_domain: str = None,
-        character_preprocessing: str = "reference",
+        character_preprocessing: str | None = None,
         trim_padding: bool = True,
+        trim_subword_padding: bool | None = None,
+        pack_sequences: bool | None = None,
+        fuse_depthwise_delta: bool | None = None,
+        gate_logit_threshold: float | None = _UNSET,  # type: ignore[assignment]
+        project_tokens_first: bool | None = None,
         quantization: str | None = None,
         precision: str | None = None,
         input_line_breaks: Literal["preserve", "space"] | None = None,
     ):
         """Load a SaT checkpoint.
+
+        ``mode`` selects the numerical/execution preset:
+        - ``"bitwise"`` (default): 0.0 ULP bit-for-bit identical to the reference execution path.
+        - ``"equivalent"``: mathematically identical equations with unpadded GEMM tiling and
+          linear operator fusion (``trim_subword_padding``, ``pack_sequences``,
+          ``fuse_depthwise_delta``, ``project_tokens_first``, and ``character_preprocessing="exact"``).
+        - ``"sparse"``: everything in ``"equivalent"`` plus coarse-gated sparse character head
+          (``gate_logit_threshold=-4.0``) and ``FlexAttention`` when running on CUDA.
 
         ``input_line_breaks`` controls how the encoder sees input ``\\n``/``\\r``. ``None`` (default) uses
         the checkpoint's ``config.json`` value, which is ``"preserve"`` (text fed unchanged) unless the
@@ -257,6 +276,8 @@ class SaT:
         for one character, so offsets and returned text are unchanged. Released SaT/SaT-SM models
         already treat line breaks as spaces and need no mapping. ``split_on_input_newlines`` is independent.
         """
+        if mode not in VALID_INFERENCE_MODES:
+            raise ValueError(f"mode must be one of {VALID_INFERENCE_MODES}, got {mode!r}")
         if input_line_breaks is not None:
             validate_input_line_breaks(input_line_breaks)
         if quantization not in (None, "int8", "combined_int8", "embedding_int8", "linear_int8"):
@@ -277,9 +298,14 @@ class SaT:
                 precision, device=device, quantization=quantization, ort_providers=ort_providers,
                 compile=compile, from_pretrained_kwargs=from_pretrained_kwargs,
             )
-        if character_preprocessing not in {"reference", "exact"}:
+        resolved_char_prep = (
+            character_preprocessing
+            if character_preprocessing is not None
+            else ("exact" if mode in ("equivalent", "sparse") else "reference")
+        )
+        if resolved_char_prep not in {"reference", "exact"}:
             raise ValueError("character_preprocessing must be 'reference' or 'exact'")
-        self.character_preprocessing = character_preprocessing
+        self.character_preprocessing = resolved_char_prep
         self.trim_padding = trim_padding
         if style_or_domain is not None:
             if domain is not None:
@@ -378,6 +404,8 @@ class SaT:
                 # This is needed because sm models have num_labels=1 but LoRA training uses num_labels=111+.
                 # We check BEFORE loading the model so we can load with the correct num_labels.
                 effective_kwargs = dict(from_pretrained_kwargs or {})
+                if mode == "sparse" and device is not None and str(device).startswith("cuda"):
+                    effective_kwargs.setdefault("attn_implementation", "flex_attention")
                 if precision is not None:
                     # Merge adapters in FP32, then select serving precision below.
                     effective_kwargs['dtype'] = torch.float32
@@ -542,8 +570,81 @@ class SaT:
                 self.precision_info = self.model.precision_info
             if quantization is not None:
                 from wtpsplit.quantization import quantize_cpu
-                mode = "combined_int8" if quantization == "int8" else quantization
-                self.model = quantize_cpu(self.model.model, mode=mode)
+                q_mode = "combined_int8" if quantization == "int8" else quantization
+                self.model = quantize_cpu(self.model.model, mode=q_mode)
+
+        self.set_mode(
+            mode,
+            trim_subword_padding=trim_subword_padding,
+            pack_sequences=pack_sequences,
+            fuse_depthwise_delta=fuse_depthwise_delta,
+            gate_logit_threshold=gate_logit_threshold,
+            project_tokens_first=project_tokens_first,
+            character_preprocessing=resolved_char_prep,
+        )
+
+    def set_mode(
+        self,
+        mode: Literal["bitwise", "equivalent", "sparse"] = "bitwise",
+        *,
+        trim_subword_padding: bool | None = None,
+        pack_sequences: bool | None = None,
+        fuse_depthwise_delta: bool | None = None,
+        gate_logit_threshold: float | None = _UNSET,  # type: ignore[assignment]
+        project_tokens_first: bool | None = None,
+        character_preprocessing: str | None = None,
+    ) -> "SaT":
+        """Configure the numerical/execution preset (`"bitwise"`, `"equivalent"`, or `"sparse"`).
+
+        Individual keyword arguments override the preset when explicitly passed.
+        Returns ``self`` for method chaining.
+        """
+        if mode not in VALID_INFERENCE_MODES:
+            raise ValueError(f"mode must be one of {VALID_INFERENCE_MODES}, got {mode!r}")
+        self.mode = mode
+        is_equiv_or_sparse = mode in ("equivalent", "sparse")
+        self.trim_subword_padding = bool(
+            is_equiv_or_sparse if trim_subword_padding is None else trim_subword_padding
+        )
+        self.pack_sequences = bool(
+            is_equiv_or_sparse if pack_sequences is None else pack_sequences
+        )
+        self.fuse_depthwise_delta = bool(
+            is_equiv_or_sparse if fuse_depthwise_delta is None else fuse_depthwise_delta
+        )
+        if character_preprocessing is not None:
+            if character_preprocessing not in {"reference", "exact"}:
+                raise ValueError("character_preprocessing must be 'reference' or 'exact'")
+            self.character_preprocessing = character_preprocessing
+        elif is_equiv_or_sparse:
+            self.character_preprocessing = "exact"
+        else:
+            self.character_preprocessing = "reference"
+
+        if gate_logit_threshold is not _UNSET:
+            self.gate_logit_threshold = (
+                None if gate_logit_threshold is None else float(gate_logit_threshold)
+            )
+        else:
+            self.gate_logit_threshold = (
+                DEFAULT_SPARSE_CHAR_GATE_THRESHOLD if mode == "sparse" else None
+            )
+
+        wrapper = self.__dict__.get("model")
+        pt_model = getattr(wrapper, "model", None) if wrapper is not None else None
+        char_head = getattr(pt_model, "character_head", None) if pt_model is not None else None
+        if char_head is not None:
+            if not hasattr(char_head, "_default_project_tokens_first"):
+                char_head._default_project_tokens_first = bool(char_head.project_tokens_first)
+            char_head.fuse_depthwise_delta = self.fuse_depthwise_delta
+            char_head.gate_logit_threshold = self.gate_logit_threshold
+            if project_tokens_first is not None:
+                char_head.project_tokens_first = bool(project_tokens_first)
+            elif is_equiv_or_sparse:
+                char_head.project_tokens_first = True
+            else:
+                char_head.project_tokens_first = bool(char_head._default_project_tokens_first)
+        return self
 
     def __getattr__(self, name):
         assert hasattr(self, "model")

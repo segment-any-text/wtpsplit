@@ -352,6 +352,8 @@ No document features or predictions are retained between requests.
         and hasattr(model, "encode_tokens")
         and hasattr(model, "run_character_head")
         and getattr(getattr(model, "model", None), "character_head", None) is not None
+        and not getattr(getattr(model, "model", None), "_forward_pre_hooks", None)
+        and not getattr(getattr(model, "model", None), "_forward_hooks", None)
         and getattr(model, "pinned_inputs", None) is None
         and "__call__" not in getattr(model, "__dict__", {})
     )
