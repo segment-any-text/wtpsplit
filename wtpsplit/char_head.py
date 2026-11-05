@@ -48,13 +48,18 @@ SUPPRESSION_BIAS = 12.0
 _PRIMES_CACHE: dict[tuple[torch.device, int], torch.Tensor] = {}
 
 
-def _get_device_primes(device: torch.device, num_hashes: int) -> torch.Tensor:
+@torch._dynamo.disable  # type: ignore[untyped-decorator]
+def _get_device_primes_impl(device: torch.device, num_hashes: int) -> torch.Tensor:
     key = (device, num_hashes)
     cached = _PRIMES_CACHE.get(key)
     if cached is None:
         cached = torch.tensor(PRIMES[:num_hashes], dtype=torch.int64, device=device)
         _PRIMES_CACHE[key] = cached
     return cached
+
+
+def _get_device_primes(device: torch.device, num_hashes: int) -> torch.Tensor:
+    return cast(torch.Tensor, _get_device_primes_impl(device, num_hashes))
 
 
 @dataclass

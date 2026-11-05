@@ -192,6 +192,7 @@ def _configure_pytorch_model(model, *, device=None, compile=False):
     if compile is not False:
         compile_kwargs = {} if compile is True else dict(compile)
         model.model = torch.compile(model.model, **compile_kwargs)
+        model._compiled = True
 
 
 def _resolve_sat_tokenizer_name(
@@ -642,6 +643,7 @@ class SaT:
                     weighting=weighting,
                     max_content_block=max_content_block_size(self.model.config),
                     trim_subword_padding=bool(getattr(self, "trim_subword_padding", False)),
+                    pack_sequences=bool(getattr(self, "pack_sequences", False)),
                 )
                 return [
                     project_subword_proba(
@@ -943,6 +945,7 @@ class SaT:
                         weighting=weighting,
                         max_content_block=max_content_block,
                         trim_subword_padding=bool(getattr(self, "trim_subword_padding", False)),
+                        pack_sequences=bool(getattr(self, "pack_sequences", False)),
                     )
                 else:
                     stitched_logits = []

@@ -24,6 +24,46 @@ from wtpsplit.model_registry import resolve_effective_lookahead
 _LOOKAHEAD_MASK_CACHE: dict[tuple[torch.device, torch.dtype, Optional[int]], Tensor] = {}
 _MAX_LOOKAHEAD_CACHE_ENTRIES = 32
 _DEFAULT_LOOKAHEAD_ALLOC_LEN = 514
+_FLEX_BLOCK_MASK_CACHE: dict[tuple[torch.device, int, Optional[int]], Any] = {}
+_MAX_FLEX_CACHE_ENTRIES = 32
+
+
+def _get_cached_flex_block_mask(
+    seq_length: int,
+    lookahead: Optional[int],
+    device: torch.device,
+) -> Any:
+    """Return cached broadcastable ``BlockMask`` (`B=None, H=None`) on ``device``."""
+    from torch.nn.attention.flex_attention import create_block_mask
+
+    key = (device, seq_length, None if lookahead is None else int(lookahead))
+    cached = _FLEX_BLOCK_MASK_CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    if lookahead is None:
+        block_mask = create_block_mask(
+            lambda b, h, q_idx, kv_idx: q_idx >= 0,
+            B=None,
+            H=None,
+            Q_LEN=seq_length,
+            KV_LEN=seq_length,
+            device=device,
+        )
+    else:
+        la = int(lookahead)
+        block_mask = create_block_mask(
+            lambda b, h, q_idx, kv_idx: kv_idx <= q_idx + la,
+            B=None,
+            H=None,
+            Q_LEN=seq_length,
+            KV_LEN=seq_length,
+            device=device,
+        )
+    if len(_FLEX_BLOCK_MASK_CACHE) >= _MAX_FLEX_CACHE_ENTRIES and key not in _FLEX_BLOCK_MASK_CACHE:
+        _FLEX_BLOCK_MASK_CACHE.pop(next(iter(_FLEX_BLOCK_MASK_CACHE)))
+    _FLEX_BLOCK_MASK_CACHE[key] = block_mask
+    return block_mask
 
 
 def _get_cached_additive_mask(
@@ -142,6 +182,79 @@ class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
         token_hidden: Tensor = outputs.last_hidden_state
         token_logits: Tensor = self.classifier(self.dropout(token_hidden))
         return token_hidden, token_logits
+
+    def encode_tokens_varlen(
+        self,
+        packed_input_ids: Tensor,
+        packed_position_ids: Tensor,
+        doc_ids: Tensor,
+    ) -> Tuple[Tensor, Tensor]:
+        """Run the subword backbone and token classifier on a 1D packed sequence ``[1, N_valid]``."""
+        n_valid = packed_input_ids.size(1)
+        device = packed_input_ids.device
+        dtype = self.dtype
+        if n_valid == 0:
+            empty_h = torch.empty((1, 0, self.config.hidden_size), device=device, dtype=dtype)
+            empty_l = torch.empty((1, 0, self.config.num_labels), device=device, dtype=dtype)
+            return empty_h, empty_l
+
+        embedding_output = self.roberta.embeddings(
+            input_ids=packed_input_ids,
+            position_ids=packed_position_ids,
+        )
+        eff_la = self.roberta.effective_lookahead
+        attn_impl = getattr(self.config, "_attn_implementation", None)
+
+        def build_varlen_mask(la: Optional[int]) -> Tensor:
+            if attn_impl == "flex_attention" and (la is None or la >= 0):
+                from torch.nn.attention.flex_attention import create_block_mask
+
+                if la is None:
+                    return cast(
+                        Tensor,
+                        create_block_mask(
+                            lambda b, h, q_idx, kv_idx: doc_ids[q_idx] == doc_ids[kv_idx],
+                            B=1,
+                            H=None,
+                            Q_LEN=n_valid,
+                            KV_LEN=n_valid,
+                            device=device,
+                        ),
+                    )
+                la_int = int(la)
+                return cast(
+                    Tensor,
+                    create_block_mask(
+                        lambda b, h, q_idx, kv_idx: (doc_ids[q_idx] == doc_ids[kv_idx])
+                        & (kv_idx <= q_idx + la_int),
+                        B=1,
+                        H=None,
+                        Q_LEN=n_valid,
+                        KV_LEN=n_valid,
+                        device=device,
+                    ),
+                )
+            same_doc = doc_ids[:, None] == doc_ids[None, :]
+            if la is not None:
+                idx = torch.arange(n_valid, device=device)
+                valid_pair = same_doc & (idx[None, :] <= idx[:, None] + int(la))
+            else:
+                valid_pair = same_doc
+            min_val = torch.finfo(dtype).min
+            neg_zero = torch.zeros((), device=device, dtype=dtype) * min_val
+            min_tensor = torch.tensor(min_val, device=device, dtype=dtype)
+            return torch.where(valid_pair, neg_zero, min_tensor).view(1, 1, n_valid, n_valid)
+
+        attn_mask = build_varlen_mask(eff_la)
+        hidden_states: Tensor = embedding_output
+        split_layer = self.config.lookahead_split_layers
+        for i, layer_module in enumerate(self.roberta.encoder.layer):
+            if split_layer is not None and i == split_layer:
+                attn_mask = build_varlen_mask(0)
+            hidden_states = layer_module(hidden_states, attention_mask=attn_mask)
+
+        token_logits: Tensor = self.classifier(self.dropout(hidden_states))
+        return hidden_states, token_logits
 
     def forward(
         self,
@@ -393,6 +506,7 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
         )
 
 
+@torch._dynamo.disable  # type: ignore[misc]
 def get_extended_attention_mask(
     config: Any,
     attention_mask: Tensor,
@@ -443,6 +557,41 @@ def get_extended_attention_mask(
             and bool((attention_mask[:, -1] == 1).all())
             and bool((attention_mask == 1).all())
         )
+        if (
+            getattr(config, "_attn_implementation", None) == "flex_attention"
+            and seq_length > 0
+            and (lookahead is None or lookahead >= 0)
+            and (is_all_ones or bool((attention_mask[:, 0] != 0).all()))
+        ):
+            if is_all_ones:
+                return cast(Tensor, _get_cached_flex_block_mask(seq_length, lookahead, mask_device))
+            from torch.nn.attention.flex_attention import create_block_mask
+
+            pad_bool = attention_mask.to(dtype=torch.bool)
+            if lookahead is None:
+                return cast(
+                    Tensor,
+                    create_block_mask(
+                        lambda b, h, q_idx, kv_idx: pad_bool[b, kv_idx],
+                        B=batch_size,
+                        H=None,
+                        Q_LEN=seq_length,
+                        KV_LEN=seq_length,
+                        device=mask_device,
+                    ),
+                )
+            la = int(lookahead)
+            return cast(
+                Tensor,
+                create_block_mask(
+                    lambda b, h, q_idx, kv_idx: (kv_idx <= q_idx + la) & pad_bool[b, kv_idx],
+                    B=batch_size,
+                    H=None,
+                    Q_LEN=seq_length,
+                    KV_LEN=seq_length,
+                    device=mask_device,
+                ),
+            )
         if lookahead is not None:
             # Lookahead mask of shape [batch_size, 1, seq_length, seq_length]:
             # query token i attends to key tokens j <= i + lookahead.

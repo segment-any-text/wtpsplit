@@ -998,6 +998,26 @@ def decode_subword_split(
     return sentences
 
 
+COMPILE_WIDTH_BUCKETS: tuple[int, ...] = (64, 128, 256, 514)
+
+
+def round_to_compile_bucket(
+    width: int,
+    max_width: int,
+    downsampling_rate: int = 1,
+    buckets: Sequence[int] = COMPILE_WIDTH_BUCKETS,
+) -> int:
+    """Round a trimmed token width `(content + 2)` up to the next static compile bucket `<= max_width`."""
+    for bucket in buckets:
+        if bucket >= width:
+            cand = min(bucket, max_width)
+            if downsampling_rate > 1 and cand > 2:
+                content = math.ceil((cand - 2) / downsampling_rate) * downsampling_rate
+                cand = min(max_width, content + 2)
+            return max(width, cand)
+    return max_width
+
+
 def extract_subword_logits_fast(
     texts: list[str],
     model: Any,
@@ -1010,6 +1030,8 @@ def extract_subword_logits_fast(
     weighting: Literal["uniform", "hat"] = "uniform",
     max_content_block: int = 510,
     trim_subword_padding: bool = False,
+    bucket_subword_padding: bool = False,
+    pack_sequences: bool = False,
 ) -> tuple[list[Float16Array], EncodedSubwordBatch]:
     """Tokenize, window-pack, forward, and stitch subword logits with `GigaPy` word caching & lazy offsets."""
     encoded = fast_tokenize_subword(tokenizer, texts)
@@ -1026,10 +1048,11 @@ def extract_subword_logits_fast(
         cls_id=int(tokenizer.cls_token_id),
         sep_id=int(tokenizer.sep_token_id),
     )
+    use_buckets = bucket_subword_padding or bool(getattr(model, "_compiled", False))
     win_lens: Int32Array | None = None
-    if trim_subword_padding and len(locs) > 0:
+    if (trim_subword_padding or pack_sequences) and len(locs) > 0:
         win_lens = locs[:, 2] - locs[:, 1]
-        if len(locs) > batch_size and not bool(np.all(win_lens[:-1] <= win_lens[1:])):
+        if trim_subword_padding and len(locs) > batch_size and not bool(np.all(win_lens[:-1] <= win_lens[1:])):
             order = np.argsort(win_lens, kind="stable")
             input_ids = input_ids[order]
             attention_mask = attention_mask[order]
@@ -1045,13 +1068,29 @@ def extract_subword_logits_fast(
         and getattr(model, "pinned_inputs", None) is None
         and "__call__" not in getattr(model, "__dict__", {})
     )
+    can_pack_varlen = (
+        pack_sequences
+        and can_defer_d2h
+        and downsampling_rate == 1
+        and hasattr(model, "forward_varlen")
+        and hasattr(getattr(model, "model", None), "encode_tokens_varlen")
+    )
     if can_defer_d2h:
         import torch
 
         tensor_batches: list[torch.Tensor] = []
         for batch_idx in range(n_batches):
             start, end = batch_idx * batch_size, min(len(attention_mask), (batch_idx + 1) * batch_size)
-            if win_lens is not None:
+            if can_pack_varlen and win_lens is not None:
+                batch_wl = win_lens[start:end]
+                max_wl = int(batch_wl.max()) if len(batch_wl) > 0 else 0
+                min_wl = int(batch_wl.min()) if len(batch_wl) > 0 else 0
+                # Use unpadded 1D varlen packing when windows in the batch have uneven lengths
+                if min_wl < max_wl:
+                    logits_t = model.forward_varlen(input_ids[start:end], batch_wl)
+                    tensor_batches.append(logits_t)
+                    continue
+            if trim_subword_padding and win_lens is not None:
                 max_win_len = int(win_lens[start:end].max())
                 eff_win_block = (
                     math.ceil(max(max_win_len, 1) / downsampling_rate) * downsampling_rate
@@ -1059,6 +1098,8 @@ def extract_subword_logits_fast(
                     else max_win_len
                 )
                 batch_width = min(block_size, eff_win_block) + 2
+                if use_buckets:
+                    batch_width = round_to_compile_bucket(batch_width, block_size + 2, downsampling_rate)
                 batch_input_ids = input_ids[start:end, :batch_width]
                 batch_attention_mask = attention_mask[start:end, :batch_width]
             else:
@@ -1086,7 +1127,7 @@ def extract_subword_logits_fast(
     else:
         for batch_idx in range(n_batches):
             start, end = batch_idx * batch_size, min(len(attention_mask), (batch_idx + 1) * batch_size)
-            if win_lens is not None:
+            if trim_subword_padding and win_lens is not None:
                 max_win_len = int(win_lens[start:end].max())
                 eff_win_block = (
                     math.ceil(max(max_win_len, 1) / downsampling_rate) * downsampling_rate
@@ -1094,6 +1135,8 @@ def extract_subword_logits_fast(
                     else max_win_len
                 )
                 batch_width = min(block_size, eff_win_block) + 2
+                if use_buckets:
+                    batch_width = round_to_compile_bucket(batch_width, block_size + 2, downsampling_rate)
                 batch_input_ids = input_ids[start:end, :batch_width]
                 batch_attention_mask = attention_mask[start:end, :batch_width]
             else:

@@ -1411,6 +1411,302 @@ def test_step_a4_two_stage_character_head_ordinals_and_from_pretrained_parity(
         assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
 
 
+def test_step_b1_flex_attention_block_mask_parity_and_cache() -> None:
+    """Step B1 FlexAttention BlockMask matches SDPA outputs across lookahead, split_layers, and padding."""
+    from torch.nn.attention.flex_attention import BlockMask
+    from wtpsplit.configs import SubwordXLMConfig
+    from wtpsplit.model_registry import resolve_effective_lookahead
+    from wtpsplit.models import (
+        _FLEX_BLOCK_MASK_CACHE,
+        _MAX_FLEX_CACHE_ENTRIES,
+        SubwordXLMForTokenClassification,
+        get_extended_attention_mask,
+    )
+
+    torch.manual_seed(99)
+    cfg = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+        vocab_size=64,
+        hidden_size=32,
+        num_hidden_layers=2,
+        num_attention_heads=2,
+        intermediate_size=64,
+        max_position_embeddings=64,
+        num_labels=1,
+        lookahead=8,
+        lookahead_split_layers=None,
+        use_character_head=False,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+    )
+    model = SubwordXLMForTokenClassification(cfg).eval()  # type: ignore[no-untyped-call]
+    input_ids = torch.randint(3, 60, (2, 16))
+
+    for lookahead, split_layers, is_padded in (
+        (None, None, False),
+        (0, None, False),
+        (8, None, False),
+        (8, 1, False),
+        (8, 1, True),
+    ):
+        for c in [model.config, model.roberta.config, model.roberta.encoder.config] + [
+            layer.attention.self.config for layer in model.roberta.encoder.layer
+        ]:
+            c.lookahead = lookahead
+            c.lookahead_split_layers = split_layers
+        model.roberta.lookahead_split_layers = split_layers
+        model.roberta.effective_lookahead = resolve_effective_lookahead(model.config, supports_split_layers=True)
+
+        attn = torch.ones((2, 16), dtype=torch.float32)
+        if is_padded:
+            attn[1, 10:] = 0.0
+
+        for c in [model.config, model.roberta.config, model.roberta.encoder.config] + [
+            layer.attention.self.config for layer in model.roberta.encoder.layer
+        ]:
+            c._attn_implementation = "sdpa"
+        with torch.no_grad():
+            out_sdpa = model(input_ids=input_ids, attention_mask=attn).logits
+
+        for c in [model.config, model.roberta.config, model.roberta.encoder.config] + [
+            layer.attention.self.config for layer in model.roberta.encoder.layer
+        ]:
+            c._attn_implementation = "flex_attention"
+        eff_la = model.roberta.effective_lookahead
+        bm = get_extended_attention_mask(model.config, attn, (2, 16), eff_la, attn.device, torch.float32)
+        assert isinstance(bm, BlockMask)
+        if not is_padded:
+            bm2 = get_extended_attention_mask(model.config, attn, (2, 16), eff_la, attn.device, torch.float32)
+            assert bm is bm2
+
+        with torch.no_grad():
+            out_flex = model(input_ids=input_ids, attention_mask=attn).logits
+
+        valid_mask = attn.bool().unsqueeze(-1)
+        max_diff = float(((out_sdpa - out_flex).abs() * valid_mask).max().item())
+        assert max_diff <= 1e-5
+
+    # Fallback when attention_mask[:, 0] == 0 or lookahead < 0 returns additive Tensor
+    attn_all_zero = torch.zeros((2, 16), dtype=torch.float32)
+    fallback_mask = get_extended_attention_mask(model.config, attn_all_zero, (2, 16), 8, attn_all_zero.device, torch.float32)
+    assert isinstance(fallback_mask, torch.Tensor)
+
+    # Cache bound check
+    for la_val in range(_MAX_FLEX_CACHE_ENTRIES + 6):
+        _ = get_extended_attention_mask(
+            model.config,
+            torch.ones((1, 8), dtype=torch.float32),
+            (1, 8),
+            lookahead=la_val,
+            dtype=torch.float32,
+        )
+    assert len(_FLEX_BLOCK_MASK_CACHE) <= _MAX_FLEX_CACHE_ENTRIES
+
+
+def test_step_b2_bucketed_compile_and_cudagraph_clone_parity() -> None:
+    """Step B2 bucketed widths, Dynamo-disabled mask/primes helpers, and compiled clone protection preserve parity."""
+    import importlib
+    from transformers import PreTrainedTokenizerFast
+    from wtpsplit._host_kernels import (
+        COMPILE_WIDTH_BUCKETS,
+        extract_subword_logits_fast,
+        round_to_compile_bucket,
+    )
+    from wtpsplit.configs import SubwordXLMConfig
+    from wtpsplit.extract import PyTorchWrapper
+
+    wtpsplit_mod: Any = importlib.import_module("wtpsplit")
+
+    assert round_to_compile_bucket(10, 512, 1) == 64
+    assert round_to_compile_bucket(64, 512, 1) == 64
+    assert round_to_compile_bucket(65, 512, 1) == 128
+    assert round_to_compile_bucket(200, 512, 1) == 256
+    assert round_to_compile_bucket(300, 512, 1) == 512
+    assert round_to_compile_bucket(15, 20, 3) == 20
+
+    tokenizers_mod: Any = importlib.import_module("tokenizers")
+    backend = tokenizers_mod.Tokenizer(
+        tokenizers_mod.models.WordLevel(
+            {"<s>": 0, "<pad>": 1, "</s>": 2, "<unk>": 3, "a": 4, "b": 5, "c": 6, "d": 7},
+            unk_token="<unk>",
+        )
+    )
+    backend.pre_tokenizer = tokenizers_mod.pre_tokenizers.Whitespace()
+    backend.post_processor = tokenizers_mod.processors.TemplateProcessing(
+        single="<s> $A </s>",
+        special_tokens=[("<s>", 0), ("</s>", 2)],
+    )
+    tok: Any = PreTrainedTokenizerFast(  # type: ignore[no-untyped-call]
+        tokenizer_object=backend,
+        pad_token="<pad>",
+        unk_token="<unk>",
+        bos_token="<s>",
+        eos_token="</s>",
+        cls_token="<s>",
+        sep_token="</s>",
+    )
+
+    torch.manual_seed(2026)
+    cfg = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+        vocab_size=128,
+        hidden_size=16,
+        num_hidden_layers=1,
+        num_attention_heads=2,
+        intermediate_size=32,
+        max_position_embeddings=514,
+        num_labels=1,
+        lookahead=4,
+        use_character_head=False,
+    )
+    pt_model = _ModuloEmbedSubwordModel(cfg).eval()
+
+    observed_widths: list[int] = []
+
+    class BucketRecorder(PyTorchWrapper):
+        def __init__(self, inner: Any) -> None:
+            super().__init__(inner)
+
+        def forward_tensor(self, attention_mask: Any, *args: Any, **kwargs: Any) -> Any:
+            observed_widths.append(int(attention_mask.shape[1]))
+            return super().forward_tensor(attention_mask, *args, **kwargs)
+
+    BucketRecorder.__name__ = "PyTorchWrapper"
+    w_comp = BucketRecorder(pt_model)
+    wtpsplit_mod._configure_pytorch_model(w_comp, compile={"backend": "eager"})
+    assert getattr(w_comp, "_compiled", False) is True
+
+    w_eager = PyTorchWrapper(pt_model)
+    texts = [
+        " ".join(["a b c d"] * 25),  # 100 tokens
+        "a b",                        # 2 tokens
+        " ".join(["b c d a"] * 20),  # 80 tokens
+        "c d a",                      # 3 tokens
+    ]
+    s_eager, _ = extract_subword_logits_fast(
+        texts,
+        w_eager,
+        tok,
+        stride=64,
+        max_block_size=128,
+        batch_size=2,
+        trim_subword_padding=False,
+    )
+    s_comp, _ = extract_subword_logits_fast(
+        texts,
+        w_comp,
+        tok,
+        stride=64,
+        max_block_size=128,
+        batch_size=2,
+        trim_subword_padding=True,
+    )
+    assert all(w in COMPILE_WIDTH_BUCKETS or w == 102 for w in observed_widths)
+    assert observed_widths[0] == 64
+    for a, b in zip(s_eager, s_comp):
+        assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
+
+
+def test_step_b3_varlen_unpadded_sequence_packing_parity() -> None:
+    """Step B3 unpadded 1D varlen sequence packing matches padded SubwordXLMForTokenClassification across lookahead, split_layers, and FlexAttention."""
+    import importlib
+    from transformers import PreTrainedTokenizerFast
+    from wtpsplit._host_kernels import extract_subword_logits_fast
+    from wtpsplit.configs import SubwordXLMConfig
+    from wtpsplit.extract import PyTorchWrapper
+    from wtpsplit.model_registry import resolve_effective_lookahead
+    from wtpsplit.models import SubwordXLMForTokenClassification
+
+    tokenizers_mod: Any = importlib.import_module("tokenizers")
+    backend = tokenizers_mod.Tokenizer(
+        tokenizers_mod.models.WordLevel(
+            {"<s>": 0, "<pad>": 1, "</s>": 2, "<unk>": 3, "a": 4, "b": 5, "c": 6, "d": 7},
+            unk_token="<unk>",
+        )
+    )
+    backend.pre_tokenizer = tokenizers_mod.pre_tokenizers.Whitespace()
+    backend.post_processor = tokenizers_mod.processors.TemplateProcessing(
+        single="<s> $A </s>",
+        special_tokens=[("<s>", 0), ("</s>", 2)],
+    )
+    tok: Any = PreTrainedTokenizerFast(  # type: ignore[no-untyped-call]
+        tokenizer_object=backend,
+        pad_token="<pad>",
+        unk_token="<unk>",
+        bos_token="<s>",
+        eos_token="</s>",
+        cls_token="<s>",
+        sep_token="</s>",
+    )
+
+    torch.manual_seed(2027)
+    cfg = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+        vocab_size=32,
+        hidden_size=32,
+        num_hidden_layers=2,
+        num_attention_heads=2,
+        intermediate_size=64,
+        max_position_embeddings=128,
+        num_labels=1,
+        lookahead=8,
+        lookahead_split_layers=None,
+        use_character_head=False,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+    )
+    model = SubwordXLMForTokenClassification(cfg).eval()  # type: ignore[no-untyped-call]
+    wrapper = PyTorchWrapper(model, output_float32=True)
+
+    texts = [
+        " ".join(["a b c d"] * 8),  # 32 tokens
+        "a b",                       # 2 tokens
+        "c d a b c",                 # 5 tokens
+        " ".join(["b c d a"] * 6),  # 24 tokens
+        "",
+    ]
+
+    for lookahead, split_layers, attn_impl in (
+        (None, None, "sdpa"),
+        (8, None, "sdpa"),
+        (8, 1, "sdpa"),
+        (8, 1, "flex_attention"),
+    ):
+        for c in [model.config, model.roberta.config, model.roberta.encoder.config] + [
+            layer.attention.self.config for layer in model.roberta.encoder.layer
+        ]:
+            c.lookahead = lookahead
+            c.lookahead_split_layers = split_layers
+            c._attn_implementation = attn_impl
+        model.roberta.lookahead_split_layers = split_layers
+        model.roberta.effective_lookahead = resolve_effective_lookahead(model.config, supports_split_layers=True)
+
+        s_pad, _ = extract_subword_logits_fast(
+            texts,
+            wrapper,
+            tok,
+            stride=16,
+            max_block_size=32,
+            batch_size=4,
+            pack_sequences=False,
+        )
+        s_varlen, _ = extract_subword_logits_fast(
+            texts,
+            wrapper,
+            tok,
+            stride=16,
+            max_block_size=32,
+            batch_size=4,
+            pack_sequences=True,
+        )
+        for a, b in zip(s_pad, s_varlen):
+            if len(a) > 0:
+                max_diff = float(np.max(np.abs(a.astype(np.float32) - b.astype(np.float32))))
+                assert max_diff <= 1e-3
+            else:
+                assert len(b) == 0
+
+
+
+
+
 
 
 

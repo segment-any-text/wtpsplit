@@ -169,6 +169,72 @@ class PyTorchWrapper:
             token_hidden, token_logits = self.model.encode_tokens(**model_kwargs)
         return token_hidden, token_logits
 
+    def forward_varlen(
+        self,
+        batch_input_ids: np.ndarray,
+        batch_win_lens: np.ndarray,
+    ) -> Any:
+        """Pack non-pad tokens across ``batch_input_ids`` into ``[1, N_valid]``, run ``encode_tokens_varlen``, and unpack content logits."""
+        import torch
+
+        num_rows = len(batch_win_lens)
+        max_content = int(batch_win_lens.max()) if num_rows > 0 else 0
+        num_labels = int(self.model.config.num_labels)
+        device = self.model.device
+        pad_idx = int(getattr(getattr(getattr(self.model, "roberta", None), "embeddings", None), "padding_idx", 1))
+
+        packed_ids_parts: list[np.ndarray] = []
+        packed_pos_parts: list[np.ndarray] = []
+        doc_id_parts: list[np.ndarray] = []
+        offsets: list[tuple[int, int]] = []
+        cursor = 0
+        for row_idx in range(num_rows):
+            n_content = int(batch_win_lens[row_idx])
+            seq_len = n_content + 2
+            row_ids = batch_input_ids[row_idx, :seq_len]
+            packed_ids_parts.append(row_ids)
+            mask = (row_ids != pad_idx).astype(np.int64)
+            row_pos = np.cumsum(mask, dtype=np.int64) * mask + pad_idx
+            packed_pos_parts.append(row_pos)
+            doc_id_parts.append(np.full(seq_len, row_idx, dtype=np.int32))
+            offsets.append((cursor + 1, cursor + 1 + n_content))
+            cursor += seq_len
+
+        if cursor == 0:
+            out_dtype = torch.float32 if self.output_float32 else getattr(self.model, "dtype", torch.float32)
+            return torch.zeros((num_rows, max_content, num_labels), device=device, dtype=out_dtype)
+
+        packed_ids_t = torch.from_numpy(np.concatenate(packed_ids_parts, axis=0)).to(
+            device=device, dtype=torch.long
+        ).unsqueeze(0)
+        packed_pos_t = torch.from_numpy(np.concatenate(packed_pos_parts, axis=0)).to(
+            device=device, dtype=torch.long
+        ).unsqueeze(0)
+        doc_ids_t = torch.from_numpy(np.concatenate(doc_id_parts, axis=0)).to(
+            device=device, dtype=torch.int32
+        )
+
+        context = (
+            torch.autocast(self.autocast_device, dtype=self.autocast_dtype, enabled=self.autocast_enabled)
+            if self.autocast_device is not None
+            else nullcontext()
+        )
+        with torch.no_grad(), context:
+            _, packed_logits = self.model.encode_tokens_varlen(
+                packed_ids_t,
+                packed_pos_t,
+                doc_ids_t,
+            )
+        if self.output_float32:
+            packed_logits = packed_logits.float()
+        packed_2d = packed_logits[0]
+        out = torch.zeros((num_rows, max_content, num_labels), device=device, dtype=packed_2d.dtype)
+        for row_idx, (s_off, e_off) in enumerate(offsets):
+            n_content = e_off - s_off
+            if n_content > 0:
+                out[row_idx, :n_content] = packed_2d[s_off:e_off]
+        return out
+
     def run_character_head(
         self,
         token_hidden: Any,
@@ -205,6 +271,8 @@ class PyTorchWrapper:
                     logits = logits.masked_fill(msk.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
                     if self.output_float32:
                         logits = logits.float()
+                    if getattr(self, "_compiled", False):
+                        logits = logits.clone()
                     return logits
 
             dev_inputs = CharInputs(
@@ -222,6 +290,8 @@ class PyTorchWrapper:
             )
         if self.output_float32:
             logits = logits.float()
+        if getattr(self, "_compiled", False):
+            logits = logits.clone()
         return logits
 
     def forward_tensor(
@@ -283,6 +353,8 @@ class PyTorchWrapper:
             logits = logits[:, 1:-1, :]
         if self.output_float32:
             logits = logits.float()
+        if getattr(self, "_compiled", False):
+            logits = logits.clone()
         return logits
 
     def __call__(
