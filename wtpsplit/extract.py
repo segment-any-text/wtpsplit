@@ -67,32 +67,45 @@ class BertCharORTWrapper:
 
 
 class SaTORTWrapper:
-    def __init__(self, config, ort_session):
+    def __init__(self, config: Any, ort_session: Any) -> None:
         self.config = config
         self.ort_session = ort_session
-        self.input_types = {value.name: value.type for value in ort_session.get_inputs()}
+        inputs = ort_session.get_inputs()
+        self.input_types = {value.name: value.type for value in inputs}
+        self.input_ranks = {
+            value.name: (len(value.shape) if getattr(value, "shape", None) is not None else None)
+            for value in inputs
+        }
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         assert hasattr(self, "ort_session")
         return getattr(self.ort_session, name)
 
-    def __call__(self, input_ids, attention_mask, **character_inputs):
+    def __call__(self, input_ids: Any, attention_mask: Any, **character_inputs: Any) -> dict[str, Any]:
         # Existing released graphs use FP16 masks; new FP32 exports do not.
         # Character features can arrive as CPU tensors or NumPy arrays.
         values = dict(input_ids=input_ids, attention_mask=attention_mask, **character_inputs)
-        dtypes = {"tensor(int64)": np.int64, "tensor(int32)": np.int32,
-                  "tensor(float16)": np.float16, "tensor(float)": np.float32,
-                  "tensor(bool)": np.bool_}
+        dtypes = {
+            "tensor(int64)": np.int64,
+            "tensor(int32)": np.int32,
+            "tensor(float16)": np.float16,
+            "tensor(float)": np.float32,
+            "tensor(bool)": np.bool_,
+        }
         feeds = {}
         for name, dtype in self.input_types.items():
             if name not in values or values[name] is None:
                 raise ValueError(f"Missing ONNX input: {name}")
             if dtype not in dtypes:
                 raise ValueError(f"Unsupported ONNX input type for {name}: {dtype}")
+            target_dtype = dtypes[dtype]
             value = values[name]
             if hasattr(value, "detach"):
                 value = value.detach().cpu().numpy()
-            feeds[name] = np.asarray(value, dtype=dtypes[dtype])
+            if isinstance(value, np.ndarray) and value.dtype == target_dtype and value.flags.c_contiguous:
+                feeds[name] = value
+            else:
+                feeds[name] = np.asarray(value, dtype=target_dtype)
         logits = self.ort_session.run(["logits"], feeds)[0]
         return {"logits": logits}
 
@@ -765,6 +778,10 @@ def extract(
                 kwargs["input_ids"] = batch_input_ids
                 logits = model(attention_mask=batch_attention_mask, **kwargs)["logits"]
                 raw_batches.append(logits[: end - start])
+            if len(raw_batches) > 1 and all(
+                b.ndim == 3 and b.shape[1:] == raw_batches[0].shape[1:] for b in raw_batches
+            ):
+                raw_batches = [np.concatenate(raw_batches, axis=0)]
             strip_cls_sep = True
 
         all_logits = stitch_subword_logits(

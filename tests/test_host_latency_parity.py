@@ -1704,6 +1704,222 @@ def test_step_b3_varlen_unpadded_sequence_packing_parity() -> None:
                 assert len(b) == 0
 
 
+def test_step_b4_ort_wrapper_giga_tokenization_and_jit_tracing_parity() -> None:
+    """Step B4 SaTORTWrapper fast path (rank-2/rank-3 char_hashes, consolidated stitch) and TorchScript dynamic tracing match PyTorch."""
+    import importlib
+    from types import SimpleNamespace
+    from transformers import PreTrainedTokenizerFast
+    from wtpsplit._char_preprocessing import extract_character_head_exact
+    from wtpsplit._host_kernels import extract_subword_logits_fast
+    from wtpsplit.configs import SubwordXLMConfig
+    from wtpsplit.extract import PyTorchWrapper, SaTORTWrapper, extract
+    from wtpsplit.models import SubwordXLMForTokenClassification
+
+    tokenizers_mod: Any = importlib.import_module("tokenizers")
+    backend = tokenizers_mod.Tokenizer(
+        tokenizers_mod.models.WordLevel(
+            {"<s>": 0, "<pad>": 1, "</s>": 2, "<unk>": 3, "hello": 4, "world": 5, ".": 6},
+            unk_token="<unk>",
+        )
+    )
+    backend.pre_tokenizer = tokenizers_mod.pre_tokenizers.Whitespace()
+    backend.post_processor = tokenizers_mod.processors.TemplateProcessing(
+        single="<s> $A </s>",
+        special_tokens=[("<s>", 0), ("</s>", 2)],
+    )
+    tok: Any = PreTrainedTokenizerFast(  # type: ignore[no-untyped-call]
+        tokenizer_object=backend,
+        pad_token="<pad>",
+        unk_token="<unk>",
+        bos_token="<s>",
+        eos_token="</s>",
+        cls_token="<s>",
+        sep_token="</s>",
+    )
+
+    # 1. Verify TorchScript tracing of get_extended_attention_mask on unpadded dummy input
+    # preserves dynamic sequence length and padding mask responsiveness
+    for lookahead in (None, 4):
+        torch.manual_seed(101)
+        cfg_trace = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+            vocab_size=20,
+            hidden_size=16,
+            num_hidden_layers=1,
+            num_attention_heads=2,
+            intermediate_size=32,
+            num_labels=1,
+            max_position_embeddings=64,
+            lookahead=lookahead,
+            use_character_head=False,
+            hidden_dropout_prob=0.0,
+            attention_probs_dropout_prob=0.0,
+        )
+        m_trace = SubwordXLMForTokenClassification(cfg_trace).eval()  # type: ignore[no-untyped-call]
+
+        class TraceExport(torch.nn.Module):
+            def __init__(self, inner: Any) -> None:
+                super().__init__()
+                self.inner = inner
+
+            def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+                out: torch.Tensor = self.inner(input_ids=input_ids, attention_mask=attention_mask).logits
+                return out
+
+        # Trace on an UN-padded (2, 6) dummy input
+        dummy_ids = torch.randint(3, 15, (2, 6))
+        dummy_attn = torch.ones((2, 6), dtype=torch.float32)
+        with torch.no_grad():
+            traced = torch.jit.trace(TraceExport(m_trace), (dummy_ids, dummy_attn))  # type: ignore[no-untyped-call]
+
+            # Evaluate traced module on a DIFFERENT shape (3, 12) with padding
+            test_ids = torch.randint(3, 15, (3, 12))
+            test_attn = torch.ones((3, 12), dtype=torch.float32)
+            test_attn[2, 7:] = 0.0
+            expected = m_trace(input_ids=test_ids, attention_mask=test_attn).logits
+            actual = traced(test_ids, test_attn)
+            assert torch.equal(expected, actual)
+
+    # 2. Verify SaTORTWrapper parity on both subword (multi-batch consolidated stitch) and character_head (rank-3 and rank-2 char_hashes)
+    torch.manual_seed(202)
+    cfg_char = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+        vocab_size=20,
+        hidden_size=16,
+        num_hidden_layers=1,
+        num_attention_heads=2,
+        intermediate_size=32,
+        num_labels=1,
+        max_position_embeddings=64,
+        lookahead=4,
+        use_character_head=True,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+    )
+    m_char = SubwordXLMForTokenClassification(cfg_char).eval()  # type: ignore[no-untyped-call]
+    with torch.no_grad():
+        assert m_char.character_head is not None
+        m_char.character_head.delta.weight.normal_(std=0.05)
+
+    class MockORTSession:
+        def __init__(self, pt_mod: Any, hash_rank: int = 3, is_char: bool = True) -> None:
+            self.pt_mod = pt_mod
+            self.hash_rank = hash_rank
+            self.is_char = is_char
+            self.last_feeds: dict[str, Any] = {}
+
+        def get_inputs(self) -> list[Any]:
+            base = [
+                SimpleNamespace(name="input_ids", type="tensor(int64)", shape=["B", "T"]),
+                SimpleNamespace(name="attention_mask", type="tensor(float)", shape=["B", "T"]),
+            ]
+            if not self.is_char:
+                return base
+            hash_type = "tensor(int32)" if self.hash_rank == 2 else "tensor(int64)"
+            hash_shape = ["B", "C"] if self.hash_rank == 2 else ["B", "C", 8]
+            return base + [
+                SimpleNamespace(name="char_to_token", type="tensor(int64)", shape=["B", "C"]),
+                SimpleNamespace(name="char_is_token_final", type="tensor(int64)", shape=["B", "C"]),
+                SimpleNamespace(name="char_position_in_token", type="tensor(int64)", shape=["B", "C"]),
+                SimpleNamespace(name="char_hashes", type=hash_type, shape=hash_shape),
+                SimpleNamespace(name="char_mask", type="tensor(int64)", shape=["B", "C"]),
+            ]
+
+        def run(self, output_names: list[str], feeds: dict[str, np.ndarray]) -> list[np.ndarray]:
+            self.last_feeds = feeds
+            with torch.no_grad():
+                t_feeds = {k: torch.from_numpy(v) for k, v in feeds.items()}
+                out = self.pt_mod(**t_feeds).logits.numpy()
+            return [out]
+
+    texts = [
+        "  hello world. hello world.  ",
+        "中文。 hello. བོད་",
+        "",
+        "hello " * 10,
+    ]
+    pt_wrapper = PyTorchWrapper(m_char)
+    out_pt, _, _, _ = extract_character_head_exact(  # type: ignore[no-untyped-call]
+        texts,
+        pt_wrapper,
+        stride=2,
+        max_block_size=8,
+        batch_size=2,
+        tokenizer=tok,
+        trim_padding=True,
+    )
+
+    for rank in (3, 2):
+        sess = MockORTSession(m_char, hash_rank=rank, is_char=True)
+        ort_wrapper = SaTORTWrapper(cfg_char, sess)
+        out_ort, _, _, _ = extract_character_head_exact(  # type: ignore[no-untyped-call]
+            texts,
+            ort_wrapper,
+            stride=2,
+            max_block_size=8,
+            batch_size=2,
+            tokenizer=tok,
+            trim_padding=True,
+        )
+        assert sess.last_feeds["char_hashes"].ndim == rank
+        for a, b in zip(out_pt, out_ort):
+            assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
+
+    # Subword multi-batch consolidated stitch via SaTORTWrapper
+    cfg_sub = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+        vocab_size=20,
+        hidden_size=16,
+        num_hidden_layers=1,
+        num_attention_heads=2,
+        intermediate_size=32,
+        num_labels=1,
+        max_position_embeddings=64,
+        lookahead=4,
+        use_character_head=False,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+    )
+    m_sub = SubwordXLMForTokenClassification(cfg_sub).eval()  # type: ignore[no-untyped-call]
+    ort_sub = SaTORTWrapper(cfg_sub, MockORTSession(m_sub, is_char=False))
+    pt_sub = PyTorchWrapper(m_sub)
+    s_ort, _ = extract_subword_logits_fast(
+        texts,
+        ort_sub,
+        tok,
+        stride=2,
+        max_block_size=8,
+        batch_size=2,
+    )
+    s_pt, _ = extract_subword_logits_fast(
+        texts,
+        pt_sub,
+        tok,
+        stride=2,
+        max_block_size=8,
+        batch_size=2,
+    )
+    for a, b in zip(s_ort, s_pt):
+        assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
+
+    e_ort, _, _, _ = extract(
+        texts[:3],
+        ort_sub,
+        stride=2,
+        max_block_size=8,
+        batch_size=2,
+        tokenizer=tok,
+    )
+    e_pt, _, _, _ = extract(
+        texts[:3],
+        pt_sub,
+        stride=2,
+        max_block_size=8,
+        batch_size=2,
+        tokenizer=tok,
+    )
+    for a, b in zip(e_ort, e_pt):
+        assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
+
+
+
 
 
 

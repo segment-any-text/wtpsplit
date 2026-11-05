@@ -220,19 +220,27 @@ No document features or predictions are retained between requests.
         and getattr(model, "pinned_inputs", None) is None
         and "__call__" not in getattr(model, "__dict__", {})
     )
-    if can_use_two_stage and len(texts) > 0 and can_use_rust_encode_batch(tokenizer):
+    is_ort_wrapper = (
+        DocumentFeatures is _DEFAULT_DOCUMENT_FEATURES
+        and type(model).__name__ == "SaTORTWrapper"
+        and "__call__" not in getattr(model, "__dict__", {})
+    )
+    use_ordinals = can_use_two_stage or (
+        is_ort_wrapper and getattr(model, "input_ranks", {}).get("char_hashes") == 2
+    )
+    if (can_use_two_stage or is_ort_wrapper) and len(texts) > 0 and can_use_rust_encode_batch(tokenizer):
         enc_batch = fast_tokenize_subword(tokenizer, texts)
         encoded = enc_batch
         token_ids = enc_batch.token_arrays
         doc_items = [enc_batch.offsets_or_encoding(i) for i in range(len(texts))]
-        cached = DocumentFeatures(texts, doc_items, use_ordinals=True)
+        cached = DocumentFeatures(texts, doc_items, use_ordinals=use_ordinals)
         offsets = None
     else:
         encoded = tokenizer(texts, return_offsets_mapping=True, verbose=False, add_special_tokens=False)
         token_ids, offsets = encoded["input_ids"], encoded["offset_mapping"]
         cached = (
-            DocumentFeatures(texts, offsets, use_ordinals=True)
-            if can_use_two_stage
+            DocumentFeatures(texts, offsets, use_ordinals=use_ordinals)
+            if (can_use_two_stage or is_ort_wrapper)
             else DocumentFeatures(texts, offsets)
         )
     windows = []

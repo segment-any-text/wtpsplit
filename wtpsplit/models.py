@@ -551,6 +551,18 @@ def get_extended_attention_mask(
             decoder_mask = decoder_mask.to(dtype=resolved_dtype)
             return (1.0 - decoder_mask) * min_val
 
+        if torch.jit.is_tracing():
+            if lookahead is not None:
+                lookahead_mask = torch.tril(
+                    torch.ones((seq_length, seq_length), device=mask_device, dtype=resolved_dtype),
+                    diagonal=lookahead,
+                )
+                extended_attention_mask = attention_mask[:, None, None, :].to(dtype=resolved_dtype) * lookahead_mask
+                return (1.0 - extended_attention_mask) * min_val
+            mask_4d = attention_mask[:, None, None, :].to(dtype=resolved_dtype)
+            inv_mask = (1.0 - mask_4d) * min_val
+            return inv_mask.expand(batch_size, 1, seq_length, seq_length)
+
         is_all_ones = bool(getattr(attention_mask, "_sat_all_ones", False)) or (
             mask_device.type == "cpu"
             and seq_length > 0

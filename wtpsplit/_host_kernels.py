@@ -1148,6 +1148,10 @@ def extract_subword_logits_fast(
                 batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
             logits = model(attention_mask=batch_attention_mask, input_ids=batch_input_ids)["logits"]
             raw_batches.append(logits[: end - start])
+        if len(raw_batches) > 1 and all(
+            b.ndim == 3 and b.shape[1:] == raw_batches[0].shape[1:] for b in raw_batches
+        ):
+            raw_batches = [np.concatenate(raw_batches, axis=0)]
         strip_cls_sep = True
 
     stitched = stitch_subword_logits(
