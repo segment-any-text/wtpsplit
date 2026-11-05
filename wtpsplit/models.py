@@ -255,28 +255,29 @@ class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
                 self_attn = layer_module.attention.self
                 num_heads = self_attn.num_attention_heads
                 head_dim = self_attn.attention_head_size
-                q_all: Tensor = self_attn.query(hidden_states)
-                k_all: Tensor = self_attn.key(hidden_states)
-                v_all: Tensor = self_attn.value(hidden_states)
+                q_all, k_all, v_all = _project_qkv_fused(self_attn, hidden_states)
                 attn_ctx = torch.empty_like(q_all)
                 for t_start, t_end, run_len, run_count in doc_runs:
                     q_r = q_all[:, t_start:t_end, :].view(run_count, run_len, num_heads, head_dim).transpose(1, 2)
                     k_r = k_all[:, t_start:t_end, :].view(run_count, run_len, num_heads, head_dim).transpose(1, 2)
                     v_r = v_all[:, t_start:t_end, :].view(run_count, run_len, num_heads, head_dim).transpose(1, 2)
-                    mask_r = _get_cached_additive_mask(run_len, cur_la, device, q_r.dtype).expand(
-                        run_count, 1, run_len, run_len
-                    )
-                    ctx_r = torch.nn.functional.scaled_dot_product_attention(
-                        q_r, k_r, v_r, attn_mask=mask_r, dropout_p=0.0, is_causal=False
-                    )
+                    if cur_la is None:
+                        ctx_r = torch.nn.functional.scaled_dot_product_attention(
+                            q_r, k_r, v_r, attn_mask=None, dropout_p=0.0, is_causal=False
+                        )
+                    elif cur_la == 0:
+                        ctx_r = torch.nn.functional.scaled_dot_product_attention(
+                            q_r, k_r, v_r, attn_mask=None, dropout_p=0.0, is_causal=True
+                        )
+                    else:
+                        mask_r = _get_cached_additive_mask(run_len, cur_la, device, q_r.dtype).expand(
+                            run_count, 1, run_len, run_len
+                        )
+                        ctx_r = torch.nn.functional.scaled_dot_product_attention(
+                            q_r, k_r, v_r, attn_mask=mask_r, dropout_p=0.0, is_causal=False
+                        )
                     attn_ctx[:, t_start:t_end, :] = ctx_r.transpose(1, 2).reshape(1, t_end - t_start, -1)
-                attn_out = layer_module.attention.output.LayerNorm(
-                    layer_module.attention.output.dense(attn_ctx) + hidden_states
-                )
-                inter_out = layer_module.intermediate(attn_out)
-                hidden_states = layer_module.output.LayerNorm(
-                    layer_module.output.dense(inter_out) + attn_out
-                )
+                hidden_states = _run_ffn_residual_norm(layer_module, attn_ctx, hidden_states)
             token_logits_runs: Tensor = self.classifier(self.dropout(hidden_states))
             return hidden_states, token_logits_runs
 
@@ -748,6 +749,69 @@ def get_extended_attention_mask(
     )
 
 
+def _project_qkv_fused(self_attn: Any, hidden_states: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
+    """Project `(Q, K, V)` in a single `[..., 3 * D]` GEMM with version/pointer-tracked weight caching."""
+    qw, qb = self_attn.query.weight, self_attn.query.bias
+    kw, kb = self_attn.key.weight, self_attn.key.bias
+    vw, vb = self_attn.value.weight, self_attn.value.bias
+    key = (
+        qw._version,
+        kw._version,
+        vw._version,
+        qb._version if qb is not None else -1,
+        kb._version if kb is not None else -1,
+        vb._version if vb is not None else -1,
+        qw.data_ptr(),
+        kw.data_ptr(),
+        vw.data_ptr(),
+        qb.data_ptr() if qb is not None else 0,
+        kb.data_ptr() if kb is not None else 0,
+        vb.data_ptr() if vb is not None else 0,
+        qw.dtype,
+        qw.device,
+    )
+    if self_attn.__dict__.get("_qkv_cache_key") != key:
+        w_qkv = torch.cat([qw, kw, vw], dim=0)
+        b_qkv = (
+            torch.cat([qb, kb, vb], dim=0)
+            if (qb is not None and kb is not None and vb is not None)
+            else None
+        )
+        self_attn.__dict__["_qkv_cache_key"] = key
+        self_attn.__dict__["_qkv_cache_val"] = (w_qkv, b_qkv)
+    w_qkv, b_qkv = self_attn.__dict__["_qkv_cache_val"]
+    if b_qkv is None and (qb is not None or kb is not None or vb is not None):
+        return self_attn.query(hidden_states), self_attn.key(hidden_states), self_attn.value(hidden_states)
+    qkv: Tensor = torch.nn.functional.linear(hidden_states, w_qkv, b_qkv)
+    q_t, k_t, v_t = qkv.chunk(3, dim=-1)
+    return q_t, k_t, v_t
+
+
+def _run_ffn_residual_norm(layer_module: Any, attn_ctx: Tensor, hidden_states: Tensor) -> Tensor:
+    """Execute attention output projection + LayerNorm + FFN + LayerNorm with in-place GELU and residuals."""
+    attn_proj: Tensor = layer_module.attention.output.dense(attn_ctx)
+    if attn_proj.dtype == hidden_states.dtype:
+        attn_proj.add_(hidden_states)
+    else:
+        attn_proj = attn_proj + hidden_states
+    attn_out: Tensor = layer_module.attention.output.LayerNorm(attn_proj)
+
+    inter_dense: Tensor = layer_module.intermediate.dense(attn_out)
+    act_fn = layer_module.intermediate.intermediate_act_fn
+    if type(act_fn).__name__ == "GELUActivation" and not inter_dense.is_meta:
+        inter_out: Tensor = getattr(torch._C._nn, "gelu_")(inter_dense)
+    else:
+        inter_out = act_fn(inter_dense)
+
+    ffn_proj: Tensor = layer_module.output.dense(inter_out)
+    if ffn_proj.dtype == attn_out.dtype:
+        ffn_proj.add_(attn_out)
+    else:
+        ffn_proj = ffn_proj + attn_out
+    out_norm: Tensor = layer_module.output.LayerNorm(ffn_proj)
+    return out_norm
+
+
 # Copied from transformers.models.roberta.modeling_roberta.RobertaEncoder with Roberta->XLMRoberta
 class SubwordXLMRobertaEncoder(nn.Module):
     def __init__(self, config):
@@ -799,6 +863,72 @@ class SubwordXLMRobertaEncoder(nn.Module):
             _pkv_len = past_key_values[0][0].shape[2] if past_key_values else 0
             _seq_len = hidden_states.size(1)
             cache_position = torch.arange(_pkv_len, _pkv_len + _seq_len, device=hidden_states.device, dtype=torch.long)
+
+        can_fast_encoder = (
+            not self.training
+            and not torch.is_grad_enabled()
+            and not torch.jit.is_tracing()
+            and not hidden_states.is_meta
+            and not output_attentions
+            and not output_hidden_states
+            and head_mask is None
+            and encoder_hidden_states is None
+            and past_key_values is None
+            and not use_cache
+            and getattr(self.config, "_attn_implementation", "sdpa") in (None, "sdpa")
+            and not getattr(self.config, "add_cross_attention", False)
+            and getattr(self.config, "position_embedding_type", "absolute") == "absolute"
+        )
+        if can_fast_encoder:
+            bsz, seq_len, _ = hidden_states.shape
+            is_unpadded_cpu = (
+                hidden_states.device.type == "cpu"
+                and init_attention_mask is not None
+                and (
+                    bool(getattr(init_attention_mask, "_sat_all_ones", False))
+                    or (init_attention_mask.numel() > 0 and bool((init_attention_mask == 1).all()))
+                )
+            )
+            cur_la = resolve_effective_lookahead(self.config, supports_split_layers=True)
+            split_layer = self.config.lookahead_split_layers
+            for i, layer_module in enumerate(self.layer):
+                if split_layer is not None and i == split_layer:
+                    cur_la = 0
+                    if not is_unpadded_cpu and init_attention_mask is not None:
+                        attention_mask = get_extended_attention_mask(
+                            self.config, init_attention_mask, init_attention_mask.shape, 0, hidden_states.device, dtype
+                        )
+                self_attn = layer_module.attention.self
+                num_heads = self_attn.num_attention_heads
+                head_dim = self_attn.attention_head_size
+                q_t, k_t, v_t = _project_qkv_fused(self_attn, hidden_states)
+                q_t = q_t.view(bsz, seq_len, num_heads, head_dim).transpose(1, 2)
+                k_t = k_t.view(bsz, seq_len, num_heads, head_dim).transpose(1, 2)
+                v_t = v_t.view(bsz, seq_len, num_heads, head_dim).transpose(1, 2)
+                if is_unpadded_cpu and cur_la is None:
+                    ctx_t = torch.nn.functional.scaled_dot_product_attention(
+                        q_t, k_t, v_t, attn_mask=None, dropout_p=0.0, is_causal=False
+                    )
+                elif is_unpadded_cpu and cur_la == 0:
+                    ctx_t = torch.nn.functional.scaled_dot_product_attention(
+                        q_t, k_t, v_t, attn_mask=None, dropout_p=0.0, is_causal=True
+                    )
+                else:
+                    ctx_t = torch.nn.functional.scaled_dot_product_attention(
+                        q_t, k_t, v_t, attn_mask=attention_mask, dropout_p=0.0, is_causal=False
+                    )
+                attn_ctx = ctx_t.transpose(1, 2).reshape(bsz, seq_len, -1)
+                hidden_states = _run_ffn_residual_norm(layer_module, attn_ctx, hidden_states)
+
+            if not return_dict:
+                return (hidden_states,)
+            return BaseModelOutputWithPastAndCrossAttentions(
+                last_hidden_state=hidden_states,
+                past_key_values=None,
+                hidden_states=None,
+                attentions=None,
+                cross_attentions=None,
+            )
 
         for i, layer_module in enumerate(self.layer):
             # MODIFIED: if lookahead_split_layers is given, use causal mask starting from that layer

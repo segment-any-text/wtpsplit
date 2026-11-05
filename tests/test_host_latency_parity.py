@@ -3265,6 +3265,60 @@ def test_tier_d_optimizations_parity(tmp_path: Any) -> None:
     assert torch.equal(l_no_runs, l_with_runs)
     m.eval()
 
+    # 7. Verify Step D7 fused QKV + is_causal SDPA + in-place FFN/residual 0.0-ULP parity and weight-mutation cache invalidation
+    for la_val in (None, 0, 4):
+        for split_val in (None, 1):
+            for dt_val in (torch.float32, torch.bfloat16):
+                for pad_flag in (False, True):
+                    torch.manual_seed(912)
+                    cfg_d7 = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+                        vocab_size=24,
+                        hidden_size=16,
+                        num_hidden_layers=2,
+                        num_attention_heads=2,
+                        intermediate_size=32,
+                        num_labels=1,
+                        max_position_embeddings=32,
+                        lookahead=la_val,
+                        lookahead_split_layers=split_val,
+                        hidden_dropout_prob=0.0,
+                        attention_probs_dropout_prob=0.0,
+                    )
+                    m_d7 = SubwordXLMForTokenClassification(cfg_d7).eval().to(dtype=dt_val)  # type: ignore[no-untyped-call]
+                    inp_d7 = torch.randint(4, 20, (3, 10), dtype=torch.int64)
+                    msk_d7 = torch.ones((3, 10), dtype=dt_val)
+                    if pad_flag:
+                        inp_d7[1, 7:] = 1
+                        msk_d7[1, 7:] = 0
+                    else:
+                        msk_d7._sat_all_ones = True  # type: ignore[attr-defined]
+                    with torch.no_grad():
+                        h_fast_d7, l_fast_d7 = m_d7.encode_tokens(input_ids=inp_d7, attention_mask=msk_d7)
+                        # Compare against standard layer_module path (triggered by output_hidden_states=True)
+                        out_ref_d7 = m_d7.roberta(
+                            input_ids=inp_d7,
+                            attention_mask=msk_d7,
+                            output_hidden_states=True,
+                            return_dict=True,
+                        )
+                        h_ref_d7 = out_ref_d7.last_hidden_state
+                        l_ref_d7 = m_d7.classifier(h_ref_d7)
+                        assert torch.equal(h_fast_d7, h_ref_d7)
+                        assert torch.equal(l_fast_d7, l_ref_d7)
+
+                    # Mutate query weight in-place and verify _qkv_cache_key invalidates automatically
+                    with torch.no_grad():
+                        m_d7.roberta.encoder.layer[0].attention.self.query.weight.mul_(1.25)
+                        h_mut_fast, l_mut_fast = m_d7.encode_tokens(input_ids=inp_d7, attention_mask=msk_d7)
+                        out_mut_ref = m_d7.roberta(
+                            input_ids=inp_d7,
+                            attention_mask=msk_d7,
+                            output_hidden_states=True,
+                            return_dict=True,
+                        )
+                        assert torch.equal(h_mut_fast, out_mut_ref.last_hidden_state)
+                        assert torch.equal(l_mut_fast, m_d7.classifier(out_mut_ref.last_hidden_state))
+
 
 
 
