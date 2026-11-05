@@ -435,12 +435,19 @@ def fast_tokenize_subword(
         ids_out: list[Any] = [None] * len(texts)
         doc_items: list[Any] = [None] * len(texts)
         fallback_indices: list[int] = []
-        candidate_words: list[tuple[int, list[str]]] = []
+        candidate_words: list[tuple[int, str, list[str]]] = []
         unseen_dict: dict[str, None] = {}
+        seen_docs: dict[str, GigaPackedDoc] = {}
+        dup_candidates: list[tuple[int, str]] = []
 
         for doc_idx, text in enumerate(texts):
             if not text:
                 fallback_indices.append(doc_idx)
+                continue
+            cached_gdoc = seen_docs.get(text)
+            if cached_gdoc is not None:
+                ids_out[doc_idx] = cached_gdoc.ids_view
+                doc_items[doc_idx] = cached_gdoc
                 continue
             trimmed = text[:-1] if text.endswith(" ") else text
             words = trimmed.split(" ")
@@ -452,10 +459,11 @@ def fast_tokenize_subword(
                     has_zero_delta=word_cache.has_zero_delta,
                     is_single_space_ascii=True,
                 )
+                seen_docs[text] = gdoc
                 ids_out[doc_idx] = gdoc.ids_view
                 doc_items[doc_idx] = gdoc
             except TypeError:
-                candidate_words.append((doc_idx, words))
+                candidate_words.append((doc_idx, text, words))
                 for w in words:
                     if w not in packed_bytes:
                         unseen_dict[w] = None
@@ -463,12 +471,17 @@ def fast_tokenize_subword(
         if unseen_dict:
             _populate_unseen_words(list(unseen_dict), rust_tok, word_cache)
             missing_after_evict = [
-                w for _, words in candidate_words for w in words if w not in packed_bytes
+                w for _, _, words in candidate_words for w in words if w not in packed_bytes
             ]
             if missing_after_evict:
                 _populate_unseen_words(list(dict.fromkeys(missing_after_evict)), rust_tok, word_cache)
 
-        for doc_idx, words in candidate_words:
+        for doc_idx, text, words in candidate_words:
+            cached_gdoc = seen_docs.get(text)
+            if cached_gdoc is not None:
+                ids_out[doc_idx] = cached_gdoc.ids_view
+                doc_items[doc_idx] = cached_gdoc
+                continue
             try:
                 raw = b"".join(map(get_packed, words))  # type: ignore[arg-type]
                 packed_arr = np.frombuffer(raw, dtype=np.int32).reshape(-1, 3)
@@ -477,9 +490,11 @@ def fast_tokenize_subword(
                     has_zero_delta=word_cache.has_zero_delta,
                     is_single_space_ascii=True,
                 )
+                seen_docs[text] = gdoc
                 ids_out[doc_idx] = gdoc.ids_view
                 doc_items[doc_idx] = gdoc
             except TypeError:
+                dup_candidates.append((doc_idx, text))
                 fallback_indices.append(doc_idx)
 
         if fallback_indices:

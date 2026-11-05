@@ -439,14 +439,6 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
             attention_mask = torch.ones(((batch_size, seq_length + past_key_values_length)), device=device)
             attention_mask._sat_all_ones = True  # type: ignore[attr-defined]
 
-        if token_type_ids is None:
-            if hasattr(self.embeddings, "token_type_ids"):
-                buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
-                token_type_ids = buffered_token_type_ids_expanded
-            else:
-                token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
-
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
         if self.config.is_decoder and encoder_hidden_states is not None:
@@ -461,13 +453,63 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
         # Prepare head mask if needed
         head_mask = _get_head_mask(head_mask, self.config.num_hidden_layers, dtype=getattr(self, "dtype", None))
 
-        embedding_output = self.embeddings(
-            input_ids=input_ids,
-            position_ids=position_ids,
-            token_type_ids=token_type_ids,
-            inputs_embeds=inputs_embeds,
-            past_key_values_length=past_key_values_length,
+        emb = self.embeddings
+        p_idx = getattr(emb, "padding_idx", None)
+        can_fast_embed = (
+            input_ids is not None
+            and inputs_embeds is None
+            and token_type_ids is None
+            and position_ids is None
+            and past_key_values_length == 0
+            and p_idx is not None
+            and getattr(emb, "position_embedding_type", "absolute") == "absolute"
+            and not self.training
+            and not torch.is_grad_enabled()
+            and not torch.jit.is_tracing()
+            and not input_ids.is_meta
+            and (p_idx + 1 + seq_length) <= emb.position_embeddings.num_embeddings
         )
+        if can_fast_embed:
+            p0 = int(p_idx) + 1
+            out_emb: torch.Tensor = emb.word_embeddings(input_ids)
+            out_emb.add_(emb.token_type_embeddings.weight[0].view(1, 1, -1))
+            is_unpadded_ids = (
+                seq_length > 0
+                and (
+                    (
+                        device.type != "cpu"
+                        and bool(getattr(attention_mask, "_sat_all_ones", False))
+                    )
+                    or (
+                        device.type == "cpu"
+                        and bool((input_ids[:, -1] != p_idx).all())
+                        and bool((input_ids != p_idx).all())
+                    )
+                )
+            )
+            if is_unpadded_ids:
+                out_emb.add_(emb.position_embeddings.weight[p0 : p0 + seq_length].unsqueeze(0))
+            else:
+                mask_ne = input_ids.ne(p_idx).int()
+                pos_ids = (torch.cumsum(mask_ne, dim=1).type_as(mask_ne) * mask_ne).long() + int(p_idx)
+                out_emb.add_(emb.position_embeddings(pos_ids))
+            embedding_output = emb.LayerNorm(out_emb)
+        else:
+            if token_type_ids is None:
+                if hasattr(self.embeddings, "token_type_ids"):
+                    buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
+                    buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
+                    token_type_ids = buffered_token_type_ids_expanded
+                else:
+                    token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
+
+            embedding_output = self.embeddings(
+                input_ids=input_ids,
+                position_ids=position_ids,
+                token_type_ids=token_type_ids,
+                inputs_embeds=inputs_embeds,
+                past_key_values_length=past_key_values_length,
+            )
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
@@ -666,7 +708,7 @@ class SubwordXLMRobertaEncoder(nn.Module):
 
         next_decoder_cache = () if use_cache else None
 
-        if cache_position is None:
+        if cache_position is None and (past_key_values is not None or use_cache):
             _pkv_len = past_key_values[0][0].shape[2] if past_key_values else 0
             _seq_len = hidden_states.size(1)
             cache_position = torch.arange(_pkv_len, _pkv_len + _seq_len, device=hidden_states.device, dtype=torch.long)

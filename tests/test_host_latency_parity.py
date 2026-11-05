@@ -2381,6 +2381,82 @@ def test_step_c5_inplace_accumulation_and_preprojected_char_lut_parity() -> None
                 assert float((out_default_mut - out_fused_mut).abs().max().item()) <= 2e-6
 
 
+def test_step_c6_subword_broadcast_embeddings_and_doc_dedup_parity() -> None:
+    """Step C6 SubwordXLMRobertaModel broadcast slice embeddings and fast_tokenize_subword document dedup are 100% bit-exact (0.0 diff)."""
+    import importlib
+    from transformers import PreTrainedTokenizerFast
+    from wtpsplit._host_kernels import fast_tokenize_subword
+    from wtpsplit.configs import SubwordXLMConfig
+    from wtpsplit.models import SubwordXLMForTokenClassification
+
+    torch.manual_seed(707)
+    cfg = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+        vocab_size=30,
+        hidden_size=16,
+        num_hidden_layers=2,
+        num_attention_heads=2,
+        intermediate_size=32,
+        num_labels=1,
+        max_position_embeddings=64,
+        lookahead=4,
+        use_character_head=False,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+    )
+    model = SubwordXLMForTokenClassification(cfg).eval()  # type: ignore[no-untyped-call]
+    emb = model.roberta.embeddings
+    with torch.no_grad():
+        emb.word_embeddings.weight.normal_(std=0.05)
+        emb.position_embeddings.weight.normal_(std=0.05)
+        emb.position_embeddings.weight[emb.padding_idx].zero_()
+        emb.token_type_embeddings.weight.normal_(std=0.05)
+
+    # Test both unpadded and right-padded batches against explicit position_ids + token_type_ids
+    for is_padded in (False, True):
+        ids = torch.randint(3, 25, (4, 16), dtype=torch.int64)
+        attn = torch.ones((4, 16), dtype=torch.float32)
+        if is_padded:
+            assert cfg.pad_token_id is not None
+            ids[2, 10:] = int(cfg.pad_token_id)
+            attn[2, 10:] = 0.0
+        else:
+            attn._sat_all_ones = True  # type: ignore[attr-defined]
+
+        mask_ne = ids.ne(emb.padding_idx).int()
+        pos_ids = (torch.cumsum(mask_ne, dim=1).type_as(mask_ne) * mask_ne).long() + emb.padding_idx
+        tt_ids = torch.zeros_like(ids)
+        with torch.no_grad():
+            ref_logits = model(input_ids=ids, attention_mask=attn, position_ids=pos_ids, token_type_ids=tt_ids).logits
+            act_logits = model(input_ids=ids, attention_mask=attn).logits
+            assert torch.equal(ref_logits, act_logits)
+
+    tokenizers_mod: Any = importlib.import_module("tokenizers")
+    backend = tokenizers_mod.Tokenizer(
+        tokenizers_mod.models.WordLevel(
+            {"<s>": 0, "<pad>": 1, "</s>": 2, "<unk>": 3, "hello": 4, "world": 5, ".": 6},
+            unk_token="<unk>",
+        )
+    )
+    backend.pre_tokenizer = tokenizers_mod.pre_tokenizers.WhitespaceSplit()
+    tok: Any = PreTrainedTokenizerFast(  # type: ignore[no-untyped-call]
+        tokenizer_object=backend,
+        pad_token="<pad>",
+        unk_token="<unk>",
+        bos_token="<s>",
+        eos_token="</s>",
+        cls_token="<s>",
+        sep_token="</s>",
+    )
+    texts = ["hello world .", "hello world .", "world hello .", "hello world ."]
+    b_warm = fast_tokenize_subword(tok, texts, enable_word_cache=True)
+    b_cold = fast_tokenize_subword(tok, texts, enable_word_cache=False)
+    assert b_warm.input_ids == b_cold.input_ids
+    assert b_warm.offset_mapping == b_cold.offset_mapping
+    assert b_warm.offsets_or_encoding(0) is b_warm.offsets_or_encoding(1)
+    assert b_warm.offsets_or_encoding(0) is b_warm.offsets_or_encoding(3)
+
+
+
 
 
 
