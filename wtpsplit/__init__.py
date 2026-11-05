@@ -641,6 +641,7 @@ class SaT:
                     pad_last_batch=pad_last_batch,
                     weighting=weighting,
                     max_content_block=max_content_block_size(self.model.config),
+                    trim_subword_padding=bool(getattr(self, "trim_subword_padding", False)),
                 )
                 return [
                     project_subword_proba(
@@ -941,6 +942,7 @@ class SaT:
                         pad_last_batch=pad_last_batch,
                         weighting=weighting,
                         max_content_block=max_content_block,
+                        trim_subword_padding=bool(getattr(self, "trim_subword_padding", False)),
                     )
                 else:
                     stitched_logits = []

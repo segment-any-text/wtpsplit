@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Union
+from typing import Any, List, Optional, Sequence, Tuple, Union, cast
 
 import torch
 from torch import Tensor, nn
@@ -19,6 +19,43 @@ from wtpsplit._training_loss import boundary_loss_balancing, masked_binary_token
 from wtpsplit.char_head import CharacterResolutionHead, CharInputs
 from wtpsplit.configs import SubwordXLMConfig
 from wtpsplit.model_registry import resolve_effective_lookahead
+
+
+_LOOKAHEAD_MASK_CACHE: dict[tuple[torch.device, torch.dtype, Optional[int]], Tensor] = {}
+_MAX_LOOKAHEAD_CACHE_ENTRIES = 32
+_DEFAULT_LOOKAHEAD_ALLOC_LEN = 514
+
+
+def _get_cached_additive_mask(
+    seq_length: int,
+    lookahead: Optional[int],
+    device: torch.device,
+    dtype: torch.dtype,
+) -> Tensor:
+    """Return cached additive attention bias on ``device`` for ``lookahead`` (or ``None``)."""
+    key = (device, dtype, None if lookahead is None else int(lookahead))
+    cached = _LOOKAHEAD_MASK_CACHE.get(key)
+    if cached is not None and cached.size(-1) >= seq_length:
+        if lookahead is None:
+            return cached[:, :, :, :seq_length]
+        return cached[:, :, :seq_length, :seq_length]
+
+    alloc_len = max(seq_length, _DEFAULT_LOOKAHEAD_ALLOC_LEN)
+    if lookahead is None:
+        additive = torch.zeros((1, 1, 1, alloc_len), device=device, dtype=dtype) * torch.finfo(dtype).min
+    else:
+        one_zero = (
+            torch.ones((alloc_len, alloc_len), device=device, dtype=dtype)
+            .tril_(diagonal=lookahead)
+            .view(1, 1, alloc_len, alloc_len)
+        )
+        additive = (1.0 - one_zero) * torch.finfo(dtype).min
+    if len(_LOOKAHEAD_MASK_CACHE) >= _MAX_LOOKAHEAD_CACHE_ENTRIES and key not in _LOOKAHEAD_MASK_CACHE:
+        _LOOKAHEAD_MASK_CACHE.pop(next(iter(_LOOKAHEAD_MASK_CACHE)))
+    _LOOKAHEAD_MASK_CACHE[key] = additive
+    if lookahead is None:
+        return additive[:, :, :, :seq_length]
+    return additive[:, :, :seq_length, :seq_length]
 
 
 def _get_head_mask(
@@ -81,6 +118,30 @@ class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
                 delta_bias=missing[1],
                 suppression=missing[2],
             )
+
+    def encode_tokens(
+        self,
+        input_ids: Optional[Tensor] = None,
+        attention_mask: Optional[Tensor] = None,
+        token_type_ids: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        **kwargs: Any,
+    ) -> Tuple[Tensor, Tensor]:
+        """Run the subword backbone and token classifier without requiring `char_*` inputs."""
+        kwargs.pop("return_dict", None)
+        outputs = self.roberta(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            inputs_embeds=inputs_embeds,
+            return_dict=True,
+            **kwargs,
+        )
+        token_hidden: Tensor = outputs.last_hidden_state
+        token_logits: Tensor = self.classifier(self.dropout(token_hidden))
+        return token_hidden, token_logits
 
     def forward(
         self,
@@ -263,6 +324,7 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
 
         if attention_mask is None:
             attention_mask = torch.ones(((batch_size, seq_length + past_key_values_length)), device=device)
+            attention_mask._sat_all_ones = True  # type: ignore[attr-defined]
 
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
@@ -332,12 +394,12 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
 
 
 def get_extended_attention_mask(
-    config,
+    config: Any,
     attention_mask: Tensor,
-    input_shape: Tuple[int],
+    input_shape: Sequence[int],
     lookahead: Optional[int] = None,
-    device: torch.device = None,
-    dtype: torch.float = None,
+    device: Optional[torch.device] = None,
+    dtype: Optional[torch.dtype] = None,
 ) -> Tensor:
     """
     Makes broadcastable attention and causal masks so that future and masked tokens are ignored.
@@ -351,54 +413,61 @@ def get_extended_attention_mask(
     Returns:
         `torch.Tensor` The extended attention mask, with a the same dtype as `attention_mask.dtype`.
     """
+    resolved_dtype = (
+        dtype
+        if dtype is not None
+        else (attention_mask.dtype if attention_mask.is_floating_point() else torch.float32)
+    )
+    min_val = torch.finfo(resolved_dtype).min
+    mask_device = attention_mask.device
 
-    # if not (attention_mask.dim() == 2 and config.is_decoder):
-    # show warning only if it won't be shown in `create_extended_attention_mask_for_decoder`
-    # if device is not None:
-    #     warnings.warn(
-    #         "The `device` argument is deprecated and will be removed in v5 of Transformers.", FutureWarning
-    #     )
-    # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
-    # ourselves in which case we just need to make it broadcastable to all heads.
     if attention_mask.dim() == 3:
-        extended_attention_mask = attention_mask[:, None, :, :]
+        extended_attention_mask = attention_mask[:, None, :, :].to(dtype=resolved_dtype)
+        return (1.0 - extended_attention_mask) * min_val
 
-    elif attention_mask.dim() == 2:
-        # Provided a padding mask of dimensions [batch_size, seq_length]
-        # - if the model is a decoder, apply a causal mask in addition to the padding mask
-        # - if the model is an encoder, make the mask broadcastable to [batch_size, num_heads, seq_length, seq_length]
-        if config.is_decoder:
-            extended_attention_mask = ModuleUtilsMixin.create_extended_attention_mask_for_decoder(
-                input_shape, attention_mask
+    if attention_mask.dim() == 2:
+        batch_size, seq_length = attention_mask.shape
+        if config.is_decoder and lookahead is None:
+            decoder_mask = cast(
+                Tensor,
+                ModuleUtilsMixin.create_extended_attention_mask_for_decoder(  # type: ignore[no-untyped-call]
+                    input_shape, attention_mask
+                ),
             )
-        if lookahead is not None:
-            # lookahead mask of shape [batch_size, 1, seq_length, seq_length]
-            # the current token should attend to the next `lookahead` tokens
-            # the current token should not attend to the previous `lookahead` tokens
-            _, seq_length = attention_mask.shape
-            # Create a lookahead mask
-            lookahead_mask = torch.tril(torch.ones(seq_length, seq_length), diagonal=lookahead, out=None).to(
-                attention_mask.device
-            )
-            # Combine the attention mask with the lookahead mask
-            extended_attention_mask = attention_mask[:, None, None, :] * lookahead_mask
-        else:
-            # [batch, 1, seq, seq] for transformers 5 SDPA; semantics
-            # equivalent to [batch, 1, 1, seq] broadcast (mask depends only on key positions).
-            extended_attention_mask = attention_mask[:, None, None, :].expand(-1, 1, attention_mask.size(1), -1)
-    else:
-        raise ValueError(
-            f"Wrong shape for input_ids (shape {input_shape}) or attention_mask (shape {attention_mask.shape})"
+            decoder_mask = decoder_mask.to(dtype=resolved_dtype)
+            return (1.0 - decoder_mask) * min_val
+
+        is_all_ones = bool(getattr(attention_mask, "_sat_all_ones", False)) or (
+            mask_device.type == "cpu"
+            and seq_length > 0
+            and bool((attention_mask[:, -1] == 1).all())
+            and bool((attention_mask == 1).all())
         )
+        if lookahead is not None:
+            # Lookahead mask of shape [batch_size, 1, seq_length, seq_length]:
+            # query token i attends to key tokens j <= i + lookahead.
+            additive_la = _get_cached_additive_mask(
+                seq_length, lookahead, mask_device, resolved_dtype
+            )
+            if is_all_ones:
+                return additive_la.expand(batch_size, 1, seq_length, seq_length)
+            inv_pad = (1.0 - attention_mask[:, None, None, :].to(dtype=resolved_dtype)) * min_val
+            return torch.minimum(additive_la, inv_pad)
 
-    # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
-    # masked positions, this operation will create a tensor which is 0.0 for
-    # positions we want to attend and the dtype's smallest value for masked positions.
-    # Since we are adding it to the raw scores before the softmax, this is
-    # effectively the same as removing these entirely.
-    extended_attention_mask = extended_attention_mask.to(dtype=dtype)  # fp16 compatibility
-    extended_attention_mask = (1.0 - extended_attention_mask) * torch.finfo(dtype).min
-    return extended_attention_mask
+        # [batch, 1, seq, seq] view for transformers 5 SDPA: compute additive mask on
+        # [batch, 1, 1, seq] (512x smaller in memory) before zero-copy .expand().
+        if is_all_ones:
+            additive_zero = _get_cached_additive_mask(
+                seq_length, None, mask_device, resolved_dtype
+            )
+            return additive_zero.expand(batch_size, 1, seq_length, seq_length)
+        mask_4d = attention_mask[:, None, None, :].to(dtype=resolved_dtype)
+        inv_mask = (1.0 - mask_4d) * min_val
+        return inv_mask.expand(batch_size, 1, seq_length, seq_length)
+
+    raise ValueError(
+        f"Wrong shape for input_ids (shape {input_shape}) or attention_mask (shape {attention_mask.shape})"
+    )
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaEncoder with Roberta->XLMRoberta

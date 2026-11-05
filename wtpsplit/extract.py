@@ -2,7 +2,7 @@ import math
 import sys
 import logging
 from contextlib import nullcontext
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 from tqdm.auto import tqdm
@@ -98,7 +98,16 @@ class SaTORTWrapper:
 
 
 class PyTorchWrapper:
-    def __init__(self, model, *, autocast_device=None, autocast_dtype=None, autocast_enabled=True, output_float32=False, pinned_inputs=None):
+    def __init__(
+        self,
+        model: Any,
+        *,
+        autocast_device: str | None = None,
+        autocast_dtype: Any = None,
+        autocast_enabled: bool = True,
+        output_float32: bool = False,
+        pinned_inputs: Any = None,
+    ) -> None:
         self.model = model
         self.config = model.config
         self.autocast_device = autocast_device
@@ -107,37 +116,145 @@ class PyTorchWrapper:
         self.output_float32 = output_float32
         self.pinned_inputs = pinned_inputs
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         assert hasattr(self, "model")
         return getattr(self.model, name)
 
-    def __call__(
+    def _as_device_tensor(self, value: Any, name: str) -> Any:
+        import torch
+
+        if value is None:
+            return None
+        if self.pinned_inputs is not None:
+            return self.pinned_inputs.tensor(name, value, self.model.device)
+        if torch.is_tensor(value):
+            return value.to(self.model.device)
+        return torch.from_numpy(value).to(self.model.device)
+
+    def encode_tokens(
         self,
-        attention_mask,
-        hashed_ids=None,
-        language_ids=None,
-        input_ids=None,
-        char_to_token=None,
-        char_is_token_final=None,
-        char_position_in_token=None,
-        char_hashes=None,
-        char_mask=None,
-    ):
+        attention_mask: Any,
+        input_ids: Any = None,
+        language_ids: Any = None,
+    ) -> tuple[Any, Any]:
+        """Run Stage 1 subword backbone and token classifier on device without `char_*` inputs."""
         try:
             import torch
         except ImportError:
             raise ImportError("`torch` must be installed to use PyTorch models!")
 
-        def as_tensor(value, name):
-            if value is None:
-                return None
-            if self.pinned_inputs is not None:
-                return self.pinned_inputs.tensor(name, value, self.model.device)
-            if torch.is_tensor(value):
-                return value.to(self.model.device)
-            return torch.from_numpy(value).to(self.model.device)
+        attn_all_ones = (
+            attention_mask is not None
+            and isinstance(attention_mask, np.ndarray)
+            and attention_mask.ndim == 2
+            and attention_mask.size > 0
+            and bool(attention_mask[:, -1].all())
+            and bool((attention_mask == 1).all())
+        )
+        attn_tensor = self._as_device_tensor(attention_mask, "attention_mask")
+        if attn_tensor is not None and attn_all_ones:
+            attn_tensor._sat_all_ones = True
+        model_kwargs: dict[str, Any] = {"attention_mask": attn_tensor}
+        if input_ids is not None:
+            model_kwargs["input_ids"] = self._as_device_tensor(input_ids, "input_ids")
+        if language_ids is not None:
+            model_kwargs["language_ids"] = self._as_device_tensor(language_ids, "language_ids")
 
-        model_kwargs = {"attention_mask": as_tensor(attention_mask, "attention_mask")}
+        context = (
+            torch.autocast(self.autocast_device, dtype=self.autocast_dtype, enabled=self.autocast_enabled)
+            if self.autocast_device is not None
+            else nullcontext()
+        )
+        with torch.no_grad(), context:
+            token_hidden, token_logits = self.model.encode_tokens(**model_kwargs)
+        return token_hidden, token_logits
+
+    def run_character_head(
+        self,
+        token_hidden: Any,
+        token_logits: Any,
+        char_inputs: Any,
+        *,
+        gate_logit_threshold: float | None = None,
+    ) -> Any:
+        """Run Stage 2 `CharacterResolutionHead` on device (with optional token-gate bypass)."""
+        import torch
+        from wtpsplit.char_head import SUPPRESSION_BIAS, CharInputs
+
+        char_head = self.model.character_head
+        eff_gate = (
+            gate_logit_threshold
+            if gate_logit_threshold is not None
+            else getattr(char_head, "gate_logit_threshold", None)
+        )
+        context = (
+            torch.autocast(self.autocast_device, dtype=self.autocast_dtype, enabled=self.autocast_enabled)
+            if self.autocast_device is not None
+            else nullcontext()
+        )
+        with torch.no_grad(), context:
+            if eff_gate is not None and not char_head.training:
+                tok_pass = token_logits.max(dim=-1).values > eff_gate
+                if not bool(tok_pass.any()):
+                    c2t = self._as_device_tensor(char_inputs.char_to_token, "char_to_token")
+                    fin = self._as_device_tensor(char_inputs.is_token_final, "char_is_token_final")
+                    msk = self._as_device_tensor(char_inputs.mask, "char_mask")
+                    index = c2t.unsqueeze(-1)
+                    gathered_logits = token_logits.gather(1, index.expand(-1, -1, token_logits.size(-1)))
+                    logits = gathered_logits + char_head.suppression(fin)
+                    logits = logits.masked_fill(msk.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
+                    if self.output_float32:
+                        logits = logits.float()
+                    return logits
+
+            dev_inputs = CharInputs(
+                char_to_token=self._as_device_tensor(char_inputs.char_to_token, "char_to_token"),
+                is_token_final=self._as_device_tensor(char_inputs.is_token_final, "char_is_token_final"),
+                position_in_token=self._as_device_tensor(char_inputs.position_in_token, "char_position_in_token"),
+                hashes=self._as_device_tensor(char_inputs.hashes, "char_hashes"),
+                mask=self._as_device_tensor(char_inputs.mask, "char_mask"),
+            )
+            logits = char_head(
+                token_hidden,
+                token_logits,
+                dev_inputs,
+                gate_logit_threshold=eff_gate,
+            )
+        if self.output_float32:
+            logits = logits.float()
+        return logits
+
+    def forward_tensor(
+        self,
+        attention_mask: Any,
+        hashed_ids: Any = None,
+        language_ids: Any = None,
+        input_ids: Any = None,
+        char_to_token: Any = None,
+        char_is_token_final: Any = None,
+        char_position_in_token: Any = None,
+        char_hashes: Any = None,
+        char_mask: Any = None,
+        *,
+        strip_cls_sep: bool = False,
+    ) -> Any:
+        try:
+            import torch
+        except ImportError:
+            raise ImportError("`torch` must be installed to use PyTorch models!")
+
+        attn_all_ones = (
+            attention_mask is not None
+            and isinstance(attention_mask, np.ndarray)
+            and attention_mask.ndim == 2
+            and attention_mask.size > 0
+            and bool(attention_mask[:, -1].all())
+            and bool((attention_mask == 1).all())
+        )
+        attn_tensor = self._as_device_tensor(attention_mask, "attention_mask")
+        if attn_tensor is not None and attn_all_ones:
+            attn_tensor._sat_all_ones = True
+        model_kwargs = {"attention_mask": attn_tensor}
         optional_inputs = {
             "input_ids": input_ids,
             "hashed_ids": hashed_ids,
@@ -150,7 +267,7 @@ class PyTorchWrapper:
         }
         model_kwargs.update(
             {
-                name: as_tensor(value, name)
+                name: self._as_device_tensor(value, name)
                 for name, value in optional_inputs.items()
                 if value is not None
             }
@@ -162,9 +279,39 @@ class PyTorchWrapper:
         )
         with torch.no_grad(), context:
             logits = self.model(**model_kwargs)["logits"]
+        if strip_cls_sep:
+            logits = logits[:, 1:-1, :]
         if self.output_float32:
             logits = logits.float()
-        logits = logits.cpu().numpy()
+        return logits
+
+    def __call__(
+        self,
+        attention_mask: Any,
+        hashed_ids: Any = None,
+        language_ids: Any = None,
+        input_ids: Any = None,
+        char_to_token: Any = None,
+        char_is_token_final: Any = None,
+        char_position_in_token: Any = None,
+        char_hashes: Any = None,
+        char_mask: Any = None,
+    ) -> dict[str, np.ndarray]:
+        logits = (
+            self.forward_tensor(
+                attention_mask,
+                hashed_ids=hashed_ids,
+                language_ids=language_ids,
+                input_ids=input_ids,
+                char_to_token=char_to_token,
+                char_is_token_final=char_is_token_final,
+                char_position_in_token=char_position_in_token,
+                char_hashes=char_hashes,
+                char_mask=char_mask,
+            )
+            .cpu()
+            .numpy()
+        )
 
         return {"logits": logits}
 
@@ -335,6 +482,7 @@ def extract(
     tokenizer=None,
     character_preprocessing="reference",
     trim_padding=True,
+    trim_subword_padding: bool = False,
 ):
     """
     Computes logits for the given batch of texts by:
@@ -464,19 +612,88 @@ def extract(
         language_ids = None
 
     if use_subwords:
+        win_lens = None
+        if trim_subword_padding and len(locs) > 0:
+            win_lens = locs[:, 2] - locs[:, 1]
+            if len(locs) > batch_size and not bool(np.all(win_lens[:-1] <= win_lens[1:])):
+                order = np.argsort(win_lens, kind="stable")
+                input_ids = input_ids[order]
+                attention_mask = attention_mask[order]
+                locs = locs[order]
+                win_lens = win_lens[order]
+
         raw_batches = []
-        for batch_idx in tqdm(range(n_batches), disable=not verbose):
-            start, end = batch_idx * batch_size, min(len(attention_mask), (batch_idx + 1) * batch_size)
-            batch_input_ids = input_ids[start:end]
-            batch_attention_mask = attention_mask[start:end]
-            if len(batch_attention_mask) < batch_size and pad_last_batch:
-                n_missing = batch_size - len(batch_attention_mask)
-                batch_input_ids = np.pad(batch_input_ids, ((0, n_missing), (0, 0)), constant_values=pad_token_id)
-                batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
-            kwargs = {"language_ids": language_ids[: len(batch_attention_mask)]} if uses_lang_adapters else {}
-            kwargs["input_ids"] = batch_input_ids
-            logits = model(attention_mask=batch_attention_mask, **kwargs)["logits"]
-            raw_batches.append(logits[: end - start])
+        can_defer_d2h = (
+            type(model).__name__ == "PyTorchWrapper"
+            and hasattr(model, "forward_tensor")
+            and getattr(model, "pinned_inputs", None) is None
+            and "__call__" not in getattr(model, "__dict__", {})
+        )
+        if can_defer_d2h:
+            import torch
+
+            tensor_batches = []
+            for batch_idx in tqdm(range(n_batches), disable=not verbose):
+                start, end = batch_idx * batch_size, min(len(attention_mask), (batch_idx + 1) * batch_size)
+                if win_lens is not None:
+                    max_win_len = int(win_lens[start:end].max())
+                    eff_win_block = (
+                        math.ceil(max(max_win_len, 1) / downsampling_rate) * downsampling_rate
+                        if downsampling_rate > 1
+                        else max_win_len
+                    )
+                    batch_width = min(block_size, eff_win_block) + 2
+                    batch_input_ids = input_ids[start:end, :batch_width]
+                    batch_attention_mask = attention_mask[start:end, :batch_width]
+                else:
+                    batch_input_ids = input_ids[start:end]
+                    batch_attention_mask = attention_mask[start:end]
+                if len(batch_attention_mask) < batch_size and pad_last_batch:
+                    n_missing = batch_size - len(batch_attention_mask)
+                    batch_input_ids = np.pad(batch_input_ids, ((0, n_missing), (0, 0)), constant_values=pad_token_id)
+                    batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
+                kwargs = {"language_ids": language_ids[: len(batch_attention_mask)]} if uses_lang_adapters else {}
+                kwargs["input_ids"] = batch_input_ids
+                logits_t = model.forward_tensor(
+                    attention_mask=batch_attention_mask,
+                    strip_cls_sep=True,
+                    **kwargs,
+                )[: end - start]
+                tensor_batches.append(logits_t)
+            if len(tensor_batches) == 1:
+                raw_batches = [tensor_batches[0].cpu().numpy()]
+            elif len(tensor_batches) > 1:
+                w0 = tensor_batches[0].shape[1]
+                if all(t.shape[1] == w0 for t in tensor_batches):
+                    raw_batches = [torch.cat(tensor_batches, dim=0).cpu().numpy()]
+                else:
+                    raw_batches = [t.cpu().numpy() for t in tensor_batches]
+            strip_cls_sep = False
+        else:
+            for batch_idx in tqdm(range(n_batches), disable=not verbose):
+                start, end = batch_idx * batch_size, min(len(attention_mask), (batch_idx + 1) * batch_size)
+                if win_lens is not None:
+                    max_win_len = int(win_lens[start:end].max())
+                    eff_win_block = (
+                        math.ceil(max(max_win_len, 1) / downsampling_rate) * downsampling_rate
+                        if downsampling_rate > 1
+                        else max_win_len
+                    )
+                    batch_width = min(block_size, eff_win_block) + 2
+                    batch_input_ids = input_ids[start:end, :batch_width]
+                    batch_attention_mask = attention_mask[start:end, :batch_width]
+                else:
+                    batch_input_ids = input_ids[start:end]
+                    batch_attention_mask = attention_mask[start:end]
+                if len(batch_attention_mask) < batch_size and pad_last_batch:
+                    n_missing = batch_size - len(batch_attention_mask)
+                    batch_input_ids = np.pad(batch_input_ids, ((0, n_missing), (0, 0)), constant_values=pad_token_id)
+                    batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
+                kwargs = {"language_ids": language_ids[: len(batch_attention_mask)]} if uses_lang_adapters else {}
+                kwargs["input_ids"] = batch_input_ids
+                logits = model(attention_mask=batch_attention_mask, **kwargs)["logits"]
+                raw_batches.append(logits[: end - start])
+            strip_cls_sep = True
 
         all_logits = stitch_subword_logits(
             raw_batches,
@@ -485,7 +702,7 @@ def extract(
             block_size=block_size,
             num_labels=model.config.num_labels,
             weighting=weighting,
-            strip_cls_sep=True,
+            strip_cls_sep=strip_cls_sep,
         )
         return all_logits, offset_mapping, tokenizer, tokens
 

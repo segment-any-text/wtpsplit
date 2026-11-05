@@ -192,6 +192,13 @@ class EncodedSubwordBatch:
             "offset_mapping": self.offset_mapping,
         }
 
+    def __getitem__(self, key: str) -> Any:
+        if key == "input_ids":
+            return self.input_ids
+        if key == "offset_mapping":
+            return self.offset_mapping
+        raise KeyError(key)
+
 
 def can_use_rust_encode_batch(tokenizer: Any) -> bool:
     """Whether `tokenizer._tokenizer.encode_batch(..., add_special_tokens=False)` is exact for `tokenizer`."""
@@ -1002,6 +1009,7 @@ def extract_subword_logits_fast(
     pad_last_batch: bool = False,
     weighting: Literal["uniform", "hat"] = "uniform",
     max_content_block: int = 510,
+    trim_subword_padding: bool = False,
 ) -> tuple[list[Float16Array], EncodedSubwordBatch]:
     """Tokenize, window-pack, forward, and stitch subword logits with `GigaPy` word caching & lazy offsets."""
     encoded = fast_tokenize_subword(tokenizer, texts)
@@ -1018,20 +1026,86 @@ def extract_subword_logits_fast(
         cls_id=int(tokenizer.cls_token_id),
         sep_id=int(tokenizer.sep_token_id),
     )
+    win_lens: Int32Array | None = None
+    if trim_subword_padding and len(locs) > 0:
+        win_lens = locs[:, 2] - locs[:, 1]
+        if len(locs) > batch_size and not bool(np.all(win_lens[:-1] <= win_lens[1:])):
+            order = np.argsort(win_lens, kind="stable")
+            input_ids = input_ids[order]
+            attention_mask = attention_mask[order]
+            locs = locs[order]
+            win_lens = win_lens[order]
+
     pad_token_id = int(tokenizer.pad_token_id)
     n_batches = math.ceil(len(attention_mask) / batch_size)
     raw_batches: list[NDArray[Any]] = []
+    can_defer_d2h = (
+        type(model).__name__ == "PyTorchWrapper"
+        and hasattr(model, "forward_tensor")
+        and getattr(model, "pinned_inputs", None) is None
+        and "__call__" not in getattr(model, "__dict__", {})
+    )
+    if can_defer_d2h:
+        import torch
 
-    for batch_idx in range(n_batches):
-        start, end = batch_idx * batch_size, min(len(attention_mask), (batch_idx + 1) * batch_size)
-        batch_input_ids = input_ids[start:end]
-        batch_attention_mask = attention_mask[start:end]
-        if len(batch_attention_mask) < batch_size and pad_last_batch:
-            n_missing = batch_size - len(batch_attention_mask)
-            batch_input_ids = np.pad(batch_input_ids, ((0, n_missing), (0, 0)), constant_values=pad_token_id)
-            batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
-        logits = model(attention_mask=batch_attention_mask, input_ids=batch_input_ids)["logits"]
-        raw_batches.append(logits[: end - start])
+        tensor_batches: list[torch.Tensor] = []
+        for batch_idx in range(n_batches):
+            start, end = batch_idx * batch_size, min(len(attention_mask), (batch_idx + 1) * batch_size)
+            if win_lens is not None:
+                max_win_len = int(win_lens[start:end].max())
+                eff_win_block = (
+                    math.ceil(max(max_win_len, 1) / downsampling_rate) * downsampling_rate
+                    if downsampling_rate > 1
+                    else max_win_len
+                )
+                batch_width = min(block_size, eff_win_block) + 2
+                batch_input_ids = input_ids[start:end, :batch_width]
+                batch_attention_mask = attention_mask[start:end, :batch_width]
+            else:
+                batch_input_ids = input_ids[start:end]
+                batch_attention_mask = attention_mask[start:end]
+            if len(batch_attention_mask) < batch_size and pad_last_batch:
+                n_missing = batch_size - len(batch_attention_mask)
+                batch_input_ids = np.pad(batch_input_ids, ((0, n_missing), (0, 0)), constant_values=pad_token_id)
+                batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
+            logits_t = model.forward_tensor(
+                attention_mask=batch_attention_mask,
+                input_ids=batch_input_ids,
+                strip_cls_sep=True,
+            )[: end - start]
+            tensor_batches.append(logits_t)
+        if len(tensor_batches) == 1:
+            raw_batches = [tensor_batches[0].cpu().numpy()]
+        elif len(tensor_batches) > 1:
+            w0 = tensor_batches[0].shape[1]
+            if all(t.shape[1] == w0 for t in tensor_batches):
+                raw_batches = [torch.cat(tensor_batches, dim=0).cpu().numpy()]
+            else:
+                raw_batches = [t.cpu().numpy() for t in tensor_batches]
+        strip_cls_sep = False
+    else:
+        for batch_idx in range(n_batches):
+            start, end = batch_idx * batch_size, min(len(attention_mask), (batch_idx + 1) * batch_size)
+            if win_lens is not None:
+                max_win_len = int(win_lens[start:end].max())
+                eff_win_block = (
+                    math.ceil(max(max_win_len, 1) / downsampling_rate) * downsampling_rate
+                    if downsampling_rate > 1
+                    else max_win_len
+                )
+                batch_width = min(block_size, eff_win_block) + 2
+                batch_input_ids = input_ids[start:end, :batch_width]
+                batch_attention_mask = attention_mask[start:end, :batch_width]
+            else:
+                batch_input_ids = input_ids[start:end]
+                batch_attention_mask = attention_mask[start:end]
+            if len(batch_attention_mask) < batch_size and pad_last_batch:
+                n_missing = batch_size - len(batch_attention_mask)
+                batch_input_ids = np.pad(batch_input_ids, ((0, n_missing), (0, 0)), constant_values=pad_token_id)
+                batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
+            logits = model(attention_mask=batch_attention_mask, input_ids=batch_input_ids)["logits"]
+            raw_batches.append(logits[: end - start])
+        strip_cls_sep = True
 
     stitched = stitch_subword_logits(
         raw_batches,
@@ -1040,6 +1114,6 @@ def extract_subword_logits_fast(
         block_size=block_size,
         num_labels=int(model.config.num_labels),
         weighting=weighting,
-        strip_cls_sep=True,
+        strip_cls_sep=strip_cls_sep,
     )
     return stitched, encoded

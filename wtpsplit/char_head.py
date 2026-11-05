@@ -45,6 +45,16 @@ __all__ = [
 # Large enough to zero out a character after a sigmoid, small enough to stay finite in
 # fp16 so the head can be trained in mixed precision (`-inf` would produce NaNs).
 SUPPRESSION_BIAS = 12.0
+_PRIMES_CACHE: dict[tuple[torch.device, int], torch.Tensor] = {}
+
+
+def _get_device_primes(device: torch.device, num_hashes: int) -> torch.Tensor:
+    key = (device, num_hashes)
+    cached = _PRIMES_CACHE.get(key)
+    if cached is None:
+        cached = torch.tensor(PRIMES[:num_hashes], dtype=torch.int64, device=device)
+        _PRIMES_CACHE[key] = cached
+    return cached
 
 
 @dataclass
@@ -270,6 +280,9 @@ class CharacterResolutionHead(nn.Module):
         if delta_bias:
             nn.init.zeros_(self.delta.bias)
         with torch.no_grad():
+            primes_buf = cast(torch.Tensor, self._primes)
+            if not primes_buf.is_meta:
+                primes_buf.copy_(_get_device_primes(primes_buf.device, self.num_hashes))
             if suppression:
                 self.suppression.weight[0].fill_(-SUPPRESSION_BIAS)
                 self.suppression.weight[1].fill_(0.0)
@@ -298,7 +311,7 @@ class CharacterResolutionHead(nn.Module):
 
     def _compute_hashes(self, ordinals: torch.Tensor) -> torch.Tensor:
         """Expand codepoint ordinals `[...]` into CANINE hashes `[..., num_hashes]` on-device."""
-        primes = cast(torch.Tensor, self._primes).to(device=ordinals.device)
+        primes = _get_device_primes(ordinals.device, self.num_hashes)
         return ((ordinals.to(torch.int64).unsqueeze(-1) + 1) * primes) % self.num_buckets
 
     def _resolve_hashes(self, hashes_or_ordinals: torch.Tensor) -> torch.Tensor:
