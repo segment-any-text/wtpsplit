@@ -2983,6 +2983,290 @@ def test_step_a2_deferred_d2h_flush_and_storage_ownership(monkeypatch: Any) -> N
         assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
 
 
+def test_tier_d_optimizations_parity(tmp_path: Any) -> None:
+    """Tier D (D1-D5): _SIGMOID_F16_LUT exhaustive 65536 bit parity, decode_char_split, run-grouped varlen SDPA, active-prefix CharHead, and v3 trim/pack parity."""
+    import importlib
+    from transformers import PreTrainedTokenizerFast
+    from wtpsplit import SaT
+    from wtpsplit._host_kernels import decode_char_split, exact_float16_logit_threshold
+    from wtpsplit.char_head import CharacterResolutionHead, CharInputs
+    from wtpsplit.configs import SubwordXLMConfig
+    from wtpsplit.models import SubwordXLMForTokenClassification
+    from wtpsplit.utils import indices_to_sentences, sigmoid
+
+    # 1. Exhaustive 65,536 IEEE-754 float16 bit-pattern verification for _SIGMOID_F16_LUT (D4)
+    all_u16 = np.arange(65536, dtype=np.uint16)
+    all_f16 = all_u16.view(np.float16)
+    with np.errstate(over="ignore", invalid="ignore"):
+        expected_sig = (1 / (1 + np.exp(-all_f16.astype(np.float32)))).astype(np.float32)
+    actual_sig = sigmoid(all_f16)
+    assert actual_sig.dtype == np.float32
+    assert actual_sig.tobytes() == expected_sig.tobytes()
+
+    # 2. decode_char_split vs sigmoid + threshold + indices_to_sentences (D4, including negative threshold -0.1 and >1.0)
+    rng = np.random.default_rng(2026)
+    sample_text = "Hello world. This is a test.\nAnother line. "
+    char_logits = rng.standard_normal((len(sample_text), 1)).astype(np.float16)
+    for thresh in (-0.1, 0.01, 0.25, 0.5, 0.99, 1.5):
+        z_min = exact_float16_logit_threshold(thresh)
+        for strip_ws in (False, True):
+            for split_nl in (False, True):
+                fast_sents = decode_char_split(
+                    sample_text,
+                    char_logits,
+                    z_min=z_min,
+                    strip_whitespace=strip_ws,
+                    split_on_input_newlines=split_nl,
+                )
+                probs = sigmoid(char_logits[:, 0])
+                cuts = np.flatnonzero(probs > thresh)
+                ref_sents = indices_to_sentences(sample_text, cuts, strip_whitespace=strip_ws)
+                if split_nl and "\n" in sample_text:
+                    nl_sents: list[str] = []
+                    for idx, s in enumerate(ref_sents):
+                        if idx < len(ref_sents) - 1 and s.endswith("\n"):
+                            s = s[:-1]
+                        nl_sents.extend(s.split("\n"))
+                    ref_sents = nl_sents
+                assert fast_sents == ref_sents
+
+    # 3. 0.0-ULP bitwise parity of default CharacterResolutionHead (_depthwise scratch + gelu_) and D6 _gather_base_logits_with_suppression
+    from wtpsplit.char_head import SUPPRESSION_BIAS
+
+    for proj_first in (False, True):
+        torch.manual_seed(910)
+        head = CharacterResolutionHead(
+            hidden_size=32,
+            num_labels=1,
+            project_tokens_first=proj_first,
+            fuse_depthwise_delta=False,
+        ).eval()
+        with torch.no_grad():
+            head.context.weight.normal_(std=0.1)
+            assert head.context.bias is not None
+            head.context.bias.normal_(std=0.1)
+            head.delta.weight.normal_(std=0.1)
+            head.delta.bias.normal_(std=0.1)
+
+        ordinals = torch.randint(32, 5000, (4, 64), dtype=torch.int32)
+        c2t = torch.randint(0, 12, (4, 64), dtype=torch.int64)
+        is_fin = torch.randint(0, 2, (4, 64), dtype=torch.int64)
+        pos = torch.randint(0, 16, (4, 64), dtype=torch.int64)
+        mask = torch.zeros((4, 64), dtype=torch.int64)
+        lens = [60, 6, 8, 5]
+        for r_i, l_val in enumerate(lens):
+            mask[r_i, :l_val] = 1
+        ci_ragged = CharInputs(
+            char_to_token=c2t,
+            is_token_final=is_fin,
+            position_in_token=pos,
+            hashes=ordinals,
+            mask=mask,
+        )
+        tok_hid = torch.randn(4, 12, 32)
+        tok_log = torch.randn(4, 12, 1)
+        with torch.no_grad():
+            # Pre-Stage-IV out-of-place reference for default CharacterResolutionHead
+            idx_t = c2t.unsqueeze(-1)
+            g_log = tok_log.gather(1, idx_t.expand(-1, -1, 1))
+            cf = (
+                head.char_embeddings(head._compute_hashes(ordinals)).sum(dim=-2)
+                + head.position_embeddings(pos)
+                + head.final_embeddings(is_fin)
+            )
+            if proj_first:
+                p_tok = torch.nn.functional.linear(tok_hid, head.project.weight[:, :32])
+                g_proj = p_tok.gather(1, idx_t.expand(-1, -1, 128))
+                p_char = torch.nn.functional.linear(cf, head.project.weight[:, 32:], head.project.bias)
+                pre_c = torch.nn.functional.gelu(g_proj + p_char)
+            else:
+                g_hid = tok_hid.gather(1, idx_t.expand(-1, -1, 32))
+                pre_c = torch.nn.functional.gelu(head.project(torch.cat([g_hid, cf], dim=-1)))
+            k_sz = head.context.kernel_size[0]
+            pad_sz = k_sz // 2
+            padded_c = torch.nn.functional.pad(pre_c, (0, 0, pad_sz, pad_sz))
+            w_c = head.context.weight.squeeze(1)
+            assert head.context.bias is not None
+            dw_ref = head.context.bias.view(1, 1, -1).expand_as(pre_c).clone()
+            for off_i in range(k_sz):
+                dw_ref = dw_ref + padded_c[:, off_i : off_i + 64, :] * w_c[:, off_i].view(1, 1, -1)
+            ref_base_logits = (g_log + head.suppression(is_fin)).masked_fill(
+                mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS
+            )
+            ref_full_out = (g_log + head.suppression(is_fin) + head.delta(dw_ref)).masked_fill(
+                mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS
+            )
+
+            # 0.0-ULP bitwise parity check for default forward and D6 _gather_base_logits_with_suppression (including mixed dtypes: fp32, fp16, bf16, and CPU bfloat16 autocast)
+            out_batch = head(tok_hid, tok_log, ci_ragged)
+            assert torch.equal(out_batch, ref_full_out)
+            with torch.autocast("cpu", dtype=torch.bfloat16):
+                if proj_first:
+                    p_tok_ac = torch.nn.functional.linear(tok_hid, head.project.weight[:, :32])
+                    g_proj_ac = p_tok_ac.gather(1, idx_t.expand(-1, -1, 128))
+                    p_char_ac = torch.nn.functional.linear(cf, head.project.weight[:, 32:], head.project.bias)
+                    pre_c_ac = torch.nn.functional.gelu(g_proj_ac + p_char_ac)
+                else:
+                    g_hid_ac = tok_hid.gather(1, idx_t.expand(-1, -1, 32))
+                    pre_c_ac = torch.nn.functional.gelu(head.project(torch.cat([g_hid_ac, cf], dim=-1)))
+                padded_c_ac = torch.nn.functional.pad(pre_c_ac, (0, 0, pad_sz, pad_sz))
+                dw_ref_ac = head.context.bias.view(1, 1, -1).expand_as(pre_c_ac).clone()
+                for off_i in range(k_sz):
+                    dw_ref_ac.add_(padded_c_ac[:, off_i : off_i + 64, :] * w_c[:, off_i].view(1, 1, -1))
+                ref_full_ac = (g_log + head.suppression(is_fin) + head.delta(dw_ref_ac)).masked_fill(
+                    mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS
+                )
+                out_batch_ac = head(tok_hid, tok_log, ci_ragged)
+                assert torch.equal(out_batch_ac, ref_full_ac)
+            d6_base_logits = head._gather_base_logits_with_suppression(tok_log, c2t, is_fin, mask)
+            assert torch.equal(d6_base_logits, ref_base_logits)
+            for dt in (torch.float32, torch.float16, torch.bfloat16):
+                tl_dt = tok_log.to(dtype=dt)
+                g_dt = tl_dt.gather(1, idx_t.expand(-1, -1, 1))
+                ref_out_of_place = (g_dt + head.suppression(is_fin)).masked_fill(
+                    mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS
+                )
+                act_out_of_place = head._gather_base_logits_with_suppression(
+                    tl_dt, c2t, is_fin, mask, inplace_add=False
+                )
+                assert act_out_of_place.dtype == ref_out_of_place.dtype
+                assert torch.equal(act_out_of_place, ref_out_of_place)
+
+                ref_in_place = g_dt.clone()
+                ref_in_place.add_(head.suppression(is_fin))
+                ref_in_place.masked_fill_(mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
+                act_in_place = head._gather_base_logits_with_suppression(
+                    tl_dt, c2t, is_fin, mask, inplace_add=True
+                )
+                assert act_in_place.dtype == ref_in_place.dtype
+                assert torch.equal(act_in_place, ref_in_place)
+
+            # Equivalent mode active-prefix ragged slicing + 3-way embedding_bag
+            head.fuse_depthwise_delta = True
+            out_batch_eq = head(tok_hid, tok_log, ci_ragged)
+            assert float((out_batch - out_batch_eq).abs().max().item()) <= 2e-6
+
+    # 4. End-to-end v3 SaT.split() & predict_proba() parity across bitwise, equivalent, and sparse modes (D1, D3, D4, D5)
+    tokenizers_mod: Any = importlib.import_module("tokenizers")
+    backend = tokenizers_mod.Tokenizer(
+        tokenizers_mod.models.WordLevel(
+            {"<s>": 0, "<pad>": 1, "</s>": 2, "<unk>": 3, "hello": 4, "world": 5, ".": 6},
+            unk_token="<unk>",
+        )
+    )
+    backend.pre_tokenizer = tokenizers_mod.pre_tokenizers.WhitespaceSplit()
+    backend.post_processor = tokenizers_mod.processors.TemplateProcessing(
+        single="<s> $A </s>",
+        special_tokens=[("<s>", 0), ("</s>", 2)],
+    )
+    tok: Any = PreTrainedTokenizerFast(  # type: ignore[no-untyped-call]
+        tokenizer_object=backend,
+        pad_token="<pad>",
+        unk_token="<unk>",
+        bos_token="<s>",
+        eos_token="</s>",
+        cls_token="<s>",
+        sep_token="</s>",
+    )
+    ckpt_dir = tmp_path / "tier_d_v3_ckpt"
+    torch.manual_seed(911)
+    cfg = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+        vocab_size=20,
+        hidden_size=16,
+        num_hidden_layers=2,
+        num_attention_heads=2,
+        intermediate_size=32,
+        num_labels=1,
+        max_position_embeddings=64,
+        lookahead=4,
+        lookahead_split_layers=1,
+        use_character_head=True,
+        character_head_project_tokens_first=True,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+    )
+    m = SubwordXLMForTokenClassification(cfg).eval()  # type: ignore[no-untyped-call]
+    with torch.no_grad():
+        assert m.character_head is not None
+        m.character_head.delta.weight.normal_(std=0.05)
+    m.save_pretrained(ckpt_dir)
+    tok.save_pretrained(ckpt_dir)
+
+    sat_cls: Any = SaT
+    sat_ref: Any = sat_cls(
+        str(ckpt_dir),
+        tokenizer_name_or_path=str(ckpt_dir),
+        device="cpu",
+        character_preprocessing="reference",
+    )
+    sat_bit: Any = sat_cls(str(ckpt_dir), tokenizer_name_or_path=str(ckpt_dir), device="cpu", mode="bitwise")
+    sat_eq: Any = sat_cls(str(ckpt_dir), tokenizer_name_or_path=str(ckpt_dir), device="cpu", mode="equivalent")
+
+    mixed_texts = [
+        "hello world . " * 8,  # multi-window long
+        "hello .",             # short single-window
+        "world hello . " * 6,  # multi-window long
+        "hello world .",       # short single-window
+        "",                    # empty
+    ]
+    p_ref = sat_ref.predict_proba(mixed_texts, stride=4, block_size=8, batch_size=2)
+    p_bit = sat_bit.predict_proba(mixed_texts, stride=4, block_size=8, batch_size=2)
+    p_eq = sat_eq.predict_proba(mixed_texts, stride=4, block_size=8, batch_size=2)
+    for a, b in zip(p_ref, p_bit):
+        assert np.array_equal(a.view(np.uint32), b.view(np.uint32))
+    for a, b in zip(p_ref, p_eq):
+        if len(a) > 0:
+            assert float(np.max(np.abs(a.astype(np.float32) - b.astype(np.float32)))) <= 1e-3
+
+    sp_ref = list(sat_ref.split(mixed_texts, threshold=0.35, stride=4, block_size=8, batch_size=2))
+    sp_bit = list(sat_bit.split(mixed_texts, threshold=0.35, stride=4, block_size=8, batch_size=2))
+    sp_eq = list(sat_eq.split(mixed_texts, threshold=0.35, stride=4, block_size=8, batch_size=2))
+    assert sp_ref == sp_bit
+    assert sp_ref == sp_eq
+
+    # 5. Verify D6 skip_hashes=True in DocumentFeatures.batch when gate_logit_threshold filters out all tokens
+    from wtpsplit._char_preprocessing import DocumentFeatures
+
+    df_d6 = DocumentFeatures(["hello world"], [[(0, 5), (6, 11)]], use_ordinals=True)  # type: ignore[no-untyped-call]
+    ci_skip = df_d6.batch(
+        [dict(text_index=0, token_start=0, char_start=0, char_end=11, reuse=True)],
+        token_offset=1,
+        skip_hashes=True,
+    )  # type: ignore[no-untyped-call]
+    assert ci_skip.hashes.numel() == 0
+    assert ci_skip.position_in_token.numel() == 0
+    sat_sp_high_gate: Any = sat_cls(
+        str(ckpt_dir),
+        tokenizer_name_or_path=str(ckpt_dir),
+        device="cpu",
+        mode="bitwise",
+        gate_logit_threshold=100.0,
+    )
+    sat_ref_high_gate: Any = sat_cls(
+        str(ckpt_dir),
+        tokenizer_name_or_path=str(ckpt_dir),
+        device="cpu",
+        character_preprocessing="reference",
+        gate_logit_threshold=100.0,
+    )
+    p_sp_hg = sat_sp_high_gate.predict_proba(mixed_texts, stride=4, block_size=8, batch_size=2)
+    p_ref_hg = sat_ref_high_gate.predict_proba(mixed_texts, stride=4, block_size=8, batch_size=2)
+    for a, b in zip(p_ref_hg, p_sp_hg):
+        assert np.array_equal(a.view(np.uint32), b.view(np.uint32))
+
+    # 6. Verify encode_tokens_varlen doc_runs training-mode guard
+    m.train()
+    p_ids = torch.tensor([[0, 4, 5, 2, 0, 5, 6, 2]], dtype=torch.int64)
+    p_pos = torch.tensor([[2, 3, 4, 5, 2, 3, 4, 5]], dtype=torch.int64)
+    d_ids = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1], dtype=torch.int32)
+    h_no_runs, l_no_runs = m.encode_tokens_varlen(p_ids, p_pos, d_ids)
+    h_with_runs, l_with_runs = m.encode_tokens_varlen(p_ids, p_pos, d_ids, doc_runs=[(0, 8, 4, 2)])
+    assert torch.equal(h_no_runs, h_with_runs)
+    assert torch.equal(l_no_runs, l_with_runs)
+    m.eval()
+
+
+
 
 
 

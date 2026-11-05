@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import os
+import threading
 import warnings
 from pathlib import Path
 from typing import Literal
@@ -12,6 +13,7 @@ from transformers import AutoConfig, AutoModelForTokenClassification, AutoTokeni
 from transformers.utils.hub import cached_file
 
 from wtpsplit._host_kernels import (
+    decode_char_split,
     decode_subword_split,
     exact_float16_logit_threshold,
     extract_subword_logits_fast,
@@ -336,6 +338,9 @@ class SaT:
         self._compiled = compile is not False
 
         self.use_lora = False
+        self._one_fit_head = None
+        self._one_fit_metadata = None
+        self._one_fit_lock = threading.RLock()
 
         model_name = str(model_name_or_model)
         is_local = os.path.isdir(model_name)
@@ -667,13 +672,116 @@ class SaT:
         assert hasattr(self, "model")
         return getattr(self.model, name)
 
+    def adapt(
+        self,
+        sentences,
+        *,
+        language: str = None,
+        epochs: int = 30,
+        learning_rate: float = 3e-4,
+        batch_size: int = 8,
+        block_size: int = 256,
+        rank: int = 16,
+        alpha: float = 32.0,
+        dropout: float = 0.0,
+        seed: int = 42,
+        show_progress: bool = True,
+    ):
+        """Adapt this PyTorch SaT model to a list of gold sentences using LoRA.
+
+        The model is updated in place and returned. No files are written unless
+        :meth:`save_adapter` is called explicitly.
+        """
+        if self.__dict__.get("_one_fit_head") is not None:
+            raise ValueError("Clear the one-fit boundary adapter before fitting LoRA")
+        if self.__dict__.get("quantization") is not None:
+            raise ValueError("INT8 SaT is inference-only; adapt the FP32 model, save its adapter, then reload with INT8")
+        if self.__dict__.get("precision") in ('fp16', 'bf16'):
+            raise ValueError('FP16/BF16 modes are inference-only; adapt in FP32, save the adapter, then reload with precision')
+        from wtpsplit.adaptation import adapt_model
+
+        history = adapt_model(
+            self,
+            sentences,
+            language=language,
+            epochs=epochs,
+            learning_rate=learning_rate,
+            batch_size=batch_size,
+            block_size=block_size,
+            rank=rank,
+            alpha=alpha,
+            dropout=dropout,
+            seed=seed,
+            show_progress=show_progress,
+        )
+        self.adaptation_history = history
+        self.use_lora = True
+        return self
+
+    def save_adapter(self, output_dir):
+        """Save an in-process adapter in the format accepted by ``lora_path``."""
+        if self.__dict__.get("_one_fit_head") is not None:
+            raise ValueError("Use save_boundary_adapter() for a one-fit head")
+        from wtpsplit.adaptation import save_adapter
+
+        return save_adapter(self, output_dir)
+
+    def _check_one_fit_model(self):
+        if self.ort_providers is not None or self.quantization is not None or self.precision is not None:
+            raise ValueError("One-fit v1 requires an ordinary PyTorch character-head model")
+        if self._compiled or self.use_lora:
+            raise ValueError("One-fit v1 cannot be combined with compilation or LoRA")
+        model = getattr(self.model, "model", None)
+        if model is None or getattr(model, "character_head", None) is None:
+            raise ValueError("One-fit v1 requires a character-head SaT checkpoint")
+        if self.character_preprocessing != "reference" or not self.trim_padding:
+            raise ValueError("One-fit v1 requires reference character preprocessing and trim_padding=True")
+
+    def fit_boundary_adapter(self, support, *, prior_bundle, batch_size: int = 32):
+        """Fit the experimental one-fit boundary head from same-corpus support.
+
+        Each support record has ``text``, internal Unicode ``gold_offsets`` and
+        an annotated ``segments`` count. The prior bundle names the two frozen
+        offline checkpoints; the base encoder remains unchanged.
+        """
+        self._check_one_fit_model()
+        if batch_size != 32:
+            raise ValueError("One-fit v1 uses the frozen batch_size=32 feature extraction")
+        from wtpsplit.one_fit import fit
+
+        head, metadata = fit(self, support, prior_bundle, batch_size=batch_size)
+        self._one_fit_head, self._one_fit_metadata = head, metadata
+        return self
+
+    def save_boundary_adapter(self, output_dir):
+        """Save the fitted one-fit head without copying the base model."""
+        if self._one_fit_head is None:
+            raise ValueError("Fit or load a one-fit boundary adapter first")
+        from wtpsplit.one_fit import save_adapter
+
+        return save_adapter(output_dir, self._one_fit_head, self._one_fit_metadata)
+
+    def load_boundary_adapter(self, adapter_dir):
+        """Load a one-fit head fitted for this character-head checkpoint."""
+        self._check_one_fit_model()
+        from wtpsplit.one_fit import load_adapter
+
+        self._one_fit_head, self._one_fit_metadata = load_adapter(adapter_dir, self.model_name_or_model)
+        return self
+
+    def clear_boundary_adapter(self):
+        """Return to the base model's boundary probabilities."""
+        self._one_fit_head = None
+        self._one_fit_metadata = None
+        return self
+
     def get_threshold(self, language: str | None = None, domain: str | None = None) -> float:
         """Return the best available development-fitted sentence threshold.
 
         Calibration is opt-in: :meth:`split` keeps the released checkpoint's
         backward-compatible default unless callers pass this value explicitly.
         """
-        if self.use_lora:
+        if self.use_lora or self.__dict__.get("_one_fit_head") is not None:
             return 0.5
         config = getattr(self.__dict__.get("model"), "config", None)
         calibration_source = getattr(config, "sat_export_source_checkpoint", str(self.model_name_or_model))
@@ -740,6 +848,37 @@ class SaT:
         if line_breaks != "preserve":
             texts = [normalize_input_line_breaks(text, line_breaks) for text in texts]
 
+        if self.__dict__.get("_one_fit_head") is not None:
+            if remove_whitespace_before_inference:
+                raise ValueError("One-fit v1 requires the original whitespace during feature extraction")
+            if (stride != 64 or block_size != 512 or batch_size != 32 or pad_last_batch
+                    or weighting != "uniform"):
+                raise ValueError("One-fit v1 requires stride=64, block_size=512, batch_size=32, "
+                                 "pad_last_batch=False and weighting='uniform'")
+            from wtpsplit.one_fit import adapted_probabilities, encode, _logit
+
+            def adapted_logits(input_texts):
+                rows = encode(self, input_texts, batch_size=batch_size)
+                return [np.column_stack([
+                    _logit(adapted_probabilities(text, row, self._one_fit_head)),
+                    _logit(row["scores"]),
+                ]) for text, row in zip(input_texts, rows, strict=True)]
+
+            def adapted_probability_fn(logits):
+                if logits.shape[1] == 1:  # shared empty-input placeholder
+                    values = sigmoid(logits[:, 0])
+                    return values, values
+                return sigmoid(logits[:, 0]), sigmoid(logits[:, 1])
+
+            yield from iter_probabilities(
+                texts, outer_batch_size=outer_batch_size,
+                remove_whitespace_before_inference=False,
+                extract_logits=adapted_logits,
+                probability_fn=adapted_probability_fn,
+                return_paragraph_probabilities=return_paragraph_probabilities,
+            )
+            return
+
         use_char_head = bool(getattr(self.model.config, "use_character_head", False))
         is_subword_proba = not use_char_head and self.model.config.model_type not in CHAR_MODEL_TYPES
         can_fast_subword_proba = (
@@ -748,6 +887,7 @@ class SaT:
             and self.tokenizer is not None
             and not verbose
         )
+
         def extract_logits(input_texts):
             if can_fast_subword_proba:
                 outer_batch_logits, encoded_batch = extract_subword_logits_fast(
@@ -785,6 +925,8 @@ class SaT:
                 tokenizer=self.tokenizer,
                 character_preprocessing=getattr(self, "character_preprocessing", "reference"),
                 trim_padding=getattr(self, "trim_padding", True),
+                trim_subword_padding=bool(getattr(self, "trim_subword_padding", False)),
+                pack_sequences=bool(getattr(self, "pack_sequences", False)),
             )
             if use_char_head:
                 return [
@@ -905,7 +1047,7 @@ class SaT:
         if threshold is not None:
             return threshold
         exported_threshold = getattr(self.model.config, "sat_export_default_threshold", None)
-        if exported_threshold is not None and not self.use_lora:
+        if exported_threshold is not None and not self.use_lora and self.__dict__.get("_one_fit_head") is None:
             return float(exported_threshold)
         model_str = self.model_name_or_model
         if not isinstance(model_str, str):
@@ -913,7 +1055,7 @@ class SaT:
                 f"get_default_threshold received non-string argument: {type(model_str)}. Using base default."
             )
             return DEFAULT_SENTENCE_THRESHOLD
-        if self.use_lora:
+        if self.use_lora or self.__dict__.get("_one_fit_head") is not None:
             return 0.5
         resolved = default_threshold_for_checkpoint(model_str)
         if resolved is None:
@@ -1021,19 +1163,20 @@ class SaT:
     ):
         sentence_threshold = self._resolve_sentence_threshold(threshold)
 
-        can_fast_subword_split = (
+        is_char_head_model = bool(getattr(self.model.config, "use_character_head", False))
+        can_fast_split = (
             not do_paragraph_segmentation
             and max_length is None
             and min_length <= 1
             and not remove_whitespace_before_inference
-            and not getattr(self.model.config, "use_character_head", False)
-            and self.model.config.model_type not in CHAR_MODEL_TYPES
+            and (is_char_head_model or self.model.config.model_type not in CHAR_MODEL_TYPES)
+            and self.__dict__.get("_one_fit_head") is None
             and getattr(self.model.config, "language_adapter", "off") != "on"
             and self.tokenizer is not None
             and not verbose
         )
 
-        if can_fast_subword_split:
+        if can_fast_split:
             z_min = exact_float16_logit_threshold(sentence_threshold)
             line_breaks = self.__dict__.get("input_line_breaks", "preserve")
             max_content_block = max_content_block_size(self.model.config)
@@ -1050,6 +1193,51 @@ class SaT:
                 )
                 nonempty_map = [i for i, t in enumerate(outer_in) if t.strip()]
                 nonempty_texts = [outer_in[i] for i in nonempty_map]
+
+                if is_char_head_model:
+                    if nonempty_texts:
+                        char_stitched_logits, _, _, _ = extract(
+                            nonempty_texts,
+                            self.model,
+                            stride=stride,
+                            max_block_size=block_size,
+                            batch_size=batch_size,
+                            pad_last_batch=pad_last_batch,
+                            weighting=weighting,
+                            verbose=verbose,
+                            tokenizer=self.tokenizer,
+                            character_preprocessing=getattr(self, "character_preprocessing", "reference"),
+                            trim_padding=getattr(self, "trim_padding", True),
+                            trim_subword_padding=bool(getattr(self, "trim_subword_padding", False)),
+                            pack_sequences=bool(getattr(self, "pack_sequences", False)),
+                        )
+                    else:
+                        char_stitched_logits = []
+
+                    nonempty_cursor = 0
+                    for doc_i, orig_text in enumerate(outer_orig):
+                        if split_on_input_newlines is False:
+                            warnings.warn(
+                                "split_on_input_newlines=False disables forced splitting at input newlines. "
+                                "This option does not replace newlines with spaces; the model may still "
+                                "predict boundaries around them. Returned segments may contain input newlines.",
+                                UserWarning,
+                                stacklevel=2,
+                            )
+                        if doc_i in nonempty_map:
+                            doc_char_logits = char_stitched_logits[nonempty_cursor]
+                            nonempty_cursor += 1
+                        else:
+                            doc_char_logits = np.empty((0, 1), dtype=np.float16)
+
+                        yield decode_char_split(
+                            orig_text,
+                            doc_char_logits,
+                            z_min=z_min,
+                            strip_whitespace=strip_whitespace,
+                            split_on_input_newlines=bool(split_on_input_newlines),
+                        )
+                    continue
 
                 if nonempty_texts:
                     stitched_logits, encoded_batch = extract_subword_logits_fast(

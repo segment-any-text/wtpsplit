@@ -1014,6 +1014,37 @@ def decode_subword_split(
     return sentences
 
 
+def decode_char_split(
+    text: str,
+    char_logits: Float16Array,
+    *,
+    z_min: float | np.floating[Any] | None,
+    strip_whitespace: bool = False,
+    split_on_input_newlines: bool = True,
+) -> list[str]:
+    """Decode `SaT.split()` sentences directly from `float16` character logits without `sigmoid`."""
+    text_len = len(text)
+    if text_len == 0 or len(char_logits) == 0 or z_min is None or (math.isinf(float(z_min)) and float(z_min) > 0):
+        sentences = indices_to_sentences(text, [], strip_whitespace=strip_whitespace)
+    else:
+        col = char_logits[:text_len, Constants.NEWLINE_INDEX]
+        if math.isinf(float(z_min)) and float(z_min) < 0:
+            cuts = np.flatnonzero(~np.isnan(col))
+        else:
+            cuts = np.flatnonzero(col >= np.float16(z_min))
+        sentences = indices_to_sentences(text, cuts, strip_whitespace=strip_whitespace)
+
+    if split_on_input_newlines and "\n" in text:
+        newline_split_sentences: list[str] = []
+        for idx, sentence in enumerate(sentences):
+            if idx < len(sentences) - 1 and sentence.endswith("\n"):
+                sentence = sentence[:-1]
+            newline_split_sentences.extend(sentence.split("\n"))
+        return newline_split_sentences
+
+    return sentences
+
+
 COMPILE_WIDTH_BUCKETS: tuple[int, ...] = (64, 128, 256, 514)
 
 

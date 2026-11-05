@@ -252,11 +252,35 @@ class DocumentFeatures:
                     g_s1 = s1_shifted_f[0] if len(s1_shifted_f) == 1 else np.concatenate(s1_shifted_f)
 
         if safe_records:
+            n_total_tok = len(g_s0)
             g_chars = np.arange(safe_char_cursor, dtype=np.int64)
-            g_owner = np.searchsorted(g_s0, g_chars, side="right") - 1
-            safe_owner = np.maximum(g_owner, 0)
-            g_covered = (g_owner >= 0) & (g_chars < g_s1[safe_owner])
-            g_pos = np.where(g_covered, np.minimum(g_chars - g_s0[safe_owner], max_position_in_token), 0)
+            # Fast O(N_chars) linear-time gap/span repeat when spans are disjoint (no overlapping tokens)
+            if not any_invalid_spans and n_total_tok > 0:
+                gaps = np.empty(n_total_tok + 1, dtype=np.int64)
+                gaps[0] = g_s0[0]
+                if n_total_tok > 1:
+                    gaps[1:-1] = g_s0[1:] - g_s1[:-1]
+                gaps[-1] = safe_char_cursor - g_s1[-1]
+                is_disjoint = bool(np.all(gaps >= 0))
+            else:
+                is_disjoint = False
+
+            if is_disjoint:
+                span_lens = g_s1 - g_s0
+                run_lens = np.empty(2 * n_total_tok + 1, dtype=np.int64)
+                run_lens[0::2] = gaps
+                run_lens[1::2] = span_lens
+                run_id = np.repeat(np.arange(2 * n_total_tok + 1, dtype=np.int64), run_lens)
+                g_covered = (run_id & 1) == 1
+                safe_owner = np.minimum(run_id >> 1, n_total_tok - 1)
+                g_owner = safe_owner
+                g_pos = np.where(g_covered, np.minimum(g_chars - g_s0[safe_owner], max_position_in_token), 0)
+            else:
+                g_owner = np.searchsorted(g_s0, g_chars, side="right") - 1
+                safe_owner = np.maximum(g_owner, 0)
+                g_covered = (g_owner >= 0) & (g_chars < g_s1[safe_owner])
+                g_pos = np.where(g_covered, np.minimum(g_chars - g_s0[safe_owner], max_position_in_token), 0)
+
             g_final = np.zeros(safe_char_cursor, dtype=np.int64)
             g_final[g_s1 - 1] = 1
 
@@ -314,31 +338,65 @@ class DocumentFeatures:
         return not ((token_start and prefix[token_start-1] > char_start)
                     or (token_end < len(suffix) and suffix[token_end] < char_end))
 
-    def batch(self, windows, *, token_offset=0):
+    def batch(self, windows, *, token_offset=0, skip_hashes=False):
         width = max(w["char_end"] - w["char_start"] for w in windows)
         use_ord = self.use_ordinals and all(
             w.get("reuse", self.rows[w["text_index"]] is not None) for w in windows
         )
         n_win = len(windows)
         t_off = int(token_offset)
+        if skip_hashes and all(w.get("reuse", self.rows[w["text_index"]] is not None) for w in windows):
+            c2t_arr = np.empty((n_win, width), dtype=np.int64)
+            fin_arr = np.empty((n_win, width), dtype=np.int64)
+            msk_arr = np.empty((n_win, width), dtype=np.int64)
+            for i, window in enumerate(windows):
+                index, start, end = window["text_index"], window["char_start"], window["char_end"]
+                length = end - start
+                if length < width:
+                    c2t_arr[i, length:] = t_off
+                    fin_arr[i, length:] = 0
+                    msk_arr[i, length:] = 0
+                source = self.rows[index]
+                fin_arr[i, :length] = source["is_token_final"][start:end]
+                msk_arr[i, :length] = 1
+                shift = t_off - window["token_start"]
+                c2t_arr[i, :length] = np.where(
+                    self.covered[index][start:end], source["char_to_token"][start:end] + shift, t_off
+                )
+            dummy_pos = torch.zeros((0, 0), dtype=torch.int64)
+            dummy_hash = torch.zeros((0, 0), dtype=torch.int32 if use_ord else torch.int64)
+            return CharInputs(
+                char_to_token=torch.from_numpy(c2t_arr),
+                is_token_final=torch.from_numpy(fin_arr),
+                position_in_token=dummy_pos,
+                hashes=dummy_hash,
+                mask=torch.from_numpy(msk_arr),
+            )
+
         arrays = {
-            "char_to_token": (
-                np.full((n_win, width), t_off, dtype=np.int64)
-                if t_off != 0
-                else np.zeros((n_win, width), dtype=np.int64)
-            ),
-            "is_token_final": np.zeros((n_win, width), dtype=np.int64),
-            "position_in_token": np.zeros((n_win, width), dtype=np.int64),
-            "mask": np.zeros((n_win, width), dtype=np.int64),
+            "char_to_token": np.empty((n_win, width), dtype=np.int64),
+            "is_token_final": np.empty((n_win, width), dtype=np.int64),
+            "position_in_token": np.empty((n_win, width), dtype=np.int64),
+            "mask": np.empty((n_win, width), dtype=np.int64),
         }
+        pad_hash_row = None
         if use_ord:
-            arrays["hashes"] = np.zeros((n_win, width), dtype=np.int32)
+            arrays["hashes"] = np.empty((n_win, width), dtype=np.int32)
         else:
-            arrays["hashes"] = np.broadcast_to(np.asarray(PRIMES[:8], dtype=np.int64) % 8192,
-                                               (n_win, width, 8)).copy()
+            pad_hash_row = np.asarray(PRIMES[:8], dtype=np.int64) % 8192
+            arrays["hashes"] = np.empty((n_win, width, 8), dtype=np.int64)
         for i, window in enumerate(windows):
             index, start, end = window["text_index"], window["char_start"], window["char_end"]
             length = end - start
+            if length < width:
+                arrays["char_to_token"][i, length:] = t_off
+                arrays["is_token_final"][i, length:] = 0
+                arrays["position_in_token"][i, length:] = 0
+                arrays["mask"][i, length:] = 0
+                if use_ord:
+                    arrays["hashes"][i, length:] = 0
+                else:
+                    arrays["hashes"][i, length:] = pad_hash_row
             source = self.rows[index]
             if not window.get("reuse", source is not None):
                 fallback = build_char_inputs_vectorized([window["text"]], [window["offsets"]])
@@ -366,7 +424,7 @@ _DEFAULT_DOCUMENT_FEATURES = DocumentFeatures
 
 def extract_character_head_exact(texts, model, *, stride, max_block_size, batch_size,
                                  pad_last_batch=False, weighting="uniform", verbose=False, tokenizer,
-                                 trim_padding=True):
+                                 trim_padding=True, trim_subword_padding=False, pack_sequences=False):
     """Reference windowing/model/stitching, with request-local document features.
 
 Preserves reference padding, batch layout and fusion unless trim_padding is enabled.
@@ -453,6 +511,11 @@ No document features or predictions are retained between requests.
             doc_win_counts[text_index] += 1
             if done:
                 break
+    if trim_subword_padding and len(windows) > batch_size:
+        win_tok_lens = [len(w["input_ids"]) for w in windows]
+        if any(win_tok_lens[i] > win_tok_lens[i + 1] for i in range(len(win_tok_lens) - 1)):
+            windows.sort(key=lambda w: len(w["input_ids"]))
+
     num_labels = model.config.num_labels
     is_uniform = weighting == "uniform"
     _zero_f32 = np.float32(0.0)
@@ -462,7 +525,11 @@ No document features or predictions are retained between requests.
         for i, t in enumerate(texts)
     ]
     counts = [
-        None if (is_uniform and doc_win_counts[i] <= 1) else np.zeros(len(t), dtype=np.float32)
+        None if (is_uniform or doc_win_counts[i] == 0) else np.zeros(len(t), dtype=np.float32)
+        for i, t in enumerate(texts)
+    ]
+    diffs = [
+        np.zeros(len(t) + 1, dtype=np.int32) if (is_uniform and doc_win_counts[i] > 1) else None
         for i, t in enumerate(texts)
     ]
     n_batches = math.ceil(len(windows) / batch_size)
@@ -474,6 +541,13 @@ No document features or predictions are retained between requests.
     sep_id = tokenizer.sep_token_id
     pad_id = tokenizer.pad_token_id
     is_default_df = type(cached) is _DEFAULT_DOCUMENT_FEATURES
+    can_pack_char_varlen = (
+        pack_sequences
+        and can_use_two_stage
+        and not pad_last_batch
+        and hasattr(model, "encode_tokens_varlen_batch")
+        and hasattr(getattr(model, "model", None), "encode_tokens_varlen")
+    )
     if can_use_two_stage:
         gpu_batches = []
         batch_windows = []
@@ -482,6 +556,20 @@ No document features or predictions are retained between requests.
         def _flush_char_gpu_batches():
             nonlocal accum_d2h_bytes
             for b_win, logits_dev in zip(batch_windows, gpu_batches):
+                if is_uniform and all(doc_win_counts[w["text_index"]] == 1 for w in b_win):
+                    values_f16 = (logits_dev + 0.0).to(torch.float16).cpu().numpy()
+                    for row, window in enumerate(b_win):
+                        ti, start, end = window["text_index"], window["char_start"], window["char_end"]
+                        length = end - start
+                        doc_len = len(texts[ti])
+                        if length == doc_len:
+                            out_f16[ti] = values_f16[row, :length]
+                        else:
+                            res = np.full((doc_len, num_labels), -12.0, dtype=np.float16)
+                            res[start:end] = values_f16[row, :length]
+                            out_f16[ti] = res
+                    continue
+
                 values = logits_dev.cpu().numpy()
                 for row, window in enumerate(b_win):
                     ti, start, end = window["text_index"], window["char_start"], window["char_end"]
@@ -497,7 +585,8 @@ No document features or predictions are retained between requests.
                                 out_f16[ti] = res
                         else:
                             logits[ti][start:end] += values[row, :length]
-                            counts[ti][start:end] += 1.0
+                            diffs[ti][start] += 1
+                            diffs[ti][end] -= 1
                     else:
                         weights = _window_weights(length, weighting)
                         logits[ti][start:end] += values[row, :length] * weights[:, None]
@@ -509,9 +598,10 @@ No document features or predictions are retained between requests.
         for bi in batches:
             batch = windows[bi*batch_size:(bi+1)*batch_size]
             real = len(batch)
-            token_width = block+2
-            if trim_padding:
-                token_width = max(len(window["input_ids"]) + 2 for window in batch)
+            b_wl = np.fromiter((len(w["input_ids"]) for w in batch), dtype=np.int64, count=real)
+            max_wl = int(b_wl.max()) if real > 0 else 0
+            min_wl = int(b_wl.min()) if real > 0 else 0
+            token_width = (max_wl + 2) if trim_padding else (block + 2)
             ids = np.full((real, token_width), pad_id, dtype=np.int64)
             attention = np.zeros_like(ids, dtype=np.float32)
             for row, window in enumerate(batch):
@@ -521,23 +611,37 @@ No document features or predictions are retained between requests.
                 ids[row, 1 : n_win + 1] = win_ids
                 ids[row, n_win + 1] = sep_id
                 attention[row, : n_win + 2] = 1
+            if real < batch_size and pad_last_batch:
+                missing = batch_size-real
+                ids = np.pad(ids, ((0,missing),(0,0)), constant_values=pad_id)
+                attention = np.pad(attention, ((0,missing),(0,0)))
+            if can_pack_char_varlen and min_wl < max_wl:
+                token_hidden, token_logits = model.encode_tokens_varlen_batch(ids, b_wl)
+            else:
+                token_hidden, token_logits = model.encode_tokens(
+                    attention_mask=attention,
+                    input_ids=ids,
+                )
+            char_head_obj = getattr(getattr(model, "model", None), "character_head", None)
+            eff_gate = getattr(char_head_obj, "gate_logit_threshold", None) if char_head_obj is not None else None
+            skip_hashes = (
+                is_default_df
+                and eff_gate is not None
+                and not getattr(char_head_obj, "training", False)
+                and not (real < batch_size and pad_last_batch)
+                and not bool((token_logits.max(dim=-1).values > eff_gate).any())
+            )
             if is_default_df:
-                inputs = cached.batch(batch, token_offset=1)
+                inputs = cached.batch(batch, token_offset=1, skip_hashes=skip_hashes)
             else:
                 inputs = cached.batch(batch)
                 inputs.char_to_token = inputs.char_to_token + 1
             if real < batch_size and pad_last_batch:
                 missing = batch_size-real
-                ids = np.pad(ids, ((0,missing),(0,0)), constant_values=pad_id)
-                attention = np.pad(attention, ((0,missing),(0,0)))
                 for key in FIELDS:
                     value = getattr(inputs, key)
                     pad_val = -1 if (key == "hashes" and value.ndim == 2) else 0
                     setattr(inputs, key, torch.nn.functional.pad(value, (0,)*(2*(value.ndim-1))+(0,missing), value=pad_val))
-            token_hidden, token_logits = model.encode_tokens(
-                attention_mask=attention,
-                input_ids=ids,
-            )
             char_logits_t = model.run_character_head(token_hidden, token_logits, inputs)[:real]
             gpu_batches.append(char_logits_t)
             batch_windows.append(batch)
@@ -593,7 +697,8 @@ No document features or predictions are retained between requests.
                             out_f16[ti] = res
                     else:
                         logits[ti][start:end] += values[row, :length]
-                        counts[ti][start:end] += 1.0
+                        diffs[ti][start] += 1
+                        diffs[ti][end] -= 1
                 else:
                     weights = _window_weights(length, weighting)
                     logits[ti][start:end] += values[row, :length] * weights[:, None]
@@ -609,8 +714,17 @@ No document features or predictions are retained between requests.
             )
         else:
             if text:
-                covered = counts[i] > 0
-                logits[i][covered] /= counts[i][covered, None]
-                logits[i][~covered] = -12.0
+                if is_uniform:
+                    cnt = np.cumsum(diffs[i][:-1], dtype=np.int32)
+                    if int(cnt.min()) > 0:
+                        logits[i] /= cnt.astype(np.float32)[:, None]
+                    else:
+                        covered = cnt > 0
+                        logits[i][covered] /= cnt[covered, None].astype(np.float32)
+                        logits[i][~covered] = -12.0
+                else:
+                    covered = counts[i] > 0
+                    logits[i][covered] /= counts[i][covered, None]
+                    logits[i][~covered] = -12.0
             out_f16[i] = logits[i].astype(np.float16)
     return out_f16, None, tokenizer, encoded

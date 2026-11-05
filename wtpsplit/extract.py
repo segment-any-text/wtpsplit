@@ -23,6 +23,8 @@ CHAR_MODEL_TYPES = {"bert-char", "la-canine"}
 DEFAULT_TOKENIZERS = {
     "xlm-token": "facebookAI/xlm-roberta-base",
     "xlm-roberta": "facebookAI/xlm-roberta-base",
+    "modernbert-token": "jhu-clsp/mmBERT-base",
+    "modernbert": "jhu-clsp/mmBERT-base",
 }
 
 # XLM-R reserves two position slots (its padding_idx offset), leaving 512 usable, minus
@@ -211,6 +213,19 @@ class PyTorchWrapper:
         )
         out: Any = None
 
+        def _build_doc_runs(chunk_offsets: list[tuple[int, int, int]]) -> list[tuple[int, int, int, int]]:
+            runs: list[tuple[int, int, int, int]] = []
+            for _r_idx, s_off, e_off in chunk_offsets:
+                seq_len = (e_off - s_off) + 2
+                t_start = s_off - 1
+                t_end = e_off + 1
+                if runs and runs[-1][2] == seq_len and runs[-1][1] == t_start:
+                    prev_s, _prev_e, prev_len, prev_cnt = runs[-1]
+                    runs[-1] = (prev_s, t_end, prev_len, prev_cnt + 1)
+                else:
+                    runs.append((t_start, t_end, seq_len, 1))
+            return runs
+
         def _run_pack_chunk(
             ids_parts: list[np.ndarray],
             pos_parts: list[np.ndarray],
@@ -227,12 +242,21 @@ class PyTorchWrapper:
             doc_ids_t = torch.from_numpy(np.concatenate(doc_parts, axis=0)).to(
                 device=device, dtype=torch.int32
             )
+            doc_runs = _build_doc_runs(chunk_offsets)
             with torch.no_grad(), context:
-                _, packed_logits = self.model.encode_tokens_varlen(
-                    packed_ids_t,
-                    packed_pos_t,
-                    doc_ids_t,
-                )
+                try:
+                    _, packed_logits = self.model.encode_tokens_varlen(
+                        packed_ids_t,
+                        packed_pos_t,
+                        doc_ids_t,
+                        doc_runs=doc_runs,
+                    )
+                except TypeError:
+                    _, packed_logits = self.model.encode_tokens_varlen(
+                        packed_ids_t,
+                        packed_pos_t,
+                        doc_ids_t,
+                    )
             if self.output_float32:
                 packed_logits = packed_logits.float()
             packed_2d = packed_logits[0]
@@ -275,6 +299,83 @@ class PyTorchWrapper:
             out = out.clone()
         return out
 
+    def encode_tokens_varlen_batch(
+        self,
+        batch_input_ids: np.ndarray,
+        batch_win_lens: np.ndarray,
+    ) -> tuple[Any, Any]:
+        """Pack non-pad tokens across ``batch_input_ids`` into ``[1, N_valid]``, run ``encode_tokens_varlen``, and unpack ``(token_hidden, token_logits)``."""
+        import torch
+
+        num_rows = len(batch_win_lens)
+        max_seq = (int(batch_win_lens.max()) + 2) if num_rows > 0 else 0
+        hidden_size = int(self.model.config.hidden_size)
+        num_labels = int(self.model.config.num_labels)
+        device = self.model.device
+        dtype = getattr(self.model, "dtype", torch.float32)
+        if num_rows == 0 or max_seq == 0:
+            return (
+                torch.zeros((num_rows, max_seq, hidden_size), device=device, dtype=dtype),
+                torch.zeros((num_rows, max_seq, num_labels), device=device, dtype=dtype),
+            )
+
+        pad_idx = int(getattr(getattr(getattr(self.model, "roberta", None), "embeddings", None), "padding_idx", 1))
+        packed_ids_parts: list[np.ndarray] = []
+        packed_pos_parts: list[np.ndarray] = []
+        doc_id_parts: list[np.ndarray] = []
+        runs: list[tuple[int, int, int, int]] = []
+        row_spans: list[tuple[int, int, int]] = []
+        cursor = 0
+        for row_idx in range(num_rows):
+            seq_len = int(batch_win_lens[row_idx]) + 2
+            row_ids = batch_input_ids[row_idx, :seq_len]
+            packed_ids_parts.append(row_ids)
+            mask = (row_ids != pad_idx).astype(np.int64)
+            row_pos = np.cumsum(mask, dtype=np.int64) * mask + pad_idx
+            packed_pos_parts.append(row_pos)
+            doc_id_parts.append(np.full(seq_len, row_idx, dtype=np.int32))
+            t_start = cursor
+            t_end = cursor + seq_len
+            row_spans.append((row_idx, t_start, t_end))
+            if runs and runs[-1][2] == seq_len and runs[-1][1] == t_start:
+                prev_s, _prev_e, prev_len, prev_cnt = runs[-1]
+                runs[-1] = (prev_s, t_end, prev_len, prev_cnt + 1)
+            else:
+                runs.append((t_start, t_end, seq_len, 1))
+            cursor = t_end
+
+        packed_ids_t = torch.from_numpy(np.concatenate(packed_ids_parts, axis=0)).to(
+            device=device, dtype=torch.long
+        ).unsqueeze(0)
+        packed_pos_t = torch.from_numpy(np.concatenate(packed_pos_parts, axis=0)).to(
+            device=device, dtype=torch.long
+        ).unsqueeze(0)
+        doc_ids_t = torch.from_numpy(np.concatenate(doc_id_parts, axis=0)).to(
+            device=device, dtype=torch.int32
+        )
+
+        context = (
+            torch.autocast(self.autocast_device, dtype=self.autocast_dtype, enabled=self.autocast_enabled)
+            if self.autocast_device is not None
+            else nullcontext()
+        )
+        with torch.no_grad(), context:
+            packed_hid, packed_log = self.model.encode_tokens_varlen(
+                packed_ids_t,
+                packed_pos_t,
+                doc_ids_t,
+                doc_runs=runs,
+            )
+        hid_2d = packed_hid[0]
+        log_2d = packed_log[0]
+        out_hid = torch.zeros((num_rows, max_seq, hidden_size), device=device, dtype=hid_2d.dtype)
+        out_log = torch.zeros((num_rows, max_seq, num_labels), device=device, dtype=log_2d.dtype)
+        for r_idx, t_s, t_e in row_spans:
+            seq_l = t_e - t_s
+            out_hid[r_idx, :seq_l] = hid_2d[t_s:t_e]
+            out_log[r_idx, :seq_l] = log_2d[t_s:t_e]
+        return out_hid, out_log
+
     def run_character_head(
         self,
         token_hidden: Any,
@@ -305,10 +406,13 @@ class PyTorchWrapper:
                     c2t = self._as_device_tensor(char_inputs.char_to_token, "char_to_token")
                     fin = self._as_device_tensor(char_inputs.is_token_final, "char_is_token_final")
                     msk = self._as_device_tensor(char_inputs.mask, "char_mask")
-                    index = c2t.unsqueeze(-1)
-                    gathered_logits = token_logits.gather(1, index.expand(-1, -1, token_logits.size(-1)))
-                    logits = gathered_logits + char_head.suppression(fin)
-                    logits = logits.masked_fill(msk.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
+                    if hasattr(char_head, "_gather_base_logits_with_suppression"):
+                        logits = char_head._gather_base_logits_with_suppression(token_logits, c2t, fin, msk)
+                    else:
+                        index = c2t.unsqueeze(-1)
+                        gathered_logits = token_logits.gather(1, index.expand(-1, -1, token_logits.size(-1)))
+                        logits = gathered_logits + char_head.suppression(fin)
+                        logits = logits.masked_fill(msk.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
                     if self.output_float32:
                         logits = logits.float()
                     if getattr(self, "_compiled", False):
@@ -595,6 +699,7 @@ def extract(
     character_preprocessing="reference",
     trim_padding=True,
     trim_subword_padding: bool = False,
+    pack_sequences: bool = False,
 ):
     """
     Computes logits for the given batch of texts by:
@@ -615,6 +720,21 @@ def extract(
             tokenizer = AutoTokenizer.from_pretrained(default_tokenizer)
         if character_preprocessing == "exact":
             from wtpsplit._char_preprocessing import extract_character_head_exact
+            if extract_character_head_exact.__module__ == "wtpsplit._char_preprocessing":
+                return extract_character_head_exact(
+                    batch_of_texts,
+                    model,
+                    stride=stride,
+                    max_block_size=max_block_size,
+                    batch_size=batch_size,
+                    pad_last_batch=pad_last_batch,
+                    weighting=weighting,
+                    verbose=verbose,
+                    tokenizer=tokenizer,
+                    trim_padding=trim_padding,
+                    trim_subword_padding=trim_subword_padding,
+                    pack_sequences=pack_sequences,
+                )
             character_extractor = extract_character_head_exact
         elif character_preprocessing == "reference":
             character_extractor = extract_character_head

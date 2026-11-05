@@ -178,7 +178,15 @@ def get_subword_label_dict(label_args, tokenizer):
     return label_dict
 
 
+with np.errstate(over="ignore", invalid="ignore"):
+    _SIGMOID_F16_LUT: NDArray[np.float32] = (
+        1 / (1 + np.exp(-np.arange(65536, dtype=np.uint16).view(np.float16).astype(np.float32)))
+    ).astype(np.float32)
+
+
 def sigmoid(x: NDArray[Any]) -> NDArray[Any]:
+    if isinstance(x, np.ndarray) and x.dtype == np.float16:
+        return _SIGMOID_F16_LUT[x.view(np.uint16)]
     return 1 / (1 + np.exp(-x.astype(np.float32)))  # fp32 for better precision
 
 

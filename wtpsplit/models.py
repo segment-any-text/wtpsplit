@@ -183,11 +183,30 @@ class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
         token_logits: Tensor = self.classifier(self.dropout(token_hidden))
         return token_hidden, token_logits
 
+    def forward_features(self, **inputs: Tensor) -> tuple[Tensor, dict[str, Tensor]]:
+        """Run the encoder once and expose the character head's distillation taps."""
+        head = self.character_head
+        if head is None or not head.project_tokens_first:
+            raise ValueError("feature distillation requires a project_tokens_first character head")
+        token_inputs = {k: v for k, v in inputs.items() if not k.startswith("char_")}
+        hidden, token_logits = self.encode_tokens(**token_inputs)
+        chars = CharInputs(
+            char_to_token=inputs["char_to_token"], is_token_final=inputs["char_is_token_final"],
+            position_in_token=inputs["char_position_in_token"], hashes=inputs["char_hashes"],
+            mask=inputs["char_mask"],
+        )
+        projected = torch.nn.functional.linear(hidden, head.project.weight[:, :hidden.shape[-1]])
+        logits, trunk = head.forward_bottleneck(projected, token_logits, chars, hidden.shape[-1])
+        return logits, {"token_hidden": hidden, "projected_tokens": projected,
+                        "token_logits": token_logits, "char_trunk": trunk}
+
     def encode_tokens_varlen(
         self,
         packed_input_ids: Tensor,
         packed_position_ids: Tensor,
         doc_ids: Tensor,
+        *,
+        doc_runs: Optional[list[Tuple[int, int, int, int]]] = None,
     ) -> Tuple[Tensor, Tensor]:
         """Run the subword backbone and token classifier on a 1D packed sequence ``[1, N_valid]``."""
         n_valid = packed_input_ids.size(1)
@@ -198,12 +217,68 @@ class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
             empty_l = torch.empty((1, 0, self.config.num_labels), device=device, dtype=dtype)
             return empty_h, empty_l
 
-        embedding_output = self.roberta.embeddings(
-            input_ids=packed_input_ids,
-            position_ids=packed_position_ids,
-        )
+        emb = self.roberta.embeddings
+        if (
+            not self.training
+            and not torch.is_grad_enabled()
+            and not torch.jit.is_tracing()
+            and not packed_input_ids.is_meta
+            and getattr(emb, "position_embedding_type", "absolute") == "absolute"
+        ):
+            out_emb: Tensor = emb.word_embeddings(packed_input_ids)
+            if hasattr(emb, "token_type_embeddings"):
+                out_emb.add_(emb.token_type_embeddings.weight[0].view(1, 1, -1))
+            out_emb.add_(emb.position_embeddings(packed_position_ids))
+            embedding_output: Tensor = emb.LayerNorm(out_emb)
+        else:
+            embedding_output = emb(
+                input_ids=packed_input_ids,
+                position_ids=packed_position_ids,
+            )
+
         eff_la = self.roberta.effective_lookahead
         attn_impl = getattr(self.config, "_attn_implementation", None)
+        split_layer = self.config.lookahead_split_layers
+
+        if (
+            doc_runs is not None
+            and attn_impl != "flex_attention"
+            and not self.training
+            and not torch.is_grad_enabled()
+            and not torch.jit.is_tracing()
+        ):
+            hidden_states: Tensor = embedding_output
+            cur_la = eff_la
+            for i, layer_module in enumerate(self.roberta.encoder.layer):
+                if split_layer is not None and i == split_layer:
+                    cur_la = 0
+                self_attn = layer_module.attention.self
+                num_heads = self_attn.num_attention_heads
+                head_dim = self_attn.attention_head_size
+                q_all: Tensor = self_attn.query(hidden_states)
+                k_all: Tensor = self_attn.key(hidden_states)
+                v_all: Tensor = self_attn.value(hidden_states)
+                attn_ctx = torch.empty_like(q_all)
+                for t_start, t_end, run_len, run_count in doc_runs:
+                    q_r = q_all[:, t_start:t_end, :].view(run_count, run_len, num_heads, head_dim).transpose(1, 2)
+                    k_r = k_all[:, t_start:t_end, :].view(run_count, run_len, num_heads, head_dim).transpose(1, 2)
+                    v_r = v_all[:, t_start:t_end, :].view(run_count, run_len, num_heads, head_dim).transpose(1, 2)
+                    mask_r = _get_cached_additive_mask(run_len, cur_la, device, q_r.dtype).expand(
+                        run_count, 1, run_len, run_len
+                    )
+                    ctx_r = torch.nn.functional.scaled_dot_product_attention(
+                        q_r, k_r, v_r, attn_mask=mask_r, dropout_p=0.0, is_causal=False
+                    )
+                    attn_ctx[:, t_start:t_end, :] = ctx_r.transpose(1, 2).reshape(1, t_end - t_start, -1)
+                attn_out = layer_module.attention.output.LayerNorm(
+                    layer_module.attention.output.dense(attn_ctx) + hidden_states
+                )
+                inter_out = layer_module.intermediate(attn_out)
+                hidden_states = layer_module.output.LayerNorm(
+                    layer_module.output.dense(inter_out) + attn_out
+                )
+            token_logits_runs: Tensor = self.classifier(self.dropout(hidden_states))
+            return hidden_states, token_logits_runs
 
         def build_varlen_mask(la: Optional[int]) -> Tensor:
             if attn_impl == "flex_attention" and (la is None or la >= 0):
@@ -680,6 +755,12 @@ class SubwordXLMRobertaEncoder(nn.Module):
         self.config = config
         self.layer = nn.ModuleList([XLMRobertaLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
+        compression = getattr(config, "experimental_token_compression", None)
+        if compression is not None:
+            from wtpsplit.experiment.token_compression import TokenCompression
+            if config.num_hidden_layers < 2:
+                raise ValueError("Compression needs at least two encoder layers")
+            self.token_compressor = TokenCompression(config.hidden_size, compression)
 
     def forward(
         self,
@@ -697,6 +778,12 @@ class SubwordXLMRobertaEncoder(nn.Module):
         dtype: torch.float = None,
         cache_position: Optional[torch.Tensor] = None,
     ) -> Union[Tuple[torch.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
+        if hasattr(self, "token_compressor"):
+            from wtpsplit.experiment.token_compression import compressed_forward
+            if output_attentions or encoder_hidden_states is not None or past_key_values is not None or use_cache:
+                raise ValueError("Compression pilot supports encoder-only inference without attention outputs/cache")
+            return compressed_forward(self, hidden_states, attention_mask, head_mask,
+                                      init_attention_mask, output_hidden_states, return_dict)
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
         all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
@@ -852,6 +939,7 @@ def __getattr__(name: str):
 
 # Preserve the historical ``import wtpsplit.models`` registration behavior while
 # keeping all Auto* mutations behind one documented internal boundary.
+from wtpsplit.models_modernbert import SubwordModernBertForTokenClassification  # noqa: E402,F401
 from wtpsplit.model_registry import register_sat_models  # noqa: E402
 
 register_sat_models()

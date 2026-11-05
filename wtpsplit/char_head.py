@@ -319,12 +319,27 @@ class CharacterResolutionHead(nn.Module):
             and not bool(getattr(torch.jit, "is_tracing")())
         )
         if can_inplace:
+            mul_dtype = torch.promote_types(hidden.dtype, weight.dtype)
+            tmp = torch.empty(hidden.shape, dtype=mul_dtype, device=hidden.device)
             for offset in range(kernel_size):
-                out.add_(padded[:, offset : offset + length, :] * weight[:, offset].view(1, 1, -1))
+                torch.mul(padded[:, offset : offset + length, :], weight[:, offset].view(1, 1, -1), out=tmp)
+                out.add_(tmp)
         else:
             for offset in range(kernel_size):
                 out = out + padded[:, offset : offset + length, :] * weight[:, offset].view(1, 1, -1)
         return out
+
+    def _apply_activation(self, x: torch.Tensor, *, can_inplace: bool) -> torch.Tensor:
+        if (
+            can_inplace
+            and type(self.activation) is nn.GELU
+            and getattr(self.activation, "approximate", "none") == "none"
+            and not x.is_meta
+        ):
+            res_in: torch.Tensor = getattr(torch._C._nn, "gelu_")(x)
+            return res_in
+        res_out: torch.Tensor = self.activation(x)
+        return res_out
 
     @torch._dynamo.disable  # type: ignore[untyped-decorator]
     def _get_fused_dw_delta_params_impl(self, target_dtype: torch.dtype) -> tuple[torch.Tensor, torch.Tensor]:
@@ -592,13 +607,18 @@ class CharacterResolutionHead(nn.Module):
             pf_idx = (pos_sub << 1) | fin_sub
             g_proj.add_(nn.functional.embedding(residues, e_res_proj))
             g_proj.add_(nn.functional.embedding(pf_idx, e_pf_proj))
-            pre_conv = self.activation(g_proj)
+            pre_conv = self._apply_activation(g_proj, can_inplace=True)
         else:
             c_feat = self._embed_char_hashes(
                 char_inputs.hashes[halo_b, safe_c],
                 is_ordinals=(char_inputs.hashes.ndim == 2),
             )
-            if not self.training and not torch.is_grad_enabled() and not bool(getattr(torch.jit, "is_tracing")()):
+            can_sp_inplace = (
+                not self.training
+                and not torch.is_grad_enabled()
+                and not bool(getattr(torch.jit, "is_tracing")())
+            )
+            if can_sp_inplace:
                 c_feat.add_(self.position_embeddings(pos_sub)).add_(self.final_embeddings(fin_sub))
             else:
                 c_feat = c_feat + self.position_embeddings(pos_sub) + self.final_embeddings(fin_sub)
@@ -618,10 +638,13 @@ class CharacterResolutionHead(nn.Module):
                 g_proj = tok_proj[tok_map[flat_tok_idx]]
                 c_proj = nn.functional.linear(c_feat, self.project.weight[:, token_width:], self.project.bias)
                 g_proj.add_(c_proj)
-                pre_conv = self.activation(g_proj)
+                pre_conv = self._apply_activation(g_proj, can_inplace=can_sp_inplace)
             else:
                 g_hid = token_hidden.reshape(batch_size * num_tokens, -1)[flat_tok_idx]
-                pre_conv = self.activation(self.project(torch.cat([g_hid, c_feat], dim=-1)))
+                pre_conv = self._apply_activation(
+                    self.project(torch.cat([g_hid, c_feat], dim=-1)),
+                    can_inplace=can_sp_inplace,
+                )
 
         pre_conv.masked_fill_(~in_bounds.unsqueeze(-1), 0.0)
 
@@ -688,6 +711,57 @@ class CharacterResolutionHead(nn.Module):
         tgt_logits: torch.Tensor = g_log + self.suppression(tgt_is_final) + delta
         return tgt_b, tgt_c, tgt_logits
 
+    def _gather_base_logits_with_suppression(
+        self,
+        token_logits: torch.Tensor,
+        char_to_token: torch.Tensor,
+        is_token_final: torch.Tensor,
+        mask: torch.Tensor,
+        *,
+        inplace_add: bool = False,
+    ) -> torch.Tensor:
+        """Compute `(token_logits[char_to_token] + suppression[is_token_final]).masked_fill(mask == 0, -SUPPRESSION_BIAS)`.
+
+        In eval mode, builds a tiny `[B, 2*T + 1, num_labels]` lookup table so the base
+        gather, `suppression` embedding, addition, and `masked_fill` collapse into a
+        single `tok_table.gather(1, ...)` call with `0.0` ULP bit-identity across both
+        homogeneous and mixed dtypes (`float32`, `float16`, `bfloat16`).
+        """
+        can_table = (
+            not self.training
+            and not torch.is_grad_enabled()
+            and not bool(getattr(torch.jit, "is_tracing")())
+            and not token_logits.is_meta
+        )
+        b_sz, t_sz, n_lbl = token_logits.shape
+        if can_table and b_sz > 0 and t_sz > 0:
+            if inplace_add:
+                sum_pairs = token_logits.unsqueeze(2).expand(-1, -1, 2, -1).clone()
+                sum_pairs.add_(self.suppression.weight.view(1, 1, 2, n_lbl))
+            else:
+                sum_pairs = token_logits.unsqueeze(2) + self.suppression.weight.view(1, 1, 2, n_lbl)
+            tok_table = torch.empty(
+                (b_sz, 2 * t_sz + 1, n_lbl),
+                dtype=sum_pairs.dtype,
+                device=token_logits.device,
+            )
+            tok_table[:, : 2 * t_sz, :] = sum_pairs.reshape(b_sz, 2 * t_sz, n_lbl)
+            tok_table[:, 2 * t_sz, :] = -SUPPRESSION_BIAS
+            combined_idx = torch.where(
+                mask != 0,
+                (char_to_token << 1) | is_token_final,
+                2 * t_sz,
+            )
+            return tok_table.gather(1, combined_idx.unsqueeze(-1).expand(-1, -1, n_lbl))
+
+        index = char_to_token.unsqueeze(-1)
+        logits: torch.Tensor = token_logits.gather(1, index.expand(-1, -1, n_lbl))
+        if inplace_add:
+            logits.add_(self.suppression(is_token_final))
+            return logits.masked_fill_(mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
+        logits = logits + self.suppression(is_token_final)
+        return logits.masked_fill(mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
+
     def forward_sparse(
         self,
         token_hidden: torch.Tensor,  # [B, T, D]
@@ -716,9 +790,13 @@ class CharacterResolutionHead(nn.Module):
         if num_tokens == 0:
             raise ValueError("token_hidden must have at least one token when num_chars > 0")
 
-        index = char_inputs.char_to_token.unsqueeze(-1)
-        logits: torch.Tensor = token_logits.gather(1, index.expand(-1, -1, token_logits.size(-1)))
-        logits.add_(self.suppression(char_inputs.is_token_final))
+        logits = self._gather_base_logits_with_suppression(
+            token_logits,
+            char_inputs.char_to_token,
+            char_inputs.is_token_final,
+            char_inputs.mask,
+            inplace_add=True,
+        )
 
         res = self._sparse_delta(
             token_hidden,
@@ -729,7 +807,7 @@ class CharacterResolutionHead(nn.Module):
         if res is not None:
             tgt_b, tgt_c, delta, _, _ = res
             logits[tgt_b, tgt_c] = logits[tgt_b, tgt_c] + delta
-        return logits.masked_fill_(char_inputs.mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
+        return logits
 
     def forward(
         self,
@@ -748,18 +826,53 @@ class CharacterResolutionHead(nn.Module):
                 char_inputs,
                 gate_logit_threshold=eff_gate,
             )
-        if self.project_tokens_first:
-            return self._forward_project_tokens(token_hidden, token_logits, char_inputs)
-        index = char_inputs.char_to_token.unsqueeze(-1)
-
-        gathered_hidden = token_hidden.gather(1, index.expand(-1, -1, token_hidden.size(-1)))
-        gathered_logits = token_logits.gather(1, index.expand(-1, -1, token_logits.size(-1)))
-
         can_inplace = (
             not self.training
             and not torch.is_grad_enabled()
             and not bool(getattr(torch.jit, "is_tracing")())
         )
+        batch_size, num_chars = char_inputs.char_to_token.shape
+        if self.fuse_depthwise_delta and can_inplace and batch_size > 1 and num_chars > 8 and not token_hidden.is_meta:
+            row_lens = char_inputs.mask.sum(dim=1)
+            pad = self.context.kernel_size[0] // 2
+            halo_lens = (row_lens + pad).clamp(max=num_chars)
+            if int(halo_lens.sum().item()) <= int(0.75 * batch_size * num_chars):
+                out_ragged = torch.full(
+                    (batch_size, num_chars, token_logits.size(-1)),
+                    -SUPPRESSION_BIAS,
+                    dtype=token_logits.dtype,
+                    device=token_logits.device,
+                )
+                for b_idx in range(batch_size):
+                    lb = int(row_lens[b_idx].item())
+                    if lb <= 0:
+                        continue
+                    if lb < num_chars and not bool((char_inputs.mask[b_idx, lb:] == 0).all()):
+                        lb = num_chars
+                    ch = min(num_chars, lb + pad)
+                    sub_ci = CharInputs(
+                        char_to_token=char_inputs.char_to_token[b_idx : b_idx + 1, :ch],
+                        is_token_final=char_inputs.is_token_final[b_idx : b_idx + 1, :ch],
+                        position_in_token=char_inputs.position_in_token[b_idx : b_idx + 1, :ch],
+                        hashes=char_inputs.hashes[b_idx : b_idx + 1, :ch],
+                        mask=char_inputs.mask[b_idx : b_idx + 1, :ch],
+                    )
+                    sub_out = self.forward(
+                        token_hidden[b_idx : b_idx + 1],
+                        token_logits[b_idx : b_idx + 1],
+                        sub_ci,
+                    )
+                    out_ragged[b_idx, :lb] = sub_out[0, :lb]
+                return out_ragged
+
+        if self.project_tokens_first:
+            return self._forward_project_tokens(token_hidden, token_logits, char_inputs)
+
+        index = char_inputs.char_to_token.unsqueeze(-1)
+
+        gathered_hidden = token_hidden.gather(1, index.expand(-1, -1, token_hidden.size(-1)))
+        gathered_logits = token_logits.gather(1, index.expand(-1, -1, token_logits.size(-1)))
+
         char_features = self._embed_char_hashes(char_inputs.hashes)
         if can_inplace:
             char_features.add_(self.position_embeddings(char_inputs.position_in_token)).add_(
@@ -772,7 +885,10 @@ class CharacterResolutionHead(nn.Module):
                 + self.final_embeddings(char_inputs.is_token_final)
             )
 
-        hidden = self.activation(self.project(torch.cat([gathered_hidden, char_features], dim=-1)))
+        hidden = self._apply_activation(
+            self.project(torch.cat([gathered_hidden, char_features], dim=-1)),
+            can_inplace=can_inplace,
+        )
         if self.fuse_depthwise_delta and can_inplace:
             delta = self._fused_depthwise_delta(hidden)
         else:
@@ -785,7 +901,7 @@ class CharacterResolutionHead(nn.Module):
         logits: torch.Tensor = gathered_logits + self.suppression(char_inputs.is_token_final) + delta
         return logits.masked_fill(char_inputs.mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
 
-    def _projected_pre_conv(self, token_hidden: torch.Tensor, char_inputs: CharInputs) -> torch.Tensor:
+    def _projected_pre_conv(self, token_hidden: torch.Tensor, char_inputs: CharInputs, projected: torch.Tensor | None = None) -> torch.Tensor:
         index = char_inputs.char_to_token.unsqueeze(-1)
         token_width = token_hidden.shape[-1]
         can_inplace = (
@@ -794,7 +910,8 @@ class CharacterResolutionHead(nn.Module):
             and not bool(getattr(torch.jit, "is_tracing")())
         )
         if (
-            self.fuse_depthwise_delta
+            projected is None
+            and self.fuse_depthwise_delta
             and can_inplace
             and char_inputs.hashes.ndim == 2
             and not token_hidden.is_meta
@@ -805,17 +922,29 @@ class CharacterResolutionHead(nn.Module):
                 self._get_projected_char_tables_impl(token_width, target_dtype),
             )
             projected_tokens = nn.functional.linear(token_hidden.to(dtype=target_dtype), w_tok)
-            gathered_projection = projected_tokens.gather(1, index.expand(-1, -1, projected_tokens.shape[-1]))
+            b_sz, c_sz = char_inputs.char_to_token.shape
+            t_sz = projected_tokens.size(1)
+            tok_slots = b_sz * t_sz
             nb = self.num_buckets
             ordinals = char_inputs.hashes
-            residues = (ordinals + 1) & (nb - 1) if (nb & (nb - 1)) == 0 else torch.remainder(ordinals + 1, nb)
+            residues = ((ordinals + 1) & (nb - 1) if (nb & (nb - 1)) == 0 else torch.remainder(ordinals + 1, nb)).to(torch.int64)
             pf_idx = (char_inputs.position_in_token << 1) | char_inputs.is_token_final
-            gathered_projection.add_(nn.functional.embedding(residues, e_res_proj))
-            gathered_projection.add_(nn.functional.embedding(pf_idx, e_pf_proj))
-            out_fused: torch.Tensor = self.activation(gathered_projection)
+            flat_tok = (
+                torch.arange(b_sz, device=token_hidden.device, dtype=torch.int64).unsqueeze(1) * t_sz
+                + char_inputs.char_to_token
+            )
+            combined_table = torch.cat([projected_tokens.reshape(tok_slots, -1), e_res_proj, e_pf_proj], dim=0)
+            bag_indices = torch.stack(
+                [flat_tok, residues + tok_slots, pf_idx + (tok_slots + nb)],
+                dim=-1,
+            ).reshape(-1, 3)
+            gathered_projection = nn.functional.embedding_bag(
+                bag_indices, combined_table, mode="sum"
+            ).view(b_sz, c_sz, -1)
+            out_fused: torch.Tensor = self._apply_activation(gathered_projection, can_inplace=True)
             return out_fused
 
-        projected_tokens = nn.functional.linear(token_hidden, self.project.weight[:, :token_width])
+        projected_tokens = nn.functional.linear(token_hidden, self.project.weight[:, :token_width]) if projected is None else projected
         gathered_projection = projected_tokens.gather(1, index.expand(-1, -1, projected_tokens.shape[-1]))
         char_features = self._embed_char_hashes(char_inputs.hashes)
         if can_inplace:
@@ -826,7 +955,7 @@ class CharacterResolutionHead(nn.Module):
                 char_features, self.project.weight[:, token_width:], self.project.bias
             )
             gathered_projection.add_(projected_chars)
-            out_inplace: torch.Tensor = self.activation(gathered_projection)
+            out_inplace: torch.Tensor = self._apply_activation(gathered_projection, can_inplace=True)
             return out_inplace
 
         char_features = (
@@ -879,3 +1008,15 @@ class CharacterResolutionHead(nn.Module):
         names: exported sentence models remain ordinary CharacterResolutionHeads.
         """
         return self._depthwise(self._projected_pre_conv(token_hidden, char_inputs))
+
+
+    def forward_bottleneck(
+        self, projected_tokens: torch.Tensor, token_logits: torch.Tensor,
+        char_inputs: CharInputs, token_width: int,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return character logits and trunk from the exact token bottleneck."""
+        placeholder = projected_tokens.new_empty((0, 0, token_width))
+        trunk = self._depthwise(self._projected_pre_conv(placeholder, char_inputs, projected_tokens))
+        index = char_inputs.char_to_token.unsqueeze(-1).expand(-1, -1, token_logits.shape[-1])
+        logits = token_logits.gather(1, index) + self.suppression(char_inputs.is_token_final) + self.delta(trunk)
+        return logits.masked_fill(char_inputs.mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS), trunk
