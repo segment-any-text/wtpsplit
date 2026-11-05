@@ -301,7 +301,7 @@ class SaT:
         resolved_char_prep = (
             character_preprocessing
             if character_preprocessing is not None
-            else ("exact" if mode in ("equivalent", "sparse") else "reference")
+            else "exact"
         )
         if resolved_char_prep not in {"reference", "exact"}:
             raise ValueError("character_preprocessing must be 'reference' or 'exact'")
@@ -616,10 +616,8 @@ class SaT:
             if character_preprocessing not in {"reference", "exact"}:
                 raise ValueError("character_preprocessing must be 'reference' or 'exact'")
             self.character_preprocessing = character_preprocessing
-        elif is_equiv_or_sparse:
-            self.character_preprocessing = "exact"
         else:
-            self.character_preprocessing = "reference"
+            self.character_preprocessing = "exact"
 
         if gate_logit_threshold is not _UNSET:
             self.gate_logit_threshold = (

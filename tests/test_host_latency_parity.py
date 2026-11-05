@@ -2515,7 +2515,7 @@ def test_sat_mode_preset_and_overrides_parity(tmp_path: Any) -> None:
     assert sat.pack_sequences is False
     assert sat.fuse_depthwise_delta is False
     assert sat.gate_logit_threshold is None
-    assert sat.character_preprocessing == "reference"
+    assert sat.character_preprocessing == "exact"
     assert sat.model.model.character_head.project_tokens_first is False
 
     texts = ["hello world . hello world .", "hello ."]
@@ -2543,14 +2543,14 @@ def test_sat_mode_preset_and_overrides_parity(tmp_path: Any) -> None:
     assert sat.model.model.character_head.gate_logit_threshold == -2.5
     _ = sat.predict_proba(texts, stride=2, block_size=8, batch_size=2)
 
-    # Switch back to mode="bitwise" restores original project_tokens_first=False and character_preprocessing="reference"
+    # Switch back to mode="bitwise" restores original project_tokens_first=False and character_preprocessing="exact"
     sat.set_mode("bitwise")
     assert sat.mode == "bitwise"
     assert sat.trim_subword_padding is False
     assert sat.pack_sequences is False
     assert sat.fuse_depthwise_delta is False
     assert sat.gate_logit_threshold is None
-    assert sat.character_preprocessing == "reference"
+    assert sat.character_preprocessing == "exact"
     assert sat.model.model.character_head.project_tokens_first is False
     p_bit2 = sat.predict_proba(texts, stride=2, block_size=8, batch_size=2)
     for a, b in zip(p_bit, p_bit2):
