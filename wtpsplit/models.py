@@ -751,9 +751,19 @@ def get_extended_attention_mask(
 
 def _project_qkv_fused(self_attn: Any, hidden_states: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
     """Project `(Q, K, V)` in a single `[..., 3 * D]` GEMM with version/pointer-tracked weight caching."""
-    qw, qb = self_attn.query.weight, self_attn.query.bias
-    kw, kb = self_attn.key.weight, self_attn.key.bias
-    vw, vb = self_attn.value.weight, self_attn.value.bias
+    fused_fp8 = self_attn.__dict__.get("_fused_fp8_qkv")
+    if fused_fp8 is not None:
+        qkv_fp8: Tensor = fused_fp8(hidden_states)
+        qf, kf, vf = qkv_fp8.chunk(3, dim=-1)
+        return qf, kf, vf
+    qw = getattr(self_attn.query, "weight", None)
+    kw = getattr(self_attn.key, "weight", None)
+    vw = getattr(self_attn.value, "weight", None)
+    if not (isinstance(qw, Tensor) and isinstance(kw, Tensor) and isinstance(vw, Tensor)):
+        return self_attn.query(hidden_states), self_attn.key(hidden_states), self_attn.value(hidden_states)
+    qb = getattr(self_attn.query, "bias", None)
+    kb = getattr(self_attn.key, "bias", None)
+    vb = getattr(self_attn.value, "bias", None)
     key = (
         qw._version,
         kw._version,

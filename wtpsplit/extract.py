@@ -866,7 +866,7 @@ def extract(
 
         raw_batches = []
         can_defer_d2h = (
-            type(model).__name__ == "PyTorchWrapper"
+            type(model).__name__ in ("PyTorchWrapper", "Int8CPUWrapper", "FP8InferenceWrapper")
             and hasattr(model, "forward_tensor")
             and getattr(model, "pinned_inputs", None) is None
             and "__call__" not in getattr(model, "__dict__", {})

@@ -3379,6 +3379,64 @@ def test_tier_d_optimizations_parity(tmp_path: Any) -> None:
     )
     assert sp_sub_single == sp_sub_multi
 
+    # 9. Verify Step D9 Low-Bit Hardware Arithmetic: FP8DynamicLinear (float8_e4m3fn + fused QKV) & Int8CPUWrapper Tiers A-D integration
+    from wtpsplit import precision as precision_mod
+    from wtpsplit.precision import FP8DynamicLinear, configure_precision
+
+    lin_ref = torch.nn.Linear(16, 32)
+    fp8_lin = FP8DynamicLinear.from_float(lin_ref)
+    assert fp8_lin.weight_fp8.dtype == torch.float8_e4m3fn
+    x_fp8_in = torch.randn(4, 8, 16)
+    out_fp8_lin = fp8_lin(x_fp8_in)
+    assert out_fp8_lin.shape == (4, 8, 32)
+    assert float((out_fp8_lin - lin_ref(x_fp8_in)).abs().max().item()) <= 0.15
+
+    # Verify configure_precision('fp8') converts encoder Linears and fuses QKV into _fused_fp8_qkv
+    m_fp8_cand = SubwordXLMForTokenClassification(cfg).eval()  # type: ignore[no-untyped-call]
+    with torch.no_grad():
+        m_fp8_cand.load_state_dict(m.state_dict())
+    fp8_wrap = configure_precision(m_fp8_cand, "fp8", {"gpu": "test", "capability": (8, 9), "supported": True})  # type: ignore[no-untyped-call]
+    assert fp8_wrap.precision == "fp8"
+    assert fp8_wrap.precision_info["weight_dtype"] == "torch.float8_e4m3fn"
+    assert "_fused_fp8_qkv" in m_fp8_cand.roberta.encoder.layer[0].attention.self.__dict__
+
+    orig_fp8_sup = precision_mod.gpu_fp8_support
+    try:
+        precision_mod.gpu_fp8_support = lambda device="cuda": {
+            "supported": True,
+            "capability": (8, 9),
+            "gpu": "test",
+            "reason": "test",
+        }
+        sat_fp8: Any = sat_cls(
+            str(ckpt_dir),
+            tokenizer_name_or_path=str(ckpt_dir),
+            device="cpu",
+            mode="sparse",
+            precision="fp8",
+        )
+        p_fp8 = sat_fp8.predict_proba(mixed_texts, stride=4, block_size=8, batch_size=2, outer_batch_size=2)
+        for a, b in zip(p_bit, p_fp8):
+            assert b.dtype == np.float32
+            if len(a) > 0:
+                assert float(np.max(np.abs(a.astype(np.float32) - b))) <= 0.08
+    finally:
+        precision_mod.gpu_fp8_support = orig_fp8_sup
+
+    # Verify Int8CPUWrapper with v3 mode='sparse' and outer_batch_size=2 prefetching
+    sat_int8: Any = sat_cls(
+        str(ckpt_dir),
+        tokenizer_name_or_path=str(ckpt_dir),
+        device="cpu",
+        mode="sparse",
+        quantization="int8",
+    )
+    p_int8 = sat_int8.predict_proba(mixed_texts, stride=4, block_size=8, batch_size=2, outer_batch_size=2)
+    for a, b in zip(p_bit, p_int8):
+        assert b.dtype == np.float32
+        if len(a) > 0:
+            assert float(np.max(np.abs(a.astype(np.float32) - b))) <= 0.08
+
 
 
 

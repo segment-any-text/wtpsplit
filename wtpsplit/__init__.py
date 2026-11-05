@@ -924,7 +924,7 @@ class SaT:
 
                 if DocumentFeatures is _DEFAULT_DOCUMENT_FEATURES:
                     is_two_stage = (
-                        type(self.model).__name__ == "PyTorchWrapper"
+                        type(self.model).__name__ in ("PyTorchWrapper", "Int8CPUWrapper", "FP8InferenceWrapper")
                         and hasattr(self.model, "encode_tokens")
                         and hasattr(self.model, "run_character_head")
                         and getattr(getattr(self.model, "model", None), "character_head", None) is not None
@@ -1289,7 +1289,7 @@ class SaT:
 
                         if DocumentFeatures is _DEFAULT_DOCUMENT_FEATURES:
                             is_two_stage = (
-                                type(self.model).__name__ == "PyTorchWrapper"
+                                type(self.model).__name__ in ("PyTorchWrapper", "Int8CPUWrapper", "FP8InferenceWrapper")
                                 and hasattr(self.model, "encode_tokens")
                                 and hasattr(self.model, "run_character_head")
                                 and getattr(getattr(self.model, "model", None), "character_head", None) is not None

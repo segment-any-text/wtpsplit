@@ -615,7 +615,7 @@ No document features or predictions are retained between requests.
         raise ValueError("No room for content tokens")
     can_use_two_stage = (
         DocumentFeatures is _DEFAULT_DOCUMENT_FEATURES
-        and type(model).__name__ == "PyTorchWrapper"
+        and type(model).__name__ in ("PyTorchWrapper", "Int8CPUWrapper", "FP8InferenceWrapper")
         and hasattr(model, "encode_tokens")
         and hasattr(model, "run_character_head")
         and getattr(getattr(model, "model", None), "character_head", None) is not None
