@@ -1919,6 +1919,473 @@ def test_step_b4_ort_wrapper_giga_tokenization_and_jit_tracing_parity() -> None:
         assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
 
 
+def test_step_c1_residue_hash_table_and_embedding_bag_parity() -> None:
+    """Step C1 ring-factorized 1-lookup residue table and F.embedding_bag are 100% bit-exact in eval and train."""
+    from wtpsplit.char_head import CharacterResolutionHead, CharInputs
+
+    for num_buckets in (8192, 37):
+        for proj_first in (False, True):
+            torch.manual_seed(303)
+            head = CharacterResolutionHead(
+                hidden_size=32,
+                num_labels=1,
+                num_buckets=num_buckets,
+                project_tokens_first=proj_first,
+            ).eval()
+            with torch.no_grad():
+                head.delta.weight.normal_(std=0.05)
+                head.delta.bias.normal_(std=0.05)
+
+            ordinals = torch.randint(-1, 1114111, (4, 64), dtype=torch.int32)
+            hashes_3d = head._compute_hashes(ordinals)
+            c2t = torch.randint(0, 12, (4, 64), dtype=torch.int64)
+            is_fin = torch.randint(0, 2, (4, 64), dtype=torch.int64)
+            pos = torch.randint(0, 16, (4, 64), dtype=torch.int64)
+            mask = (ordinals >= 0).to(torch.int64)
+            tok_hid = torch.randn(4, 12, 32)
+            tok_log = torch.randn(4, 12, 1)
+
+            with torch.no_grad():
+                ref_emb = head.char_embeddings(hashes_3d).sum(dim=-2)
+                act_ord_emb = head._embed_char_hashes(ordinals)
+                act_3d_emb = head._embed_char_hashes(hashes_3d)
+                assert torch.equal(ref_emb, act_ord_emb)
+                assert torch.equal(ref_emb, act_3d_emb)
+
+                ci_ord = CharInputs(
+                    char_to_token=c2t,
+                    is_token_final=is_fin,
+                    position_in_token=pos,
+                    hashes=ordinals,
+                    mask=mask,
+                )
+                ci_3d = CharInputs(
+                    char_to_token=c2t,
+                    is_token_final=is_fin,
+                    position_in_token=pos,
+                    hashes=hashes_3d,
+                    mask=mask,
+                )
+                out_ord = head(tok_hid, tok_log, ci_ord)
+                out_3d = head(tok_hid, tok_log, ci_3d)
+                assert torch.equal(out_ord, out_3d)
+
+                sp_ord = head(tok_hid, tok_log, ci_ord, gate_logit_threshold=0.0)
+                sp_3d = head(tok_hid, tok_log, ci_3d, gate_logit_threshold=0.0)
+                assert torch.equal(sp_ord, sp_3d)
+
+                # In-place mutation of char_embeddings.weight must invalidate _residue_table_cache
+                head.char_embeddings.weight.add_(0.25)
+                ref_after = head.char_embeddings(hashes_3d).sum(dim=-2)
+                act_after = head._embed_char_hashes(ordinals)
+                assert torch.equal(ref_after, act_after)
+
+            # Verify training-mode forward + backward gradient parity
+            head.train()
+            head.zero_grad()
+            emb_train = head._embed_char_hashes(ordinals)
+            loss1 = emb_train.sum()
+            loss1.backward()  # type: ignore[no-untyped-call]
+            assert head.char_embeddings.weight.grad is not None
+            g1 = head.char_embeddings.weight.grad.clone()
+
+            head.zero_grad()
+            emb_ref_train: torch.Tensor = head.char_embeddings(head._compute_hashes(ordinals)).sum(dim=-2)
+            loss2: torch.Tensor = emb_ref_train.sum()
+            loss2.backward()  # type: ignore[no-untyped-call]
+            assert head.char_embeddings.weight.grad is not None
+            g2 = head.char_embeddings.weight.grad.clone()
+            assert torch.equal(emb_train, emb_ref_train)
+            assert torch.equal(g1, g2)
+
+
+def test_step_c2_zero_transpose_depthwise_and_fused_delta_parity() -> None:
+    """Step C2 zero-transpose _depthwise is 100% bit-exact (0.0 diff) and algebraic fuse_depthwise_delta matches within <= 1e-6."""
+    from wtpsplit.char_head import CharacterResolutionHead, CharInputs
+
+    def legacy_depthwise(head: CharacterResolutionHead, hidden: torch.Tensor) -> torch.Tensor:
+        x = hidden.transpose(1, 2)
+        k_size = head.context.kernel_size[0]
+        pad = k_size // 2
+        padded = torch.nn.functional.pad(x, (pad, pad))
+        w = head.context.weight.squeeze(1)
+        length = x.size(-1)
+        bias = head.context.bias
+        assert bias is not None
+        out = bias.view(1, -1, 1).expand_as(x).clone()
+        for offset in range(k_size):
+            out = out + w[:, offset].view(1, -1, 1) * padded[:, :, offset : offset + length]
+        return out.transpose(1, 2)
+
+    for num_labels in (1, 3):
+        for proj_first in (False, True):
+            torch.manual_seed(404)
+            head = CharacterResolutionHead(
+                hidden_size=32,
+                num_labels=num_labels,
+                project_tokens_first=proj_first,
+                fuse_depthwise_delta=False,
+            ).eval()
+            with torch.no_grad():
+                head.context.weight.normal_(std=0.1)
+                assert head.context.bias is not None
+                head.context.bias.normal_(std=0.1)
+                head.delta.weight.normal_(std=0.1)
+                head.delta.bias.normal_(std=0.1)
+
+            hidden = torch.randn(4, 64, 128)
+            with torch.no_grad():
+                ref_dw = legacy_depthwise(head, hidden)
+                act_dw = head._depthwise(hidden)
+                assert torch.equal(ref_dw, act_dw)
+
+                ref_delta = head.delta(ref_dw)
+                act_delta = head.delta(act_dw)
+                assert torch.equal(ref_delta, act_delta)
+
+                fused_delta = head._fused_depthwise_delta(hidden)
+                assert float((ref_delta - fused_delta).abs().max().item()) <= 1e-6
+
+            ordinals = torch.randint(32, 5000, (4, 64), dtype=torch.int32)
+            c2t = torch.randint(0, 12, (4, 64), dtype=torch.int64)
+            is_fin = torch.randint(0, 2, (4, 64), dtype=torch.int64)
+            pos = torch.randint(0, 16, (4, 64), dtype=torch.int64)
+            mask = torch.ones((4, 64), dtype=torch.int64)
+            ci = CharInputs(
+                char_to_token=c2t,
+                is_token_final=is_fin,
+                position_in_token=pos,
+                hashes=ordinals,
+                mask=mask,
+            )
+            tok_hid = torch.randn(4, 12, 32)
+            tok_log = torch.randn(4, 12, num_labels)
+
+            with torch.no_grad():
+                out_default = head(tok_hid, tok_log, ci)
+                sp_default = head(tok_hid, tok_log, ci, gate_logit_threshold=0.0)
+                head.fuse_depthwise_delta = True
+                out_fused = head(tok_hid, tok_log, ci)
+                sp_fused = head(tok_hid, tok_log, ci, gate_logit_threshold=0.0)
+                assert float((out_default - out_fused).abs().max().item()) <= 1e-6
+                assert float((sp_default - sp_fused).abs().max().item()) <= 1e-6
+
+                # Mutating delta.weight invalidates _fused_dw_delta_cache
+                head.delta.weight.mul_(1.5)
+                out_fused_mut = head(tok_hid, tok_log, ci)
+                head.fuse_depthwise_delta = False
+                out_default_mut = head(tok_hid, tok_log, ci)
+                assert float((out_default_mut - out_fused_mut).abs().max().item()) <= 1e-6
+
+            # Training gradient parity for zero-transpose _depthwise
+            head.train()
+            head.zero_grad()
+            h1 = hidden.detach().clone().requires_grad_(True)
+            l1: torch.Tensor = head.delta(head._depthwise(h1)).sum()
+            l1.backward()  # type: ignore[no-untyped-call]
+            assert head.context.weight.grad is not None
+            gw1 = head.context.weight.grad.clone()
+            gh1 = h1.grad.clone() if h1.grad is not None else torch.empty(0)
+
+            head.zero_grad()
+            h2 = hidden.detach().clone().requires_grad_(True)
+            l2: torch.Tensor = head.delta(legacy_depthwise(head, h2)).sum()
+            l2.backward()  # type: ignore[no-untyped-call]
+            assert head.context.weight.grad is not None
+            gw2 = head.context.weight.grad.clone()
+            gh2 = h2.grad.clone() if h2.grad is not None else torch.empty(0)
+            assert torch.equal(gw1, gw2)
+            assert torch.equal(gh1, gh2)
+
+
+def test_step_c3_global_concatenated_document_features_parity() -> None:
+    """Step C3 global concatenated DocumentFeatures matches per-document construction bit-for-bit across distinct, duplicate, empty-span, and fallback docs."""
+    from wtpsplit._char_preprocessing import DocumentFeatures, FIELDS
+    from wtpsplit._host_kernels import GigaPackedDoc
+    from wtpsplit.utils import PRIMES
+
+    def legacy_doc_features(
+        texts: list[str],
+        offsets: list[Any],
+        *,
+        use_ordinals: bool = False,
+        max_position_in_token: int = 15,
+        num_hashes: int = 8,
+        num_buckets: int = 8192,
+    ) -> list[dict[str, Any] | None]:
+        rows: list[dict[str, Any] | None] = []
+        primes = None if use_ordinals else np.asarray(PRIMES[:num_hashes], dtype=np.int64)
+        for text, raw in zip(texts, offsets):
+            length = len(text)
+            if isinstance(raw, GigaPackedDoc):
+                packed = raw.packed
+                if len(packed) == 0:
+                    all_spans = np.empty((0, 2), dtype=np.int64)
+                else:
+                    ends = np.cumsum(packed[:, 1], dtype=np.int64) - 1
+                    starts = ends - packed[:, 2]
+                    all_spans = np.empty((len(packed), 2), dtype=np.int64)
+                    all_spans[:, 0] = starts
+                    all_spans[:, 1] = ends
+            elif hasattr(raw, "offsets"):
+                all_spans = np.asarray(raw.offsets, dtype=np.int64).reshape(-1, 2)
+            else:
+                all_spans = np.asarray(raw, dtype=np.int64).reshape(-1, 2)
+            valid = all_spans[:, 1] > all_spans[:, 0]
+            spans = all_spans[valid]
+            s0 = spans[:, 0]
+            s1 = spans[:, 1]
+            safe = (
+                len(spans) > 0
+                and int(s0[0]) >= 0
+                and int(s1[-1]) <= length
+                and bool(np.all(s0[1:] >= s0[:-1]))
+                and bool(np.all(s1[1:] >= s1[:-1]))
+            )
+            if not safe:
+                rows.append(None)
+                continue
+            indices = np.flatnonzero(valid)
+            mapping = np.zeros(length, dtype=np.int64)
+            final = np.zeros(length, dtype=np.int64)
+            position = np.zeros(length, dtype=np.int64)
+            u32_ord = np.frombuffer(text.encode("utf-32-le"), dtype=np.uint32)
+            mask = np.ones(length, dtype=np.int64)
+            chars = np.arange(length, dtype=np.int64)
+            owner = np.searchsorted(s0, chars, side="right") - 1
+            safe_owner = np.maximum(owner, 0)
+            covered = (owner >= 0) & (chars < s1[safe_owner])
+            sel = chars[covered]
+            own_cov = owner[covered]
+            mapping[sel] = indices[own_cov]
+            position[sel] = np.minimum(sel - s0[own_cov], max_position_in_token)
+            final[s1 - 1] = 1
+            if use_ordinals:
+                hashes: Any = u32_ord.astype(np.int32, copy=False)
+            else:
+                assert primes is not None
+                ord_i64 = u32_ord.astype(np.int64)
+                hashes = ((ord_i64[:, None] + 1) * primes) % num_buckets
+            rows.append({
+                "char_to_token": mapping,
+                "is_token_final": final,
+                "position_in_token": position,
+                "hashes": hashes,
+                "mask": mask,
+            })
+        return rows
+
+    packed_arr = np.array([[10, 6, 5], [11, 6, 5]], dtype=np.int32)
+    gdoc = GigaPackedDoc(packed_arr, has_zero_delta=False, is_single_space_ascii=True)
+    # Non-monotone start in GigaPackedDoc: token 0 covers [2, 5) (end=5, len=3), token 1 covers [1, 6) (delta_end=1 -> end=6, len=5 -> start=1 < 2)
+    bad_packed_arr = np.array([[10, 6, 3], [11, 1, 5]], dtype=np.int32)
+    bad_gdoc = GigaPackedDoc(bad_packed_arr, has_zero_delta=False, is_single_space_ascii=True)
+    texts = [
+        "hello world",
+        "hello world",  # duplicate GigaPackedDoc
+        "  中文。 བོད་  ",  # leading/trailing uncovered chars + empty span
+        "bad offsets",  # non-monotone fallback
+        "",  # empty doc fallback
+        "overlapping spans!",
+        "bad giga doc",
+    ]
+    offsets: list[Any] = [
+        gdoc,
+        gdoc,
+        [(0, 0), (2, 5), (6, 6), (6, 10)],
+        [(5, 8), (2, 4)],
+        [],
+        [(0, 6), (3, 11), (12, 18)],
+        bad_gdoc,
+    ]
+
+    for use_ord in (False, True):
+        df = DocumentFeatures(texts, offsets, use_ordinals=use_ord)  # type: ignore[no-untyped-call]
+        ref_rows = legacy_doc_features(texts, offsets, use_ordinals=use_ord)
+        assert df.fallback_documents == 3
+        for d, ref_row in enumerate(ref_rows):
+            act_row = df.rows[d]
+            if ref_row is None:
+                assert act_row is None
+            else:
+                assert act_row is not None
+                for k in FIELDS:
+                    assert np.array_equal(ref_row[k], act_row[k])
+
+
+def test_step_c4_char_window_batch_and_stitch_parity() -> None:
+    """Step C4 zero-list window slicing, fused token_offset=1 batch(), and single/multi-window uniform/hat stitch match extract_character_head bit-for-bit."""
+    import importlib
+    from transformers import PreTrainedTokenizerFast
+    from wtpsplit._char_preprocessing import DocumentFeatures, extract_character_head_exact
+    from wtpsplit.configs import SubwordXLMConfig
+    from wtpsplit.extract import PyTorchWrapper, extract_character_head
+    from wtpsplit.models import SubwordXLMForTokenClassification
+
+    tokenizers_mod: Any = importlib.import_module("tokenizers")
+    backend = tokenizers_mod.Tokenizer(
+        tokenizers_mod.models.WordLevel(
+            {"<s>": 0, "<pad>": 1, "</s>": 2, "<unk>": 3, "hello": 4, "world": 5, ".": 6},
+            unk_token="<unk>",
+        )
+    )
+    backend.pre_tokenizer = tokenizers_mod.pre_tokenizers.Whitespace()
+    backend.post_processor = tokenizers_mod.processors.TemplateProcessing(
+        single="<s> $A </s>",
+        special_tokens=[("<s>", 0), ("</s>", 2)],
+    )
+    tok: Any = PreTrainedTokenizerFast(  # type: ignore[no-untyped-call]
+        tokenizer_object=backend,
+        pad_token="<pad>",
+        unk_token="<unk>",
+        bos_token="<s>",
+        eos_token="</s>",
+        cls_token="<s>",
+        sep_token="</s>",
+    )
+
+    torch.manual_seed(505)
+    cfg = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+        vocab_size=20,
+        hidden_size=16,
+        num_hidden_layers=1,
+        num_attention_heads=2,
+        intermediate_size=32,
+        num_labels=1,
+        max_position_embeddings=64,
+        lookahead=4,
+        use_character_head=True,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+    )
+    model = SubwordXLMForTokenClassification(cfg).eval()  # type: ignore[no-untyped-call]
+    with torch.no_grad():
+        assert model.character_head is not None
+        model.character_head.delta.weight.normal_(std=0.05)
+
+    wrapper = PyTorchWrapper(model)
+    texts = [
+        "hello world .",  # single window
+        "hello world . hello world . hello world .",  # multi window
+        "   ",  # non-empty whitespace with 0 tokens
+        "",  # empty string
+        "  hello .  ",
+    ]
+    for stride, max_block in ((2, 4), (4, 2)):
+        for weighting in ("uniform", "hat"):
+            for pad_last in (False, True):
+                ref, _, _, _ = extract_character_head(
+                    texts,
+                    wrapper,
+                    stride=stride,
+                    max_block_size=max_block,
+                    batch_size=2,
+                    pad_last_batch=pad_last,
+                    weighting=weighting,
+                    tokenizer=tok,
+                    trim_padding=True,
+                )
+                act, _, _, _ = extract_character_head_exact(  # type: ignore[no-untyped-call]
+                    texts,
+                    wrapper,
+                    stride=stride,
+                    max_block_size=max_block,
+                    batch_size=2,
+                    pad_last_batch=pad_last,
+                    weighting=weighting,
+                    tokenizer=tok,
+                    trim_padding=True,
+                )
+                for a, b in zip(ref, act):
+                    assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
+
+    # Also verify DocumentFeatures.batch(windows, token_offset=1) vs batch(windows) + 1
+    df = DocumentFeatures(["hello world"], [[(0, 5), (6, 11)]], use_ordinals=True)  # type: ignore[no-untyped-call]
+    win = [dict(text_index=0, token_start=1, char_start=5, char_end=11, reuse=True)]
+    b0 = df.batch(win)  # type: ignore[no-untyped-call]
+    b1 = df.batch(win, token_offset=1)  # type: ignore[no-untyped-call]
+    assert torch.equal(b0.char_to_token + 1, b1.char_to_token)
+
+
+def test_step_c5_inplace_accumulation_and_preprojected_char_lut_parity() -> None:
+    """Step C5 in-place feature/logit accumulation is 100% bit-exact (0.0 diff) and pre-projected char LUT matches within <= 2e-6."""
+    from wtpsplit.char_head import CharacterResolutionHead, CharInputs, SUPPRESSION_BIAS
+
+    for num_buckets in (8192, 37):
+        for proj_first in (False, True):
+            torch.manual_seed(606)
+            head = CharacterResolutionHead(
+                hidden_size=32,
+                num_labels=1,
+                num_buckets=num_buckets,
+                project_tokens_first=proj_first,
+                fuse_depthwise_delta=False,
+            ).eval()
+            with torch.no_grad():
+                head.context.weight.normal_(std=0.1)
+                assert head.context.bias is not None
+                head.context.bias.normal_(std=0.1)
+                head.delta.weight.normal_(std=0.1)
+                head.delta.bias.normal_(std=0.1)
+
+            ordinals = torch.randint(-1, 50000, (4, 64), dtype=torch.int32)
+            c2t = torch.randint(0, 12, (4, 64), dtype=torch.int64)
+            is_fin = torch.randint(0, 2, (4, 64), dtype=torch.int64)
+            pos = torch.randint(0, 16, (4, 64), dtype=torch.int64)
+            mask = (ordinals >= 0).to(torch.int64)
+            ci = CharInputs(
+                char_to_token=c2t,
+                is_token_final=is_fin,
+                position_in_token=pos,
+                hashes=ordinals,
+                mask=mask,
+            )
+            tok_hid = torch.randn(4, 12, 32)
+            tok_log = torch.randn(4, 12, 1)
+
+            with torch.no_grad():
+                # Compare default eval path against out-of-place reference arithmetic
+                idx = c2t.unsqueeze(-1)
+                g_log = tok_log.gather(1, idx.expand(-1, -1, 1))
+                cf = (
+                    head.char_embeddings(head._compute_hashes(ordinals)).sum(dim=-2)
+                    + head.position_embeddings(pos)
+                    + head.final_embeddings(is_fin)
+                )
+                if proj_first:
+                    p_tok = torch.nn.functional.linear(tok_hid, head.project.weight[:, :32])
+                    g_proj = p_tok.gather(1, idx.expand(-1, -1, 128))
+                    p_char = torch.nn.functional.linear(cf, head.project.weight[:, 32:], head.project.bias)
+                    hid = head._depthwise(head.activation(g_proj + p_char))
+                else:
+                    g_hid = tok_hid.gather(1, idx.expand(-1, -1, 32))
+                    hid = head._depthwise(head.activation(head.project(torch.cat([g_hid, cf], dim=-1))))
+                ref_out = (g_log + head.suppression(is_fin) + head.delta(hid)).masked_fill(
+                    mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS
+                )
+                act_out = head(tok_hid, tok_log, ci)
+                assert torch.equal(ref_out, act_out)
+
+                sp_default = head(tok_hid, tok_log, ci, gate_logit_threshold=0.0)
+                head.fuse_depthwise_delta = True
+                out_fused = head(tok_hid, tok_log, ci)
+                sp_fused = head(tok_hid, tok_log, ci, gate_logit_threshold=0.0)
+                assert float((act_out - out_fused).abs().max().item()) <= 2e-6
+                assert float((sp_default - sp_fused).abs().max().item()) <= 2e-6
+
+                # Mutating position_embeddings.weight invalidates _proj_char_tables_cache
+                head.position_embeddings.weight.add_(0.2)
+                out_fused_mut = head(tok_hid, tok_log, ci)
+                head.fuse_depthwise_delta = False
+                out_default_mut = head(tok_hid, tok_log, ci)
+                assert float((out_default_mut - out_fused_mut).abs().max().item()) <= 2e-6
+
+
+
+
+
+
+
 
 
 

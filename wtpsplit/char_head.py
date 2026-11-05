@@ -229,6 +229,7 @@ class CharacterResolutionHead(nn.Module):
         max_position_in_token: int = 15,
         project_tokens_first: bool = False,
         gate_logit_threshold: float | None = None,
+        fuse_depthwise_delta: bool = False,
     ):
         super().__init__()
         self.num_hashes = num_hashes
@@ -236,6 +237,10 @@ class CharacterResolutionHead(nn.Module):
         self.max_position_in_token = max_position_in_token
         self.project_tokens_first = project_tokens_first
         self.gate_logit_threshold = gate_logit_threshold
+        self.fuse_depthwise_delta = fuse_depthwise_delta
+        self._residue_table_cache: tuple[int, int, torch.dtype, torch.device, int, int, torch.Tensor] | None = None
+        self._fused_dw_delta_cache: tuple[Any, ...] | None = None
+        self._proj_char_tables_cache: tuple[Any, ...] | None = None
         self.register_buffer(
             "_primes",
             torch.tensor(PRIMES[:num_hashes], dtype=torch.int64),
@@ -296,23 +301,118 @@ class CharacterResolutionHead(nn.Module):
         """`self.context` applied as shifted multiply-adds instead of `nn.Conv1d`.
 
         Mathematically identical and uses the same parameters, so checkpoints stay
-        interchangeable with a standard depthwise `Conv1d`. PyTorch's depthwise kernel is
-        pathologically slow on CPU for long sequences — it measured 1277 ms of a 1298 ms
-        head, against 21 ms for everything else — whereas `kernel_size` shifted
-        elementwise products are trivial.
+        interchangeable with a standard depthwise `Conv1d`. Operates directly in the
+        native `[B, T, C]` channel-last layout so neither `F.pad` nor `self.delta`
+        pays a `[B, T, C] <-> [B, C, T]` transpose copy.
         """
-        x = hidden.transpose(1, 2)  # [B, C, T]
         kernel_size = self.context.kernel_size[0]
         padding = kernel_size // 2
-        padded = nn.functional.pad(x, (padding, padding))
+        length = hidden.size(1)
+        padded = nn.functional.pad(hidden, (0, 0, padding, padding))
         weight = self.context.weight.squeeze(1)  # [C, k]
 
-        length = x.size(-1)
         bias = cast(torch.Tensor, self.context.bias)
-        out = bias.view(1, -1, 1).expand_as(x).clone()
-        for offset in range(kernel_size):
-            out = out + weight[:, offset].view(1, -1, 1) * padded[:, :, offset : offset + length]
-        return out.transpose(1, 2)
+        out = bias.view(1, 1, -1).expand_as(hidden).clone()
+        can_inplace = (
+            not self.training
+            and not torch.is_grad_enabled()
+            and not bool(getattr(torch.jit, "is_tracing")())
+        )
+        if can_inplace:
+            for offset in range(kernel_size):
+                out.add_(padded[:, offset : offset + length, :] * weight[:, offset].view(1, 1, -1))
+        else:
+            for offset in range(kernel_size):
+                out = out + padded[:, offset : offset + length, :] * weight[:, offset].view(1, 1, -1)
+        return out
+
+    @torch._dynamo.disable  # type: ignore[untyped-decorator]
+    def _get_fused_dw_delta_params_impl(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return `(w_fused, b_fused)` composing `self.delta` (`[L, C]`) and `self.context` (`[C, 1, K]`)."""
+        cw = self.context.weight
+        cb = cast(torch.Tensor, self.context.bias)
+        dw = self.delta.weight
+        db = cast(torch.Tensor, self.delta.bias)
+        key = (
+            cw._version,
+            cw.data_ptr(),
+            cb._version,
+            cb.data_ptr(),
+            dw._version,
+            dw.data_ptr(),
+            db._version,
+            db.data_ptr(),
+            dw.dtype,
+            dw.device,
+        )
+        cached = self._fused_dw_delta_cache
+        if cached is not None and cached[0] == key:
+            return cast(tuple[torch.Tensor, torch.Tensor], cached[1])
+        k_size = self.context.kernel_size[0]
+        num_labels, c_dim = dw.shape
+        w_conv = cw.squeeze(1)  # [C, K]
+        w_fused = (dw.unsqueeze(1) * w_conv.t().unsqueeze(0)).reshape(num_labels * k_size, c_dim).contiguous()
+        b_fused = db + torch.mv(dw, cb)
+        pair = (w_fused, b_fused)
+        self._fused_dw_delta_cache = (key, pair)
+        return pair
+
+    @torch._dynamo.disable  # type: ignore[untyped-decorator]
+    def _get_projected_char_tables_impl(
+        self, token_width: int
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Return `(w_tok_contig, e_res_proj, e_pf_proj)` pre-projecting `char_embeddings` and `(pos, final)` into bottleneck space."""
+        cew = self.char_embeddings.weight
+        pew = self.position_embeddings.weight
+        few = self.final_embeddings.weight
+        pw = self.project.weight
+        pb = cast(torch.Tensor, self.project.bias)
+        key = (
+            cew._version,
+            cew.data_ptr(),
+            pew._version,
+            pew.data_ptr(),
+            few._version,
+            few.data_ptr(),
+            pw._version,
+            pw.data_ptr(),
+            pb._version,
+            pb.data_ptr(),
+            pw.dtype,
+            pw.device,
+            self.num_hashes,
+            self.num_buckets,
+            token_width,
+        )
+        cached = self._proj_char_tables_cache
+        if cached is not None and cached[0] == key:
+            return cast(tuple[torch.Tensor, torch.Tensor, torch.Tensor], cached[1])
+        w_tok = pw[:, :token_width].contiguous()
+        w_char = pw[:, token_width:].contiguous()
+        e_res = self._get_residue_embedding_table()
+        e_res_proj = nn.functional.linear(e_res, w_char).contiguous()
+        e_pf = (pew[:, None, :] + few[None, :, :]).reshape(-1, pew.size(-1))
+        e_pf_proj = nn.functional.linear(e_pf, w_char, pb).contiguous()
+        triple = (w_tok, e_res_proj, e_pf_proj)
+        self._proj_char_tables_cache = (key, triple)
+        return triple
+
+    def _fused_depthwise_delta(self, hidden: torch.Tensor) -> torch.Tensor:
+        """Evaluate `self.delta(self._depthwise(hidden))` via a single `[B, T, C] @ [C, L*K]` GEMM."""
+        k_size = self.context.kernel_size[0]
+        pad = k_size // 2
+        b_sz, seq_len, _ = hidden.shape
+        num_labels = self.delta.out_features
+        w_fused, b_fused = cast(
+            tuple[torch.Tensor, torch.Tensor],
+            self._get_fused_dw_delta_params_impl(),
+        )
+        taps = nn.functional.linear(hidden, w_fused).view(b_sz, seq_len, num_labels, k_size)
+        padded_taps = nn.functional.pad(taps, (0, 0, 0, 0, pad, pad))
+        out = b_fused.view(1, 1, num_labels).expand(b_sz, seq_len, num_labels).clone()
+        for offset in range(k_size):
+            out.add_(padded_taps[:, offset : offset + seq_len, :, offset])
+        return out
 
     def _compute_hashes(self, ordinals: torch.Tensor) -> torch.Tensor:
         """Expand codepoint ordinals `[...]` into CANINE hashes `[..., num_hashes]` on-device."""
@@ -324,6 +424,82 @@ class CharacterResolutionHead(nn.Module):
         if hashes_or_ordinals.ndim == 2:
             return self._compute_hashes(hashes_or_ordinals)
         return hashes_or_ordinals
+
+    @torch._dynamo.disable  # type: ignore[untyped-decorator]
+    def _get_residue_embedding_table_impl(self) -> torch.Tensor:
+        """Return pre-summed `[num_buckets, char_embedding_size]` residue embedding table.
+
+        Because `((c + 1) * p_k) % M == (((c + 1) % M) * p_k) % M` for every `c >= -1`,
+        the 8-hash tuple depends only on the residue `r = (c + 1) % M` in `0..M-1`.
+        Pre-summing the 8 hash embeddings for each of the `M` residues reduces `[B, C]`
+        ordinal hashing + `[B, C, 8, D]` 4D embedding + `.sum(dim=-2)` to a single 2D
+        `F.embedding` lookup while remaining 100% bit-exact (`0.0` ulp difference).
+        """
+        weight = self.char_embeddings.weight
+        ver = weight._version
+        ptr = weight.data_ptr()
+        dt = weight.dtype
+        dev = weight.device
+        nh = self.num_hashes
+        nb = self.num_buckets
+        cached = self._residue_table_cache
+        if (
+            cached is not None
+            and cached[0] == ver
+            and cached[1] == ptr
+            and cached[2] == dt
+            and cached[3] == dev
+            and cached[4] == nh
+            and cached[5] == nb
+        ):
+            return cached[6]
+        primes = _get_device_primes(dev, nh)
+        r = torch.arange(nb, dtype=torch.int64, device=dev).unsqueeze(-1)
+        lut = (r * primes) % nb
+        table: torch.Tensor = nn.functional.embedding_bag(lut, weight, mode="sum")
+        self._residue_table_cache = (ver, ptr, dt, dev, nh, nb, table)
+        return table
+
+    def _get_residue_embedding_table(self) -> torch.Tensor:
+        return cast(torch.Tensor, self._get_residue_embedding_table_impl())
+
+    def _embed_char_hashes(
+        self,
+        hashes_or_ordinals: torch.Tensor,
+        *,
+        is_ordinals: bool | None = None,
+    ) -> torch.Tensor:
+        """Sum `self.char_embeddings` across hashes without materializing a 4D `[B, C, H, D]` tensor."""
+        if is_ordinals is None:
+            is_ordinals = hashes_or_ordinals.ndim == 2
+        if bool(getattr(torch.jit, "is_tracing")()):
+            hashes = self._compute_hashes(hashes_or_ordinals) if is_ordinals else hashes_or_ordinals
+            out_trace: torch.Tensor = self.char_embeddings(hashes).sum(dim=-2)
+            return out_trace
+        if is_ordinals:
+            if (
+                not self.training
+                and not torch.is_grad_enabled()
+                and not hashes_or_ordinals.is_meta
+                and not self.char_embeddings.weight.is_meta
+            ):
+                nb = self.num_buckets
+                if (nb & (nb - 1)) == 0:
+                    residues = (hashes_or_ordinals + 1) & (nb - 1)
+                else:
+                    residues = torch.remainder(hashes_or_ordinals + 1, nb)
+                return nn.functional.embedding(residues, self._get_residue_embedding_table())
+            hashes = self._compute_hashes(hashes_or_ordinals)
+        else:
+            hashes = hashes_or_ordinals
+        if hashes.numel() == 0:
+            out_empty: torch.Tensor = self.char_embeddings(hashes).sum(dim=-2)
+            return out_empty
+        flat_hashes = hashes.reshape(-1, hashes.size(-1))
+        bag_out: torch.Tensor = nn.functional.embedding_bag(
+            flat_hashes, self.char_embeddings.weight, mode="sum"
+        )
+        return bag_out.reshape(*hashes.shape[:-1], -1)
 
     def _sparse_delta(
         self,
@@ -361,18 +537,21 @@ class CharacterResolutionHead(nn.Module):
 
         flat_tok_idx = halo_b * num_tokens + c2t_sub
 
-        if char_inputs.hashes.ndim == 2:
-            halo_hashes = self._compute_hashes(char_inputs.hashes[halo_b, safe_c])
-        else:
-            halo_hashes = char_inputs.hashes[halo_b, safe_c]
-        c_feat = (
-            self.char_embeddings(halo_hashes).sum(dim=-2)
-            + self.position_embeddings(pos_sub)
-            + self.final_embeddings(fin_sub)
+        can_fuse_lut = (
+            self.project_tokens_first
+            and self.fuse_depthwise_delta
+            and not self.training
+            and not torch.is_grad_enabled()
+            and not bool(getattr(torch.jit, "is_tracing")())
+            and char_inputs.hashes.ndim == 2
+            and not token_hidden.is_meta
         )
-
-        if self.project_tokens_first:
+        if can_fuse_lut:
             token_width = token_hidden.size(-1)
+            w_tok, e_res_proj, e_pf_proj = cast(
+                tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+                self._get_projected_char_tables_impl(token_width),
+            )
             total_tok_slots = batch_size * num_tokens
             tok_used = torch.zeros(total_tok_slots, dtype=torch.bool, device=token_hidden.device)
             tok_used[flat_tok_idx] = True
@@ -381,24 +560,66 @@ class CharacterResolutionHead(nn.Module):
             tok_map[uniq_tok] = torch.arange(len(uniq_tok), device=token_hidden.device)
             tok_proj = nn.functional.linear(
                 token_hidden.reshape(total_tok_slots, -1)[uniq_tok],
-                self.project.weight[:, :token_width],
+                w_tok,
             )
             g_proj = tok_proj[tok_map[flat_tok_idx]]
-            c_proj = nn.functional.linear(c_feat, self.project.weight[:, token_width:], self.project.bias)
-            pre_conv = self.activation(g_proj + c_proj)
+            nb = self.num_buckets
+            halo_ord = char_inputs.hashes[halo_b, safe_c]
+            residues = (halo_ord + 1) & (nb - 1) if (nb & (nb - 1)) == 0 else torch.remainder(halo_ord + 1, nb)
+            pf_idx = (pos_sub << 1) | fin_sub
+            g_proj.add_(nn.functional.embedding(residues, e_res_proj))
+            g_proj.add_(nn.functional.embedding(pf_idx, e_pf_proj))
+            pre_conv = self.activation(g_proj)
         else:
-            g_hid = token_hidden.reshape(batch_size * num_tokens, -1)[flat_tok_idx]
-            pre_conv = self.activation(self.project(torch.cat([g_hid, c_feat], dim=-1)))
+            c_feat = self._embed_char_hashes(
+                char_inputs.hashes[halo_b, safe_c],
+                is_ordinals=(char_inputs.hashes.ndim == 2),
+            )
+            if not self.training and not torch.is_grad_enabled() and not bool(getattr(torch.jit, "is_tracing")()):
+                c_feat.add_(self.position_embeddings(pos_sub)).add_(self.final_embeddings(fin_sub))
+            else:
+                c_feat = c_feat + self.position_embeddings(pos_sub) + self.final_embeddings(fin_sub)
 
-        pre_conv = pre_conv.masked_fill(~in_bounds.unsqueeze(-1), 0.0)
+            if self.project_tokens_first:
+                token_width = token_hidden.size(-1)
+                total_tok_slots = batch_size * num_tokens
+                tok_used = torch.zeros(total_tok_slots, dtype=torch.bool, device=token_hidden.device)
+                tok_used[flat_tok_idx] = True
+                uniq_tok = tok_used.nonzero(as_tuple=True)[0]
+                tok_map = torch.zeros(total_tok_slots, dtype=torch.int64, device=token_hidden.device)
+                tok_map[uniq_tok] = torch.arange(len(uniq_tok), device=token_hidden.device)
+                tok_proj = nn.functional.linear(
+                    token_hidden.reshape(total_tok_slots, -1)[uniq_tok],
+                    self.project.weight[:, :token_width],
+                )
+                g_proj = tok_proj[tok_map[flat_tok_idx]]
+                c_proj = nn.functional.linear(c_feat, self.project.weight[:, token_width:], self.project.bias)
+                g_proj.add_(c_proj)
+                pre_conv = self.activation(g_proj)
+            else:
+                g_hid = token_hidden.reshape(batch_size * num_tokens, -1)[flat_tok_idx]
+                pre_conv = self.activation(self.project(torch.cat([g_hid, c_feat], dim=-1)))
+
+        pre_conv.masked_fill_(~in_bounds.unsqueeze(-1), 0.0)
 
         h_idx = padded_target[halo_b, halo_c_pad].nonzero(as_tuple=True)[0]
-        weight = self.context.weight.squeeze(1)  # [C_Neck, k]
-        bias = cast(torch.Tensor, self.context.bias)
-        conv_out = bias.unsqueeze(0).expand(len(h_idx), -1).clone()
-        for offset in range(kernel_size):
-            conv_out = conv_out + pre_conv[h_idx + (offset - padding)] * weight[:, offset]
-        delta: torch.Tensor = self.delta(conv_out)
+        if self.fuse_depthwise_delta and not self.training and not bool(getattr(torch.jit, "is_tracing")()):
+            num_labels = self.delta.out_features
+            w_fused, b_fused = cast(
+                tuple[torch.Tensor, torch.Tensor],
+                self._get_fused_dw_delta_params_impl(),
+            )
+            taps = nn.functional.linear(pre_conv, w_fused).view(len(pre_conv), num_labels, kernel_size)
+            delta = b_fused.unsqueeze(0).expand(len(h_idx), num_labels).clone()
+            for offset in range(kernel_size):
+                delta.add_(taps[h_idx + (offset - padding), :, offset])
+        else:
+            weight = self.context.weight.squeeze(1)  # [C_Neck, k]
+            bias = cast(torch.Tensor, self.context.bias)
+            conv_out = bias.unsqueeze(0).expand(len(h_idx), -1).clone()
+            for offset in range(kernel_size):
+                conv_out.add_(pre_conv[h_idx + (offset - padding)] * weight[:, offset])
+            delta = self.delta(conv_out)
         return halo_b[h_idx], halo_c[h_idx], delta, flat_tok_idx[h_idx], fin_sub[h_idx]
 
     def forward_sparse_compact(
@@ -472,8 +693,8 @@ class CharacterResolutionHead(nn.Module):
             raise ValueError("token_hidden must have at least one token when num_chars > 0")
 
         index = char_inputs.char_to_token.unsqueeze(-1)
-        gathered_logits = token_logits.gather(1, index.expand(-1, -1, token_logits.size(-1)))
-        logits: torch.Tensor = gathered_logits + self.suppression(char_inputs.is_token_final)
+        logits: torch.Tensor = token_logits.gather(1, index.expand(-1, -1, token_logits.size(-1)))
+        logits.add_(self.suppression(char_inputs.is_token_final))
 
         res = self._sparse_delta(
             token_hidden,
@@ -484,7 +705,7 @@ class CharacterResolutionHead(nn.Module):
         if res is not None:
             tgt_b, tgt_c, delta, _, _ = res
             logits[tgt_b, tgt_c] = logits[tgt_b, tgt_c] + delta
-        return logits.masked_fill(char_inputs.mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
+        return logits.masked_fill_(char_inputs.mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
 
     def forward(
         self,
@@ -510,19 +731,89 @@ class CharacterResolutionHead(nn.Module):
         gathered_hidden = token_hidden.gather(1, index.expand(-1, -1, token_hidden.size(-1)))
         gathered_logits = token_logits.gather(1, index.expand(-1, -1, token_logits.size(-1)))
 
-        hashes = self._resolve_hashes(char_inputs.hashes)
+        can_inplace = (
+            not self.training
+            and not torch.is_grad_enabled()
+            and not bool(getattr(torch.jit, "is_tracing")())
+        )
+        char_features = self._embed_char_hashes(char_inputs.hashes)
+        if can_inplace:
+            char_features.add_(self.position_embeddings(char_inputs.position_in_token)).add_(
+                self.final_embeddings(char_inputs.is_token_final)
+            )
+        else:
+            char_features = (
+                char_features
+                + self.position_embeddings(char_inputs.position_in_token)
+                + self.final_embeddings(char_inputs.is_token_final)
+            )
+
+        hidden = self.activation(self.project(torch.cat([gathered_hidden, char_features], dim=-1)))
+        if self.fuse_depthwise_delta and can_inplace:
+            delta = self._fused_depthwise_delta(hidden)
+        else:
+            hidden = self._depthwise(hidden)
+            delta = self.delta(hidden)
+
+        if can_inplace:
+            gathered_logits.add_(self.suppression(char_inputs.is_token_final)).add_(delta)
+            return gathered_logits.masked_fill_(char_inputs.mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
+        logits: torch.Tensor = gathered_logits + self.suppression(char_inputs.is_token_final) + delta
+        return logits.masked_fill(char_inputs.mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
+
+    def _projected_pre_conv(self, token_hidden: torch.Tensor, char_inputs: CharInputs) -> torch.Tensor:
+        index = char_inputs.char_to_token.unsqueeze(-1)
+        token_width = token_hidden.shape[-1]
+        can_inplace = (
+            not self.training
+            and not torch.is_grad_enabled()
+            and not bool(getattr(torch.jit, "is_tracing")())
+        )
+        if (
+            self.fuse_depthwise_delta
+            and can_inplace
+            and char_inputs.hashes.ndim == 2
+            and not token_hidden.is_meta
+        ):
+            w_tok, e_res_proj, e_pf_proj = cast(
+                tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+                self._get_projected_char_tables_impl(token_width),
+            )
+            projected_tokens = nn.functional.linear(token_hidden, w_tok)
+            gathered_projection = projected_tokens.gather(1, index.expand(-1, -1, projected_tokens.shape[-1]))
+            nb = self.num_buckets
+            ordinals = char_inputs.hashes
+            residues = (ordinals + 1) & (nb - 1) if (nb & (nb - 1)) == 0 else torch.remainder(ordinals + 1, nb)
+            pf_idx = (char_inputs.position_in_token << 1) | char_inputs.is_token_final
+            gathered_projection.add_(nn.functional.embedding(residues, e_res_proj))
+            gathered_projection.add_(nn.functional.embedding(pf_idx, e_pf_proj))
+            out_fused: torch.Tensor = self.activation(gathered_projection)
+            return out_fused
+
+        projected_tokens = nn.functional.linear(token_hidden, self.project.weight[:, :token_width])
+        gathered_projection = projected_tokens.gather(1, index.expand(-1, -1, projected_tokens.shape[-1]))
+        char_features = self._embed_char_hashes(char_inputs.hashes)
+        if can_inplace:
+            char_features.add_(self.position_embeddings(char_inputs.position_in_token)).add_(
+                self.final_embeddings(char_inputs.is_token_final)
+            )
+            projected_chars = nn.functional.linear(
+                char_features, self.project.weight[:, token_width:], self.project.bias
+            )
+            gathered_projection.add_(projected_chars)
+            out_inplace: torch.Tensor = self.activation(gathered_projection)
+            return out_inplace
+
         char_features = (
-            self.char_embeddings(hashes).sum(dim=-2)
+            char_features
             + self.position_embeddings(char_inputs.position_in_token)
             + self.final_embeddings(char_inputs.is_token_final)
         )
-
-        hidden = self.activation(self.project(torch.cat([gathered_hidden, char_features], dim=-1)))
-        hidden = self._depthwise(hidden)
-        delta: torch.Tensor = self.delta(hidden)
-
-        logits: torch.Tensor = gathered_logits + self.suppression(char_inputs.is_token_final) + delta
-        return logits.masked_fill(char_inputs.mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
+        projected_chars = nn.functional.linear(
+            char_features, self.project.weight[:, token_width:], self.project.bias
+        )
+        out: torch.Tensor = self.activation(gathered_projection + projected_chars)
+        return out
 
     def _forward_project_tokens(
         self,
@@ -537,10 +828,22 @@ class CharacterResolutionHead(nn.Module):
         semantics, but changes mixed-precision rounding. This is opt-in so
         existing checkpoints retain their original execution path.
         """
-        hidden = self.projected_features(token_hidden, char_inputs)
         index = char_inputs.char_to_token.unsqueeze(-1)
         gathered_logits = token_logits.gather(1, index.expand(-1, -1, token_logits.shape[-1]))
-        delta: torch.Tensor = self.delta(hidden)
+        can_inplace = (
+            not self.training
+            and not torch.is_grad_enabled()
+            and not bool(getattr(torch.jit, "is_tracing")())
+        )
+        if self.fuse_depthwise_delta and can_inplace:
+            pre_conv = self._projected_pre_conv(token_hidden, char_inputs)
+            delta = self._fused_depthwise_delta(pre_conv)
+        else:
+            hidden = self.projected_features(token_hidden, char_inputs)
+            delta = self.delta(hidden)
+        if can_inplace:
+            gathered_logits.add_(self.suppression(char_inputs.is_token_final)).add_(delta)
+            return gathered_logits.masked_fill_(char_inputs.mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
         logits: torch.Tensor = gathered_logits + self.suppression(char_inputs.is_token_final) + delta
         return logits.masked_fill(char_inputs.mask.unsqueeze(-1) == 0, -SUPPRESSION_BIAS)
 
@@ -550,18 +853,4 @@ class CharacterResolutionHead(nn.Module):
         Uses the opt-in project-before-gather path. No new parameters or state-dict
         names: exported sentence models remain ordinary CharacterResolutionHeads.
         """
-        index = char_inputs.char_to_token.unsqueeze(-1)
-        token_width = token_hidden.shape[-1]
-        projected_tokens = nn.functional.linear(token_hidden, self.project.weight[:, :token_width])
-        gathered_projection = projected_tokens.gather(1, index.expand(-1, -1, projected_tokens.shape[-1]))
-        hashes = self._resolve_hashes(char_inputs.hashes)
-        char_features = (
-            self.char_embeddings(hashes).sum(dim=-2)
-            + self.position_embeddings(char_inputs.position_in_token)
-            + self.final_embeddings(char_inputs.is_token_final)
-        )
-        projected_chars = nn.functional.linear(
-            char_features, self.project.weight[:, token_width:], self.project.bias
-        )
-        hidden = self.activation(gathered_projection + projected_chars)
-        return self._depthwise(hidden)
+        return self._depthwise(self._projected_pre_conv(token_hidden, char_inputs))

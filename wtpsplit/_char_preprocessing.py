@@ -76,82 +76,203 @@ class DocumentFeatures:
     """Reuse only unambiguously sliceable offsets; fallback preserves the rest."""
     def __init__(self, texts, offsets, *, use_ordinals=False, max_position_in_token=15,
                  num_hashes=8, num_buckets=8192):
-        self.rows = []
-        self.covered = []
-        self.edges = []
-        self.spans = []
+        texts_list = list(texts)
+        offsets_list = list(offsets)
+        if len(texts_list) != len(offsets_list):
+            raise ValueError("texts and offsets must have the same length")
+        n_docs = len(texts_list)
+        self.rows = [None] * n_docs
+        self.covered = [None] * n_docs
+        self.edges = [None] * n_docs
+        self.span_pairs = [None] * n_docs
+        self._spans = None
         self.fallback_documents = 0
         self.use_ordinals = bool(use_ordinals)
+        if n_docs == 0:
+            return
+
         primes = None if self.use_ordinals else np.asarray(PRIMES[:num_hashes], dtype=np.int64)
-        for text, raw in zip(texts, offsets, strict=True):
+        giga_seen = {}
+        dup_targets = []
+        unique_texts = []
+        unique_records = []
+
+        for d, (text, raw) in enumerate(zip(texts_list, offsets_list)):
+            if isinstance(raw, GigaPackedDoc):
+                p_len = len(raw.packed)
+                dedup_key = (text, p_len, int(raw.packed[0, 0]) if p_len else -1)
+                prev_d = giga_seen.get(dedup_key)
+                if prev_d is not None:
+                    dup_targets.append((d, prev_d))
+                    continue
+                giga_seen[dedup_key] = d
+            unique_texts.append(text)
+            unique_records.append((d, text, raw))
+
+        full_u32 = np.frombuffer("".join(unique_texts).encode("utf-32-le"), dtype=np.uint32)
+        if self.use_ordinals:
+            full_hashes = full_u32.astype(np.int32, copy=False)
+        else:
+            full_hashes = ((full_u32.astype(np.int64)[:, None] + 1) * primes) % num_buckets
+
+        safe_records = []
+        s0_shifted = []
+        s1_shifted = []
+        char_cursor = 0
+        safe_char_cursor = 0
+        safe_tok_cursor = 0
+        any_invalid_spans = False
+        _one_i64 = np.int64(1)
+
+        for d, text, raw in unique_records:
             length = len(text)
+            c_start = char_cursor
+            char_cursor += length
+
             if isinstance(raw, GigaPackedDoc):
                 packed = raw.packed
-                if len(packed) == 0:
-                    all_spans = np.empty((0, 2), dtype=np.int64)
+                n_tok = len(packed)
+                if n_tok == 0:
+                    empty_i64 = np.empty(0, dtype=np.int64)
+                    self.span_pairs[d] = (empty_i64, empty_i64)
+                    self.fallback_documents += 1
+                    continue
+                ends = np.cumsum(packed[:, 1], dtype=np.int64) - 1
+                starts = ends - packed[:, 2]
+                self.span_pairs[d] = (starts, ends)
+                if int(starts[0]) < 0 or int(ends[-1]) > length:
+                    self.fallback_documents += 1
+                    continue
+                s0 = starts
+                s1 = ends
+                all_valid = True
+                val_idx = None
+                self.edges[d] = (ends, starts)
+            else:
+                if hasattr(raw, "offsets"):
+                    all_spans = np.asarray(raw.offsets, dtype=np.int64).reshape(-1, 2)
                 else:
-                    ends = np.cumsum(packed[:, 1], dtype=np.int64) - 1
-                    starts = ends - packed[:, 2]
-                    all_spans = np.empty((len(packed), 2), dtype=np.int64)
-                    all_spans[:, 0] = starts
-                    all_spans[:, 1] = ends
-            elif hasattr(raw, "offsets"):
-                all_spans = np.asarray(raw.offsets, dtype=np.int64).reshape(-1, 2)
-            else:
-                all_spans = np.asarray(raw, dtype=np.int64).reshape(-1, 2)
-            self.spans.append(all_spans)
-            valid = all_spans[:, 1] > all_spans[:, 0]
-            spans = all_spans[valid]
-            s0 = spans[:, 0]
-            s1 = spans[:, 1]
-            safe = (
-                len(spans) > 0
-                and int(s0[0]) >= 0
-                and int(s1[-1]) <= length
-                and bool(np.all(s0[1:] >= s0[:-1]))
-                and bool(np.all(s1[1:] >= s1[:-1]))
+                    all_spans = np.asarray(raw, dtype=np.int64).reshape(-1, 2)
+                self.span_pairs[d] = (all_spans[:, 0], all_spans[:, 1])
+                valid = all_spans[:, 1] > all_spans[:, 0]
+                all_valid = bool(np.all(valid))
+                spans = all_spans if all_valid else all_spans[valid]
+                s0 = spans[:, 0]
+                s1 = spans[:, 1]
+                safe = (
+                    len(spans) > 0
+                    and int(s0[0]) >= 0
+                    and int(s1[-1]) <= length
+                    and bool(np.all(s0[1:] >= s0[:-1]))
+                    and bool(np.all(s1[1:] >= s1[:-1]))
+                )
+                if not safe:
+                    self.fallback_documents += 1
+                    continue
+                if all_valid:
+                    self.edges[d] = (s1, s0)
+                    val_idx = None
+                else:
+                    any_invalid_spans = True
+                    prefix_ends = np.maximum.accumulate(np.where(valid, all_spans[:, 1], -1))
+                    suffix_starts = np.minimum.accumulate(
+                        np.where(valid, all_spans[:, 0], length + 1)[::-1]
+                    )[::-1]
+                    self.edges[d] = (prefix_ends, suffix_starts)
+                    val_idx = np.flatnonzero(valid)
+
+            n_tok = len(s0)
+            s0_shifted.append(s0 + safe_char_cursor if safe_char_cursor else s0)
+            s1_shifted.append(s1 + safe_char_cursor if safe_char_cursor else s1)
+            safe_records.append(
+                (d, length, c_start, safe_char_cursor, safe_char_cursor + length, safe_tok_cursor, n_tok, val_idx)
             )
-            if not safe:
-                self.rows.append(None)
-                self.covered.append(None)
-                self.edges.append(None)
+            safe_char_cursor += length
+            safe_tok_cursor += n_tok
+
+        if safe_records:
+            g_s0 = s0_shifted[0] if len(s0_shifted) == 1 else np.concatenate(s0_shifted)
+            g_s1 = s1_shifted[0] if len(s1_shifted) == 1 else np.concatenate(s1_shifted)
+            if len(g_s0) > 1 and not bool(np.all(g_s0[1:] >= g_s0[:-1])):
+                filtered_records = []
+                s0_shifted_f = []
+                s1_shifted_f = []
+                sc_cur = 0
+                st_cur = 0
+                for rec, s0_u, s1_u in zip(safe_records, s0_shifted, s1_shifted):
+                    d, length, c_start, old_sc, _, _, n_tok, val_idx = rec
+                    s0_raw = s0_u - old_sc if old_sc else s0_u
+                    s1_raw = s1_u - old_sc if old_sc else s1_u
+                    if n_tok > 1 and not bool(np.all(s0_raw[1:] >= s0_raw[:-1])):
+                        self.edges[d] = None
+                        self.fallback_documents += 1
+                        continue
+                    s0_shifted_f.append(s0_raw + sc_cur if sc_cur else s0_raw)
+                    s1_shifted_f.append(s1_raw + sc_cur if sc_cur else s1_raw)
+                    filtered_records.append(
+                        (d, length, c_start, sc_cur, sc_cur + length, st_cur, n_tok, val_idx)
+                    )
+                    sc_cur += length
+                    st_cur += n_tok
+                safe_records = filtered_records
+                safe_char_cursor = sc_cur
+                if safe_records:
+                    g_s0 = s0_shifted_f[0] if len(s0_shifted_f) == 1 else np.concatenate(s0_shifted_f)
+                    g_s1 = s1_shifted_f[0] if len(s1_shifted_f) == 1 else np.concatenate(s1_shifted_f)
+
+        if safe_records:
+            g_chars = np.arange(safe_char_cursor, dtype=np.int64)
+            g_owner = np.searchsorted(g_s0, g_chars, side="right") - 1
+            safe_owner = np.maximum(g_owner, 0)
+            g_covered = (g_owner >= 0) & (g_chars < g_s1[safe_owner])
+            g_pos = np.where(g_covered, np.minimum(g_chars - g_s0[safe_owner], max_position_in_token), 0)
+            g_final = np.zeros(safe_char_cursor, dtype=np.int64)
+            g_final[g_s1 - 1] = 1
+
+            if not any_invalid_spans:
+                if len(safe_records) == 1:
+                    g_mapping = np.where(g_covered, g_owner, 0)
+                else:
+                    tok_bases = np.repeat(
+                        np.fromiter((r[5] for r in safe_records), dtype=np.int64, count=len(safe_records)),
+                        np.fromiter((r[1] for r in safe_records), dtype=np.int64, count=len(safe_records)),
+                    )
+                    g_mapping = np.where(g_covered, g_owner - tok_bases, 0)
+            else:
+                g_mapping = np.zeros(safe_char_cursor, dtype=np.int64)
+
+            for d, length, c_start, sc_start, sc_end, st_start, _n_tok, val_idx in safe_records:
+                cov_slice = g_covered[sc_start:sc_end]
+                if any_invalid_spans:
+                    local_owner = g_owner[sc_start:sc_end][cov_slice] - st_start
+                    g_mapping[sc_start:sc_end][cov_slice] = (
+                        local_owner if val_idx is None else val_idx[local_owner]
+                    )
+                self.rows[d] = {
+                    "char_to_token": g_mapping[sc_start:sc_end],
+                    "is_token_final": g_final[sc_start:sc_end],
+                    "position_in_token": g_pos[sc_start:sc_end],
+                    "hashes": full_hashes[c_start : c_start + length],
+                    "mask": np.broadcast_to(_one_i64, (length,)),
+                }
+                self.covered[d] = cov_slice
+
+        for d, prev_d in dup_targets:
+            self.span_pairs[d] = self.span_pairs[prev_d]
+            self.rows[d] = self.rows[prev_d]
+            self.covered[d] = self.covered[prev_d]
+            self.edges[d] = self.edges[prev_d]
+            if self.rows[prev_d] is None:
                 self.fallback_documents += 1
-                continue
-            indices = np.flatnonzero(valid)
-            mapping = np.zeros(length, dtype=np.int64)
-            final = np.zeros(length, dtype=np.int64)
-            position = np.zeros(length, dtype=np.int64)
-            u32_ord = np.frombuffer(text.encode("utf-32-le"), dtype=np.uint32)
-            mask = np.ones(length, dtype=np.int64)
-            chars = np.arange(length, dtype=np.int64)
-            owner = np.searchsorted(s0, chars, side="right") - 1
-            safe_owner = np.maximum(owner, 0)
-            covered = (owner >= 0) & (chars < s1[safe_owner])
-            sel = chars[covered]
-            own_cov = owner[covered]
-            mapping[sel] = indices[own_cov]
-            position[sel] = np.minimum(sel - s0[own_cov], max_position_in_token)
-            final[s1 - 1] = 1
-            if self.use_ordinals:
-                hashes = u32_ord.astype(np.int32, copy=False)
-            else:
-                ord_i64 = u32_ord.astype(np.int64)
-                hashes = ((ord_i64[:, None] + 1) * primes) % num_buckets
-            self.rows.append({
-                "char_to_token": mapping,
-                "is_token_final": final,
-                "position_in_token": position,
-                "hashes": hashes,
-                "mask": mask,
-            })
-            self.covered.append(covered)
-            if bool(np.all(valid)):
-                prefix_ends = s1
-                suffix_starts = s0
-            else:
-                prefix_ends = np.maximum.accumulate(np.where(valid, all_spans[:, 1], -1))
-                suffix_starts = np.minimum.accumulate(np.where(valid, all_spans[:, 0], length + 1)[::-1])[::-1]
-            self.edges.append((prefix_ends, suffix_starts))
+
+    @property
+    def spans(self):
+        if self._spans is None:
+            self._spans = [
+                np.column_stack(pair) if pair is not None else np.empty((0, 2), dtype=np.int64)
+                for pair in self.span_pairs
+            ]
+        return self._spans
 
     def can_slice(self, index, token_start, token_end, char_start, char_end):
         if self.rows[index] is None:
@@ -162,18 +283,28 @@ class DocumentFeatures:
         return not ((token_start and prefix[token_start-1] > char_start)
                     or (token_end < len(suffix) and suffix[token_end] < char_end))
 
-    def batch(self, windows):
+    def batch(self, windows, *, token_offset=0):
         width = max(w["char_end"] - w["char_start"] for w in windows)
         use_ord = self.use_ordinals and all(
             w.get("reuse", self.rows[w["text_index"]] is not None) for w in windows
         )
-        arrays = {key: np.zeros((len(windows), width), dtype=np.int64)
-                  for key in FIELDS if key != "hashes"}
+        n_win = len(windows)
+        t_off = int(token_offset)
+        arrays = {
+            "char_to_token": (
+                np.full((n_win, width), t_off, dtype=np.int64)
+                if t_off != 0
+                else np.zeros((n_win, width), dtype=np.int64)
+            ),
+            "is_token_final": np.zeros((n_win, width), dtype=np.int64),
+            "position_in_token": np.zeros((n_win, width), dtype=np.int64),
+            "mask": np.zeros((n_win, width), dtype=np.int64),
+        }
         if use_ord:
-            arrays["hashes"] = np.zeros((len(windows), width), dtype=np.int32)
+            arrays["hashes"] = np.zeros((n_win, width), dtype=np.int32)
         else:
             arrays["hashes"] = np.broadcast_to(np.asarray(PRIMES[:8], dtype=np.int64) % 8192,
-                                               (len(windows), width, 8)).copy()
+                                               (n_win, width, 8)).copy()
         for i, window in enumerate(windows):
             index, start, end = window["text_index"], window["char_start"], window["char_end"]
             length = end - start
@@ -181,17 +312,21 @@ class DocumentFeatures:
             if not window.get("reuse", source is not None):
                 fallback = build_char_inputs_vectorized([window["text"]], [window["offsets"]])
                 for key in FIELDS:
-                    arrays[key][i, :length] = getattr(fallback, key)[0].numpy()
+                    val = getattr(fallback, key)[0].numpy()
+                    arrays[key][i, :length] = val + t_off if (key == "char_to_token" and t_off != 0) else val
             else:
-                for key in FIELDS:
-                    if key == "hashes" and not use_ord and source["hashes"].ndim == 1:
-                        ord_slice = source["hashes"][start:end].astype(np.int64)
-                        primes = np.asarray(PRIMES[:8], dtype=np.int64)
-                        arrays["hashes"][i, :length] = ((ord_slice[:, None] + 1) * primes) % 8192
-                    else:
-                        arrays[key][i, :length] = source[key][start:end]
+                arrays["is_token_final"][i, :length] = source["is_token_final"][start:end]
+                arrays["position_in_token"][i, :length] = source["position_in_token"][start:end]
+                if not use_ord and source["hashes"].ndim == 1:
+                    ord_slice = source["hashes"][start:end].astype(np.int64)
+                    primes = np.asarray(PRIMES[:8], dtype=np.int64)
+                    arrays["hashes"][i, :length] = ((ord_slice[:, None] + 1) * primes) % 8192
+                else:
+                    arrays["hashes"][i, :length] = source["hashes"][start:end]
+                arrays["mask"][i, :length] = 1
+                shift = t_off - window["token_start"]
                 arrays["char_to_token"][i, :length] = np.where(
-                    self.covered[index][start:end], source["char_to_token"][start:end] - window["token_start"], 0)
+                    self.covered[index][start:end], source["char_to_token"][start:end] + shift, t_off)
         return CharInputs(**{k: torch.from_numpy(v) for k,v in arrays.items()})
 
 
@@ -244,22 +379,29 @@ No document features or predictions are retained between requests.
             else DocumentFeatures(texts, offsets)
         )
     windows = []
+    doc_win_counts = [0] * len(texts)
+    has_span_pairs = hasattr(cached, "span_pairs")
+    has_spans = hasattr(cached, "spans")
     for text_index, text in enumerate(texts):
         ids = token_ids[text_index]
         n_ids = len(ids)
         if n_ids == 0:
             continue
-        has_spans = hasattr(cached, "spans")
-        doc_spans = cached.spans[text_index] if has_spans else None
-        mapping = None if has_spans else (offsets[text_index] if offsets is not None else encoded.offset_mapping[text_index])
-        ids_list = ids.tolist() if isinstance(ids, np.ndarray) else ids
+        doc_span_pair = cached.span_pairs[text_index] if has_span_pairs else None
+        doc_spans = (cached.spans[text_index] if has_spans else None) if doc_span_pair is None else None
+        mapping = None if (doc_span_pair is not None or doc_spans is not None) else (
+            offsets[text_index] if offsets is not None else encoded.offset_mapping[text_index]
+        )
         for token_start in range(0, n_ids, stride):
             token_end = token_start + block
             done = token_end >= n_ids
             if done:
                 token_end = n_ids
                 token_start = max(token_end - block, 0)
-            if doc_spans is not None:
+            if doc_span_pair is not None:
+                char_start = 0 if token_start == 0 else int(doc_span_pair[0][token_start])
+                char_end = len(text) if token_end == n_ids else int(doc_span_pair[1][token_end - 1])
+            elif doc_spans is not None:
                 char_start = 0 if token_start == 0 else int(doc_spans[token_start, 0])
                 char_end = len(text) if token_end == n_ids else int(doc_spans[token_end - 1, 1])
             else:
@@ -274,16 +416,31 @@ No document features or predictions are retained between requests.
             windows.append(dict(text_index=text_index, token_start=token_start,
                                 char_start=char_start, char_end=char_end,
                                 text=text[char_start:char_end] if relative is not None else None,
-                                offsets=relative, reuse=reuse, input_ids=ids_list[token_start:token_end]))
+                                offsets=relative, reuse=reuse, input_ids=ids[token_start:token_end]))
+            doc_win_counts[text_index] += 1
             if done:
                 break
-    logits = [np.zeros((len(t), model.config.num_labels), dtype=np.float32) for t in texts]
-    counts = [np.zeros(len(t), dtype=np.float32) for t in texts]
+    num_labels = model.config.num_labels
+    is_uniform = weighting == "uniform"
+    _zero_f32 = np.float32(0.0)
+    out_f16 = [None] * len(texts)
+    logits = [
+        None if (is_uniform and doc_win_counts[i] <= 1) else np.zeros((len(t), num_labels), dtype=np.float32)
+        for i, t in enumerate(texts)
+    ]
+    counts = [
+        None if (is_uniform and doc_win_counts[i] <= 1) else np.zeros(len(t), dtype=np.float32)
+        for i, t in enumerate(texts)
+    ]
     n_batches = math.ceil(len(windows) / batch_size)
     batches = range(n_batches)
     if verbose:
         from tqdm.auto import tqdm
         batches = tqdm(batches)
+    cls_id = tokenizer.cls_token_id
+    sep_id = tokenizer.sep_token_id
+    pad_id = tokenizer.pad_token_id
+    is_default_df = type(cached) is _DEFAULT_DOCUMENT_FEATURES
     if can_use_two_stage:
         gpu_batches = []
         batch_windows = []
@@ -293,17 +450,23 @@ No document features or predictions are retained between requests.
             token_width = block+2
             if trim_padding:
                 token_width = max(len(window["input_ids"]) + 2 for window in batch)
-            ids = np.full((real, token_width), tokenizer.pad_token_id, dtype=np.int64)
+            ids = np.full((real, token_width), pad_id, dtype=np.int64)
             attention = np.zeros_like(ids, dtype=np.float32)
             for row, window in enumerate(batch):
-                seq = [tokenizer.cls_token_id, *window["input_ids"], tokenizer.sep_token_id]
-                ids[row, :len(seq)] = seq
-                attention[row, :len(seq)] = 1
-            inputs = cached.batch(batch)
-            inputs.char_to_token = inputs.char_to_token + 1
+                win_ids = window["input_ids"]
+                n_win = len(win_ids)
+                ids[row, 0] = cls_id
+                ids[row, 1 : n_win + 1] = win_ids
+                ids[row, n_win + 1] = sep_id
+                attention[row, : n_win + 2] = 1
+            if is_default_df:
+                inputs = cached.batch(batch, token_offset=1)
+            else:
+                inputs = cached.batch(batch)
+                inputs.char_to_token = inputs.char_to_token + 1
             if real < batch_size and pad_last_batch:
                 missing = batch_size-real
-                ids = np.pad(ids, ((0,missing),(0,0)), constant_values=tokenizer.pad_token_id)
+                ids = np.pad(ids, ((0,missing),(0,0)), constant_values=pad_id)
                 attention = np.pad(attention, ((0,missing),(0,0)))
                 for key in FIELDS:
                     value = getattr(inputs, key)
@@ -320,9 +483,22 @@ No document features or predictions are retained between requests.
             for row, window in enumerate(batch):
                 ti, start, end = window["text_index"], window["char_start"], window["char_end"]
                 length = end-start
-                weights = _window_weights(length, weighting)
-                logits[ti][start:end] += values[row, :length] * weights[:, None]
-                counts[ti][start:end] += weights
+                if is_uniform:
+                    if doc_win_counts[ti] == 1:
+                        doc_len = len(texts[ti])
+                        if length == doc_len:
+                            out_f16[ti] = (values[row, :length] + _zero_f32).astype(np.float16)
+                        else:
+                            res = np.full((doc_len, num_labels), -12.0, dtype=np.float16)
+                            res[start:end] = (values[row, :length] + _zero_f32).astype(np.float16)
+                            out_f16[ti] = res
+                    else:
+                        logits[ti][start:end] += values[row, :length]
+                        counts[ti][start:end] += 1.0
+                else:
+                    weights = _window_weights(length, weighting)
+                    logits[ti][start:end] += values[row, :length] * weights[:, None]
+                    counts[ti][start:end] += weights
     else:
         for bi in batches:
             batch = windows[bi*batch_size:(bi+1)*batch_size]
@@ -330,17 +506,23 @@ No document features or predictions are retained between requests.
             token_width = block+2
             if trim_padding:
                 token_width = max(len(window["input_ids"]) + 2 for window in batch)
-            ids = np.full((real, token_width), tokenizer.pad_token_id, dtype=np.int64)
+            ids = np.full((real, token_width), pad_id, dtype=np.int64)
             attention = np.zeros_like(ids, dtype=np.float32)
             for row, window in enumerate(batch):
-                seq = [tokenizer.cls_token_id, *window["input_ids"], tokenizer.sep_token_id]
-                ids[row, :len(seq)] = seq
-                attention[row, :len(seq)] = 1
-            inputs = cached.batch(batch)
-            inputs.char_to_token = inputs.char_to_token + 1
+                win_ids = window["input_ids"]
+                n_win = len(win_ids)
+                ids[row, 0] = cls_id
+                ids[row, 1 : n_win + 1] = win_ids
+                ids[row, n_win + 1] = sep_id
+                attention[row, : n_win + 2] = 1
+            if is_default_df:
+                inputs = cached.batch(batch, token_offset=1)
+            else:
+                inputs = cached.batch(batch)
+                inputs.char_to_token = inputs.char_to_token + 1
             if real < batch_size and pad_last_batch:
                 missing = batch_size-real
-                ids = np.pad(ids, ((0,missing),(0,0)), constant_values=tokenizer.pad_token_id)
+                ids = np.pad(ids, ((0,missing),(0,0)), constant_values=pad_id)
                 attention = np.pad(attention, ((0,missing),(0,0)))
                 for key in FIELDS:
                     value = getattr(inputs, key)
@@ -353,12 +535,35 @@ No document features or predictions are retained between requests.
             for row, window in enumerate(batch):
                 ti, start, end = window["text_index"], window["char_start"], window["char_end"]
                 length = end-start
-                weights = _window_weights(length, weighting)
-                logits[ti][start:end] += values[row, :length] * weights[:, None]
-                counts[ti][start:end] += weights
+                if is_uniform:
+                    if doc_win_counts[ti] == 1:
+                        doc_len = len(texts[ti])
+                        if length == doc_len:
+                            out_f16[ti] = (values[row, :length] + _zero_f32).astype(np.float16)
+                        else:
+                            res = np.full((doc_len, num_labels), -12.0, dtype=np.float16)
+                            res[start:end] = (values[row, :length] + _zero_f32).astype(np.float16)
+                            out_f16[ti] = res
+                    else:
+                        logits[ti][start:end] += values[row, :length]
+                        counts[ti][start:end] += 1.0
+                else:
+                    weights = _window_weights(length, weighting)
+                    logits[ti][start:end] += values[row, :length] * weights[:, None]
+                    counts[ti][start:end] += weights
     for i, text in enumerate(texts):
-        if text:
-            covered = counts[i] > 0
-            logits[i][covered] /= counts[i][covered, None]
-            logits[i][~covered] = -12.0
-    return [a.astype(np.float16) for a in logits], None, tokenizer, encoded
+        if out_f16[i] is not None:
+            continue
+        if doc_win_counts[i] == 0:
+            out_f16[i] = (
+                np.full((len(text), num_labels), -12.0, dtype=np.float16)
+                if text
+                else np.empty((0, num_labels), dtype=np.float16)
+            )
+        else:
+            if text:
+                covered = counts[i] > 0
+                logits[i][covered] /= counts[i][covered, None]
+                logits[i][~covered] = -12.0
+            out_f16[i] = logits[i].astype(np.float16)
+    return out_f16, None, tokenizer, encoded
