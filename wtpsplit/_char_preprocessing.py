@@ -126,40 +126,127 @@ class DocumentFeatures:
         any_invalid_spans = False
         _one_i64 = np.int64(1)
 
-        for d, text, raw in unique_records:
-            length = len(text)
-            c_start = char_cursor
-            char_cursor += length
+        all_clean_giga = bool(unique_records) and all(
+            isinstance(r[2], GigaPackedDoc) and not r[2].has_zero_delta and len(r[2].packed) > 0
+            for r in unique_records
+        )
+        if all_clean_giga:
+            all_packed = np.concatenate([r[2].packed for r in unique_records], axis=0)
+            if not bool(np.any(all_packed[:, 2] <= 0)):
+                doc_tok_lens = np.fromiter(
+                    (len(r[2].packed) for r in unique_records), dtype=np.int64, count=len(unique_records)
+                )
+                doc_char_lens = np.fromiter(
+                    (len(r[1]) for r in unique_records), dtype=np.int64, count=len(unique_records)
+                )
+                doc_char_starts = np.zeros(len(unique_records), dtype=np.int64)
+                if len(unique_records) > 1:
+                    doc_char_starts[1:] = np.cumsum(doc_char_lens[:-1], dtype=np.int64)
+                doc_tok_starts = np.zeros(len(unique_records), dtype=np.int64)
+                if len(unique_records) > 1:
+                    doc_tok_starts[1:] = np.cumsum(doc_tok_lens[:-1], dtype=np.int64)
 
-            if isinstance(raw, GigaPackedDoc):
-                packed = raw.packed
-                n_tok = len(packed)
-                if n_tok == 0:
-                    empty_i64 = np.empty(0, dtype=np.int64)
-                    self.span_pairs[d] = (empty_i64, empty_i64)
-                    self.fallback_documents += 1
-                    continue
-                ends = np.cumsum(packed[:, 1], dtype=np.int64) - 1
-                starts = ends - packed[:, 2]
-                self.span_pairs[d] = (starts, ends)
-                if not raw.has_zero_delta and not bool(np.any(packed[:, 2] <= 0)):
-                    if int(starts[0]) < 0 or int(ends[-1]) > length or (
-                        n_tok > 1 and not bool(np.all(ends[1:] >= ends[:-1]))
-                    ):
+                g_deltas = all_packed[:, 1].astype(np.int64)
+                g_deltas[doc_tok_starts] -= 1
+                g_ends_raw = np.cumsum(g_deltas, dtype=np.int64)
+                doc_end_before = np.zeros(len(unique_records), dtype=np.int64)
+                if len(unique_records) > 1:
+                    doc_end_before[1:] = g_ends_raw[doc_tok_starts[1:] - 1]
+                tok_shift = np.repeat(doc_char_starts - doc_end_before, doc_tok_lens)
+                cand_s1 = g_ends_raw + tok_shift
+                cand_s0 = cand_s1 - all_packed[:, 2]
+                doc_last_tok = doc_tok_starts + doc_tok_lens - 1
+                if (
+                    bool(np.all(cand_s0[doc_tok_starts] >= doc_char_starts))
+                    and bool(np.all(cand_s1[doc_last_tok] <= doc_char_starts + doc_char_lens))
+                    and (len(cand_s1) <= 1 or bool(np.all(cand_s1[1:] >= cand_s1[:-1])))
+                    and (len(cand_s0) <= 1 or bool(np.all(cand_s0[1:] >= cand_s0[:-1])))
+                ):
+                    g_s0 = cand_s0
+                    g_s1 = cand_s1
+                    safe_char_cursor = int(doc_char_lens.sum())
+                    for idx_u, (d, _text, _raw) in enumerate(unique_records):
+                        c_s = int(doc_char_starts[idx_u])
+                        c_l = int(doc_char_lens[idx_u])
+                        t_s = int(doc_tok_starts[idx_u])
+                        t_l = int(doc_tok_lens[idx_u])
+                        starts_d = cand_s0[t_s : t_s + t_l] - c_s if c_s else cand_s0[t_s : t_s + t_l]
+                        ends_d = cand_s1[t_s : t_s + t_l] - c_s if c_s else cand_s1[t_s : t_s + t_l]
+                        self.span_pairs[d] = (starts_d, ends_d)
+                        self.edges[d] = (ends_d, starts_d)
+                        safe_records.append((d, c_l, c_s, c_s, c_s + c_l, t_s, t_l, None))
+                else:
+                    all_clean_giga = False
+            else:
+                all_clean_giga = False
+
+        if not all_clean_giga:
+            for d, text, raw in unique_records:
+                length = len(text)
+                c_start = char_cursor
+                char_cursor += length
+
+                if isinstance(raw, GigaPackedDoc):
+                    packed = raw.packed
+                    n_tok = len(packed)
+                    if n_tok == 0:
+                        empty_i64 = np.empty(0, dtype=np.int64)
+                        self.span_pairs[d] = (empty_i64, empty_i64)
                         self.fallback_documents += 1
                         continue
-                    s0 = starts
-                    s1 = ends
-                    all_valid = True
-                    val_idx = None
-                    self.edges[d] = (ends, starts)
+                    ends = np.cumsum(packed[:, 1], dtype=np.int64) - 1
+                    starts = ends - packed[:, 2]
+                    self.span_pairs[d] = (starts, ends)
+                    if not raw.has_zero_delta and not bool(np.any(packed[:, 2] <= 0)):
+                        if int(starts[0]) < 0 or int(ends[-1]) > length or (
+                            n_tok > 1 and not bool(np.all(ends[1:] >= ends[:-1]))
+                        ):
+                            self.fallback_documents += 1
+                            continue
+                        s0 = starts
+                        s1 = ends
+                        all_valid = True
+                        val_idx = None
+                        self.edges[d] = (ends, starts)
+                    else:
+                        valid = ends > starts
+                        all_valid = bool(np.all(valid))
+                        s0 = starts if all_valid else starts[valid]
+                        s1 = ends if all_valid else ends[valid]
+                        safe = (
+                            len(s0) > 0
+                            and int(s0[0]) >= 0
+                            and int(s1[-1]) <= length
+                            and bool(np.all(s0[1:] >= s0[:-1]))
+                            and bool(np.all(s1[1:] >= s1[:-1]))
+                        )
+                        if not safe:
+                            self.fallback_documents += 1
+                            continue
+                        if all_valid:
+                            self.edges[d] = (s1, s0)
+                            val_idx = None
+                        else:
+                            any_invalid_spans = True
+                            prefix_ends = np.maximum.accumulate(np.where(valid, ends, -1))
+                            suffix_starts = np.minimum.accumulate(
+                                np.where(valid, starts, length + 1)[::-1]
+                            )[::-1]
+                            self.edges[d] = (prefix_ends, suffix_starts)
+                            val_idx = np.flatnonzero(valid)
                 else:
-                    valid = ends > starts
+                    if hasattr(raw, "offsets"):
+                        all_spans = np.asarray(raw.offsets, dtype=np.int64).reshape(-1, 2)
+                    else:
+                        all_spans = np.asarray(raw, dtype=np.int64).reshape(-1, 2)
+                    self.span_pairs[d] = (all_spans[:, 0], all_spans[:, 1])
+                    valid = all_spans[:, 1] > all_spans[:, 0]
                     all_valid = bool(np.all(valid))
-                    s0 = starts if all_valid else starts[valid]
-                    s1 = ends if all_valid else ends[valid]
+                    spans = all_spans if all_valid else all_spans[valid]
+                    s0 = spans[:, 0]
+                    s1 = spans[:, 1]
                     safe = (
-                        len(s0) > 0
+                        len(spans) > 0
                         and int(s0[0]) >= 0
                         and int(s1[-1]) <= length
                         and bool(np.all(s0[1:] >= s0[:-1]))
@@ -173,100 +260,69 @@ class DocumentFeatures:
                         val_idx = None
                     else:
                         any_invalid_spans = True
-                        prefix_ends = np.maximum.accumulate(np.where(valid, ends, -1))
+                        prefix_ends = np.maximum.accumulate(np.where(valid, all_spans[:, 1], -1))
                         suffix_starts = np.minimum.accumulate(
-                            np.where(valid, starts, length + 1)[::-1]
+                            np.where(valid, all_spans[:, 0], length + 1)[::-1]
                         )[::-1]
                         self.edges[d] = (prefix_ends, suffix_starts)
                         val_idx = np.flatnonzero(valid)
-            else:
-                if hasattr(raw, "offsets"):
-                    all_spans = np.asarray(raw.offsets, dtype=np.int64).reshape(-1, 2)
-                else:
-                    all_spans = np.asarray(raw, dtype=np.int64).reshape(-1, 2)
-                self.span_pairs[d] = (all_spans[:, 0], all_spans[:, 1])
-                valid = all_spans[:, 1] > all_spans[:, 0]
-                all_valid = bool(np.all(valid))
-                spans = all_spans if all_valid else all_spans[valid]
-                s0 = spans[:, 0]
-                s1 = spans[:, 1]
-                safe = (
-                    len(spans) > 0
-                    and int(s0[0]) >= 0
-                    and int(s1[-1]) <= length
-                    and bool(np.all(s0[1:] >= s0[:-1]))
-                    and bool(np.all(s1[1:] >= s1[:-1]))
+
+                n_tok = len(s0)
+                s0_shifted.append(s0 + safe_char_cursor if safe_char_cursor else s0)
+                s1_shifted.append(s1 + safe_char_cursor if safe_char_cursor else s1)
+                safe_records.append(
+                    (d, length, c_start, safe_char_cursor, safe_char_cursor + length, safe_tok_cursor, n_tok, val_idx)
                 )
-                if not safe:
-                    self.fallback_documents += 1
-                    continue
-                if all_valid:
-                    self.edges[d] = (s1, s0)
-                    val_idx = None
-                else:
-                    any_invalid_spans = True
-                    prefix_ends = np.maximum.accumulate(np.where(valid, all_spans[:, 1], -1))
-                    suffix_starts = np.minimum.accumulate(
-                        np.where(valid, all_spans[:, 0], length + 1)[::-1]
-                    )[::-1]
-                    self.edges[d] = (prefix_ends, suffix_starts)
-                    val_idx = np.flatnonzero(valid)
+                safe_char_cursor += length
+                safe_tok_cursor += n_tok
 
-            n_tok = len(s0)
-            s0_shifted.append(s0 + safe_char_cursor if safe_char_cursor else s0)
-            s1_shifted.append(s1 + safe_char_cursor if safe_char_cursor else s1)
-            safe_records.append(
-                (d, length, c_start, safe_char_cursor, safe_char_cursor + length, safe_tok_cursor, n_tok, val_idx)
-            )
-            safe_char_cursor += length
-            safe_tok_cursor += n_tok
-
-        if safe_records:
-            g_s0 = s0_shifted[0] if len(s0_shifted) == 1 else np.concatenate(s0_shifted)
-            g_s1 = s1_shifted[0] if len(s1_shifted) == 1 else np.concatenate(s1_shifted)
-            if len(g_s0) > 1 and not bool(np.all(g_s0[1:] >= g_s0[:-1])):
-                filtered_records = []
-                s0_shifted_f = []
-                s1_shifted_f = []
-                sc_cur = 0
-                st_cur = 0
-                for rec, s0_u, s1_u in zip(safe_records, s0_shifted, s1_shifted):
-                    d, length, c_start, old_sc, _, _, n_tok, val_idx = rec
-                    s0_raw = s0_u - old_sc if old_sc else s0_u
-                    s1_raw = s1_u - old_sc if old_sc else s1_u
-                    if n_tok > 1 and not bool(np.all(s0_raw[1:] >= s0_raw[:-1])):
-                        self.edges[d] = None
-                        self.fallback_documents += 1
-                        continue
-                    s0_shifted_f.append(s0_raw + sc_cur if sc_cur else s0_raw)
-                    s1_shifted_f.append(s1_raw + sc_cur if sc_cur else s1_raw)
-                    filtered_records.append(
-                        (d, length, c_start, sc_cur, sc_cur + length, st_cur, n_tok, val_idx)
-                    )
-                    sc_cur += length
-                    st_cur += n_tok
-                safe_records = filtered_records
-                safe_char_cursor = sc_cur
-                if safe_records:
-                    g_s0 = s0_shifted_f[0] if len(s0_shifted_f) == 1 else np.concatenate(s0_shifted_f)
-                    g_s1 = s1_shifted_f[0] if len(s1_shifted_f) == 1 else np.concatenate(s1_shifted_f)
+            if safe_records:
+                g_s0 = s0_shifted[0] if len(s0_shifted) == 1 else np.concatenate(s0_shifted)
+                g_s1 = s1_shifted[0] if len(s1_shifted) == 1 else np.concatenate(s1_shifted)
+                if len(g_s0) > 1 and not bool(np.all(g_s0[1:] >= g_s0[:-1])):
+                    filtered_records = []
+                    s0_shifted_f = []
+                    s1_shifted_f = []
+                    sc_cur = 0
+                    st_cur = 0
+                    for rec, s0_u, s1_u in zip(safe_records, s0_shifted, s1_shifted):
+                        d, length, c_start, old_sc, _, _, n_tok, val_idx = rec
+                        s0_raw = s0_u - old_sc if old_sc else s0_u
+                        s1_raw = s1_u - old_sc if old_sc else s1_u
+                        if n_tok > 1 and not bool(np.all(s0_raw[1:] >= s0_raw[:-1])):
+                            self.edges[d] = None
+                            self.fallback_documents += 1
+                            continue
+                        s0_shifted_f.append(s0_raw + sc_cur if sc_cur else s0_raw)
+                        s1_shifted_f.append(s1_raw + sc_cur if sc_cur else s1_raw)
+                        filtered_records.append(
+                            (d, length, c_start, sc_cur, sc_cur + length, st_cur, n_tok, val_idx)
+                        )
+                        sc_cur += length
+                        st_cur += n_tok
+                    safe_records = filtered_records
+                    safe_char_cursor = sc_cur
+                    if safe_records:
+                        g_s0 = s0_shifted_f[0] if len(s0_shifted_f) == 1 else np.concatenate(s0_shifted_f)
+                        g_s1 = s1_shifted_f[0] if len(s1_shifted_f) == 1 else np.concatenate(s1_shifted_f)
 
         if safe_records:
             n_total_tok = len(g_s0)
             g_chars = np.arange(safe_char_cursor, dtype=np.int64)
-            # Fast O(N_chars) linear-time gap/span repeat when spans are disjoint (no overlapping tokens)
-            if not any_invalid_spans and n_total_tok > 0:
+            # Fast O(N_chars) linear-time effective-span partition under last-writer-wins:
+            # Since g_s0 is non-decreasing (0 <= g_s0[0] <= ... <= g_s0[N-1] <= safe_char_cursor),
+            # searchsorted(g_s0, c, side="right") - 1 returns k strictly on [g_s0[k], next_s0[k]),
+            # and c < g_s1[k] holds on [g_s0[k], eff_s1[k]) where eff_s1 = max(g_s0, min(g_s1, next_s0)).
+            if n_total_tok > 0 and int(g_s0[0]) >= 0 and int(g_s0[-1]) <= safe_char_cursor:
+                next_s0 = np.empty(n_total_tok, dtype=np.int64)
+                if n_total_tok > 1:
+                    next_s0[:-1] = g_s0[1:]
+                next_s0[-1] = safe_char_cursor
+                eff_s1 = np.maximum(g_s0, np.minimum(g_s1, next_s0))
+                span_lens = eff_s1 - g_s0
                 gaps = np.empty(n_total_tok + 1, dtype=np.int64)
                 gaps[0] = g_s0[0]
-                if n_total_tok > 1:
-                    gaps[1:-1] = g_s0[1:] - g_s1[:-1]
-                gaps[-1] = safe_char_cursor - g_s1[-1]
-                is_disjoint = bool(np.all(gaps >= 0))
-            else:
-                is_disjoint = False
-
-            if is_disjoint:
-                span_lens = g_s1 - g_s0
+                gaps[1:] = next_s0 - eff_s1
                 run_lens = np.empty(2 * n_total_tok + 1, dtype=np.int64)
                 run_lens[0::2] = gaps
                 run_lens[1::2] = span_lens
