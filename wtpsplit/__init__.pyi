@@ -1,5 +1,6 @@
 from collections.abc import Iterable, Iterator
 from os import PathLike
+from pathlib import Path
 from typing import Any, Literal, overload
 
 import numpy as np
@@ -23,7 +24,13 @@ class WtP:
     def split(self, text_or_texts: Any, **kwargs: Any) -> Any: ...
 
 class SaT:
-    precision: Literal['fp32', 'fp16', 'bf16'] | None
+    adaptation_history: list[float]
+    mode: Literal["bitwise", "equivalent", "sparse"]
+    trim_padding: bool
+    trim_subword_padding: bool
+    pack_sequences: bool
+    character_preprocessing: Literal["reference", "exact"]
+    precision: Literal['fp32', 'fp16', 'bf16', 'fp8'] | None
     precision_info: dict[str, Any] | None
     quantization: Literal["int8", "combined_int8", "embedding_int8", "linear_int8"] | None
     quantization_info: dict[str, Any]
@@ -44,13 +51,43 @@ class SaT:
         compile: bool | dict[str, Any] = ...,
         *,
         style_or_domain: str | None = ...,
+        mode: Literal["bitwise", "equivalent", "sparse"] = ...,
         character_preprocessing: Literal["reference", "exact"] = ...,
         trim_padding: bool = ...,
+        trim_subword_padding: bool | None = ...,
+        pack_sequences: bool | None = ...,
+        fuse_depthwise_delta: bool | None = ...,
+        gate_logit_threshold: float | None = ...,
         quantization: Literal["int8", "combined_int8", "embedding_int8", "linear_int8"] | None = ...,
-        precision: Literal['fp32', 'fp16', 'bf16'] | None = ...,
+        precision: Literal['fp32', 'fp16', 'bf16', 'fp8'] | None = ...,
         input_line_breaks: Literal["preserve", "space"] | None = ...,
     ) -> None: ...
+    def set_mode(
+        self,
+        mode: Literal["bitwise", "equivalent", "sparse"],
+        *,
+        trim_subword_padding: bool | None = ...,
+        pack_sequences: bool | None = ...,
+        fuse_depthwise_delta: bool | None = ...,
+        gate_logit_threshold: float | None = ...,
+    ) -> SaT: ...
     def __getattr__(self, name: str) -> Any: ...
+    def adapt(
+        self,
+        sentences: Iterable[str],
+        *,
+        language: str | None = ...,
+        epochs: int = ...,
+        learning_rate: float = ...,
+        batch_size: int = ...,
+        block_size: int = ...,
+        rank: int = ...,
+        alpha: float = ...,
+        dropout: float = ...,
+        seed: int = ...,
+        show_progress: bool = ...,
+    ) -> SaT: ...
+    def save_adapter(self, output_dir: str | PathLike[str]) -> Path: ...
     def get_threshold(self, language: str | None = ..., domain: str | None = ...) -> float: ...
     @overload
     def predict_proba(  # type: ignore[overload-overlap]
