@@ -17,6 +17,7 @@ from wtpsplit._host_kernels import (
     decode_subword_split,
     exact_float16_logit_threshold,
     extract_subword_logits_fast,
+    prepare_subword_logits_chunk,
     project_subword_proba,
 )
 from wtpsplit._inference import (
@@ -887,8 +888,71 @@ class SaT:
             and self.tokenizer is not None
             and not verbose
         )
+        char_prep_mode = getattr(self, "character_preprocessing", "reference")
+        trim_sub_flag = bool(getattr(self, "trim_subword_padding", False))
+        pack_seq_flag = bool(getattr(self, "pack_sequences", False))
+        max_cb = max_content_block_size(self.model.config)
+        down_rate = int(getattr(self.model.config, "downsampling_rate", 1))
+        can_prefetch_char = (
+            use_char_head
+            and char_prep_mode == "exact"
+            and self.tokenizer is not None
+            and not verbose
+            and stride >= 1
+            and min(block_size, max_cb) >= 1
+        )
 
-        def extract_logits(input_texts):
+        def _prepare_proba_chunk(input_texts):
+            if can_fast_subword_proba:
+                return prepare_subword_logits_chunk(
+                    input_texts,
+                    self.tokenizer,
+                    stride=stride,
+                    max_block_size=block_size,
+                    batch_size=batch_size,
+                    max_content_block=max_cb,
+                    downsampling_rate=down_rate,
+                    trim_subword_padding=trim_sub_flag,
+                    pack_sequences=pack_seq_flag,
+                )
+            if can_prefetch_char:
+                from wtpsplit._char_preprocessing import (
+                    DocumentFeatures,
+                    _DEFAULT_DOCUMENT_FEATURES,
+                    prepare_character_head_chunk,
+                )
+
+                if DocumentFeatures is _DEFAULT_DOCUMENT_FEATURES:
+                    is_two_stage = (
+                        type(self.model).__name__ == "PyTorchWrapper"
+                        and hasattr(self.model, "encode_tokens")
+                        and hasattr(self.model, "run_character_head")
+                        and getattr(getattr(self.model, "model", None), "character_head", None) is not None
+                        and not getattr(getattr(self.model, "model", None), "_forward_pre_hooks", None)
+                        and not getattr(getattr(self.model, "model", None), "_forward_hooks", None)
+                        and getattr(self.model, "pinned_inputs", None) is None
+                        and "__call__" not in getattr(self.model, "__dict__", {})
+                    )
+                    is_ort = (
+                        type(self.model).__name__ == "SaTORTWrapper"
+                        and "__call__" not in getattr(self.model, "__dict__", {})
+                    )
+                    use_ord = is_two_stage or (
+                        is_ort and getattr(self.model, "input_ranks", {}).get("char_hashes") == 2
+                    )
+                    return prepare_character_head_chunk(
+                        input_texts,
+                        self.tokenizer,
+                        stride=stride,
+                        block=min(block_size, max_cb),
+                        use_ordinals=use_ord,
+                        can_use_fast_tok=(is_two_stage or is_ort),
+                        trim_subword_padding=trim_sub_flag,
+                        batch_size=batch_size,
+                    )
+            return None
+
+        def extract_logits(input_texts, prepared_chunk=None):
             if can_fast_subword_proba:
                 outer_batch_logits, encoded_batch = extract_subword_logits_fast(
                     input_texts,
@@ -899,9 +963,10 @@ class SaT:
                     batch_size=batch_size,
                     pad_last_batch=pad_last_batch,
                     weighting=weighting,
-                    max_content_block=max_content_block_size(self.model.config),
-                    trim_subword_padding=bool(getattr(self, "trim_subword_padding", False)),
-                    pack_sequences=bool(getattr(self, "pack_sequences", False)),
+                    max_content_block=max_cb,
+                    trim_subword_padding=trim_sub_flag,
+                    pack_sequences=pack_seq_flag,
+                    prepared_chunk=prepared_chunk,
                 )
                 return [
                     project_subword_proba(
@@ -923,10 +988,11 @@ class SaT:
                 weighting=weighting,
                 verbose=verbose,
                 tokenizer=self.tokenizer,
-                character_preprocessing=getattr(self, "character_preprocessing", "reference"),
+                character_preprocessing=char_prep_mode,
                 trim_padding=getattr(self, "trim_padding", True),
-                trim_subword_padding=bool(getattr(self, "trim_subword_padding", False)),
-                pack_sequences=bool(getattr(self, "pack_sequences", False)),
+                trim_subword_padding=trim_sub_flag,
+                pack_sequences=pack_seq_flag,
+                prepared_chunk=prepared_chunk,
             )
             if use_char_head:
                 return [
@@ -971,6 +1037,7 @@ class SaT:
             probability_fn=probability_fn,
             return_paragraph_probabilities=return_paragraph_probabilities,
             outputs_are_probabilities=is_subword_proba,
+            prepare_batch=_prepare_proba_chunk if (can_fast_subword_proba or can_prefetch_char) else None,
         )
 
     def segment(
@@ -1177,12 +1244,18 @@ class SaT:
         )
 
         if can_fast_split:
+            from concurrent.futures import ThreadPoolExecutor
+
             z_min = exact_float16_logit_threshold(sentence_threshold)
             line_breaks = self.__dict__.get("input_line_breaks", "preserve")
             max_content_block = max_content_block_size(self.model.config)
+            down_rate_split = int(getattr(self.model.config, "downsampling_rate", 1))
+            trim_sub_split = bool(getattr(self, "trim_subword_padding", False))
+            pack_seq_split = bool(getattr(self, "pack_sequences", False))
+            char_prep_split = getattr(self, "character_preprocessing", "reference")
             n_outer = math.ceil(len(texts) / outer_batch_size)
 
-            for outer_idx in range(n_outer):
+            def _prepare_split_outer(outer_idx: int):
                 start = outer_idx * outer_batch_size
                 end = min((outer_idx + 1) * outer_batch_size, len(texts))
                 outer_orig = texts[start:end]
@@ -1193,26 +1266,134 @@ class SaT:
                 )
                 nonempty_map = [i for i, t in enumerate(outer_in) if t.strip()]
                 nonempty_texts = [outer_in[i] for i in nonempty_map]
+                prepared_chunk = None
+                if nonempty_texts:
+                    if not is_char_head_model:
+                        prepared_chunk = prepare_subword_logits_chunk(
+                            nonempty_texts,
+                            self.tokenizer,
+                            stride=stride,
+                            max_block_size=block_size,
+                            batch_size=batch_size,
+                            max_content_block=max_content_block,
+                            downsampling_rate=down_rate_split,
+                            trim_subword_padding=trim_sub_split,
+                            pack_sequences=pack_seq_split,
+                        )
+                    elif char_prep_split == "exact" and stride >= 1 and min(block_size, max_content_block) >= 1:
+                        from wtpsplit._char_preprocessing import (
+                            DocumentFeatures,
+                            _DEFAULT_DOCUMENT_FEATURES,
+                            prepare_character_head_chunk,
+                        )
 
-                if is_char_head_model:
+                        if DocumentFeatures is _DEFAULT_DOCUMENT_FEATURES:
+                            is_two_stage = (
+                                type(self.model).__name__ == "PyTorchWrapper"
+                                and hasattr(self.model, "encode_tokens")
+                                and hasattr(self.model, "run_character_head")
+                                and getattr(getattr(self.model, "model", None), "character_head", None) is not None
+                                and not getattr(getattr(self.model, "model", None), "_forward_pre_hooks", None)
+                                and not getattr(getattr(self.model, "model", None), "_forward_hooks", None)
+                                and getattr(self.model, "pinned_inputs", None) is None
+                                and "__call__" not in getattr(self.model, "__dict__", {})
+                            )
+                            is_ort = (
+                                type(self.model).__name__ == "SaTORTWrapper"
+                                and "__call__" not in getattr(self.model, "__dict__", {})
+                            )
+                            use_ord = is_two_stage or (
+                                is_ort and getattr(self.model, "input_ranks", {}).get("char_hashes") == 2
+                            )
+                            prepared_chunk = prepare_character_head_chunk(
+                                nonempty_texts,
+                                self.tokenizer,
+                                stride=stride,
+                                block=min(block_size, max_content_block),
+                                use_ordinals=use_ord,
+                                can_use_fast_tok=(is_two_stage or is_ort),
+                                trim_subword_padding=trim_sub_split,
+                                batch_size=batch_size,
+                            )
+                return outer_orig, nonempty_map, nonempty_texts, prepared_chunk
+
+            executor = ThreadPoolExecutor(max_workers=1) if n_outer > 1 else None
+            try:
+                next_fut = executor.submit(_prepare_split_outer, 0) if (executor is not None and n_outer > 0) else None
+                for outer_idx in range(n_outer):
+                    if next_fut is not None:
+                        outer_orig, nonempty_map, nonempty_texts, prepared_chunk = next_fut.result()
+                        if executor is not None and (outer_idx + 1) < n_outer:
+                            next_fut = executor.submit(_prepare_split_outer, outer_idx + 1)
+                        else:
+                            next_fut = None
+                    else:
+                        outer_orig, nonempty_map, nonempty_texts, prepared_chunk = _prepare_split_outer(outer_idx)
+
+                    if is_char_head_model:
+                        if nonempty_texts:
+                            char_stitched_logits, _, _, _ = extract(
+                                nonempty_texts,
+                                self.model,
+                                stride=stride,
+                                max_block_size=block_size,
+                                batch_size=batch_size,
+                                pad_last_batch=pad_last_batch,
+                                weighting=weighting,
+                                verbose=verbose,
+                                tokenizer=self.tokenizer,
+                                character_preprocessing=char_prep_split,
+                                trim_padding=getattr(self, "trim_padding", True),
+                                trim_subword_padding=trim_sub_split,
+                                pack_sequences=pack_seq_split,
+                                prepared_chunk=prepared_chunk,
+                            )
+                        else:
+                            char_stitched_logits = []
+
+                        nonempty_cursor = 0
+                        for doc_i, orig_text in enumerate(outer_orig):
+                            if split_on_input_newlines is False:
+                                warnings.warn(
+                                    "split_on_input_newlines=False disables forced splitting at input newlines. "
+                                    "This option does not replace newlines with spaces; the model may still "
+                                    "predict boundaries around them. Returned segments may contain input newlines.",
+                                    UserWarning,
+                                    stacklevel=2,
+                                )
+                            if doc_i in nonempty_map:
+                                doc_char_logits = char_stitched_logits[nonempty_cursor]
+                                nonempty_cursor += 1
+                            else:
+                                doc_char_logits = np.empty((0, 1), dtype=np.float16)
+
+                            yield decode_char_split(
+                                orig_text,
+                                doc_char_logits,
+                                z_min=z_min,
+                                strip_whitespace=strip_whitespace,
+                                split_on_input_newlines=bool(split_on_input_newlines),
+                            )
+                        continue
+
                     if nonempty_texts:
-                        char_stitched_logits, _, _, _ = extract(
+                        stitched_logits, encoded_batch = extract_subword_logits_fast(
                             nonempty_texts,
                             self.model,
+                            self.tokenizer,
                             stride=stride,
                             max_block_size=block_size,
                             batch_size=batch_size,
                             pad_last_batch=pad_last_batch,
                             weighting=weighting,
-                            verbose=verbose,
-                            tokenizer=self.tokenizer,
-                            character_preprocessing=getattr(self, "character_preprocessing", "reference"),
-                            trim_padding=getattr(self, "trim_padding", True),
-                            trim_subword_padding=bool(getattr(self, "trim_subword_padding", False)),
-                            pack_sequences=bool(getattr(self, "pack_sequences", False)),
+                            max_content_block=max_content_block,
+                            trim_subword_padding=trim_sub_split,
+                            pack_sequences=pack_seq_split,
+                            prepared_chunk=prepared_chunk,
                         )
                     else:
-                        char_stitched_logits = []
+                        stitched_logits = []
+                        encoded_batch = None
 
                     nonempty_cursor = 0
                     for doc_i, orig_text in enumerate(outer_orig):
@@ -1224,65 +1405,25 @@ class SaT:
                                 UserWarning,
                                 stacklevel=2,
                             )
-                        if doc_i in nonempty_map:
-                            doc_char_logits = char_stitched_logits[nonempty_cursor]
+                        if doc_i in nonempty_map and encoded_batch is not None:
+                            tok_logits = stitched_logits[nonempty_cursor]
+                            off_or_enc = encoded_batch.offsets_or_encoding(nonempty_cursor)
                             nonempty_cursor += 1
                         else:
-                            doc_char_logits = np.empty((0, 1), dtype=np.float16)
+                            tok_logits = np.empty((0, 1), dtype=np.float16)
+                            off_or_enc = []
 
-                        yield decode_char_split(
+                        yield decode_subword_split(
                             orig_text,
-                            doc_char_logits,
+                            tok_logits,
+                            off_or_enc,
                             z_min=z_min,
                             strip_whitespace=strip_whitespace,
                             split_on_input_newlines=bool(split_on_input_newlines),
                         )
-                    continue
-
-                if nonempty_texts:
-                    stitched_logits, encoded_batch = extract_subword_logits_fast(
-                        nonempty_texts,
-                        self.model,
-                        self.tokenizer,
-                        stride=stride,
-                        max_block_size=block_size,
-                        batch_size=batch_size,
-                        pad_last_batch=pad_last_batch,
-                        weighting=weighting,
-                        max_content_block=max_content_block,
-                        trim_subword_padding=bool(getattr(self, "trim_subword_padding", False)),
-                        pack_sequences=bool(getattr(self, "pack_sequences", False)),
-                    )
-                else:
-                    stitched_logits = []
-                    encoded_batch = None
-
-                nonempty_cursor = 0
-                for doc_i, orig_text in enumerate(outer_orig):
-                    if split_on_input_newlines is False:
-                        warnings.warn(
-                            "split_on_input_newlines=False disables forced splitting at input newlines. "
-                            "This option does not replace newlines with spaces; the model may still "
-                            "predict boundaries around them. Returned segments may contain input newlines.",
-                            UserWarning,
-                            stacklevel=2,
-                        )
-                    if doc_i in nonempty_map and encoded_batch is not None:
-                        tok_logits = stitched_logits[nonempty_cursor]
-                        off_or_enc = encoded_batch.offsets_or_encoding(nonempty_cursor)
-                        nonempty_cursor += 1
-                    else:
-                        tok_logits = np.empty((0, 1), dtype=np.float16)
-                        off_or_enc = []
-
-                    yield decode_subword_split(
-                        orig_text,
-                        tok_logits,
-                        off_or_enc,
-                        z_min=z_min,
-                        strip_whitespace=strip_whitespace,
-                        split_on_input_newlines=bool(split_on_input_newlines),
-                    )
+            finally:
+                if executor is not None:
+                    executor.shutdown(wait=True)
             return
 
         for text, probs in zip(

@@ -72,16 +72,21 @@ def iter_probabilities(
     *,
     outer_batch_size: int,
     remove_whitespace_before_inference: bool,
-    extract_logits: Callable[[list[str]], list[FloatArray]],
+    extract_logits: Callable[..., list[FloatArray]],
     probability_fn: Callable[[FloatArray], ProbabilityPair],
     return_paragraph_probabilities: bool,
     outputs_are_probabilities: bool = False,
+    prepare_batch: Callable[[list[str]], Any] | None = None,
 ) -> Iterator[FloatArray | ProbabilityPair]:
     """Run shared outer batching and restore spaces removed before inference."""
+    from concurrent.futures import Future, ThreadPoolExecutor
+
     n_outer_batches = math.ceil(len(texts) / outer_batch_size)
     empty_sentinel = np.zeros((1, 1), dtype=np.float32) if outputs_are_probabilities else np.full((1, 1), -np.inf)
 
-    for outer_batch_idx in range(n_outer_batches):
+    def _prepare_outer(
+        outer_batch_idx: int,
+    ) -> tuple[list[list[int]], list[int], list[str], Any]:
         start = outer_batch_idx * outer_batch_size
         end = min((outer_batch_idx + 1) * outer_batch_size, len(texts))
         outer_batch_texts = texts[start:end]
@@ -105,27 +110,56 @@ def iter_probabilities(
 
         empty_string_indices = [i for i, text in enumerate(input_texts) if not text.strip()]
         nonempty_texts = [text for text in input_texts if text.strip()]
-        outer_batch_logits = extract_logits(nonempty_texts) if nonempty_texts else []
+        prepared = prepare_batch(nonempty_texts) if (prepare_batch is not None and nonempty_texts) else None
+        return space_positions, empty_string_indices, nonempty_texts, prepared
 
-        for i in empty_string_indices:
-            outer_batch_logits.insert(i, empty_sentinel)
+    use_prefetch = prepare_batch is not None and n_outer_batches > 1
+    executor = ThreadPoolExecutor(max_workers=1) if use_prefetch else None
+    try:
+        next_future: Future[tuple[list[list[int]], list[int], list[str], Any]] | None = None
+        if executor is not None and n_outer_batches > 0:
+            next_future = executor.submit(_prepare_outer, 0)
 
-        for i, logits in enumerate(outer_batch_logits):
-            sentence_probs, newline_probs = probability_fn(logits)
-
-            if remove_whitespace_before_inference:
-                full_newline_probs = list(newline_probs)
-                full_sentence_probs = list(sentence_probs)
-                for position in space_positions[i]:
-                    full_newline_probs.insert(position, np.zeros_like(newline_probs[0]))
-                    full_sentence_probs.insert(position, np.zeros_like(sentence_probs[0]))
-                newline_probs = np.asarray(full_newline_probs)
-                sentence_probs = np.asarray(full_sentence_probs)
-
-            if return_paragraph_probabilities:
-                yield sentence_probs, newline_probs
+        for outer_batch_idx in range(n_outer_batches):
+            if next_future is not None:
+                space_positions, empty_string_indices, nonempty_texts, prepared = next_future.result()
+                if executor is not None and (outer_batch_idx + 1) < n_outer_batches:
+                    next_future = executor.submit(_prepare_outer, outer_batch_idx + 1)
+                else:
+                    next_future = None
             else:
-                yield sentence_probs
+                space_positions, empty_string_indices, nonempty_texts, prepared = _prepare_outer(outer_batch_idx)
+
+            if nonempty_texts:
+                if prepare_batch is not None:
+                    outer_batch_logits = extract_logits(nonempty_texts, prepared)
+                else:
+                    outer_batch_logits = extract_logits(nonempty_texts)
+            else:
+                outer_batch_logits = []
+
+            for i in empty_string_indices:
+                outer_batch_logits.insert(i, empty_sentinel)
+
+            for i, logits in enumerate(outer_batch_logits):
+                sentence_probs, newline_probs = probability_fn(logits)
+
+                if remove_whitespace_before_inference:
+                    full_newline_probs = list(newline_probs)
+                    full_sentence_probs = list(sentence_probs)
+                    for position in space_positions[i]:
+                        full_newline_probs.insert(position, np.zeros_like(newline_probs[0]))
+                        full_sentence_probs.insert(position, np.zeros_like(sentence_probs[0]))
+                    newline_probs = np.asarray(full_newline_probs)
+                    sentence_probs = np.asarray(full_sentence_probs)
+
+                if return_paragraph_probabilities:
+                    yield sentence_probs, newline_probs
+                else:
+                    yield sentence_probs
+    finally:
+        if executor is not None:
+            executor.shutdown(wait=True)
 
 
 def validate_segmentation_options(

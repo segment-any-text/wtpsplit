@@ -132,6 +132,7 @@ class PyTorchWrapper:
         self.autocast_enabled = autocast_enabled
         self.output_float32 = output_float32
         self.pinned_inputs = pinned_inputs
+        self._auto_pinned_inputs: Any = None
 
     def __getattr__(self, name: str) -> Any:
         assert hasattr(self, "model")
@@ -142,11 +143,18 @@ class PyTorchWrapper:
 
         if value is None:
             return None
+        device = self.model.device
         if self.pinned_inputs is not None:
-            return self.pinned_inputs.tensor(name, value, self.model.device)
+            return self.pinned_inputs.tensor(name, value, device)
+        if getattr(device, "type", None) == "cuda":
+            if self._auto_pinned_inputs is None:
+                from wtpsplit._inference_transfer import PinnedInputs
+
+                self._auto_pinned_inputs = PinnedInputs()
+            return self._auto_pinned_inputs.tensor(name, value, device)
         if torch.is_tensor(value):
-            return value.to(self.model.device)
-        return torch.from_numpy(value).to(self.model.device)
+            return value.to(device)
+        return torch.from_numpy(value).to(device)
 
     def encode_tokens(
         self,
@@ -233,14 +241,14 @@ class PyTorchWrapper:
             chunk_offsets: list[tuple[int, int, int]],
         ) -> None:
             nonlocal out
-            packed_ids_t = torch.from_numpy(np.concatenate(ids_parts, axis=0)).to(
-                device=device, dtype=torch.long
+            packed_ids_t = self._as_device_tensor(
+                np.concatenate(ids_parts, axis=0).astype(np.int64, copy=False), "packed_input_ids"
             ).unsqueeze(0)
-            packed_pos_t = torch.from_numpy(np.concatenate(pos_parts, axis=0)).to(
-                device=device, dtype=torch.long
+            packed_pos_t = self._as_device_tensor(
+                np.concatenate(pos_parts, axis=0).astype(np.int64, copy=False), "packed_position_ids"
             ).unsqueeze(0)
-            doc_ids_t = torch.from_numpy(np.concatenate(doc_parts, axis=0)).to(
-                device=device, dtype=torch.int32
+            doc_ids_t = self._as_device_tensor(
+                np.concatenate(doc_parts, axis=0).astype(np.int32, copy=False), "packed_doc_ids"
             )
             doc_runs = _build_doc_runs(chunk_offsets)
             with torch.no_grad(), context:
@@ -344,14 +352,14 @@ class PyTorchWrapper:
                 runs.append((t_start, t_end, seq_len, 1))
             cursor = t_end
 
-        packed_ids_t = torch.from_numpy(np.concatenate(packed_ids_parts, axis=0)).to(
-            device=device, dtype=torch.long
+        packed_ids_t = self._as_device_tensor(
+            np.concatenate(packed_ids_parts, axis=0).astype(np.int64, copy=False), "packed_input_ids"
         ).unsqueeze(0)
-        packed_pos_t = torch.from_numpy(np.concatenate(packed_pos_parts, axis=0)).to(
-            device=device, dtype=torch.long
+        packed_pos_t = self._as_device_tensor(
+            np.concatenate(packed_pos_parts, axis=0).astype(np.int64, copy=False), "packed_position_ids"
         ).unsqueeze(0)
-        doc_ids_t = torch.from_numpy(np.concatenate(doc_id_parts, axis=0)).to(
-            device=device, dtype=torch.int32
+        doc_ids_t = self._as_device_tensor(
+            np.concatenate(doc_id_parts, axis=0).astype(np.int32, copy=False), "packed_doc_ids"
         )
 
         context = (
@@ -700,6 +708,7 @@ def extract(
     trim_padding=True,
     trim_subword_padding: bool = False,
     pack_sequences: bool = False,
+    prepared_chunk: Any = None,
 ):
     """
     Computes logits for the given batch of texts by:
@@ -734,6 +743,7 @@ def extract(
                     trim_padding=trim_padding,
                     trim_subword_padding=trim_subword_padding,
                     pack_sequences=pack_sequences,
+                    prepared_chunk=prepared_chunk,
                 )
             character_extractor = extract_character_head_exact
         elif character_preprocessing == "reference":

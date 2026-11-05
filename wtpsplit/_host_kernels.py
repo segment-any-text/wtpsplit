@@ -1065,6 +1065,44 @@ def round_to_compile_bucket(
     return max_width
 
 
+def prepare_subword_logits_chunk(
+    texts: list[str],
+    tokenizer: Any,
+    *,
+    stride: int,
+    max_block_size: int,
+    batch_size: int,
+    max_content_block: int = 510,
+    downsampling_rate: int = 1,
+    trim_subword_padding: bool = False,
+    pack_sequences: bool = False,
+) -> tuple[EncodedSubwordBatch, list[int], Int64Array, Float32Array, Int32Array, int, Int32Array | None]:
+    """Prepare `(encoded, text_lengths, input_ids, attention_mask, locs, block_size, win_lens)` on CPU for async prefetch."""
+    encoded = fast_tokenize_subword(tokenizer, texts)
+    token_ids = encoded.token_arrays
+    text_lengths = [len(t) for t in token_ids]
+    eff_max_block = min(max_block_size, max_content_block)
+
+    input_ids, attention_mask, locs, block_size = pack_subword_windows(
+        token_ids,
+        block_size=eff_max_block,
+        stride=stride,
+        downsampling_rate=downsampling_rate,
+        cls_id=int(tokenizer.cls_token_id),
+        sep_id=int(tokenizer.sep_token_id),
+    )
+    win_lens: Int32Array | None = None
+    if (trim_subword_padding or pack_sequences) and len(locs) > 0:
+        win_lens = locs[:, 2] - locs[:, 1]
+        if trim_subword_padding and len(locs) > batch_size and not bool(np.all(win_lens[:-1] <= win_lens[1:])):
+            order = np.argsort(win_lens, kind="stable")
+            input_ids = input_ids[order]
+            attention_mask = attention_mask[order]
+            locs = locs[order]
+            win_lens = win_lens[order]
+    return encoded, text_lengths, input_ids, attention_mask, locs, block_size, win_lens
+
+
 def extract_subword_logits_fast(
     texts: list[str],
     model: Any,
@@ -1079,32 +1117,25 @@ def extract_subword_logits_fast(
     trim_subword_padding: bool = False,
     bucket_subword_padding: bool = False,
     pack_sequences: bool = False,
+    prepared_chunk: tuple[EncodedSubwordBatch, list[int], Int64Array, Float32Array, Int32Array, int, Int32Array | None] | None = None,
 ) -> tuple[list[Float16Array], EncodedSubwordBatch]:
     """Tokenize, window-pack, forward, and stitch subword logits with `GigaPy` word caching & lazy offsets."""
-    encoded = fast_tokenize_subword(tokenizer, texts)
-    token_ids = encoded.token_arrays
-    text_lengths = [len(t) for t in token_ids]
     downsampling_rate = int(getattr(model.config, "downsampling_rate", 1))
-    eff_max_block = min(max_block_size, max_content_block)
-
-    input_ids, attention_mask, locs, block_size = pack_subword_windows(
-        token_ids,
-        block_size=eff_max_block,
-        stride=stride,
-        downsampling_rate=downsampling_rate,
-        cls_id=int(tokenizer.cls_token_id),
-        sep_id=int(tokenizer.sep_token_id),
-    )
+    if prepared_chunk is not None:
+        encoded, text_lengths, input_ids, attention_mask, locs, block_size, win_lens = prepared_chunk
+    else:
+        encoded, text_lengths, input_ids, attention_mask, locs, block_size, win_lens = prepare_subword_logits_chunk(
+            texts,
+            tokenizer,
+            stride=stride,
+            max_block_size=max_block_size,
+            batch_size=batch_size,
+            max_content_block=max_content_block,
+            downsampling_rate=downsampling_rate,
+            trim_subword_padding=trim_subword_padding,
+            pack_sequences=pack_sequences,
+        )
     use_buckets = bucket_subword_padding or bool(getattr(model, "_compiled", False))
-    win_lens: Int32Array | None = None
-    if (trim_subword_padding or pack_sequences) and len(locs) > 0:
-        win_lens = locs[:, 2] - locs[:, 1]
-        if trim_subword_padding and len(locs) > batch_size and not bool(np.all(win_lens[:-1] <= win_lens[1:])):
-            order = np.argsort(win_lens, kind="stable")
-            input_ids = input_ids[order]
-            attention_mask = attention_mask[order]
-            locs = locs[order]
-            win_lens = win_lens[order]
 
     pad_token_id = int(tokenizer.pad_token_id)
     n_batches = math.ceil(len(attention_mask) / batch_size)

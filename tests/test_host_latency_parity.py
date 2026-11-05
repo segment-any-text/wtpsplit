@@ -3319,6 +3319,66 @@ def test_tier_d_optimizations_parity(tmp_path: Any) -> None:
                         assert torch.equal(h_mut_fast, out_mut_ref.last_hidden_state)
                         assert torch.equal(l_mut_fast, m_d7.classifier(out_mut_ref.last_hidden_state))
 
+    # 8. Verify Step D8 populate_hashes, double-buffered PinnedInputs, and multi-chunk outer_batch_size prefetching parity
+    from wtpsplit._inference_transfer import PinnedInputs
+
+    w_d8 = [dict(text_index=0, token_start=0, char_start=0, char_end=11, reuse=True)]
+    ci_full_d8 = df_d6.batch(w_d8, token_offset=1, skip_hashes=False)  # type: ignore[no-untyped-call]
+    ci_pop_d8 = df_d6.batch(w_d8, token_offset=1, skip_hashes=True)  # type: ignore[no-untyped-call]
+    df_d6.populate_hashes(w_d8, ci_pop_d8)  # type: ignore[no-untyped-call]
+    assert torch.equal(ci_full_d8.char_to_token, ci_pop_d8.char_to_token)
+    assert torch.equal(ci_full_d8.is_token_final, ci_pop_d8.is_token_final)
+    assert torch.equal(ci_full_d8.position_in_token, ci_pop_d8.position_in_token)
+    assert torch.equal(ci_full_d8.hashes, ci_pop_d8.hashes)
+    assert torch.equal(ci_full_d8.mask, ci_pop_d8.mask)
+
+    pi_d8 = PinnedInputs(max_bytes=1024 * 1024, slots=2)
+    arr_d8 = np.arange(2048, dtype=np.int64)
+    t_cpu_d8 = pi_d8.tensor("input_ids", arr_d8, torch.device("cpu"))
+    assert torch.equal(t_cpu_d8, torch.from_numpy(arr_d8))
+    pi_d8.clear()
+
+    # Multi-chunk outer_batch_size=2 prefetching vs single-chunk outer_batch_size=100 (0.0 ULP bit-identical)
+    p_bit_multi = sat_bit.predict_proba(mixed_texts, stride=4, block_size=8, batch_size=2, outer_batch_size=2)
+    for a, b in zip(p_bit, p_bit_multi):
+        assert np.array_equal(a.view(np.uint32), b.view(np.uint32))
+    sp_bit_multi = list(
+        sat_bit.split(mixed_texts, threshold=0.35, stride=4, block_size=8, batch_size=2, outer_batch_size=2)
+    )
+    assert sp_bit == sp_bit_multi
+
+    # Subword model multi-chunk outer_batch_size=2 prefetching parity
+    sub_ckpt_dir = tmp_path / "tier_d8_sub_ckpt"
+    cfg_sub = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+        vocab_size=20,
+        hidden_size=16,
+        num_hidden_layers=2,
+        num_attention_heads=2,
+        intermediate_size=32,
+        num_labels=1,
+        max_position_embeddings=64,
+        lookahead=4,
+        lookahead_split_layers=1,
+        use_character_head=False,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+    )
+    m_sub = SubwordXLMForTokenClassification(cfg_sub).eval()  # type: ignore[no-untyped-call]
+    m_sub.save_pretrained(sub_ckpt_dir)
+    tok.save_pretrained(sub_ckpt_dir)
+    sat_sub: Any = sat_cls(str(sub_ckpt_dir), tokenizer_name_or_path=str(sub_ckpt_dir), device="cpu", mode="bitwise")
+    p_sub_single = sat_sub.predict_proba(mixed_texts, stride=4, block_size=8, batch_size=2, outer_batch_size=100)
+    p_sub_multi = sat_sub.predict_proba(mixed_texts, stride=4, block_size=8, batch_size=2, outer_batch_size=2)
+    for a, b in zip(p_sub_single, p_sub_multi):
+        assert np.array_equal(a.view(np.uint32), b.view(np.uint32))
+    sp_sub_single = list(
+        sat_sub.split(mixed_texts, threshold=0.35, stride=4, block_size=8, batch_size=2, outer_batch_size=100)
+    )
+    sp_sub_multi = list(
+        sat_sub.split(mixed_texts, threshold=0.35, stride=4, block_size=8, batch_size=2, outer_batch_size=2)
+    )
+    assert sp_sub_single == sp_sub_multi
+
 
 
 

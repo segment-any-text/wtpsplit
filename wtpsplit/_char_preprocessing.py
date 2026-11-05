@@ -474,43 +474,58 @@ class DocumentFeatures:
                     self.covered[index][start:end], source["char_to_token"][start:end] + shift, t_off)
         return CharInputs(**{k: torch.from_numpy(v) for k,v in arrays.items()})
 
+    def populate_hashes(self, windows, char_inputs):
+        """Fill `position_in_token` and `hashes` in-place on a `CharInputs` built with `skip_hashes=True`."""
+        width = max(w["char_end"] - w["char_start"] for w in windows)
+        use_ord = self.use_ordinals and all(
+            w.get("reuse", self.rows[w["text_index"]] is not None) for w in windows
+        )
+        n_win = len(windows)
+        pos_arr = np.empty((n_win, width), dtype=np.int64)
+        pad_hash_row = None
+        if use_ord:
+            hash_arr = np.empty((n_win, width), dtype=np.int32)
+        else:
+            pad_hash_row = np.asarray(PRIMES[:8], dtype=np.int64) % 8192
+            hash_arr = np.empty((n_win, width, 8), dtype=np.int64)
+        for i, window in enumerate(windows):
+            index, start, end = window["text_index"], window["char_start"], window["char_end"]
+            length = end - start
+            if length < width:
+                pos_arr[i, length:] = 0
+                if use_ord:
+                    hash_arr[i, length:] = 0
+                else:
+                    hash_arr[i, length:] = pad_hash_row
+            source = self.rows[index]
+            pos_arr[i, :length] = source["position_in_token"][start:end]
+            if not use_ord and source["hashes"].ndim == 1:
+                ord_slice = source["hashes"][start:end].astype(np.int64)
+                primes = np.asarray(PRIMES[:8], dtype=np.int64)
+                hash_arr[i, :length] = ((ord_slice[:, None] + 1) * primes) % 8192
+            else:
+                hash_arr[i, :length] = source["hashes"][start:end]
+        char_inputs.position_in_token = torch.from_numpy(pos_arr)
+        char_inputs.hashes = torch.from_numpy(hash_arr)
+        return char_inputs
+
 
 _DEFAULT_DOCUMENT_FEATURES = DocumentFeatures
 
 
-def extract_character_head_exact(texts, model, *, stride, max_block_size, batch_size,
-                                 pad_last_batch=False, weighting="uniform", verbose=False, tokenizer,
-                                 trim_padding=True, trim_subword_padding=False, pack_sequences=False):
-    """Reference windowing/model/stitching, with request-local document features.
-
-Preserves reference padding, batch layout and fusion unless trim_padding is enabled.
-No document features or predictions are retained between requests.
-"""
-    if stride < 1:
-        raise ValueError(f"`stride` must be at least 1, got {stride}.")
-    block = min(max_block_size, max_content_block_size(model.config))
-    if block < 1:
-        raise ValueError("No room for content tokens")
-    can_use_two_stage = (
-        DocumentFeatures is _DEFAULT_DOCUMENT_FEATURES
-        and type(model).__name__ == "PyTorchWrapper"
-        and hasattr(model, "encode_tokens")
-        and hasattr(model, "run_character_head")
-        and getattr(getattr(model, "model", None), "character_head", None) is not None
-        and not getattr(getattr(model, "model", None), "_forward_pre_hooks", None)
-        and not getattr(getattr(model, "model", None), "_forward_hooks", None)
-        and getattr(model, "pinned_inputs", None) is None
-        and "__call__" not in getattr(model, "__dict__", {})
-    )
-    is_ort_wrapper = (
-        DocumentFeatures is _DEFAULT_DOCUMENT_FEATURES
-        and type(model).__name__ == "SaTORTWrapper"
-        and "__call__" not in getattr(model, "__dict__", {})
-    )
-    use_ordinals = can_use_two_stage or (
-        is_ort_wrapper and getattr(model, "input_ranks", {}).get("char_hashes") == 2
-    )
-    if (can_use_two_stage or is_ort_wrapper) and len(texts) > 0 and can_use_rust_encode_batch(tokenizer):
+def prepare_character_head_chunk(
+    texts,
+    tokenizer,
+    *,
+    stride,
+    block,
+    use_ordinals=True,
+    can_use_fast_tok=True,
+    trim_subword_padding=False,
+    batch_size=32,
+):
+    """Prepare `(encoded, cached, windows, doc_win_counts)` on the CPU (safe for background thread prefetching)."""
+    if can_use_fast_tok and len(texts) > 0 and can_use_rust_encode_batch(tokenizer):
         enc_batch = fast_tokenize_subword(tokenizer, texts)
         encoded = enc_batch
         token_ids = enc_batch.token_arrays
@@ -522,7 +537,7 @@ No document features or predictions are retained between requests.
         token_ids, offsets = encoded["input_ids"], encoded["offset_mapping"]
         cached = (
             DocumentFeatures(texts, offsets, use_ordinals=use_ordinals)
-            if (can_use_two_stage or is_ort_wrapper)
+            if can_use_fast_tok
             else DocumentFeatures(texts, offsets)
         )
     windows = []
@@ -557,13 +572,23 @@ No document features or predictions are retained between requests.
             reuse = cached.can_slice(text_index, token_start, token_end, char_start, char_end)
             if not reuse and mapping is None:
                 mapping = offsets[text_index] if offsets is not None else encoded.offset_mapping[text_index]
-            # Only fallback documents need repeated Python offset conversion.
-            relative = ([(max(s-char_start,0), min(e-char_start,char_end-char_start))
-                         for s,e in mapping[token_start:token_end]] if not reuse else None)
-            windows.append(dict(text_index=text_index, token_start=token_start,
-                                char_start=char_start, char_end=char_end,
-                                text=text[char_start:char_end] if relative is not None else None,
-                                offsets=relative, reuse=reuse, input_ids=ids[token_start:token_end]))
+            relative = (
+                [(max(s - char_start, 0), min(e - char_start, char_end - char_start)) for s, e in mapping[token_start:token_end]]
+                if not reuse
+                else None
+            )
+            windows.append(
+                dict(
+                    text_index=text_index,
+                    token_start=token_start,
+                    char_start=char_start,
+                    char_end=char_end,
+                    text=text[char_start:char_end] if relative is not None else None,
+                    offsets=relative,
+                    reuse=reuse,
+                    input_ids=ids[token_start:token_end],
+                )
+            )
             doc_win_counts[text_index] += 1
             if done:
                 break
@@ -571,6 +596,55 @@ No document features or predictions are retained between requests.
         win_tok_lens = [len(w["input_ids"]) for w in windows]
         if any(win_tok_lens[i] > win_tok_lens[i + 1] for i in range(len(win_tok_lens) - 1)):
             windows.sort(key=lambda w: len(w["input_ids"]))
+    return encoded, cached, windows, doc_win_counts
+
+
+def extract_character_head_exact(texts, model, *, stride, max_block_size, batch_size,
+                                 pad_last_batch=False, weighting="uniform", verbose=False, tokenizer,
+                                 trim_padding=True, trim_subword_padding=False, pack_sequences=False,
+                                 prepared_chunk=None):
+    """Reference windowing/model/stitching, with request-local document features.
+
+Preserves reference padding, batch layout and fusion unless trim_padding is enabled.
+No document features or predictions are retained between requests.
+"""
+    if stride < 1:
+        raise ValueError(f"`stride` must be at least 1, got {stride}.")
+    block = min(max_block_size, max_content_block_size(model.config))
+    if block < 1:
+        raise ValueError("No room for content tokens")
+    can_use_two_stage = (
+        DocumentFeatures is _DEFAULT_DOCUMENT_FEATURES
+        and type(model).__name__ == "PyTorchWrapper"
+        and hasattr(model, "encode_tokens")
+        and hasattr(model, "run_character_head")
+        and getattr(getattr(model, "model", None), "character_head", None) is not None
+        and not getattr(getattr(model, "model", None), "_forward_pre_hooks", None)
+        and not getattr(getattr(model, "model", None), "_forward_hooks", None)
+        and getattr(model, "pinned_inputs", None) is None
+        and "__call__" not in getattr(model, "__dict__", {})
+    )
+    is_ort_wrapper = (
+        DocumentFeatures is _DEFAULT_DOCUMENT_FEATURES
+        and type(model).__name__ == "SaTORTWrapper"
+        and "__call__" not in getattr(model, "__dict__", {})
+    )
+    use_ordinals = can_use_two_stage or (
+        is_ort_wrapper and getattr(model, "input_ranks", {}).get("char_hashes") == 2
+    )
+    if prepared_chunk is not None and DocumentFeatures is _DEFAULT_DOCUMENT_FEATURES:
+        encoded, cached, windows, doc_win_counts = prepared_chunk
+    else:
+        encoded, cached, windows, doc_win_counts = prepare_character_head_chunk(
+            texts,
+            tokenizer,
+            stride=stride,
+            block=block,
+            use_ordinals=use_ordinals,
+            can_use_fast_tok=(can_use_two_stage or is_ort_wrapper),
+            trim_subword_padding=trim_subword_padding,
+            batch_size=batch_size,
+        )
 
     num_labels = model.config.num_labels
     is_uniform = weighting == "uniform"
@@ -680,15 +754,18 @@ No document features or predictions are retained between requests.
                 )
             char_head_obj = getattr(getattr(model, "model", None), "character_head", None)
             eff_gate = getattr(char_head_obj, "gate_logit_threshold", None) if char_head_obj is not None else None
-            skip_hashes = (
+            can_skip_hashes = (
                 is_default_df
                 and eff_gate is not None
                 and not getattr(char_head_obj, "training", False)
                 and not (real < batch_size and pad_last_batch)
-                and not bool((token_logits.max(dim=-1).values > eff_gate).any())
+                and all(w.get("reuse", cached.rows[w["text_index"]] is not None) for w in batch)
             )
             if is_default_df:
-                inputs = cached.batch(batch, token_offset=1, skip_hashes=skip_hashes)
+                # Assemble CPU character window tensors while GPU executes encode_tokens asynchronously
+                inputs = cached.batch(batch, token_offset=1, skip_hashes=can_skip_hashes)
+                if can_skip_hashes and bool((token_logits.max(dim=-1).values > eff_gate).any()):
+                    cached.populate_hashes(batch, inputs)
             else:
                 inputs = cached.batch(batch)
                 inputs.char_to_token = inputs.char_to_token + 1
