@@ -16,6 +16,7 @@ from wtpsplit.utils import PRIMES
 
 
 FIELDS = ("char_to_token", "is_token_final", "position_in_token", "hashes", "mask")
+MAX_DEFERRED_D2H_BYTES = 64 * 1024 * 1024
 
 
 def build_char_inputs_vectorized(texts, offset_mappings, *, num_hashes=8,
@@ -99,13 +100,14 @@ class DocumentFeatures:
 
         for d, (text, raw) in enumerate(zip(texts_list, offsets_list)):
             if isinstance(raw, GigaPackedDoc):
-                p_len = len(raw.packed)
-                dedup_key = (text, p_len, int(raw.packed[0, 0]) if p_len else -1)
-                prev_d = giga_seen.get(dedup_key)
+                prev_d = giga_seen.get(text)
                 if prev_d is not None:
-                    dup_targets.append((d, prev_d))
-                    continue
-                giga_seen[dedup_key] = d
+                    prev_raw = offsets_list[prev_d]
+                    if raw is prev_raw or np.array_equal(raw.packed, prev_raw.packed):
+                        dup_targets.append((d, prev_d))
+                        continue
+                else:
+                    giga_seen[text] = d
             unique_texts.append(text)
             unique_records.append((d, text, raw))
 
@@ -140,14 +142,43 @@ class DocumentFeatures:
                 ends = np.cumsum(packed[:, 1], dtype=np.int64) - 1
                 starts = ends - packed[:, 2]
                 self.span_pairs[d] = (starts, ends)
-                if int(starts[0]) < 0 or int(ends[-1]) > length:
-                    self.fallback_documents += 1
-                    continue
-                s0 = starts
-                s1 = ends
-                all_valid = True
-                val_idx = None
-                self.edges[d] = (ends, starts)
+                if not raw.has_zero_delta and not bool(np.any(packed[:, 2] <= 0)):
+                    if int(starts[0]) < 0 or int(ends[-1]) > length or (
+                        n_tok > 1 and not bool(np.all(ends[1:] >= ends[:-1]))
+                    ):
+                        self.fallback_documents += 1
+                        continue
+                    s0 = starts
+                    s1 = ends
+                    all_valid = True
+                    val_idx = None
+                    self.edges[d] = (ends, starts)
+                else:
+                    valid = ends > starts
+                    all_valid = bool(np.all(valid))
+                    s0 = starts if all_valid else starts[valid]
+                    s1 = ends if all_valid else ends[valid]
+                    safe = (
+                        len(s0) > 0
+                        and int(s0[0]) >= 0
+                        and int(s1[-1]) <= length
+                        and bool(np.all(s0[1:] >= s0[:-1]))
+                        and bool(np.all(s1[1:] >= s1[:-1]))
+                    )
+                    if not safe:
+                        self.fallback_documents += 1
+                        continue
+                    if all_valid:
+                        self.edges[d] = (s1, s0)
+                        val_idx = None
+                    else:
+                        any_invalid_spans = True
+                        prefix_ends = np.maximum.accumulate(np.where(valid, ends, -1))
+                        suffix_starts = np.minimum.accumulate(
+                            np.where(valid, starts, length + 1)[::-1]
+                        )[::-1]
+                        self.edges[d] = (prefix_ends, suffix_starts)
+                        val_idx = np.flatnonzero(valid)
             else:
                 if hasattr(raw, "offsets"):
                     all_spans = np.asarray(raw.offsets, dtype=np.int64).reshape(-1, 2)
@@ -383,7 +414,7 @@ No document features or predictions are retained between requests.
     windows = []
     doc_win_counts = [0] * len(texts)
     has_span_pairs = hasattr(cached, "span_pairs")
-    has_spans = hasattr(cached, "spans")
+    has_spans = (not has_span_pairs) and hasattr(cached, "spans")
     for text_index, text in enumerate(texts):
         ids = token_ids[text_index]
         n_ids = len(ids)
@@ -446,6 +477,35 @@ No document features or predictions are retained between requests.
     if can_use_two_stage:
         gpu_batches = []
         batch_windows = []
+        accum_d2h_bytes = 0
+
+        def _flush_char_gpu_batches():
+            nonlocal accum_d2h_bytes
+            for b_win, logits_dev in zip(batch_windows, gpu_batches):
+                values = logits_dev.cpu().numpy()
+                for row, window in enumerate(b_win):
+                    ti, start, end = window["text_index"], window["char_start"], window["char_end"]
+                    length = end-start
+                    if is_uniform:
+                        if doc_win_counts[ti] == 1:
+                            doc_len = len(texts[ti])
+                            if length == doc_len:
+                                out_f16[ti] = (values[row, :length] + _zero_f32).astype(np.float16)
+                            else:
+                                res = np.full((doc_len, num_labels), -12.0, dtype=np.float16)
+                                res[start:end] = (values[row, :length] + _zero_f32).astype(np.float16)
+                                out_f16[ti] = res
+                        else:
+                            logits[ti][start:end] += values[row, :length]
+                            counts[ti][start:end] += 1.0
+                    else:
+                        weights = _window_weights(length, weighting)
+                        logits[ti][start:end] += values[row, :length] * weights[:, None]
+                        counts[ti][start:end] += weights
+            gpu_batches.clear()
+            batch_windows.clear()
+            accum_d2h_bytes = 0
+
         for bi in batches:
             batch = windows[bi*batch_size:(bi+1)*batch_size]
             real = len(batch)
@@ -478,29 +538,14 @@ No document features or predictions are retained between requests.
                 attention_mask=attention,
                 input_ids=ids,
             )
-            gpu_batches.append(model.run_character_head(token_hidden, token_logits, inputs)[:real])
+            char_logits_t = model.run_character_head(token_hidden, token_logits, inputs)[:real]
+            gpu_batches.append(char_logits_t)
             batch_windows.append(batch)
-        for batch, logits_dev in zip(batch_windows, gpu_batches):
-            values = logits_dev.cpu().numpy()
-            for row, window in enumerate(batch):
-                ti, start, end = window["text_index"], window["char_start"], window["char_end"]
-                length = end-start
-                if is_uniform:
-                    if doc_win_counts[ti] == 1:
-                        doc_len = len(texts[ti])
-                        if length == doc_len:
-                            out_f16[ti] = (values[row, :length] + _zero_f32).astype(np.float16)
-                        else:
-                            res = np.full((doc_len, num_labels), -12.0, dtype=np.float16)
-                            res[start:end] = (values[row, :length] + _zero_f32).astype(np.float16)
-                            out_f16[ti] = res
-                    else:
-                        logits[ti][start:end] += values[row, :length]
-                        counts[ti][start:end] += 1.0
-                else:
-                    weights = _window_weights(length, weighting)
-                    logits[ti][start:end] += values[row, :length] * weights[:, None]
-                    counts[ti][start:end] += weights
+            accum_d2h_bytes += int(char_logits_t.numel() * char_logits_t.element_size())
+            del char_logits_t, token_hidden, token_logits
+            if accum_d2h_bytes >= MAX_DEFERRED_D2H_BYTES:
+                _flush_char_gpu_batches()
+        _flush_char_gpu_batches()
     else:
         for bi in batches:
             batch = windows[bi*batch_size:(bi+1)*batch_size]

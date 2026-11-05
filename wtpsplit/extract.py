@@ -28,6 +28,8 @@ DEFAULT_TOKENIZERS = {
 # XLM-R reserves two position slots (its padding_idx offset), leaving 512 usable, minus
 # CLS and SEP. Kept as a literal so the XLM-R path behaves exactly as before.
 XLM_MAX_CONTENT_BLOCK_SIZE = 510
+MAX_DEFERRED_D2H_BYTES = 64 * 1024 * 1024
+MAX_VARLEN_SDPA_TOKENS = 2048
 
 
 def outputs_character_logits(config) -> bool:
@@ -194,58 +196,83 @@ class PyTorchWrapper:
         max_content = int(batch_win_lens.max()) if num_rows > 0 else 0
         num_labels = int(self.model.config.num_labels)
         device = self.model.device
-        pad_idx = int(getattr(getattr(getattr(self.model, "roberta", None), "embeddings", None), "padding_idx", 1))
-
-        packed_ids_parts: list[np.ndarray] = []
-        packed_pos_parts: list[np.ndarray] = []
-        doc_id_parts: list[np.ndarray] = []
-        offsets: list[tuple[int, int]] = []
-        cursor = 0
-        for row_idx in range(num_rows):
-            n_content = int(batch_win_lens[row_idx])
-            seq_len = n_content + 2
-            row_ids = batch_input_ids[row_idx, :seq_len]
-            packed_ids_parts.append(row_ids)
-            mask = (row_ids != pad_idx).astype(np.int64)
-            row_pos = np.cumsum(mask, dtype=np.int64) * mask + pad_idx
-            packed_pos_parts.append(row_pos)
-            doc_id_parts.append(np.full(seq_len, row_idx, dtype=np.int32))
-            offsets.append((cursor + 1, cursor + 1 + n_content))
-            cursor += seq_len
-
-        if cursor == 0:
-            out_dtype = torch.float32 if self.output_float32 else getattr(self.model, "dtype", torch.float32)
+        out_dtype = torch.float32 if self.output_float32 else getattr(self.model, "dtype", torch.float32)
+        if num_rows == 0 or max_content == 0:
             return torch.zeros((num_rows, max_content, num_labels), device=device, dtype=out_dtype)
 
-        packed_ids_t = torch.from_numpy(np.concatenate(packed_ids_parts, axis=0)).to(
-            device=device, dtype=torch.long
-        ).unsqueeze(0)
-        packed_pos_t = torch.from_numpy(np.concatenate(packed_pos_parts, axis=0)).to(
-            device=device, dtype=torch.long
-        ).unsqueeze(0)
-        doc_ids_t = torch.from_numpy(np.concatenate(doc_id_parts, axis=0)).to(
-            device=device, dtype=torch.int32
-        )
+        pad_idx = int(getattr(getattr(getattr(self.model, "roberta", None), "embeddings", None), "padding_idx", 1))
+        attn_impl = getattr(self.model.config, "_attn_implementation", None)
+        max_pack_tokens = None if attn_impl == "flex_attention" else MAX_VARLEN_SDPA_TOKENS
 
         context = (
             torch.autocast(self.autocast_device, dtype=self.autocast_dtype, enabled=self.autocast_enabled)
             if self.autocast_device is not None
             else nullcontext()
         )
-        with torch.no_grad(), context:
-            _, packed_logits = self.model.encode_tokens_varlen(
-                packed_ids_t,
-                packed_pos_t,
-                doc_ids_t,
+        out: Any = None
+
+        def _run_pack_chunk(
+            ids_parts: list[np.ndarray],
+            pos_parts: list[np.ndarray],
+            doc_parts: list[np.ndarray],
+            chunk_offsets: list[tuple[int, int, int]],
+        ) -> None:
+            nonlocal out
+            packed_ids_t = torch.from_numpy(np.concatenate(ids_parts, axis=0)).to(
+                device=device, dtype=torch.long
+            ).unsqueeze(0)
+            packed_pos_t = torch.from_numpy(np.concatenate(pos_parts, axis=0)).to(
+                device=device, dtype=torch.long
+            ).unsqueeze(0)
+            doc_ids_t = torch.from_numpy(np.concatenate(doc_parts, axis=0)).to(
+                device=device, dtype=torch.int32
             )
-        if self.output_float32:
-            packed_logits = packed_logits.float()
-        packed_2d = packed_logits[0]
-        out = torch.zeros((num_rows, max_content, num_labels), device=device, dtype=packed_2d.dtype)
-        for row_idx, (s_off, e_off) in enumerate(offsets):
-            n_content = e_off - s_off
-            if n_content > 0:
-                out[row_idx, :n_content] = packed_2d[s_off:e_off]
+            with torch.no_grad(), context:
+                _, packed_logits = self.model.encode_tokens_varlen(
+                    packed_ids_t,
+                    packed_pos_t,
+                    doc_ids_t,
+                )
+            if self.output_float32:
+                packed_logits = packed_logits.float()
+            packed_2d = packed_logits[0]
+            if out is None:
+                out = torch.zeros((num_rows, max_content, num_labels), device=device, dtype=packed_2d.dtype)
+            for r_idx, s_off, e_off in chunk_offsets:
+                n_c = e_off - s_off
+                if n_c > 0:
+                    out[r_idx, :n_c] = packed_2d[s_off:e_off]
+
+        packed_ids_parts: list[np.ndarray] = []
+        packed_pos_parts: list[np.ndarray] = []
+        doc_id_parts: list[np.ndarray] = []
+        offsets: list[tuple[int, int, int]] = []
+        cursor = 0
+        for row_idx in range(num_rows):
+            n_content = int(batch_win_lens[row_idx])
+            seq_len = n_content + 2
+            if max_pack_tokens is not None and cursor > 0 and (cursor + seq_len) > max_pack_tokens:
+                _run_pack_chunk(packed_ids_parts, packed_pos_parts, doc_id_parts, offsets)
+                packed_ids_parts.clear()
+                packed_pos_parts.clear()
+                doc_id_parts.clear()
+                offsets.clear()
+                cursor = 0
+            row_ids = batch_input_ids[row_idx, :seq_len]
+            packed_ids_parts.append(row_ids)
+            mask = (row_ids != pad_idx).astype(np.int64)
+            row_pos = np.cumsum(mask, dtype=np.int64) * mask + pad_idx
+            packed_pos_parts.append(row_pos)
+            doc_id_parts.append(np.full(seq_len, row_idx, dtype=np.int32))
+            offsets.append((row_idx, cursor + 1, cursor + 1 + n_content))
+            cursor += seq_len
+
+        if cursor > 0:
+            _run_pack_chunk(packed_ids_parts, packed_pos_parts, doc_id_parts, offsets)
+        if out is None:
+            return torch.zeros((num_rows, max_content, num_labels), device=device, dtype=out_dtype)
+        if getattr(self, "_compiled", False):
+            out = out.clone()
         return out
 
     def run_character_head(
@@ -366,7 +393,7 @@ class PyTorchWrapper:
             logits = logits[:, 1:-1, :]
         if self.output_float32:
             logits = logits.float()
-        if getattr(self, "_compiled", False):
+        if getattr(self, "_compiled", False) or strip_cls_sep:
             logits = logits.clone()
         return logits
 
@@ -718,6 +745,24 @@ def extract(
             import torch
 
             tensor_batches = []
+            accum_d2h_bytes = 0
+
+            def _flush_extract_batches() -> None:
+                nonlocal accum_d2h_bytes
+                if not tensor_batches:
+                    return
+                if len(tensor_batches) == 1:
+                    raw_batches.append(tensor_batches[0].cpu().numpy())
+                else:
+                    w0 = tensor_batches[0].shape[1]
+                    if all(t.shape[1] == w0 for t in tensor_batches):
+                        raw_batches.append(torch.cat(tensor_batches, dim=0).cpu().numpy())
+                    else:
+                        for t in tensor_batches:
+                            raw_batches.append(t.cpu().numpy())
+                tensor_batches.clear()
+                accum_d2h_bytes = 0
+
             for batch_idx in tqdm(range(n_batches), disable=not verbose):
                 start, end = batch_idx * batch_size, min(len(attention_mask), (batch_idx + 1) * batch_size)
                 if win_lens is not None:
@@ -745,14 +790,15 @@ def extract(
                     **kwargs,
                 )[: end - start]
                 tensor_batches.append(logits_t)
-            if len(tensor_batches) == 1:
-                raw_batches = [tensor_batches[0].cpu().numpy()]
-            elif len(tensor_batches) > 1:
-                w0 = tensor_batches[0].shape[1]
-                if all(t.shape[1] == w0 for t in tensor_batches):
-                    raw_batches = [torch.cat(tensor_batches, dim=0).cpu().numpy()]
-                else:
-                    raw_batches = [t.cpu().numpy() for t in tensor_batches]
+                accum_d2h_bytes += int(logits_t.numel() * logits_t.element_size())
+                del logits_t
+                if accum_d2h_bytes >= MAX_DEFERRED_D2H_BYTES:
+                    _flush_extract_batches()
+            _flush_extract_batches()
+            if len(raw_batches) > 1 and all(
+                b.ndim == 3 and b.shape[1:] == raw_batches[0].shape[1:] for b in raw_batches
+            ):
+                raw_batches = [np.concatenate(raw_batches, axis=0)]
             strip_cls_sep = False
         else:
             for batch_idx in tqdm(range(n_batches), disable=not verbose):

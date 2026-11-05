@@ -949,6 +949,21 @@ def test_step_a1_encoder_and_split_layers_forward_byte_parity() -> None:
                     out_none_mask = model(input_ids=input_ids, attention_mask=None).logits
                     assert torch.equal(out_with_mask.view(torch.uint8), out_none_mask.view(torch.uint8))
 
+                # Compare model forward output directly against _reference_get_extended_attention_mask
+                import wtpsplit.models as models_mod
+
+                orig_fn = models_mod.get_extended_attention_mask
+                try:
+                    models_mod.get_extended_attention_mask = (
+                        lambda config, attention_mask, input_shape, la=None, device=None, dtype=None: _reference_get_extended_attention_mask(
+                            config, attention_mask, input_shape, la, dtype or torch.float32
+                        )
+                    )
+                    out_ref_mask = model(input_ids=input_ids, attention_mask=attn.clone()).logits
+                finally:
+                    models_mod.get_extended_attention_mask = orig_fn
+                assert torch.equal(out_with_mask.view(torch.uint8), out_ref_mask.view(torch.uint8))
+
     # 3D attention_mask and cache eviction bounds
     cfg_base = SubwordXLMConfig(  # type: ignore[no-untyped-call]
         vocab_size=64, hidden_size=16, num_hidden_layers=1, num_attention_heads=2
@@ -1257,6 +1272,51 @@ def test_step_a3_length_sorted_trimmed_subword_batching_parity(
     )
     for a, b in zip(e_untrim, e_trim):
         assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
+
+    # Also verify real SubwordXLMForTokenClassification transformer parity across trimmed widths and sorted batches
+    if downsampling_rate == 1:
+        from wtpsplit.models import SubwordXLMForTokenClassification
+
+        torch.manual_seed(2027)
+        cfg_real = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+            vocab_size=32,
+            hidden_size=16,
+            num_hidden_layers=2,
+            num_attention_heads=2,
+            intermediate_size=32,
+            max_position_embeddings=64,
+            num_labels=1,
+            lookahead=4,
+            lookahead_split_layers=1,
+            use_character_head=False,
+            hidden_dropout_prob=0.0,
+            attention_probs_dropout_prob=0.0,
+        )
+        real_tf = SubwordXLMForTokenClassification(cfg_real).eval()  # type: ignore[no-untyped-call]
+        tf_untrim, _ = extract_subword_logits_fast(
+            texts,
+            PyTorchWrapper(real_tf),
+            tok,
+            stride=8,
+            max_block_size=16,
+            batch_size=2,
+            pad_last_batch=pad_last_batch,
+            weighting=weighting,
+            trim_subword_padding=False,
+        )
+        tf_trim, _ = extract_subword_logits_fast(
+            texts,
+            PyTorchWrapper(real_tf),
+            tok,
+            stride=8,
+            max_block_size=16,
+            batch_size=2,
+            pad_last_batch=pad_last_batch,
+            weighting=weighting,
+            trim_subword_padding=True,
+        )
+        for a, b in zip(tf_untrim, tf_trim):
+            assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
 
 
 @pytest.mark.parametrize("pad_last_batch", [False, True])
@@ -1604,6 +1664,113 @@ def test_step_b2_bucketed_compile_and_cudagraph_clone_parity() -> None:
     for a, b in zip(s_eager, s_comp):
         assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
 
+    # Verify static output-buffer reuse (CUDA Graph replay hazard): without _compiled=True,
+    # reusing a static output tensor across calls overwrites retained batches; with _compiled=True,
+    # forward_tensor and run_character_head clone the output so retained tensors survive subsequent calls.
+    static_buf = torch.zeros((2, 6, 1), dtype=torch.float32)
+    static_char_buf = torch.zeros((2, 8, 1), dtype=torch.float32)
+
+    class StaticCharHead(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.gate_logit_threshold = None
+            self.call_idx = 0
+
+        def forward(
+            self,
+            token_hidden: torch.Tensor,
+            token_logits: torch.Tensor,
+            char_inputs: Any,
+            *,
+            gate_logit_threshold: float | None = None,
+        ) -> torch.Tensor:
+            self.call_idx += 1
+            b, c = char_inputs.char_to_token.shape
+            view = static_char_buf[:b, :c, :]
+            view.fill_(float(self.call_idx * 10))
+            return view
+
+    class StaticBufferModel(torch.nn.Module):
+        def __init__(self, config: Any) -> None:
+            super().__init__()
+            self.config = config
+            self.device = torch.device("cpu")
+            self.dtype = torch.float32
+            self.call_idx = 0
+            self.character_head = StaticCharHead()
+
+        def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor | None = None, **kwargs: Any) -> dict[str, torch.Tensor]:
+            self.call_idx += 1
+            b, t = input_ids.shape
+            view = static_buf[:b, :t, :]
+            view.fill_(float(self.call_idx))
+            return {"logits": view}
+
+    sb_mod = StaticBufferModel(cfg).eval()
+    w_static = PyTorchWrapper(sb_mod)
+    w_static._compiled = True  # type: ignore[attr-defined]
+    ids_a = np.ones((2, 6), dtype=np.int64)
+    attn_a = np.ones((2, 6), dtype=np.float32)
+    out_call_1 = w_static.forward_tensor(attention_mask=attn_a, input_ids=ids_a, strip_cls_sep=False)
+    out_call_2 = w_static.forward_tensor(attention_mask=attn_a, input_ids=ids_a, strip_cls_sep=False)
+    assert float(out_call_1[0, 0, 0].item()) == 1.0
+    assert float(out_call_2[0, 0, 0].item()) == 2.0
+
+    from wtpsplit.char_head import CharInputs
+
+    ci_static = CharInputs(
+        char_to_token=torch.zeros((2, 8), dtype=torch.int64),
+        is_token_final=torch.zeros((2, 8), dtype=torch.int64),
+        position_in_token=torch.zeros((2, 8), dtype=torch.int64),
+        hashes=torch.zeros((2, 8), dtype=torch.int32),
+        mask=torch.ones((2, 8), dtype=torch.int64),
+    )
+    tok_h_dummy = torch.zeros((2, 6, 16), dtype=torch.float32)
+    tok_l_dummy = torch.zeros((2, 6, 1), dtype=torch.float32)
+    c_call_1 = w_static.run_character_head(tok_h_dummy, tok_l_dummy, ci_static)
+    c_call_2 = w_static.run_character_head(tok_h_dummy, tok_l_dummy, ci_static)
+    assert float(c_call_1[0, 0, 0].item()) == 10.0
+    assert float(c_call_2[0, 0, 0].item()) == 20.0
+
+    # Also test real SubwordXLMForTokenClassification compiled across shape buckets
+    from wtpsplit.models import SubwordXLMForTokenClassification
+
+    torch.manual_seed(2028)
+    cfg_real = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+        vocab_size=32,
+        hidden_size=16,
+        num_hidden_layers=1,
+        num_attention_heads=2,
+        intermediate_size=32,
+        max_position_embeddings=256,
+        num_labels=1,
+        lookahead=4,
+        use_character_head=False,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+    )
+    real_m1 = SubwordXLMForTokenClassification(cfg_real).eval()  # type: ignore[no-untyped-call]
+    real_m2 = SubwordXLMForTokenClassification(cfg_real).eval()  # type: ignore[no-untyped-call]
+    real_m2.load_state_dict(real_m1.state_dict())
+    w_real_eager = PyTorchWrapper(real_m1)
+    w_real_comp = PyTorchWrapper(real_m2)
+    comp_spec: Any = {"mode": "reduce-overhead"} if torch.cuda.is_available() else {"backend": "eager"}
+    wtpsplit_mod._configure_pytorch_model(
+        w_real_comp,
+        device="cuda" if torch.cuda.is_available() else "cpu",
+        compile=comp_spec,
+    )
+    if torch.cuda.is_available():
+        w_real_eager.model.to("cuda")
+    r_eager, _ = extract_subword_logits_fast(
+        texts, w_real_eager, tok, stride=64, max_block_size=128, batch_size=2, trim_subword_padding=True
+    )
+    r_comp, _ = extract_subword_logits_fast(
+        texts, w_real_comp, tok, stride=64, max_block_size=128, batch_size=2, trim_subword_padding=True
+    )
+    for a, b in zip(r_eager, r_comp):
+        assert float(np.max(np.abs(a.astype(np.float32) - b.astype(np.float32)))) <= 1e-3
+
 
 def test_step_b3_varlen_unpadded_sequence_packing_parity() -> None:
     """Step B3 unpadded 1D varlen sequence packing matches padded SubwordXLMForTokenClassification across lookahead, split_layers, and FlexAttention."""
@@ -1702,6 +1869,72 @@ def test_step_b3_varlen_unpadded_sequence_packing_parity() -> None:
                 assert max_diff <= 1e-3
             else:
                 assert len(b) == 0
+
+    # Verify MAX_VARLEN_SDPA_TOKENS chunking in forward_varlen bounds SDPA mask size and preserves exact parity
+    extract_mod: Any = importlib.import_module("wtpsplit.extract")
+    for c in [model.config, model.roberta.config, model.roberta.encoder.config] + [
+        layer.attention.self.config for layer in model.roberta.encoder.layer
+    ]:
+        c.lookahead = 8
+        c.lookahead_split_layers = 1
+        c._attn_implementation = "sdpa"
+    model.roberta.lookahead_split_layers = 1
+    model.roberta.effective_lookahead = 8
+
+    batch_ids = np.array(
+        [
+            [0, 4, 5, 6, 7, 4, 5, 2, 1, 1],
+            [0, 5, 6, 2, 1, 1, 1, 1, 1, 1],
+            [0, 4, 5, 6, 7, 2, 1, 1, 1, 1],
+        ],
+        dtype=np.int64,
+    )
+    batch_wl = np.array([6, 2, 4], dtype=np.int64)
+    out_unchunked = wrapper.forward_varlen(batch_ids, batch_wl)
+    seen_varlen_lens: list[int] = []
+    orig_etv = model.encode_tokens_varlen
+
+    def recording_etv(p_ids: torch.Tensor, p_pos: torch.Tensor, d_ids: torch.Tensor) -> Any:
+        seen_varlen_lens.append(int(p_ids.size(1)))
+        return orig_etv(p_ids, p_pos, d_ids)
+
+    setattr(model, "encode_tokens_varlen", recording_etv)
+    orig_max_tok = extract_mod.MAX_VARLEN_SDPA_TOKENS
+    try:
+        extract_mod.MAX_VARLEN_SDPA_TOKENS = 8  # Force each window into its own SDPA chunk
+        out_chunked = wrapper.forward_varlen(batch_ids, batch_wl)
+    finally:
+        extract_mod.MAX_VARLEN_SDPA_TOKENS = orig_max_tok
+        setattr(model, "encode_tokens_varlen", orig_etv)
+    assert len(seen_varlen_lens) == 3
+    assert all(n <= 8 for n in seen_varlen_lens)
+    assert torch.allclose(out_unchunked, out_chunked, atol=1e-6, rtol=0.0)
+
+    # Also verify 20% padding threshold routing in extract_subword_logits_fast:
+    # A near-full batch (e.g. lengths 10 and 9 -> n_valid=23, padded=24 -> 95.8% > 80%) must NOT call forward_varlen,
+    # whereas a ragged batch (lengths 10 and 2 -> n_valid=16, padded=24 -> 66.7% <= 80%) MUST call forward_varlen.
+    varlen_calls: list[int] = []
+    orig_fv = wrapper.forward_varlen
+
+    def recording_fv(b_ids: np.ndarray, b_wl: np.ndarray) -> Any:
+        varlen_calls.append(len(b_wl))
+        return orig_fv(b_ids, b_wl)
+
+    setattr(wrapper, "forward_varlen", recording_fv)
+    try:
+        near_full_texts = [" ".join(["a"] * 10), " ".join(["b"] * 9)]
+        _ = extract_subword_logits_fast(
+            near_full_texts, wrapper, tok, stride=16, max_block_size=16, batch_size=2, pack_sequences=True
+        )
+        assert len(varlen_calls) == 0
+
+        ragged_texts = [" ".join(["a"] * 10), " ".join(["b"] * 2)]
+        _ = extract_subword_logits_fast(
+            ragged_texts, wrapper, tok, stride=16, max_block_size=16, batch_size=2, pack_sequences=True
+        )
+        assert varlen_calls == [2]
+    finally:
+        setattr(wrapper, "forward_varlen", orig_fv)
 
 
 def test_step_b4_ort_wrapper_giga_tokenization_and_jit_tracing_parity() -> None:
@@ -2177,32 +2410,47 @@ def test_step_c3_global_concatenated_document_features_parity() -> None:
 
     packed_arr = np.array([[10, 6, 5], [11, 6, 5]], dtype=np.int32)
     gdoc = GigaPackedDoc(packed_arr, has_zero_delta=False, is_single_space_ascii=True)
+    # Same text ("hello world"), same token count (2), same first token ID (10), but different second token offsets!
+    packed_arr_diff = np.array([[10, 4, 3], [11, 8, 7]], dtype=np.int32)
+    gdoc_diff = GigaPackedDoc(packed_arr_diff, has_zero_delta=False, is_single_space_ascii=True)
+    # Zero-width span inside GigaPackedDoc (token 1 has length 0 -> filtered out by valid = ends > starts)
+    zero_len_arr = np.array([[10, 6, 5], [12, 0, 0], [11, 6, 5]], dtype=np.int32)
+    zero_len_gdoc = GigaPackedDoc(zero_len_arr, has_zero_delta=True, is_single_space_ascii=True)
     # Non-monotone start in GigaPackedDoc: token 0 covers [2, 5) (end=5, len=3), token 1 covers [1, 6) (delta_end=1 -> end=6, len=5 -> start=1 < 2)
     bad_packed_arr = np.array([[10, 6, 3], [11, 1, 5]], dtype=np.int32)
     bad_gdoc = GigaPackedDoc(bad_packed_arr, has_zero_delta=False, is_single_space_ascii=True)
+    # Non-monotone end in GigaPackedDoc (delta_end = -2)
+    bad_end_arr = np.array([[10, 6, 3], [11, -2, 2]], dtype=np.int32)
+    bad_end_gdoc = GigaPackedDoc(bad_end_arr, has_zero_delta=False, is_single_space_ascii=True)
     texts = [
         "hello world",
         "hello world",  # duplicate GigaPackedDoc
+        "hello world",  # same text & first token ID, DIFFERENT packed offsets!
+        "hello world",  # zero-width span in GigaPackedDoc
         "  中文。 བོད་  ",  # leading/trailing uncovered chars + empty span
         "bad offsets",  # non-monotone fallback
         "",  # empty doc fallback
         "overlapping spans!",
         "bad giga doc",
+        "bad end doc",
     ]
     offsets: list[Any] = [
         gdoc,
         gdoc,
+        gdoc_diff,
+        zero_len_gdoc,
         [(0, 0), (2, 5), (6, 6), (6, 10)],
         [(5, 8), (2, 4)],
         [],
         [(0, 6), (3, 11), (12, 18)],
         bad_gdoc,
+        bad_end_gdoc,
     ]
 
     for use_ord in (False, True):
         df = DocumentFeatures(texts, offsets, use_ordinals=use_ord)  # type: ignore[no-untyped-call]
         ref_rows = legacy_doc_features(texts, offsets, use_ordinals=use_ord)
-        assert df.fallback_documents == 3
+        assert df.fallback_documents == 4
         for d, ref_row in enumerate(ref_rows):
             act_row = df.rows[d]
             if ref_row is None:
@@ -2301,10 +2549,12 @@ def test_step_c4_char_window_batch_and_stitch_parity() -> None:
 
     # Also verify DocumentFeatures.batch(windows, token_offset=1) vs batch(windows) + 1
     df = DocumentFeatures(["hello world"], [[(0, 5), (6, 11)]], use_ordinals=True)  # type: ignore[no-untyped-call]
+    assert df._spans is None
     win = [dict(text_index=0, token_start=1, char_start=5, char_end=11, reuse=True)]
     b0 = df.batch(win)  # type: ignore[no-untyped-call]
     b1 = df.batch(win, token_offset=1)  # type: ignore[no-untyped-call]
     assert torch.equal(b0.char_to_token + 1, b1.char_to_token)
+    assert df._spans is None
 
 
 def test_step_c5_inplace_accumulation_and_preprojected_char_lut_parity() -> None:
@@ -2379,6 +2629,14 @@ def test_step_c5_inplace_accumulation_and_preprojected_char_lut_parity() -> None
                 head.fuse_depthwise_delta = False
                 out_default_mut = head(tok_hid, tok_log, ci)
                 assert float((out_default_mut - out_fused_mut).abs().max().item()) <= 2e-6
+
+                # Warming under BF16 CPU autocast must not contaminate subsequent FP32 calls
+                head.fuse_depthwise_delta = True
+                with torch.autocast(device_type="cpu", dtype=torch.bfloat16):
+                    _ = head(tok_hid, tok_log, ci)
+                out_fp32_after = head(tok_hid, tok_log, ci)
+                assert out_fp32_after.dtype == torch.float32
+                assert float((out_default_mut - out_fp32_after).abs().max().item()) <= 2e-6
 
 
 def test_step_c6_subword_broadcast_embeddings_and_doc_dedup_parity() -> None:
@@ -2558,6 +2816,172 @@ def test_sat_mode_preset_and_overrides_parity(tmp_path: Any) -> None:
 
     with pytest.raises(ValueError, match="mode must be one of"):
         sat.set_mode("invalid_mode")
+
+    # Verify reversible CUDA _attn_implementation switching in set_mode, including when constructed directly in mode="sparse"
+    class FakeCudaDevice:
+        type = "cuda"
+
+    orig_dev_prop = getattr(type(sat.model.model), "device")
+    try:
+        setattr(type(sat.model.model), "device", property(lambda _self: FakeCudaDevice()))
+        sat_sparse_init: Any = SaT(str(ckpt_dir), tokenizer_name_or_path=str(ckpt_dir), device="cpu", mode="sparse")
+        assert sat_sparse_init.model.model.config._attn_implementation == "flex_attention"
+        assert sat_sparse_init.model.model.roberta.encoder.layer[0].attention.self.config._attn_implementation == "flex_attention"
+        sat_sparse_init.set_mode("equivalent")
+        assert sat_sparse_init.model.model.config._attn_implementation != "flex_attention"
+        assert sat_sparse_init.model.model.roberta.encoder.layer[0].attention.self.config._attn_implementation != "flex_attention"
+        sat_sparse_init.set_mode("sparse")
+        assert sat_sparse_init.model.model.config._attn_implementation == "flex_attention"
+        sat_sparse_init.set_mode("bitwise")
+        assert sat_sparse_init.model.model.config._attn_implementation != "flex_attention"
+        assert sat_sparse_init.model.model.roberta.encoder.layer[0].attention.self.config._attn_implementation != "flex_attention"
+    finally:
+        setattr(type(sat.model.model), "device", orig_dev_prop)
+
+
+def test_step_a2_deferred_d2h_flush_and_storage_ownership(monkeypatch: Any) -> None:
+    """Step A2 bounded deferred D2H flush releases batch tensor references mid-loop and strip_cls_sep owns its storage."""
+    import importlib
+    import weakref
+    from transformers import PreTrainedTokenizerFast
+    import wtpsplit._char_preprocessing as char_prep_mod
+    import wtpsplit._host_kernels as host_kernels_mod
+    from wtpsplit.configs import SubwordXLMConfig
+    from wtpsplit.extract import PyTorchWrapper, extract
+    from wtpsplit.models import SubwordXLMForTokenClassification
+
+    extract_mod: Any = importlib.import_module("wtpsplit.extract")
+
+    tokenizers_mod: Any = importlib.import_module("tokenizers")
+    backend = tokenizers_mod.Tokenizer(
+        tokenizers_mod.models.WordLevel(
+            {"<s>": 0, "<pad>": 1, "</s>": 2, "<unk>": 3, "hello": 4, "world": 5, ".": 6},
+            unk_token="<unk>",
+        )
+    )
+    backend.pre_tokenizer = tokenizers_mod.pre_tokenizers.WhitespaceSplit()
+    backend.post_processor = tokenizers_mod.processors.TemplateProcessing(
+        single="<s> $A </s>",
+        special_tokens=[("<s>", 0), ("</s>", 2)],
+    )
+    tok: Any = PreTrainedTokenizerFast(  # type: ignore[no-untyped-call]
+        tokenizer_object=backend,
+        pad_token="<pad>",
+        unk_token="<unk>",
+        bos_token="<s>",
+        eos_token="</s>",
+        cls_token="<s>",
+        sep_token="</s>",
+    )
+
+    torch.manual_seed(909)
+    cfg_sub = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+        vocab_size=20,
+        hidden_size=16,
+        num_hidden_layers=1,
+        num_attention_heads=2,
+        intermediate_size=32,
+        num_labels=1,
+        max_position_embeddings=64,
+        lookahead=4,
+        use_character_head=False,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+    )
+    m_sub = SubwordXLMForTokenClassification(cfg_sub).eval()  # type: ignore[no-untyped-call]
+    w_sub = PyTorchWrapper(m_sub)
+
+    # 1. Assert strip_cls_sep=True returns a tensor that owns its storage (does not retain [B, T+2, L] allocation)
+    ids_np = np.array([[0, 4, 5, 6, 2], [0, 5, 4, 6, 2]], dtype=np.int64)
+    attn_np = np.ones((2, 5), dtype=np.float32)
+    sliced_t = w_sub.forward_tensor(attention_mask=attn_np, input_ids=ids_np, strip_cls_sep=True)
+    assert sliced_t.shape == (2, 3, 1)
+    assert sliced_t.untyped_storage().nbytes() == sliced_t.numel() * sliced_t.element_size()
+
+    # 2. Force per-batch flushes (MAX_DEFERRED_D2H_BYTES = 1) and verify earlier batch tensors are released before later batches run
+    texts = ["hello world . " * 6, "world hello . " * 6, "hello . " * 5]
+    ref_fast, _ = host_kernels_mod.extract_subword_logits_fast(
+        texts, w_sub, tok, stride=2, max_block_size=4, batch_size=2
+    )
+    ref_ext, _, _, _ = extract(
+        texts, w_sub, stride=2, max_block_size=4, batch_size=2, tokenizer=tok
+    )
+
+    monkeypatch.setattr(host_kernels_mod, "MAX_DEFERRED_D2H_BYTES", 1)
+    monkeypatch.setattr(extract_mod, "MAX_DEFERRED_D2H_BYTES", 1)
+    monkeypatch.setattr(char_prep_mod, "MAX_DEFERRED_D2H_BYTES", 1)
+
+    weak_refs: list[Any] = []
+    alive_at_next_call: list[bool] = []
+    orig_ft = w_sub.forward_tensor
+
+    def tracking_forward_tensor(*args: Any, **kwargs: Any) -> Any:
+        if weak_refs:
+            alive_at_next_call.append(weak_refs[-1]() is not None)
+        out = orig_ft(*args, **kwargs)
+        weak_refs.append(weakref.ref(out))
+        return out
+
+    monkeypatch.setattr(w_sub, "forward_tensor", tracking_forward_tensor)
+    act_fast, _ = host_kernels_mod.extract_subword_logits_fast(
+        texts, w_sub, tok, stride=2, max_block_size=4, batch_size=2
+    )
+    assert len(alive_at_next_call) >= 2
+    assert not any(alive_at_next_call)
+    for a, b in zip(ref_fast, act_fast):
+        assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
+
+    weak_refs.clear()
+    alive_at_next_call.clear()
+    act_ext, _, _, _ = extract(
+        texts, w_sub, stride=2, max_block_size=4, batch_size=2, tokenizer=tok
+    )
+    assert len(alive_at_next_call) >= 2
+    assert not any(alive_at_next_call)
+    for a, b in zip(ref_ext, act_ext):
+        assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
+
+    # 3. Verify character-head two-stage flush releases batch tensors mid-loop and preserves exact outputs
+    cfg_char = SubwordXLMConfig(  # type: ignore[no-untyped-call]
+        vocab_size=20,
+        hidden_size=16,
+        num_hidden_layers=1,
+        num_attention_heads=2,
+        intermediate_size=32,
+        num_labels=1,
+        max_position_embeddings=64,
+        lookahead=4,
+        use_character_head=True,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+    )
+    m_char = SubwordXLMForTokenClassification(cfg_char).eval()  # type: ignore[no-untyped-call]
+    w_char = PyTorchWrapper(m_char)
+    monkeypatch.setattr(char_prep_mod, "MAX_DEFERRED_D2H_BYTES", 64 * 1024 * 1024)
+    ref_char, _, _, _ = char_prep_mod.extract_character_head_exact(  # type: ignore[no-untyped-call]
+        texts, w_char, stride=2, max_block_size=4, batch_size=2, tokenizer=tok
+    )
+    monkeypatch.setattr(char_prep_mod, "MAX_DEFERRED_D2H_BYTES", 1)
+    char_weak_refs: list[Any] = []
+    char_alive_at_next: list[bool] = []
+    orig_rch = w_char.run_character_head
+
+    def tracking_rch(*args: Any, **kwargs: Any) -> Any:
+        if char_weak_refs:
+            char_alive_at_next.append(char_weak_refs[-1]() is not None)
+        out = orig_rch(*args, **kwargs)
+        char_weak_refs.append(weakref.ref(out))
+        return out
+
+    monkeypatch.setattr(w_char, "run_character_head", tracking_rch)
+    act_char, _, _, _ = char_prep_mod.extract_character_head_exact(  # type: ignore[no-untyped-call]
+        texts, w_char, stride=2, max_block_size=4, batch_size=2, tokenizer=tok
+    )
+    assert len(char_alive_at_next) >= 2
+    assert not any(char_alive_at_next)
+    for a, b in zip(ref_char, act_char):
+        assert np.array_equal(a.view(np.uint16), b.view(np.uint16))
+
 
 
 

@@ -38,6 +38,7 @@ Int64Array = NDArray[np.int64]
 OffsetSpan = tuple[int, int]
 
 MAX_WORD_CACHE_SIZE = 65536
+MAX_DEFERRED_D2H_BYTES = 64 * 1024 * 1024
 
 # Rejects words containing any character that XLM-R's SentencePiece normalizer + WhitespaceSplit
 # treats as a split boundary or control character (checked once per unique word on cache insertion).
@@ -1094,16 +1095,40 @@ def extract_subword_logits_fast(
         import torch
 
         tensor_batches: list[torch.Tensor] = []
+        accum_d2h_bytes = 0
+
+        def _flush_tensor_batches() -> None:
+            nonlocal accum_d2h_bytes
+            if not tensor_batches:
+                return
+            if len(tensor_batches) == 1:
+                raw_batches.append(tensor_batches[0].cpu().numpy())
+            else:
+                w0 = tensor_batches[0].shape[1]
+                if all(t.shape[1] == w0 for t in tensor_batches):
+                    raw_batches.append(torch.cat(tensor_batches, dim=0).cpu().numpy())
+                else:
+                    for t in tensor_batches:
+                        raw_batches.append(t.cpu().numpy())
+            tensor_batches.clear()
+            accum_d2h_bytes = 0
+
         for batch_idx in range(n_batches):
             start, end = batch_idx * batch_size, min(len(attention_mask), (batch_idx + 1) * batch_size)
             if can_pack_varlen and win_lens is not None:
                 batch_wl = win_lens[start:end]
                 max_wl = int(batch_wl.max()) if len(batch_wl) > 0 else 0
                 min_wl = int(batch_wl.min()) if len(batch_wl) > 0 else 0
-                # Use unpadded 1D varlen packing when windows in the batch have uneven lengths
-                if min_wl < max_wl:
+                n_valid_tok = int(batch_wl.sum()) + 2 * len(batch_wl)
+                padded_tok = len(batch_wl) * (max_wl + 2)
+                # Use unpadded 1D varlen packing when windows in the batch have meaningful padding (>= 20%)
+                if min_wl < max_wl and n_valid_tok <= int(0.80 * padded_tok):
                     logits_t = model.forward_varlen(input_ids[start:end], batch_wl)
                     tensor_batches.append(logits_t)
+                    accum_d2h_bytes += int(logits_t.numel() * logits_t.element_size())
+                    del logits_t
+                    if accum_d2h_bytes >= MAX_DEFERRED_D2H_BYTES:
+                        _flush_tensor_batches()
                     continue
             if trim_subword_padding and win_lens is not None:
                 max_win_len = int(win_lens[start:end].max())
@@ -1130,14 +1155,15 @@ def extract_subword_logits_fast(
                 strip_cls_sep=True,
             )[: end - start]
             tensor_batches.append(logits_t)
-        if len(tensor_batches) == 1:
-            raw_batches = [tensor_batches[0].cpu().numpy()]
-        elif len(tensor_batches) > 1:
-            w0 = tensor_batches[0].shape[1]
-            if all(t.shape[1] == w0 for t in tensor_batches):
-                raw_batches = [torch.cat(tensor_batches, dim=0).cpu().numpy()]
-            else:
-                raw_batches = [t.cpu().numpy() for t in tensor_batches]
+            accum_d2h_bytes += int(logits_t.numel() * logits_t.element_size())
+            del logits_t
+            if accum_d2h_bytes >= MAX_DEFERRED_D2H_BYTES:
+                _flush_tensor_batches()
+        _flush_tensor_batches()
+        if len(raw_batches) > 1 and all(
+            b.ndim == 3 and b.shape[1:] == raw_batches[0].shape[1:] for b in raw_batches
+        ):
+            raw_batches = [np.concatenate(raw_batches, axis=0)]
         strip_cls_sep = False
     else:
         for batch_idx in range(n_batches):

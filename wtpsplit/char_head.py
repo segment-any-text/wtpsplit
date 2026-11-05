@@ -327,7 +327,7 @@ class CharacterResolutionHead(nn.Module):
         return out
 
     @torch._dynamo.disable  # type: ignore[untyped-decorator]
-    def _get_fused_dw_delta_params_impl(self) -> tuple[torch.Tensor, torch.Tensor]:
+    def _get_fused_dw_delta_params_impl(self, target_dtype: torch.dtype) -> tuple[torch.Tensor, torch.Tensor]:
         """Return `(w_fused, b_fused)` composing `self.delta` (`[L, C]`) and `self.context` (`[C, 1, K]`)."""
         cw = self.context.weight
         cb = cast(torch.Tensor, self.context.bias)
@@ -344,22 +344,34 @@ class CharacterResolutionHead(nn.Module):
             db.data_ptr(),
             dw.dtype,
             dw.device,
+            target_dtype,
         )
         cached = self._fused_dw_delta_cache
         if cached is not None and cached[0] == key:
             return cast(tuple[torch.Tensor, torch.Tensor], cached[1])
         k_size = self.context.kernel_size[0]
         num_labels, c_dim = dw.shape
-        w_conv = cw.squeeze(1)  # [C, K]
-        w_fused = (dw.unsqueeze(1) * w_conv.t().unsqueeze(0)).reshape(num_labels * k_size, c_dim).contiguous()
-        b_fused = db + torch.mv(dw, cb)
+        dev_type = dw.device.type
+        with torch.autocast(device_type=dev_type, enabled=False) if dev_type in ("cuda", "cpu") else torch.no_grad():
+            cw_f = cw.float() if dw.dtype in (torch.float16, torch.bfloat16) else cw
+            cb_f = cb.float() if dw.dtype in (torch.float16, torch.bfloat16) else cb
+            dw_f = dw.float() if dw.dtype in (torch.float16, torch.bfloat16) else dw
+            db_f = db.float() if dw.dtype in (torch.float16, torch.bfloat16) else db
+            w_conv = cw_f.squeeze(1)  # [C, K]
+            w_fused = (
+                (dw_f.unsqueeze(1) * w_conv.t().unsqueeze(0))
+                .reshape(num_labels * k_size, c_dim)
+                .to(dtype=target_dtype)
+                .contiguous()
+            )
+            b_fused = (db_f + torch.mv(dw_f, cb_f)).to(dtype=target_dtype)
         pair = (w_fused, b_fused)
         self._fused_dw_delta_cache = (key, pair)
         return pair
 
     @torch._dynamo.disable  # type: ignore[untyped-decorator]
     def _get_projected_char_tables_impl(
-        self, token_width: int
+        self, token_width: int, target_dtype: torch.dtype
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Return `(w_tok_contig, e_res_proj, e_pf_proj)` pre-projecting `char_embeddings` and `(pos, final)` into bottleneck space."""
         cew = self.char_embeddings.weight
@@ -383,19 +395,28 @@ class CharacterResolutionHead(nn.Module):
             self.num_hashes,
             self.num_buckets,
             token_width,
+            target_dtype,
         )
         cached = self._proj_char_tables_cache
         if cached is not None and cached[0] == key:
             return cast(tuple[torch.Tensor, torch.Tensor, torch.Tensor], cached[1])
-        w_tok = pw[:, :token_width].contiguous()
-        w_char = pw[:, token_width:].contiguous()
-        e_res = self._get_residue_embedding_table()
-        e_res_proj = nn.functional.linear(e_res, w_char).contiguous()
-        e_pf = (pew[:, None, :] + few[None, :, :]).reshape(-1, pew.size(-1))
-        e_pf_proj = nn.functional.linear(e_pf, w_char, pb).contiguous()
+        dev_type = pw.device.type
+        with torch.autocast(device_type=dev_type, enabled=False) if dev_type in ("cuda", "cpu") else torch.no_grad():
+            w_tok = pw[:, :token_width].to(dtype=target_dtype).contiguous()
+            w_char = pw[:, token_width:].to(dtype=pw.dtype).contiguous()
+            e_res = self._get_residue_embedding_table().to(dtype=pw.dtype)
+            e_res_proj = nn.functional.linear(e_res, w_char).to(dtype=target_dtype).contiguous()
+            e_pf = (pew[:, None, :] + few[None, :, :]).reshape(-1, pew.size(-1)).to(dtype=pw.dtype)
+            e_pf_proj = nn.functional.linear(e_pf, w_char, pb).to(dtype=target_dtype).contiguous()
         triple = (w_tok, e_res_proj, e_pf_proj)
         self._proj_char_tables_cache = (key, triple)
         return triple
+
+    def _effective_compute_dtype(self, ref_tensor: torch.Tensor) -> torch.dtype:
+        dev_type = ref_tensor.device.type
+        if dev_type in ("cuda", "cpu") and torch.is_autocast_enabled(dev_type):
+            return torch.get_autocast_dtype(dev_type)
+        return ref_tensor.dtype
 
     def _fused_depthwise_delta(self, hidden: torch.Tensor) -> torch.Tensor:
         """Evaluate `self.delta(self._depthwise(hidden))` via a single `[B, T, C] @ [C, L*K]` GEMM."""
@@ -403,11 +424,12 @@ class CharacterResolutionHead(nn.Module):
         pad = k_size // 2
         b_sz, seq_len, _ = hidden.shape
         num_labels = self.delta.out_features
+        target_dtype = self._effective_compute_dtype(hidden)
         w_fused, b_fused = cast(
             tuple[torch.Tensor, torch.Tensor],
-            self._get_fused_dw_delta_params_impl(),
+            self._get_fused_dw_delta_params_impl(target_dtype),
         )
-        taps = nn.functional.linear(hidden, w_fused).view(b_sz, seq_len, num_labels, k_size)
+        taps = nn.functional.linear(hidden.to(dtype=target_dtype), w_fused).view(b_sz, seq_len, num_labels, k_size)
         padded_taps = nn.functional.pad(taps, (0, 0, 0, 0, pad, pad))
         out = b_fused.view(1, 1, num_labels).expand(b_sz, seq_len, num_labels).clone()
         for offset in range(k_size):
@@ -548,9 +570,10 @@ class CharacterResolutionHead(nn.Module):
         )
         if can_fuse_lut:
             token_width = token_hidden.size(-1)
+            target_dtype = self._effective_compute_dtype(token_hidden)
             w_tok, e_res_proj, e_pf_proj = cast(
                 tuple[torch.Tensor, torch.Tensor, torch.Tensor],
-                self._get_projected_char_tables_impl(token_width),
+                self._get_projected_char_tables_impl(token_width, target_dtype),
             )
             total_tok_slots = batch_size * num_tokens
             tok_used = torch.zeros(total_tok_slots, dtype=torch.bool, device=token_hidden.device)
@@ -559,7 +582,7 @@ class CharacterResolutionHead(nn.Module):
             tok_map = torch.zeros(total_tok_slots, dtype=torch.int64, device=token_hidden.device)
             tok_map[uniq_tok] = torch.arange(len(uniq_tok), device=token_hidden.device)
             tok_proj = nn.functional.linear(
-                token_hidden.reshape(total_tok_slots, -1)[uniq_tok],
+                token_hidden.reshape(total_tok_slots, -1)[uniq_tok].to(dtype=target_dtype),
                 w_tok,
             )
             g_proj = tok_proj[tok_map[flat_tok_idx]]
@@ -605,11 +628,12 @@ class CharacterResolutionHead(nn.Module):
         h_idx = padded_target[halo_b, halo_c_pad].nonzero(as_tuple=True)[0]
         if self.fuse_depthwise_delta and not self.training and not bool(getattr(torch.jit, "is_tracing")()):
             num_labels = self.delta.out_features
+            target_dtype = self._effective_compute_dtype(pre_conv)
             w_fused, b_fused = cast(
                 tuple[torch.Tensor, torch.Tensor],
-                self._get_fused_dw_delta_params_impl(),
+                self._get_fused_dw_delta_params_impl(target_dtype),
             )
-            taps = nn.functional.linear(pre_conv, w_fused).view(len(pre_conv), num_labels, kernel_size)
+            taps = nn.functional.linear(pre_conv.to(dtype=target_dtype), w_fused).view(len(pre_conv), num_labels, kernel_size)
             delta = b_fused.unsqueeze(0).expand(len(h_idx), num_labels).clone()
             for offset in range(kernel_size):
                 delta.add_(taps[h_idx + (offset - padding), :, offset])
@@ -775,11 +799,12 @@ class CharacterResolutionHead(nn.Module):
             and char_inputs.hashes.ndim == 2
             and not token_hidden.is_meta
         ):
+            target_dtype = self._effective_compute_dtype(token_hidden)
             w_tok, e_res_proj, e_pf_proj = cast(
                 tuple[torch.Tensor, torch.Tensor, torch.Tensor],
-                self._get_projected_char_tables_impl(token_width),
+                self._get_projected_char_tables_impl(token_width, target_dtype),
             )
-            projected_tokens = nn.functional.linear(token_hidden, w_tok)
+            projected_tokens = nn.functional.linear(token_hidden.to(dtype=target_dtype), w_tok)
             gathered_projection = projected_tokens.gather(1, index.expand(-1, -1, projected_tokens.shape[-1]))
             nb = self.num_buckets
             ordinals = char_inputs.hashes

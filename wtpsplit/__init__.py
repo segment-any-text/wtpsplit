@@ -404,8 +404,6 @@ class SaT:
                 # This is needed because sm models have num_labels=1 but LoRA training uses num_labels=111+.
                 # We check BEFORE loading the model so we can load with the correct num_labels.
                 effective_kwargs = dict(from_pretrained_kwargs or {})
-                if mode == "sparse" and device is not None and str(device).startswith("cuda"):
-                    effective_kwargs.setdefault("attn_implementation", "flex_attention")
                 if precision is not None:
                     # Merge adapters in FP32, then select serving precision below.
                     effective_kwargs['dtype'] = torch.float32
@@ -630,6 +628,27 @@ class SaT:
 
         wrapper = self.__dict__.get("model")
         pt_model = getattr(wrapper, "model", None) if wrapper is not None else None
+        if pt_model is not None and hasattr(pt_model, "config"):
+            if not hasattr(pt_model, "_default_attn_implementation"):
+                pt_model._default_attn_implementation = (
+                    getattr(pt_model.config, "_attn_implementation", None) or "sdpa"
+                )
+            dev = getattr(pt_model, "device", None)
+            if dev is not None and getattr(dev, "type", None) == "cuda":
+                target_attn = (
+                    "flex_attention"
+                    if mode == "sparse"
+                    else pt_model._default_attn_implementation
+                )
+                roberta = getattr(pt_model, "roberta", None)
+                encoder = getattr(roberta, "encoder", None)
+                layers = getattr(encoder, "layer", ())
+                for cfg_obj in [pt_model.config, getattr(roberta, "config", None), getattr(encoder, "config", None)] + [
+                    getattr(getattr(getattr(layer, "attention", None), "self", None), "config", None)
+                    for layer in layers
+                ]:
+                    if cfg_obj is not None:
+                        cfg_obj._attn_implementation = target_attn
         char_head = getattr(pt_model, "character_head", None) if pt_model is not None else None
         if char_head is not None:
             if not hasattr(char_head, "_default_project_tokens_first"):
