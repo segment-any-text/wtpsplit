@@ -17,6 +17,7 @@ from wtpsplit._inference import (
     resolve_text_input,
     validate_segmentation_options,
 )
+from wtpsplit.chunking import LengthFunction, reject_legacy_keywords
 from wtpsplit.constants import DEFAULT_STRIDE
 from wtpsplit.extract import BertCharORTWrapper, PyTorchWrapper, extract
 from wtpsplit.model_registry import register_legacy_configs, register_legacy_models
@@ -251,12 +252,13 @@ class WtP:
             return_paragraph_probabilities=return_paragraph_probabilities,
         )
 
+    @reject_legacy_keywords
     def split(
         self,
         text_or_texts,
         language: str = None,
         domain: str = None,
-        threshold: float = None,  # ignored when max_length is set
+        threshold: float = None,
         stride=DEFAULT_STRIDE,
         block_size: int = 512,
         batch_size=32,
@@ -268,24 +270,26 @@ class WtP:
         strip_whitespace: bool = False,
         do_paragraph_segmentation=False,
         verbose: bool = False,
-        min_length: int = 1,
-        max_length: int = None,  # when set, segments may contain newlines; use ''.join(segments)
-        prior_type: str = "uniform",
-        prior_kwargs: dict = None,
-        algorithm: str = "viterbi",
+        max_length: int | None = None,
+        length_fn: LengthFunction = len,
         *,
         lang_code: str = None,
         style: str = None,
         lazy: bool = False,
     ):
+        """Split at model boundaries, retaining input whitespace as in 2.2.2.
+
+        WtP never forces input line breaks and has no newline-splitting option.
+        Unstripped output reconstructs the source, including paragraph output.
+        max_length caps actual source slices using length_fn; stripping remains
+        uncapped only and filters empty strings.
+        """
         language = _resolve_deprecated_alias(language, lang_code, "lang_code", "language")
         domain = _resolve_deprecated_alias(domain, style, "style", "domain")
         validate_segmentation_options(
             threshold=threshold,
-            min_length=min_length,
             max_length=max_length,
-            prior_type=prior_type,
-            algorithm=algorithm,
+            length_fn=length_fn,
             split_on_input_newlines=None,
         )
 
@@ -307,11 +311,8 @@ class WtP:
                 strip_whitespace=strip_whitespace,
                 do_paragraph_segmentation=do_paragraph_segmentation,
                 verbose=verbose,
-                min_length=min_length,
                 max_length=max_length,
-                prior_type=prior_type,
-                prior_kwargs=prior_kwargs,
-                algorithm=algorithm,
+                length_fn=length_fn,
             ),
             lazy=lazy,
         )
@@ -370,11 +371,8 @@ class WtP:
         do_paragraph_segmentation: bool,
         strip_whitespace: bool,
         verbose: bool,
-        min_length: int,
         max_length: int | None,
-        prior_type: str,
-        prior_kwargs: dict | None,
-        algorithm: str,
+        length_fn: LengthFunction = len,
     ):
         mixture = self._resolve_mixture(lang_code, style)
         # The established default for newline probabilities is 0.01.
@@ -408,11 +406,8 @@ class WtP:
                 strip_whitespace=strip_whitespace,
                 do_paragraph_segmentation=do_paragraph_segmentation,
                 split_on_input_newlines=None,
-                min_length=min_length,
                 max_length=max_length,
-                prior_type=prior_type,
-                prior_kwargs=prior_kwargs,
-                algorithm=algorithm,
+                length_fn=length_fn,
                 language=self.language,
             )
             yield decoded.paragraphs if decoded.paragraphs is not None else decoded.sentences

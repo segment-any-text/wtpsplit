@@ -1,13 +1,18 @@
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from os import PathLike
-from pathlib import Path
 from typing import Any, Literal, overload
+from typing_extensions import Unpack
 
 import numpy as np
 from numpy.typing import NDArray
 from torch import device as TorchDevice
 
+from wtpsplit._inference import WtpsplitBehaviorChangeWarning as WtpsplitBehaviorChangeWarning
+from wtpsplit.chunking import LengthFunction as LengthFunction, TokenLength as TokenLength
+from wtpsplit.chunking import UnsplittableUnitError as UnsplittableUnitError
+from wtpsplit.chunking import split_spans as split_spans, chunk_spans as chunk_spans
 from wtpsplit.constants import DEFAULT_STRIDE as DEFAULT_STRIDE
+from wtpsplit.prepared import PreparedBatch as PreparedBatch, PreparedSplitOptions, Segments
 from wtpsplit.segmentation import Segmentation as Segmentation
 
 __version__: str
@@ -21,16 +26,100 @@ class WtP:
     def __init__(self, model_name_or_model: Any, **kwargs: Any) -> None: ...
     def __getattr__(self, name: str) -> Any: ...
     def predict_proba(self, text_or_texts: Any, **kwargs: Any) -> Any: ...
-    def split(self, text_or_texts: Any, **kwargs: Any) -> Any: ...
+    def split(
+        self,
+        text_or_texts: str | Iterable[str],
+        language: str | None = ...,
+        domain: str | None = ...,
+        threshold: float | None = ...,
+        stride: int = ...,
+        block_size: int = ...,
+        batch_size: int = ...,
+        pad_last_batch: bool = ...,
+        weighting: Literal["uniform", "hat"] = ...,
+        remove_whitespace_before_inference: bool = ...,
+        outer_batch_size: int = ...,
+        paragraph_threshold: float = ...,
+        strip_whitespace: bool = ...,
+        do_paragraph_segmentation: bool = ...,
+        verbose: bool = ...,
+        max_length: int | None = ...,
+        length_fn: LengthFunction = ...,
+        *,
+        lang_code: str | None = ...,
+        style: str | None = ...,
+        lazy: bool = ...,
+    ) -> SentenceResult | list[SentenceResult] | Iterator[SentenceResult]: ...
 
 class SaT:
-    adaptation_history: list[float]
+    def prepare(
+        self, texts: Sequence[str], *, document_ids: Sequence[str] | None = ...,
+        remove_whitespace_before_inference: bool = ...,
+    ) -> PreparedBatch: ...
+    @overload
+    def split_prepared(
+        self, batch: PreparedBatch, *, return_segments: Literal[False] = ...,
+        **split_options: Unpack[PreparedSplitOptions],
+    ) -> list[tuple[int, ...]]: ...
+    @overload
+    def split_prepared(
+        self, batch: PreparedBatch, *, return_segments: Literal[True],
+        **split_options: Unpack[PreparedSplitOptions],
+    ) -> Segments: ...
+    @overload
+    def split_prepared(
+        self, batch: PreparedBatch, *, return_segments: bool,
+        **split_options: Unpack[PreparedSplitOptions],
+    ) -> list[tuple[int, ...]] | Segments: ...
+    @overload
+    def chunk(
+        self,
+        text: str,
+        *,
+        max_length: int,
+        length_fn: LengthFunction = len,
+        unit: Literal["sentence", "paragraph"] = "sentence",
+        overlap_sentences: int = 0,
+        return_spans: Literal[False] = False,
+        threshold: float | None = None,
+        paragraph_threshold: float = 0.5,
+        **inference_options: Any,
+    ) -> list[str]: ...
+    @overload
+    def chunk(
+        self,
+        text: str,
+        *,
+        max_length: int,
+        length_fn: LengthFunction = len,
+        unit: Literal["sentence", "paragraph"] = "sentence",
+        overlap_sentences: int = 0,
+        return_spans: Literal[True],
+        threshold: float | None = None,
+        paragraph_threshold: float = 0.5,
+        **inference_options: Any,
+    ) -> list[tuple[int, int]]: ...
+    @overload
+    def chunk(
+        self,
+        text: str,
+        *,
+        max_length: int,
+        length_fn: LengthFunction = len,
+        unit: Literal["sentence", "paragraph"] = "sentence",
+        overlap_sentences: int = 0,
+        return_spans: bool,
+        threshold: float | None = None,
+        paragraph_threshold: float = 0.5,
+        **inference_options: Any,
+    ) -> list[str] | list[tuple[int, int]]: ...
+
     mode: Literal["bitwise", "equivalent", "sparse"]
     trim_padding: bool
     trim_subword_padding: bool
     pack_sequences: bool
     character_preprocessing: Literal["reference", "exact"]
-    precision: Literal['fp32', 'fp16', 'bf16', 'fp8'] | None
+    precision: Literal["fp32", "fp16", "bf16", "fp8"] | None
     precision_info: dict[str, Any] | None
     quantization: Literal["int8", "combined_int8", "embedding_int8", "linear_int8"] | None
     quantization_info: dict[str, Any]
@@ -57,9 +146,10 @@ class SaT:
         trim_subword_padding: bool | None = ...,
         pack_sequences: bool | None = ...,
         fuse_depthwise_delta: bool | None = ...,
+        project_tokens_first: bool | None = ...,
         gate_logit_threshold: float | None = ...,
         quantization: Literal["int8", "combined_int8", "embedding_int8", "linear_int8"] | None = ...,
-        precision: Literal['fp32', 'fp16', 'bf16', 'fp8'] | None = ...,
+        precision: Literal["fp32", "fp16", "bf16", "fp8"] | None = ...,
         input_line_breaks: Literal["preserve", "space"] | None = ...,
     ) -> None: ...
     def set_mode(
@@ -69,25 +159,10 @@ class SaT:
         trim_subword_padding: bool | None = ...,
         pack_sequences: bool | None = ...,
         fuse_depthwise_delta: bool | None = ...,
+        project_tokens_first: bool | None = ...,
         gate_logit_threshold: float | None = ...,
     ) -> SaT: ...
     def __getattr__(self, name: str) -> Any: ...
-    def adapt(
-        self,
-        sentences: Iterable[str],
-        *,
-        language: str | None = ...,
-        epochs: int = ...,
-        learning_rate: float = ...,
-        batch_size: int = ...,
-        block_size: int = ...,
-        rank: int = ...,
-        alpha: float = ...,
-        dropout: float = ...,
-        seed: int = ...,
-        show_progress: bool = ...,
-    ) -> SaT: ...
-    def save_adapter(self, output_dir: str | PathLike[str]) -> Path: ...
     def get_threshold(self, language: str | None = ..., domain: str | None = ...) -> float: ...
     @overload
     def predict_proba(  # type: ignore[overload-overlap]
@@ -137,12 +212,8 @@ class SaT:
         split_on_input_newlines: bool = ...,
         treat_newline_as_space: bool | None = ...,
         verbose: bool = ...,
-        min_length: int = ...,
         max_length: int | None = ...,
-        prior_type: str = ...,
-        prior_kwargs: dict[str, Any] | None = ...,
-        algorithm: Literal["viterbi", "greedy"] = ...,
-        use_negative_evidence: bool = ...,
+        length_fn: LengthFunction = ...,
         lazy: bool = ...,
     ) -> Segmentation: ...
     @overload
@@ -163,12 +234,8 @@ class SaT:
         split_on_input_newlines: bool = ...,
         treat_newline_as_space: bool | None = ...,
         verbose: bool = ...,
-        min_length: int = ...,
         max_length: int | None = ...,
-        prior_type: str = ...,
-        prior_kwargs: dict[str, Any] | None = ...,
-        algorithm: Literal["viterbi", "greedy"] = ...,
-        use_negative_evidence: bool = ...,
+        length_fn: LengthFunction = ...,
         lazy: bool = ...,
     ) -> list[Segmentation] | Iterator[Segmentation]: ...
     @overload
@@ -189,13 +256,58 @@ class SaT:
         split_on_input_newlines: bool = ...,
         treat_newline_as_space: bool | None = ...,
         verbose: bool = ...,
-        min_length: int = ...,
         max_length: int | None = ...,
-        prior_type: str = ...,
-        prior_kwargs: dict[str, Any] | None = ...,
-        algorithm: Literal["viterbi", "greedy"] = ...,
-        use_negative_evidence: bool = ...,
+        length_fn: LengthFunction = ...,
         lazy: bool = ...,
+        *,
+        _return_offsets: Literal[True],
+    ) -> list[int]: ...
+    @overload
+    def split(
+        self,
+        text_or_texts: Iterable[str],
+        threshold: float | None = ...,
+        stride: int = ...,
+        block_size: int = ...,
+        batch_size: int = ...,
+        pad_last_batch: bool = ...,
+        weighting: Literal["uniform", "hat"] = ...,
+        remove_whitespace_before_inference: bool = ...,
+        outer_batch_size: int = ...,
+        paragraph_threshold: float = ...,
+        strip_whitespace: bool = ...,
+        do_paragraph_segmentation: bool = ...,
+        split_on_input_newlines: bool = ...,
+        treat_newline_as_space: bool | None = ...,
+        verbose: bool = ...,
+        max_length: int | None = ...,
+        length_fn: LengthFunction = ...,
+        lazy: bool = ...,
+        *,
+        _return_offsets: Literal[True],
+    ) -> list[list[int]] | Iterator[list[int]]: ...
+    @overload
+    def split(  # type: ignore[overload-overlap]
+        self,
+        text_or_texts: str,
+        threshold: float | None = ...,
+        stride: int = ...,
+        block_size: int = ...,
+        batch_size: int = ...,
+        pad_last_batch: bool = ...,
+        weighting: Literal["uniform", "hat"] = ...,
+        remove_whitespace_before_inference: bool = ...,
+        outer_batch_size: int = ...,
+        paragraph_threshold: float = ...,
+        strip_whitespace: bool = ...,
+        do_paragraph_segmentation: bool = ...,
+        split_on_input_newlines: bool = ...,
+        treat_newline_as_space: bool | None = ...,
+        verbose: bool = ...,
+        max_length: int | None = ...,
+        length_fn: LengthFunction = ...,
+        lazy: bool = ...,
+        _return_offsets: Literal[False] = ...,
     ) -> SentenceResult: ...
     @overload
     def split(
@@ -215,11 +327,8 @@ class SaT:
         split_on_input_newlines: bool = ...,
         treat_newline_as_space: bool | None = ...,
         verbose: bool = ...,
-        min_length: int = ...,
         max_length: int | None = ...,
-        prior_type: str = ...,
-        prior_kwargs: dict[str, Any] | None = ...,
-        algorithm: Literal["viterbi", "greedy"] = ...,
-        use_negative_evidence: bool = ...,
+        length_fn: LengthFunction = ...,
         lazy: bool = ...,
+        _return_offsets: Literal[False] = ...,
     ) -> list[SentenceResult] | Iterator[SentenceResult]: ...

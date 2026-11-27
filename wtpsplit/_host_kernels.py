@@ -7,7 +7,7 @@ and exact list equality on sentence splits) to the historical reference path whi
 2. Eager Python tuple materialization for untouched token offsets (`fast_tokenize_subword`),
 3. Per-window Python list concatenations during window packing (`pack_subword_windows`, Identity 4),
 4. Single-window float16 accumulation/division, `float16 += 1.0` count loops, and scalar multi-window
-   slice additions (`stitch_subword_logits`, Identity 1 + `cumsum` counts + 2D length-grouped stitch),
+   repeated per-document averaging (`stitch_subword_logits`, Identity 1 + flattened `cumsum` counts),
 5. Dense `(len(text), num_labels)` float64 `-inf` buffers and full-string `exp` evaluation in
    probability projection (`project_subword_proba`, Identity 2), and
 6. Full-character probability array allocation during unconstrained `split()`
@@ -16,12 +16,13 @@ and exact list equality on sentence splits) to the historical reference path whi
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 import ctypes
 from dataclasses import dataclass
 from functools import lru_cache
 import hashlib
 import math
+import os
 import re
 from typing import Any, Literal
 import weakref
@@ -29,6 +30,7 @@ import weakref
 import numpy as np
 from numpy.typing import NDArray
 
+from wtpsplit._char_decisions import CharacterDecisions
 from wtpsplit.utils import Constants, get_token_spans, indices_to_sentences, sigmoid
 
 Float16Array = NDArray[np.float16]
@@ -81,7 +83,7 @@ class _TokenizerWordCache:
     added_tokens_count: int
     special_tokens_set: frozenset[str]
     packed_bytes: dict[str, bytes | None]
-    token_id_invariants: list[tuple[int, str | None]]
+    token_id_invariants: dict[int, str | None]
     has_zero_delta: bool = False
 
 
@@ -295,7 +297,7 @@ def _get_or_init_word_cache(tokenizer: Any) -> _TokenizerWordCache | None:
             hashlib.sha256(rust_tok.to_str().encode("utf-8")).hexdigest() == cached.full_config_sha256
         ):
             id_to_token = rust_tok.id_to_token
-            if all(id_to_token(tid) == tok_str for tid, tok_str in cached.token_id_invariants):
+            if all(id_to_token(tid) == tok_str for tid, tok_str in cached.token_id_invariants.items()):
                 return cached if cached.supports_giga_cache else None
 
     try:
@@ -344,7 +346,7 @@ def _get_or_init_word_cache(tokenizer: Any) -> _TokenizerWordCache | None:
         added_tokens_count=added_count,
         special_tokens_set=special_set,
         packed_bytes={"": None},
-        token_id_invariants=[],
+        token_id_invariants={},
     )
     try:
         _TOKENIZER_CACHES[tokenizer] = entry
@@ -414,16 +416,27 @@ def _populate_unseen_words(
         packed_bytes[w] = arr.tobytes()
         for tid in ids:
             t_int = int(tid)
-            invariants.append((t_int, id_to_token(t_int)))
+            if t_int not in invariants:
+                invariants[t_int] = id_to_token(t_int)
 
 
 def fast_tokenize_subword(
     tokenizer: Any,
     texts: list[str],
     *,
-    enable_word_cache: bool = True,
+    enable_word_cache: bool | None = None,
 ) -> EncodedSubwordBatch:
-    """Tokenize `texts` without special tokens, using the fused `GigaPy` word cache when eligible."""
+    """Tokenize exactly without special tokens; cold streams bypass the word cache.
+
+    Explicit ``enable_word_cache=True`` retains the recurrent-word optimization.
+    Otherwise ``WTPSPLIT_WORD_CACHE=1`` opts in process-wide, including preparation
+    threads. The default is 0. A new document never reuses cached predictions.
+    """
+    if enable_word_cache is None:
+        policy = os.environ.get('WTPSPLIT_WORD_CACHE', '0')
+        if policy not in ('0', '1'):
+            raise ValueError('WTPSPLIT_WORD_CACHE must be 0 or 1')
+        enable_word_cache = policy == '1'
     if not texts:
         return EncodedSubwordBatch(token_arrays=[], _input_ids_list=[], _offsets=[])
 
@@ -590,6 +603,13 @@ def pack_subword_windows(
     return input_ids, attention_mask, locations, eff_block
 
 
+def subword_hat_weights(block_size: int) -> Float16Array:
+    if block_size <= 1:
+        return np.ones(block_size, dtype=np.float16)
+    x = np.linspace(-(1 - 1 / block_size), 1 - 1 / block_size, block_size, dtype=np.float16)
+    return 1 - np.abs(x)
+
+
 def stitch_subword_logits(
     raw_batches: Sequence[NDArray[Any]],
     locations: Int32Array,
@@ -601,7 +621,7 @@ def stitch_subword_logits(
     strip_cls_sep: bool = True,
     batch_size: int | None = None,
 ) -> list[Float16Array]:
-    """Stitch window logits into per-document `float16` token logits using Identity 1 + `cumsum` counts."""
+    """Stitch window logits into per-document `float16` token logits."""
     num_docs = len(text_lengths)
     total_windows = len(locations)
     if batch_size is not None:
@@ -614,76 +634,17 @@ def stitch_subword_logits(
             np.empty((0, num_labels), dtype=np.float16) for _ in range(num_docs)
         ]
 
-        # Fast 2D span-grouped multi-window stitch when all windows are in a single batch array
-        if len(raw_batches) == 1 and total_windows > 0:
-            batch_logits = raw_batches[0]
-            if (
-                batch_logits.ndim != 3
-                or (batch_size is not None and len(batch_logits) != total_windows)
-                or len(batch_logits) < total_windows
-                or batch_logits.shape[2] != num_labels
-            ):
-                raise ValueError("Forward logits do not match prepared batch geometry")
-            values = batch_logits[:total_windows, 1:-1, :] if strip_cls_sep else batch_logits[:total_windows]
-
-            if max(text_lengths, default=0) <= block_size:
-                for row in range(total_windows):
-                    loc = locations[row]
-                    doc_idx, start, end = int(loc[0]), int(loc[1]), int(loc[2])
-                    n = end - start
-                    if values.shape[1] < n:
-                        raise ValueError("Forward logits are shorter than their window")
-                    stitched[doc_idx] = np.asarray(values[row, :n], dtype=np.float16)
-                return stitched
-
-            doc_spans: dict[int, list[tuple[int, int, int]]] = {}
-            for row in range(total_windows):
-                loc = locations[row]
-                doc_idx, start, end = int(loc[0]), int(loc[1]), int(loc[2])
-                t_len = text_lengths[doc_idx]
-                n = end - start
-                if values.shape[1] < n:
-                    raise ValueError("Forward logits are shorter than their window")
-                if t_len <= block_size:
-                    stitched[doc_idx] = np.asarray(values[row, :n], dtype=np.float16)
-                else:
-                    if doc_idx not in doc_spans:
-                        doc_spans[doc_idx] = [(start, end, row)]
-                    else:
-                        doc_spans[doc_idx].append((start, end, row))
-
-            by_geometry: dict[tuple[int, tuple[tuple[int, int], ...]], list[tuple[int, list[int]]]] = {}
-            for doc_idx, span_rows in doc_spans.items():
-                geom_key = (text_lengths[doc_idx], tuple((s, e) for s, e, _ in span_rows))
-                rows_list = [r for _, _, r in span_rows]
-                if geom_key not in by_geometry:
-                    by_geometry[geom_key] = [(doc_idx, rows_list)]
-                else:
-                    by_geometry[geom_key].append((doc_idx, rows_list))
-
-            for (t_len, span_seq), group in by_geometry.items():
-                n_group = len(group)
-                acc_2d = np.zeros((n_group, t_len, num_labels), dtype=np.float16)
-                diff = np.zeros(t_len + 1, dtype=np.int32)
-                row_matrix = np.asarray([ r_list for _, r_list in group ], dtype=np.intp)
-                for w_idx, (s, e) in enumerate(span_seq):
-                    n = e - s
-                    w_rows = row_matrix[:, w_idx]
-                    if w_idx == 0 and s == 0 and values.dtype == np.float16:
-                        acc_2d[:, :n] = values[w_rows, :n]
-                    else:
-                        acc_2d[:, s:e] += values[w_rows, :n]
-                    diff[s] += 1
-                    diff[e] -= 1
-                cnt_f16 = np.cumsum(diff[:-1]).astype(np.float16)[None, :, None]
-                res_2d = (acc_2d / cnt_f16).astype(np.float16)
-                for g_idx, (doc_idx, _) in enumerate(group):
-                    stitched[doc_idx] = res_2d[g_idx]
-            return stitched
-
-        multi_acc: dict[int, Float16Array] = {}
-        multi_diff: dict[int, Int32Array] = {}
-
+        # Flatten only long documents so all overlap counts and final averages
+        # can be computed together. The window additions still round to
+        # float16 after each addition, in their original order.
+        long_lengths = [length if length > block_size else 0 for length in text_lengths]
+        offsets = np.empty(num_docs + 1, dtype=np.intp)
+        offsets[0] = 0
+        np.cumsum(long_lengths, dtype=np.intp, out=offsets[1:])
+        accumulated = np.zeros((int(offsets[-1]), num_labels), dtype=np.float16)
+        starts = offsets[:-1].tolist()
+        unseen = [bool(length) for length in long_lengths]
+        window_locations: list[list[int]] = locations.tolist()
         cursor = 0
         for batch_logits in raw_batches:
             real = min(batch_size if batch_size is not None else len(batch_logits), total_windows - cursor)
@@ -695,50 +656,44 @@ def stitch_subword_logits(
             ):
                 raise ValueError("Forward logits do not match prepared batch geometry")
             values = batch_logits[:real, 1:-1, :] if strip_cls_sep else batch_logits[:real]
-            for row in range(real):
-                loc = locations[cursor + row]
-                doc_idx, start, end = int(loc[0]), int(loc[1]), int(loc[2])
-                t_len = text_lengths[doc_idx]
+            half = values.dtype == np.float16
+            for row, (doc_idx, start, end) in enumerate(window_locations[cursor:cursor + real]):
                 n = end - start
                 if values.shape[1] < n:
                     raise ValueError("Forward logits are shorter than their window")
-                if t_len <= block_size:
-                    stitched[doc_idx] = np.asarray(values[row, :n], dtype=np.float16)
+                current = values[row, :n]
+                if not long_lengths[doc_idx]:
+                    stitched[doc_idx] = np.asarray(current, dtype=np.float16)
+                    continue
+                base = starts[doc_idx]
+                acc = accumulated[base + start:base + end]
+                if unseen[doc_idx] and start == 0 and half:
+                    acc[:] = current
                 else:
-                    if doc_idx not in multi_acc:
-                        acc = np.zeros((t_len, num_labels), dtype=np.float16)
-                        if start == 0 and values.dtype == np.float16:
-                            acc[:n] = values[row, :n]
-                        else:
-                            acc[start:end] += values[row, :n]
-                        multi_acc[doc_idx] = acc
-                        diff = np.zeros(t_len + 1, dtype=np.int32)
-                        diff[start] += 1
-                        diff[end] -= 1
-                        multi_diff[doc_idx] = diff
-                    else:
-                        multi_acc[doc_idx][start:end] += values[row, :n]
-                        diff = multi_diff[doc_idx]
-                        diff[start] += 1
-                        diff[end] -= 1
+                    acc += current
+                unseen[doc_idx] = False
             cursor += real
-
         if cursor != total_windows:
             raise ValueError("Wrong number of forward batches")
 
-        for doc_idx, acc in multi_acc.items():
-            cnt_f16 = np.cumsum(multi_diff[doc_idx][:-1]).astype(np.float16)[:, None]
-            stitched[doc_idx] = (acc / cnt_f16).astype(np.float16)
+        if offsets[-1]:
+            doc_indices = locations[:, 0]
+            multi_locations = locations[np.asarray(long_lengths, dtype=np.intp)[doc_indices] != 0]
+            base = offsets[multi_locations[:, 0]]
+            counts = np.zeros(len(accumulated) + 1, dtype=np.int32)
+            np.add.at(counts, base + multi_locations[:, 1], 1)
+            np.subtract.at(counts, base + multi_locations[:, 2], 1)
+            np.cumsum(counts, dtype=np.int32, out=counts)
+            np.divide(accumulated, counts[:-1, None].astype(np.float16), out=accumulated)
+            for doc_idx, (start, length) in enumerate(zip(starts, long_lengths, strict=True)):
+                if length and not unseen[doc_idx]:
+                    stitched[doc_idx] = accumulated[start:start + length]
         return stitched
 
     if weighting != "hat":
         raise ValueError(f"Unknown weighting scheme: {weighting!r}")
 
-    if block_size <= 1:
-        weights = np.ones(block_size, dtype=np.float16)
-    else:
-        x = np.linspace(-(1 - 1 / block_size), 1 - 1 / block_size, block_size, dtype=np.float16)
-        weights = 1 - np.abs(x)
+    weights = subword_hat_weights(block_size)
 
     all_logits = [np.zeros((length, num_labels), dtype=np.float16) for length in text_lengths]
     all_counts = [np.zeros(length, dtype=np.float16) for length in text_lengths]
@@ -1014,25 +969,48 @@ def decode_subword_split(
     return sentences
 
 
+
+def _character_cuts(text_len: int, char_logits: Float16Array | CharacterDecisions,
+                    z_min: float | np.floating[Any] | None) -> Sequence[int] | NDArray[np.intp]:
+    """Select the established character decisions without allocating strings."""
+    if isinstance(char_logits, CharacterDecisions):
+        return char_logits.positions()
+    if text_len == 0 or len(char_logits) == 0 or z_min is None or (math.isinf(float(z_min)) and float(z_min) > 0):
+        return []
+    col = char_logits[:text_len, Constants.NEWLINE_INDEX]
+    if math.isinf(float(z_min)) and float(z_min) < 0:
+        return np.flatnonzero(~np.isnan(col))
+    return np.flatnonzero(col >= np.float16(z_min))
+
+
+def decode_char_offsets(text: str, char_logits: Float16Array | CharacterDecisions, *,
+                        z_min: float | np.floating[Any] | None,
+                        force_newlines: bool, fast_newlines: bool = False) -> list[int]:
+    """Return retained internal ends using the ordinary whitespace ownership.
+
+    Only representation changes: threshold decisions and the shared newline/
+    whitespace ownership are identical to the string decoder.
+    """
+    from wtpsplit._inference import owned_sentence_spans
+
+    if not text or text.isspace():
+        return []
+    ends = [int(cut)+1 for cut in _character_cuts(len(text), char_logits, z_min)]
+    spans = owned_sentence_spans(text, ends, force_newlines=force_newlines, fast_newlines=fast_newlines)
+    return [end for _, end in spans[:-1]]
+
+
 def decode_char_split(
     text: str,
-    char_logits: Float16Array,
+    char_logits: Float16Array | CharacterDecisions,
     *,
     z_min: float | np.floating[Any] | None,
     strip_whitespace: bool = False,
     split_on_input_newlines: bool = True,
 ) -> list[str]:
     """Decode `SaT.split()` sentences directly from `float16` character logits without `sigmoid`."""
-    text_len = len(text)
-    if text_len == 0 or len(char_logits) == 0 or z_min is None or (math.isinf(float(z_min)) and float(z_min) > 0):
-        sentences = indices_to_sentences(text, [], strip_whitespace=strip_whitespace)
-    else:
-        col = char_logits[:text_len, Constants.NEWLINE_INDEX]
-        if math.isinf(float(z_min)) and float(z_min) < 0:
-            cuts = np.flatnonzero(~np.isnan(col))
-        else:
-            cuts = np.flatnonzero(col >= np.float16(z_min))
-        sentences = indices_to_sentences(text, cuts, strip_whitespace=strip_whitespace)
+    sentences = indices_to_sentences(text, _character_cuts(len(text), char_logits, z_min),
+                                     strip_whitespace=strip_whitespace)
 
     if split_on_input_newlines and "\n" in text:
         newline_split_sentences: list[str] = []
@@ -1076,9 +1054,10 @@ def prepare_subword_logits_chunk(
     downsampling_rate: int = 1,
     trim_subword_padding: bool = False,
     pack_sequences: bool = False,
+    _encoded: EncodedSubwordBatch | None = None,
 ) -> tuple[EncodedSubwordBatch, list[int], Int64Array, Float32Array, Int32Array, int, Int32Array | None]:
     """Prepare `(encoded, text_lengths, input_ids, attention_mask, locs, block_size, win_lens)` on CPU for async prefetch."""
-    encoded = fast_tokenize_subword(tokenizer, texts)
+    encoded = fast_tokenize_subword(tokenizer, texts) if _encoded is None else _encoded
     token_ids = encoded.token_arrays
     text_lengths = [len(t) for t in token_ids]
     eff_max_block = min(max_block_size, max_content_block)
@@ -1103,7 +1082,38 @@ def prepare_subword_logits_chunk(
     return encoded, text_lengths, input_ids, attention_mask, locs, block_size, win_lens
 
 
-def extract_subword_logits_fast(
+def standard_numpy_errors() -> bool:
+    return np.geterrcall() is None and np.geterr() == {
+        "divide": "warn", "over": "warn", "under": "ignore", "invalid": "warn",
+    }
+
+
+def _device_stitch_eligible(
+    model: Any, *, sentence_logits_only: bool, stride: int, block_size: int,
+    downsampling_rate: int, windows: int, weighting: str,
+) -> bool:
+    wrapper = type(model).__name__
+    return (
+        sentence_logits_only
+        and (
+            (wrapper == "PrecisionInferenceWrapper" and model.precision == "fp16"
+             and os.environ.get("WTPSPLIT_FP16_DEVICE_STITCH") != "0")
+            or (wrapper == "FP8InferenceWrapper" and os.environ.get("WTPSPLIT_FP8_DEVICE_STITCH") == "1")
+        )
+        and getattr(getattr(model, "device", None), "type", None) == "cuda"
+        and getattr(model, "pinned_inputs", None) is None
+        and "__call__" not in vars(model)
+        and not getattr(model, "_compiled", False)
+        and hasattr(model, "forward_tensor")
+        and weighting in ("uniform", "hat")
+        and downsampling_rate == 1
+        and 0 < stride <= block_size
+        and 0 < windows * (block_size + 2) * np.dtype(np.float32).itemsize <= MAX_DEFERRED_D2H_BYTES
+        and standard_numpy_errors()
+    )
+
+
+def _forward_subword_logits(
     texts: list[str],
     model: Any,
     tokenizer: Any,
@@ -1118,8 +1128,10 @@ def extract_subword_logits_fast(
     bucket_subword_padding: bool = False,
     pack_sequences: bool = False,
     prepared_chunk: tuple[EncodedSubwordBatch, list[int], Int64Array, Float32Array, Int32Array, int, Int32Array | None] | None = None,
-) -> tuple[list[Float16Array], EncodedSubwordBatch]:
-    """Tokenize, window-pack, forward, and stitch subword logits with `GigaPy` word caching & lazy offsets."""
+    copy_stream: Any = None,
+    sentence_logits_only: bool = False,
+) -> Callable[[], tuple[list[Float16Array], EncodedSubwordBatch]]:
+    """Dispatch the forwards on the caller's stream and return a CPU completion step."""
     downsampling_rate = int(getattr(model.config, "downsampling_rate", 1))
     if prepared_chunk is not None:
         encoded, text_lengths, input_ids, attention_mask, locs, block_size, win_lens = prepared_chunk
@@ -1140,14 +1152,35 @@ def extract_subword_logits_fast(
     pad_token_id = int(tokenizer.pad_token_id)
     n_batches = math.ceil(len(attention_mask) / batch_size)
     raw_batches: list[NDArray[Any]] = []
+    num_labels = int(model.config.num_labels)
+    # Split uses only the newline label. Select it on the device before
+    # buffering windows and retain the full-label path for probability callers.
+    stitcher = None
+    wrapper = type(model).__name__
+    fp16 = wrapper == "PrecisionInferenceWrapper" and model.precision == "fp16"
+    if _device_stitch_eligible(
+        model, sentence_logits_only=sentence_logits_only, stride=stride, block_size=block_size,
+        downsampling_rate=downsampling_rate, windows=len(locs), weighting=weighting,
+    ):
+        try:
+            from wtpsplit._subword_stitching import SubwordStitcher, supports_device
+
+            if supports_device(model.device):
+                stitcher = SubwordStitcher(locs, text_lengths, block_size, weighting, model.device)
+        except (ImportError, RuntimeError):
+            # An optional acceleration failure leaves the original path available.
+            pass
     can_defer_d2h = (
-        type(model).__name__ in ("PyTorchWrapper", "Int8CPUWrapper", "FP8InferenceWrapper")
+        (stitcher is not None or copy_stream is not None
+         or type(model).__name__ in ("PyTorchWrapper", "Int8CPUWrapper", "FP8InferenceWrapper"))
         and hasattr(model, "forward_tensor")
         and getattr(model, "pinned_inputs", None) is None
         and "__call__" not in getattr(model, "__dict__", {})
     )
     can_pack_varlen = (
         pack_sequences
+        and not (fp16 and stitcher is not None)
+        and copy_stream is None
         and can_defer_d2h
         and downsampling_rate == 1
         and hasattr(model, "forward_varlen")
@@ -1158,6 +1191,18 @@ def extract_subword_logits_fast(
 
         tensor_batches: list[torch.Tensor] = []
         accum_d2h_bytes = 0
+        # Preserve each route's original CLS handling and varlen geometry.
+        strip_before_buffering = copy_stream is None and not (fp16 and stitcher is not None)
+
+        def buffer_logits(values: torch.Tensor) -> None:
+            nonlocal accum_d2h_bytes
+            if stitcher is not None:
+                label = Constants.NEWLINE_INDEX
+                values = values[:, :, label:label + 1].contiguous()
+            tensor_batches.append(values)
+            accum_d2h_bytes += int(values.numel() * values.element_size())
+            if stitcher is None and accum_d2h_bytes >= MAX_DEFERRED_D2H_BYTES:
+                _flush_tensor_batches()
 
         def _flush_tensor_batches() -> None:
             nonlocal accum_d2h_bytes
@@ -1186,11 +1231,8 @@ def extract_subword_logits_fast(
                 # Use unpadded 1D varlen packing when windows in the batch have meaningful padding (>= 20%)
                 if min_wl < max_wl and n_valid_tok <= int(0.80 * padded_tok):
                     logits_t = model.forward_varlen(input_ids[start:end], batch_wl)
-                    tensor_batches.append(logits_t)
-                    accum_d2h_bytes += int(logits_t.numel() * logits_t.element_size())
+                    buffer_logits(logits_t)
                     del logits_t
-                    if accum_d2h_bytes >= MAX_DEFERRED_D2H_BYTES:
-                        _flush_tensor_batches()
                     continue
             if trim_subword_padding and win_lens is not None:
                 max_win_len = int(win_lens[start:end].max())
@@ -1211,22 +1253,61 @@ def extract_subword_logits_fast(
                 n_missing = batch_size - len(batch_attention_mask)
                 batch_input_ids = np.pad(batch_input_ids, ((0, n_missing), (0, 0)), constant_values=pad_token_id)
                 batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
+            if copy_stream is not None or (fp16 and stitcher is not None):
+                model._validate_inference_state()
             logits_t = model.forward_tensor(
                 attention_mask=batch_attention_mask,
                 input_ids=batch_input_ids,
-                strip_cls_sep=True,
+                strip_cls_sep=strip_before_buffering,
             )[: end - start]
-            tensor_batches.append(logits_t)
-            accum_d2h_bytes += int(logits_t.numel() * logits_t.element_size())
+            buffer_logits(logits_t)
             del logits_t
-            if accum_d2h_bytes >= MAX_DEFERRED_D2H_BYTES:
+        if stitcher is not None:
+            cls_prefix = int(not strip_before_buffering)
+            stitcher.validate_widths(tensor_batches, cls_prefix=cls_prefix)
+            try:
+                merged = stitcher.merge(tensor_batches, cls_prefix=cls_prefix)
+            except Exception:
+                # Triton versions expose different import, compilation and launch
+                # exception classes. Keep the already computed newline logits.
+                merged = None
+            ready = torch.cuda.current_stream(copy_stream.device).record_event() if copy_stream is not None else None
+
+            def read_or_stitch() -> list[Float16Array]:
+                if merged is not None:
+                    try:
+                        return stitcher.copy_to_host(merged)
+                    except RuntimeError:
+                        # A recoverable CUDA error may surface during readback.
+                        pass
                 _flush_tensor_batches()
-        _flush_tensor_batches()
-        if len(raw_batches) > 1 and all(
-            b.ndim == 3 and b.shape[1:] == raw_batches[0].shape[1:] for b in raw_batches
-        ):
-            raw_batches = [np.concatenate(raw_batches, axis=0)]
-        strip_cls_sep = False
+                return stitch_subword_logits(
+                    raw_batches, locs, text_lengths, block_size=block_size, num_labels=1,
+                    weighting=weighting, strip_cls_sep=not strip_before_buffering,
+                )
+
+            def finish_device() -> tuple[list[Float16Array], EncodedSubwordBatch]:
+                try:
+                    if ready is None:
+                        logits = read_or_stitch()
+                    else:
+                        with torch.cuda.stream(copy_stream):
+                            copy_stream.wait_event(ready)
+                            logits = read_or_stitch()
+                finally:
+                    tensor_batches.clear()
+                return [doc[:, 0] for doc in logits], encoded
+
+            return finish_device
+        if copy_stream is not None and tensor_batches:
+            # The finishing thread owns these logits until its blocking CPU
+            # copy completes. Only this event orders its copy stream after the
+            # producer, leaving the producer free to dispatch the next batch.
+            forward_done = torch.cuda.current_stream(copy_stream.device).record_event()
+        else:
+            _flush_tensor_batches()
+            forward_done = None
+        strip_cls_sep = copy_stream is not None
     else:
         for batch_idx in range(n_batches):
             start, end = batch_idx * batch_size, min(len(attention_mask), (batch_idx + 1) * batch_size)
@@ -1251,19 +1332,48 @@ def extract_subword_logits_fast(
                 batch_attention_mask = np.pad(batch_attention_mask, ((0, n_missing), (0, 0)))
             logits = model(attention_mask=batch_attention_mask, input_ids=batch_input_ids)["logits"]
             raw_batches.append(logits[: end - start])
-        if len(raw_batches) > 1 and all(
-            b.ndim == 3 and b.shape[1:] == raw_batches[0].shape[1:] for b in raw_batches
-        ):
-            raw_batches = [np.concatenate(raw_batches, axis=0)]
         strip_cls_sep = True
+        forward_done = None
 
-    stitched = stitch_subword_logits(
-        raw_batches,
-        locs,
-        text_lengths,
-        block_size=block_size,
-        num_labels=int(model.config.num_labels),
-        weighting=weighting,
-        strip_cls_sep=strip_cls_sep,
-    )
-    return stitched, encoded
+    def finish() -> tuple[list[Float16Array], EncodedSubwordBatch]:
+        if forward_done is not None:
+            with torch.cuda.stream(copy_stream):
+                copy_stream.wait_event(forward_done)
+                _flush_tensor_batches()
+        return stitch_subword_logits(
+            raw_batches,
+            locs,
+            text_lengths,
+            block_size=block_size,
+            num_labels=num_labels,
+            weighting=weighting,
+            strip_cls_sep=strip_cls_sep,
+        ), encoded
+
+    return finish
+
+
+def extract_subword_logits_fast(
+    texts: list[str],
+    model: Any,
+    tokenizer: Any,
+    *,
+    stride: int,
+    max_block_size: int,
+    batch_size: int,
+    pad_last_batch: bool = False,
+    weighting: Literal["uniform", "hat"] = "uniform",
+    max_content_block: int = 510,
+    trim_subword_padding: bool = False,
+    bucket_subword_padding: bool = False,
+    pack_sequences: bool = False,
+    prepared_chunk: tuple[EncodedSubwordBatch, list[int], Int64Array, Float32Array, Int32Array, int, Int32Array | None] | None = None,
+) -> tuple[list[Float16Array], EncodedSubwordBatch]:
+    """Tokenize, forward, and stitch using the optimized subword route."""
+    return _forward_subword_logits(
+        texts, model, tokenizer, stride=stride, max_block_size=max_block_size,
+        batch_size=batch_size, pad_last_batch=pad_last_batch, weighting=weighting,
+        max_content_block=max_content_block, trim_subword_padding=trim_subword_padding,
+        bucket_subword_padding=bucket_subword_padding, pack_sequences=pack_sequences,
+        prepared_chunk=prepared_chunk,
+    )()

@@ -2,6 +2,8 @@
 from pathlib import Path
 import platform
 
+from typing import Any
+
 import torch
 
 from wtpsplit.extract import PyTorchWrapper
@@ -203,32 +205,40 @@ def validate_precision(precision, *, device, quantization, ort_providers, compil
 class PrecisionInferenceWrapper(PyTorchWrapper):
     """GPU half weights or CPU BF16 autocast, with FP32 output/stitching."""
 
-    def __init__(self, model, precision, hardware):
+    def __init__(self, model: Any, precision: str, hardware: dict[str, Any] | None) -> None:
         super().__init__(model, autocast_device='cpu' if precision == 'bf16' else 'cuda',
                          autocast_dtype=torch.bfloat16 if precision == 'bf16' else torch.float16,
                          autocast_enabled=precision == 'bf16',
                          output_float32=True)
         self.precision = precision
-        self.precision_info = dict(precision=precision, hardware=hardware, output_dtype='torch.float32',
-                                   autocast=precision == 'bf16', scope='Inference only; source checkpoint unchanged')
+        self.precision_info: dict[str, Any] = dict(
+            precision=precision,
+            hardware=hardware,
+            output_dtype='torch.float32',
+            autocast=precision == 'bf16',
+            scope='Inference only; source checkpoint unchanged',
+        )
         self._refresh_info()
 
-    def _refresh_info(self):
+    def _refresh_info(self) -> None:
         param = next(self.model.parameters())
         self.precision_info.update(device=str(param.device), weight_dtype=str(param.dtype),
                                    compute_dtype='torch.float16' if self.precision == 'fp16' else 'torch.bfloat16')
-        if self.precision == 'fp16':
+        if self.precision == 'fp16' and isinstance(self.precision_info.get('hardware'), dict):
             self.precision_info['hardware']['gpu'] = torch.cuda.get_device_name(param.device)
 
-    def __call__(self, *args, **kwargs):
+    def _validate_inference_state(self) -> None:
         param = next(self.model.parameters())
         expected_device = 'cuda' if self.precision == 'fp16' else 'cpu'
         expected_dtype = torch.float16 if self.precision == 'fp16' else torch.float32
         if param.device.type != expected_device or param.dtype != expected_dtype or self.model.training:
             raise ValueError('Inference precision state changed; reload with the desired device/precision and adapt in FP32')
+
+    def __call__(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        self._validate_inference_state()
         return super().__call__(*args, **kwargs)
 
-    def to(self, device=None, *, dtype=None, **kwargs):
+    def to(self, device: Any = None, *, dtype: Any = None, **kwargs: Any) -> 'PrecisionInferenceWrapper':
         if isinstance(device, torch.dtype):
             if dtype is not None:
                 raise TypeError('Specify dtype once')
@@ -242,29 +252,29 @@ class PrecisionInferenceWrapper(PyTorchWrapper):
         self._refresh_info()
         return self
 
-    def cpu(self):
+    def cpu(self) -> 'PrecisionInferenceWrapper':
         return self.to('cpu')
 
-    def cuda(self, device=None):
+    def cuda(self, device: Any = None) -> 'PrecisionInferenceWrapper':
         target = 'cuda' if device is None else f'cuda:{device}' if isinstance(device, int) else device
         return self.to(target)
 
-    def half(self):
+    def half(self) -> 'PrecisionInferenceWrapper':
         return self.to(dtype=torch.float16)
 
-    def float(self):
+    def float(self) -> 'PrecisionInferenceWrapper':
         return self.to(dtype=torch.float32)
 
-    def bfloat16(self):
+    def bfloat16(self) -> 'PrecisionInferenceWrapper':
         raise ValueError('CPU BF16 autocast keeps weights FP32; select inference precision at load time')
 
-    def train(self, mode=True):
+    def train(self, mode: bool = True) -> 'PrecisionInferenceWrapper':
         if mode:
             raise ValueError('FP16/BF16 modes are inference-only; adapt/train the original model in FP32')
         self.model.eval()
         return self
 
-    def eval(self):
+    def eval(self) -> 'PrecisionInferenceWrapper':
         return self.train(False)
 
 
@@ -306,7 +316,7 @@ class FP8InferenceWrapper(PyTorchWrapper):
 def configure_precision(model, precision, hardware):
     """Call after FP32 checkpoint loading, LoRA merging and device placement."""
     if precision == 'fp8':
-        if model.config.model_type != 'xlm-token' or getattr(model.config, 'experimental_token_compression', False):
+        if model.config.model_type != 'xlm-token':
             raise ValueError('FP8 precision currently supports ordinary XLM-R SaT token/character heads only')
         param = next(model.parameters())
         if param.device.type == 'cuda':
@@ -319,7 +329,7 @@ def configure_precision(model, precision, hardware):
             raise ValueError('No encoder Linear modules found to convert to FP8')
         return FP8InferenceWrapper(model, hardware, count)
     if precision in ('fp16', 'bf16'):
-        if model.config.model_type != 'xlm-token' or getattr(model.config, 'experimental_token_compression', False):
+        if model.config.model_type != 'xlm-token':
             raise ValueError('FP16/BF16 precision currently supports ordinary XLM-R SaT token/character heads only')
         expected_device = 'cuda' if precision == 'fp16' else 'cpu'
         if next(model.parameters()).device.type != expected_device:

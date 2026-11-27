@@ -8,6 +8,9 @@ restoration, option validation, and probability-to-segment decoding.
 from __future__ import annotations
 
 import math
+import os
+import re
+import threading
 import warnings
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
@@ -16,9 +19,8 @@ from typing import Any, TypeVar, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from wtpsplit.chunking import LengthFunction, UnsplittableUnitError, forced_newline_ends, measure, source_spans, split_spans, resolve_budget
 from wtpsplit.utils import indices_to_sentences
-from wtpsplit.utils.constraints import _enforce_segment_constraints, constrained_segmentation
-from wtpsplit.utils.priors import create_prior_function
 
 T = TypeVar("T")
 FloatArray = NDArray[Any]
@@ -29,6 +31,92 @@ ProbabilityPair = tuple[FloatArray, FloatArray]
 # encoding, for checkpoints whose tokenizer/character head reacts to raw line breaks.
 INPUT_LINE_BREAK_MODES = ("preserve", "space")
 _LINE_BREAKS_TO_SPACES = str.maketrans({"\n": " ", "\r": " "})
+
+
+class WtpsplitBehaviorChangeWarning(UserWarning):
+    """Notice that 3.0 split/segment retain input line endings."""
+
+
+_retention_notice_pid: int | None = None
+_retention_notice_origin = os.getpid()
+_retention_notice_lock = threading.Lock()
+
+
+def notified_texts(texts: list[str], enabled: bool | None) -> list[str]:
+    """Issue the retention notice once per process and return this input batch."""
+    global _retention_notice_pid, _retention_notice_origin, _retention_notice_lock
+    pid = os.getpid()
+    if not enabled or _retention_notice_pid == pid or not any("\n" in t for t in texts):
+        return texts
+    if _retention_notice_origin != pid:
+        # A fork must not inherit an acquired parent lock or its notice state.
+        _retention_notice_origin = pid
+        _retention_notice_lock = threading.Lock()
+    with _retention_notice_lock:
+        if _retention_notice_pid != pid:
+            _retention_notice_pid = pid
+            warnings.warn(
+                "wtpsplit 3.0 keeps input line endings in split/segment pieces.\n"
+                "Approximately old stripped strings: strip_whitespace=True (uncapped), or [s.strip() for s in pieces if s.strip()].\n"
+                'Silence: warnings.filterwarnings("ignore", category=WtpsplitBehaviorChangeWarning).',
+                WtpsplitBehaviorChangeWarning,
+                stacklevel=6,
+            )
+    return texts
+
+
+def owned_sentence_spans(
+    text: str, ends: Iterable[int], *, force_newlines: bool, fast_newlines: bool = True,
+) -> list[tuple[int, int]]:
+    """Assign all trailing whitespace to the left and leading whitespace to the first piece.
+
+    Forced LF cuts (including CRLF) retain blank-line runs. Boundary selection never
+    creates an empty or whitespace-only piece in mixed-content text. Hard caps
+    can still require subdividing a whitespace run into whitespace-only pieces.
+    """
+    if not text:
+        return []
+    first_content = next((i for i, c in enumerate(text) if not c.isspace()), len(text))
+    if first_content == len(text):
+        return [(0, len(text))]
+    boundaries = {len(text), *(int(e) for e in ends if 0 < e <= len(text))}
+    if force_newlines and "\n" in text:
+        # Snap only the new forced cuts to grapheme ends; existing model cuts
+        # keep their established ordinary-splitting convention.
+        if fast_newlines:
+            boundaries.update(forced_newline_ends(text))
+        else:
+            forced = [m.end() for m in re.finditer(r"\n", text)]
+            if text.isascii():
+                boundaries.update(forced)
+            else:
+                boundaries.update(b for _, b in source_spans(text, forced))
+    result = []
+    start = advanced = 0
+    for candidate in sorted(boundaries):
+        if candidate <= advanced:
+            continue
+        end = candidate
+        while end < len(text) and text[end].isspace():
+            end += 1
+        advanced = end
+        if end <= first_content:
+            continue
+        result.append((start, end))
+        start = end
+    return result
+
+
+def retained_sentences(text: str, sentences: list[str], *, force_newlines: bool, strip_whitespace: bool) -> list[str]:
+    """Apply shared newline ownership to an unstripped, source-preserving fast decode."""
+    ends = []
+    offset = 0
+    for sentence in sentences:
+        offset += len(sentence)
+        ends.append(offset)
+    spans = owned_sentence_spans(text, ends, force_newlines=force_newlines)
+    pieces = [text[a:b] for a, b in spans]
+    return [piece.strip() for piece in pieces if piece.strip()] if strip_whitespace else pieces
 
 
 def validate_input_line_breaks(mode: str) -> str:
@@ -165,42 +253,16 @@ def iter_probabilities(
 def validate_segmentation_options(
     *,
     threshold: float | None,
-    min_length: int,
     max_length: int | None,
-    prior_type: str,
-    algorithm: str,
+    length_fn: LengthFunction = len,
     split_on_input_newlines: bool | None,
 ) -> None:
-    """Validate segmentation options shared by SaT and WtP."""
-    if max_length is not None and min_length > max_length:
-        raise ValueError(f"min_length ({min_length}) cannot be greater than max_length ({max_length})")
-    if min_length < 1:
-        raise ValueError(f"min_length must be >= 1, got {min_length}")
-    if max_length is not None and max_length < 1:
-        raise ValueError(f"max_length must be >= 1, got {max_length}")
-
-    valid_priors = ["uniform", "gaussian", "clipped_polynomial", "lognormal"]
-    if prior_type not in valid_priors:
-        raise ValueError(f"Unknown prior_type: '{prior_type}'. Must be one of {valid_priors}")
-    valid_algorithms = ["viterbi", "greedy"]
-    if algorithm not in valid_algorithms:
-        raise ValueError(f"Unknown algorithm: '{algorithm}'. Must be one of {valid_algorithms}")
-
-    if max_length is not None and threshold is not None:
-        warnings.warn(
-            "Both 'threshold' and 'max_length' are set. When using length-constrained "
-            "segmentation (max_length), the threshold parameter is ignored.",
-            UserWarning,
-            stacklevel=2,
-        )
-
-    if (max_length is not None or min_length > 1) and split_on_input_newlines:
-        warnings.warn(
-            "When using length constraints (max_length/min_length), segments may contain newlines. "
-            "split_on_input_newlines is ignored; use ''.join(segments) to reconstruct the original text. "
-            "To split at newlines with constraints, pre-split your text at newlines and process each line.",
-            UserWarning,
-            stacklevel=2,
+    """Validate the optional hard cap; thresholds retain ordinary meaning."""
+    if max_length is not None:
+        resolve_budget(max_length, length_fn)
+    elif length_fn is not len:
+        raise TypeError(
+            "length_fn requires max_length; use split(max_length=N, length_fn=...) or segment(max_length=N, length_fn=...)"
         )
 
 
@@ -216,44 +278,51 @@ def _decode_unit(
     *,
     sentence_threshold: float,
     strip_whitespace: bool,
-    min_length: int,
     max_length: int | None,
-    prior_type: str,
-    prior_kwargs: dict[str, Any] | None,
-    algorithm: str,
+    length_fn: LengthFunction,
     language: str | None,
-    use_negative_evidence: bool = True,
+    split_on_input_newlines: bool | None = None,
 ) -> list[str]:
-    if max_length is None and min_length <= 1:
-        return indices_to_sentences(
-            text,
-            np.where(probabilities > sentence_threshold)[0],
-            strip_whitespace=strip_whitespace,
-        )
-
-    local_prior_kwargs: dict[str, Any] = {} if prior_kwargs is None else prior_kwargs.copy()
-    if max_length is not None:
-        local_prior_kwargs["max_length"] = max_length
-    if language and "lang_code" not in local_prior_kwargs and "target_length" not in local_prior_kwargs:
-        local_prior_kwargs["lang_code"] = language
-
-    prior_fn = cast(Callable[..., Any], create_prior_function)(prior_type, local_prior_kwargs)
-    boundaries: list[int] = cast(Callable[..., list[int]], constrained_segmentation)(
-        probabilities,
-        prior_fn,
-        min_length=min_length,
-        max_length=max_length,
-        algorithm=algorithm,
-        use_negative_evidence=use_negative_evidence,
-    )
-    indices = [boundary - 1 for boundary in boundaries]
-    return cast(Callable[..., list[str]], _enforce_segment_constraints)(
-        text,
-        indices,
-        min_length,
-        max_length,
-        strip_whitespace=strip_whitespace,
-    )
+    if not text:
+        return []
+    if not text.strip():
+        probabilities = np.zeros(len(text))
+    if max_length is None:
+        sentences = indices_to_sentences(text, np.where(probabilities > sentence_threshold)[0], strip_whitespace=False)
+        ends = np.cumsum([len(sentence) for sentence in sentences]).tolist()
+    else:
+        if strip_whitespace:
+            raise ValueError("strip_whitespace is incompatible with a reconstructing hard cap")
+        ends = [b for _, b in source_spans(text, (np.where(probabilities > sentence_threshold)[0] + 1).tolist())]
+    spans = owned_sentence_spans(text, ends, force_newlines=bool(split_on_input_newlines))
+    sentences = [text[a:b] for a, b in spans]
+    if strip_whitespace:
+        sentences = [sentence.strip() for sentence in sentences if sentence.strip()]
+    if max_length is None:
+        return sentences
+    output = []
+    cursor = 0
+    for sentence in sentences:
+        start = text.find(sentence, cursor)
+        end = start + len(sentence)
+        cursor = end
+        if measure(sentence, length_fn) <= max_length:
+            output.append(sentence)
+        else:
+            try:
+                output.extend(
+                    sentence[a:b]
+                    for a, b in split_spans(
+                        sentence,
+                        probabilities[start:end],
+                        max_length=max_length,
+                        length_fn=length_fn,
+                        threshold=sentence_threshold,
+                    )
+                )
+            except UnsplittableUnitError as error:
+                raise UnsplittableUnitError(start + error.position, error.measured_length, max_length) from error
+    return output
 
 
 def decode_probabilities(
@@ -265,37 +334,41 @@ def decode_probabilities(
     strip_whitespace: bool,
     do_paragraph_segmentation: bool,
     split_on_input_newlines: bool | None,
-    min_length: int,
     max_length: int | None,
-    prior_type: str,
-    prior_kwargs: dict[str, Any] | None,
-    algorithm: str,
     language: str | None,
-    use_negative_evidence: bool = True,
+    length_fn: LengthFunction = len,
 ) -> DecodedText:
     """Decode model probabilities without depending on a model implementation."""
+    if not text.strip():
+        zeros = np.zeros(len(text))
+        probabilities = (zeros, zeros) if do_paragraph_segmentation else zeros
     if do_paragraph_segmentation:
         sentence_probs, newline_probs = cast(ProbabilityPair, probabilities)
         offset = 0
         paragraphs: list[list[str]] = []
-        for paragraph in indices_to_sentences(text, np.where(newline_probs > paragraph_threshold)[0]):
+        paragraph_ends = (np.where(newline_probs > paragraph_threshold)[0] + 1).tolist()
+        if max_length is not None:
+            paragraph_ends = [b for _, b in source_spans(text, paragraph_ends)]
+        paragraph_texts = [text[a:b] for a, b in owned_sentence_spans(text, paragraph_ends, force_newlines=False)]
+        for paragraph in paragraph_texts:
             paragraph_probs = sentence_probs[offset : offset + len(paragraph)]
-            paragraphs.append(
-                _decode_unit(
-                    paragraph,
-                    paragraph_probs,
-                    sentence_threshold=sentence_threshold,
-                    strip_whitespace=strip_whitespace,
-                    min_length=min_length,
-                    max_length=max_length,
-                    prior_type=prior_type,
-                    prior_kwargs=prior_kwargs,
-                    algorithm=algorithm,
-                    language=language,
-                    use_negative_evidence=use_negative_evidence,
+            try:
+                paragraphs.append(
+                    _decode_unit(
+                        paragraph,
+                        paragraph_probs,
+                        sentence_threshold=sentence_threshold,
+                        strip_whitespace=strip_whitespace,
+                        max_length=max_length,
+                        length_fn=length_fn,
+                        language=language,
+                        split_on_input_newlines=None,
+                    )
                 )
-            )
+            except UnsplittableUnitError as error:
+                raise UnsplittableUnitError(offset + error.position, error.measured_length, max_length or 0) from error
             offset += len(paragraph)
+        paragraphs = [paragraph for paragraph in paragraphs if paragraph]
         return DecodedText(
             sentences=[sentence for paragraph in paragraphs for sentence in paragraph],
             paragraphs=paragraphs,
@@ -307,30 +380,18 @@ def decode_probabilities(
         sentence_probs,
         sentence_threshold=sentence_threshold,
         strip_whitespace=strip_whitespace,
-        min_length=min_length,
         max_length=max_length,
-        prior_type=prior_type,
-        prior_kwargs=prior_kwargs,
-        algorithm=algorithm,
+        length_fn=length_fn,
         language=language,
-        use_negative_evidence=use_negative_evidence,
+        split_on_input_newlines=split_on_input_newlines,
     )
 
-    if max_length is None and min_length <= 1:
-        if split_on_input_newlines:
-            newline_split_sentences = []
-            for i, sentence in enumerate(sentences):
-                if i < len(sentences) - 1 and sentence.endswith("\n"):
-                    sentence = sentence[:-1]
-                newline_split_sentences.extend(sentence.split("\n"))
-            sentences = newline_split_sentences
-        elif split_on_input_newlines is False:
-            warnings.warn(
-                "split_on_input_newlines=False disables forced splitting at input newlines. "
-                "This option does not replace newlines with spaces; the model may still "
-                "predict boundaries around them. Returned segments may contain input newlines.",
-                UserWarning,
-                stacklevel=2,
-            )
-
+    if split_on_input_newlines is False:
+        warnings.warn(
+            "split_on_input_newlines=False disables forced splitting at input newlines. "
+            "This option does not replace newlines with spaces; the model may still "
+            "predict boundaries around them. Returned segments may contain input newlines.",
+            UserWarning,
+            stacklevel=2,
+        )
     return DecodedText(sentences=sentences)

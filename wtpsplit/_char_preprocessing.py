@@ -9,6 +9,9 @@ import math
 import numpy as np
 import torch
 
+from wtpsplit._char_decisions import CharacterDecisionRequest
+from wtpsplit._inference_metadata import GateState
+from wtpsplit._inference_transfer import PinnedInputs
 from wtpsplit._host_kernels import GigaPackedDoc, can_use_rust_encode_batch, fast_tokenize_subword
 from wtpsplit.char_head import CharInputs, build_char_inputs as reference_builder
 from wtpsplit.extract import _window_weights, max_content_block_size
@@ -17,6 +20,21 @@ from wtpsplit.utils import PRIMES
 
 FIELDS = ("char_to_token", "is_token_final", "position_in_token", "hashes", "mask")
 MAX_DEFERRED_D2H_BYTES = 64 * 1024 * 1024
+
+
+def _transfer_character_inputs(inputs: CharInputs, transfers: PinnedInputs, device: torch.device) -> None:
+    """Compact only fields consumed by the already computed qualified gate.
+
+    Keep the gate object, sparse targets, dtype and shape of every field. The
+    inactive branch does not transfer unused hashes or positions.
+    """
+    # Without a cached gate, accept transferring all fields to avoid another host synchronization.
+    fields: tuple[str, ...] = FIELDS
+    if inputs.gate_state is not None and not inputs.gate_state.active:
+        fields = ('char_to_token', 'is_token_final', 'mask')
+    transferred = transfers.tensors('characters', {key: getattr(inputs, key) for key in fields}, device)
+    for key, value in transferred.items():
+        setattr(inputs, key, value)
 
 
 def build_char_inputs_vectorized(texts, offset_mappings, *, num_hashes=8,
@@ -523,10 +541,11 @@ def prepare_character_head_chunk(
     can_use_fast_tok=True,
     trim_subword_padding=False,
     batch_size=32,
+    _encoded=None,
 ):
     """Prepare `(encoded, cached, windows, doc_win_counts)` on the CPU (safe for background thread prefetching)."""
-    if can_use_fast_tok and len(texts) > 0 and can_use_rust_encode_batch(tokenizer):
-        enc_batch = fast_tokenize_subword(tokenizer, texts)
+    if _encoded is not None or (can_use_fast_tok and len(texts) > 0 and can_use_rust_encode_batch(tokenizer)):
+        enc_batch = _encoded if _encoded is not None else fast_tokenize_subword(tokenizer, texts)
         encoded = enc_batch
         token_ids = enc_batch.token_arrays
         doc_items = [enc_batch.offsets_or_encoding(i) for i in range(len(texts))]
@@ -602,7 +621,7 @@ def prepare_character_head_chunk(
 def extract_character_head_exact(texts, model, *, stride, max_block_size, batch_size,
                                  pad_last_batch=False, weighting="uniform", verbose=False, tokenizer,
                                  trim_padding=True, trim_subword_padding=False, pack_sequences=False,
-                                 prepared_chunk=None):
+                                 prepared_chunk=None, _decision_request: CharacterDecisionRequest | None = None):
     """Reference windowing/model/stitching, with request-local document features.
 
 Preserves reference padding, batch layout and fusion unless trim_padding is enabled.
@@ -679,6 +698,7 @@ No document features or predictions are retained between requests.
         and hasattr(getattr(model, "model", None), "encode_tokens_varlen")
     )
     if can_use_two_stage:
+        stitcher = None
         gpu_batches = []
         batch_windows = []
         accum_d2h_bytes = 0
@@ -725,64 +745,86 @@ No document features or predictions are retained between requests.
             batch_windows.clear()
             accum_d2h_bytes = 0
 
-        for bi in batches:
-            batch = windows[bi*batch_size:(bi+1)*batch_size]
-            real = len(batch)
-            b_wl = np.fromiter((len(w["input_ids"]) for w in batch), dtype=np.int64, count=real)
-            max_wl = int(b_wl.max()) if real > 0 else 0
-            min_wl = int(b_wl.min()) if real > 0 else 0
-            token_width = (max_wl + 2) if trim_padding else (block + 2)
-            ids = np.full((real, token_width), pad_id, dtype=np.int64)
-            attention = np.zeros_like(ids, dtype=np.float32)
-            for row, window in enumerate(batch):
-                win_ids = window["input_ids"]
-                n_win = len(win_ids)
-                ids[row, 0] = cls_id
-                ids[row, 1 : n_win + 1] = win_ids
-                ids[row, n_win + 1] = sep_id
-                attention[row, : n_win + 2] = 1
-            if real < batch_size and pad_last_batch:
-                missing = batch_size-real
-                ids = np.pad(ids, ((0,missing),(0,0)), constant_values=pad_id)
-                attention = np.pad(attention, ((0,missing),(0,0)))
-            if can_pack_char_varlen and min_wl < max_wl:
-                token_hidden, token_logits = model.encode_tokens_varlen_batch(ids, b_wl)
-            else:
-                token_hidden, token_logits = model.encode_tokens(
-                    attention_mask=attention,
-                    input_ids=ids,
+        with PinnedInputs() as metadata_transfers:
+            for bi in batches:
+                batch = windows[bi*batch_size:(bi+1)*batch_size]
+                real = len(batch)
+                b_wl = np.fromiter((len(w["input_ids"]) for w in batch), dtype=np.int64, count=real)
+                max_wl = int(b_wl.max()) if real > 0 else 0
+                min_wl = int(b_wl.min()) if real > 0 else 0
+                token_width = (max_wl + 2) if trim_padding else (block + 2)
+                ids = np.full((real, token_width), pad_id, dtype=np.int64)
+                attention = np.zeros_like(ids, dtype=np.float32)
+                for row, window in enumerate(batch):
+                    win_ids = window["input_ids"]
+                    n_win = len(win_ids)
+                    ids[row, 0] = cls_id
+                    ids[row, 1 : n_win + 1] = win_ids
+                    ids[row, n_win + 1] = sep_id
+                    attention[row, : n_win + 2] = 1
+                if real < batch_size and pad_last_batch:
+                    missing = batch_size-real
+                    ids = np.pad(ids, ((0,missing),(0,0)), constant_values=pad_id)
+                    attention = np.pad(attention, ((0,missing),(0,0)))
+                if can_pack_char_varlen and min_wl < max_wl:
+                    token_hidden, token_logits = model.encode_tokens_varlen_batch(ids, b_wl)
+                else:
+                    token_hidden, token_logits = model.encode_tokens(
+                        attention_mask=attention,
+                        input_ids=ids,
+                    )
+                char_head_obj = getattr(getattr(model, "model", None), "character_head", None)
+                eff_gate = getattr(char_head_obj, "gate_logit_threshold", None) if char_head_obj is not None else None
+                can_skip_hashes = (
+                    is_default_df
+                    and eff_gate is not None
+                    # Opt-in heads need complete inputs without a host gate read.
+                    and not getattr(char_head_obj, "sync_free_sparse", False)
+                    and not getattr(char_head_obj, "training", False)
+                    and not (real < batch_size and pad_last_batch)
+                    and all(w.get("reuse", cached.rows[w["text_index"]] is not None) for w in batch)
                 )
-            char_head_obj = getattr(getattr(model, "model", None), "character_head", None)
-            eff_gate = getattr(char_head_obj, "gate_logit_threshold", None) if char_head_obj is not None else None
-            can_skip_hashes = (
-                is_default_df
-                and eff_gate is not None
-                and not getattr(char_head_obj, "training", False)
-                and not (real < batch_size and pad_last_batch)
-                and all(w.get("reuse", cached.rows[w["text_index"]] is not None) for w in batch)
-            )
-            if is_default_df:
-                # Assemble CPU character window tensors while GPU executes encode_tokens asynchronously
-                inputs = cached.batch(batch, token_offset=1, skip_hashes=can_skip_hashes)
-                if can_skip_hashes and bool((token_logits.max(dim=-1).values > eff_gate).any()):
-                    cached.populate_hashes(batch, inputs)
-            else:
-                inputs = cached.batch(batch)
-                inputs.char_to_token = inputs.char_to_token + 1
-            if real < batch_size and pad_last_batch:
-                missing = batch_size-real
-                for key in FIELDS:
-                    value = getattr(inputs, key)
-                    pad_val = -1 if (key == "hashes" and value.ndim == 2) else 0
-                    setattr(inputs, key, torch.nn.functional.pad(value, (0,)*(2*(value.ndim-1))+(0,missing), value=pad_val))
-            char_logits_t = model.run_character_head(token_hidden, token_logits, inputs)[:real]
-            gpu_batches.append(char_logits_t)
-            batch_windows.append(batch)
-            accum_d2h_bytes += int(char_logits_t.numel() * char_logits_t.element_size())
-            del char_logits_t, token_hidden, token_logits
-            if accum_d2h_bytes >= MAX_DEFERRED_D2H_BYTES:
-                _flush_char_gpu_batches()
-        _flush_char_gpu_batches()
+                if is_default_df:
+                    # Assemble CPU character window tensors while GPU executes encode_tokens asynchronously
+                    inputs = cached.batch(batch, token_offset=1, skip_hashes=can_skip_hashes)
+                    if can_skip_hashes:
+                        gate_active = bool((token_logits.max(dim=-1).values > eff_gate).any())
+                        # Reuse this same batch's reduction in run_character_head.
+                        inputs.gate_state = GateState(token_logits, float(eff_gate), gate_active)
+                        if gate_active:
+                            cached.populate_hashes(batch, inputs)
+                else:
+                    inputs = cached.batch(batch)
+                    inputs.char_to_token = inputs.char_to_token + 1
+                if real < batch_size and pad_last_batch:
+                    missing = batch_size-real
+                    for key in FIELDS:
+                        value = getattr(inputs, key)
+                        pad_val = -1 if (key == "hashes" and value.ndim == 2) else 0
+                        setattr(inputs, key, torch.nn.functional.pad(value, (0,)*(2*(value.ndim-1))+(0,missing), value=pad_val))
+                if token_hidden.is_cuda:
+                    _transfer_character_inputs(inputs, metadata_transfers, token_hidden.device)
+                char_logits_t = model.run_character_head(token_hidden, token_logits, inputs)[:real]
+                if (is_uniform and char_logits_t.is_cuda
+                        and sum(map(len, texts)) * num_labels * 4 <= MAX_DEFERRED_D2H_BYTES):
+                    if stitcher is None:
+                        from wtpsplit._char_stitching import UniformStitcher
+                        stitcher = UniformStitcher(list(map(len, texts)), num_labels, char_logits_t.device,
+                                                   transfers=metadata_transfers)
+                    stitcher.add(batch, char_logits_t)
+                    del char_logits_t, token_hidden, token_logits
+                    continue
+                gpu_batches.append(char_logits_t)
+                batch_windows.append(batch)
+                accum_d2h_bytes += int(char_logits_t.numel() * char_logits_t.element_size())
+                del char_logits_t, token_hidden, token_logits
+                if accum_d2h_bytes >= MAX_DEFERRED_D2H_BYTES:
+                    _flush_char_gpu_batches()
+            _flush_char_gpu_batches()
+            if stitcher is not None:
+                if _decision_request is not None:
+                    return stitcher.finish_decisions(_decision_request), None, tokenizer, encoded
+                return stitcher.finish(), None, tokenizer, encoded
     else:
         for bi in batches:
             batch = windows[bi*batch_size:(bi+1)*batch_size]

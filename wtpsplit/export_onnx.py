@@ -51,8 +51,7 @@ def export_onnx(model_name_or_path, output_dir, *, tokenizer_name_or_path=None, 
     """Load a fresh CPU model, export and check dynamic shapes, then publish locally.
 
     The output must not exist. This function never modifies the source checkpoint
-    or an in-memory SaT instance. Supports XLM-R token and character heads;
-    ModernBERT and experimental compression exports are not supported here.
+    or an in-memory SaT instance. Supports XLM-R token and character heads.
     Numerical smoke checks are not multilingual quality validation.
     """
     import onnx

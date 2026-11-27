@@ -8,6 +8,7 @@ import numpy as np
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 
+from wtpsplit._inference_metadata import MaskMetadata
 from wtpsplit._host_kernels import pack_subword_windows, stitch_subword_logits
 from wtpsplit.char_head import build_char_inputs
 from wtpsplit.utils import Constants, hash_encode
@@ -23,8 +24,6 @@ CHAR_MODEL_TYPES = {"bert-char", "la-canine"}
 DEFAULT_TOKENIZERS = {
     "xlm-token": "facebookAI/xlm-roberta-base",
     "xlm-roberta": "facebookAI/xlm-roberta-base",
-    "modernbert-token": "jhu-clsp/mmBERT-base",
-    "modernbert": "jhu-clsp/mmBERT-base",
 }
 
 # XLM-R reserves two position slots (its padding_idx offset), leaving 512 usable, minus
@@ -145,16 +144,30 @@ class PyTorchWrapper:
             return None
         device = self.model.device
         if self.pinned_inputs is not None:
-            return self.pinned_inputs.tensor(name, value, device)
-        if getattr(device, "type", None) == "cuda":
+            out = self.pinned_inputs.tensor(name, value, device)
+        elif getattr(device, "type", None) == "cuda":
             if self._auto_pinned_inputs is None:
                 from wtpsplit._inference_transfer import PinnedInputs
 
                 self._auto_pinned_inputs = PinnedInputs()
-            return self._auto_pinned_inputs.tensor(name, value, device)
-        if torch.is_tensor(value):
-            return value.to(device)
-        return torch.from_numpy(value).to(device)
+            out = self._auto_pinned_inputs.tensor(name, value, device)
+        elif torch.is_tensor(value):
+            out = value.to(device)
+        else:
+            out = torch.from_numpy(value).to(device)
+        return out
+
+    def _mask_metadata_kwargs(self, value: Any, *, packed: bool = False) -> dict[str, MaskMetadata]:
+        """Pass host metadata only to native models that explicitly accept it."""
+        from wtpsplit.models import SubwordXLMForTokenClassification
+
+        if not isinstance(self.model, SubwordXLMForTokenClassification) or not isinstance(value, np.ndarray):
+            return {}
+        if packed:
+            return {"_mask_metadata": MaskMetadata.documents(value)}
+        if value.ndim == 2:
+            return {"_mask_metadata": MaskMetadata.padding(value)}
+        return {}
 
     def encode_tokens(
         self,
@@ -168,18 +181,8 @@ class PyTorchWrapper:
         except ImportError:
             raise ImportError("`torch` must be installed to use PyTorch models!")
 
-        attn_all_ones = (
-            attention_mask is not None
-            and isinstance(attention_mask, np.ndarray)
-            and attention_mask.ndim == 2
-            and attention_mask.size > 0
-            and bool(attention_mask[:, -1].all())
-            and bool((attention_mask == 1).all())
-        )
         attn_tensor = self._as_device_tensor(attention_mask, "attention_mask")
-        if attn_tensor is not None and attn_all_ones:
-            attn_tensor._sat_all_ones = True
-        model_kwargs: dict[str, Any] = {"attention_mask": attn_tensor}
+        model_kwargs: dict[str, Any] = {"attention_mask": attn_tensor, **self._mask_metadata_kwargs(attention_mask)}
         if input_ids is not None:
             model_kwargs["input_ids"] = self._as_device_tensor(input_ids, "input_ids")
         if language_ids is not None:
@@ -247,9 +250,8 @@ class PyTorchWrapper:
             packed_pos_t = self._as_device_tensor(
                 np.concatenate(pos_parts, axis=0).astype(np.int64, copy=False), "packed_position_ids"
             ).unsqueeze(0)
-            doc_ids_t = self._as_device_tensor(
-                np.concatenate(doc_parts, axis=0).astype(np.int32, copy=False), "packed_doc_ids"
-            )
+            doc_ids_host = np.concatenate(doc_parts, axis=0).astype(np.int32, copy=False)
+            doc_ids_t = self._as_device_tensor(doc_ids_host, "packed_doc_ids")
             doc_runs = _build_doc_runs(chunk_offsets)
             with torch.no_grad(), context:
                 try:
@@ -258,6 +260,7 @@ class PyTorchWrapper:
                         packed_pos_t,
                         doc_ids_t,
                         doc_runs=doc_runs,
+                        **self._mask_metadata_kwargs(doc_ids_host, packed=True),
                     )
                 except TypeError:
                     _, packed_logits = self.model.encode_tokens_varlen(
@@ -358,9 +361,8 @@ class PyTorchWrapper:
         packed_pos_t = self._as_device_tensor(
             np.concatenate(packed_pos_parts, axis=0).astype(np.int64, copy=False), "packed_position_ids"
         ).unsqueeze(0)
-        doc_ids_t = self._as_device_tensor(
-            np.concatenate(doc_id_parts, axis=0).astype(np.int32, copy=False), "packed_doc_ids"
-        )
+        doc_ids_host = np.concatenate(doc_id_parts, axis=0).astype(np.int32, copy=False)
+        doc_ids_t = self._as_device_tensor(doc_ids_host, "packed_doc_ids")
 
         context = (
             torch.autocast(self.autocast_device, dtype=self.autocast_dtype, enabled=self.autocast_enabled)
@@ -373,6 +375,7 @@ class PyTorchWrapper:
                 packed_pos_t,
                 doc_ids_t,
                 doc_runs=runs,
+                **self._mask_metadata_kwargs(doc_ids_host, packed=True),
             )
         hid_2d = packed_hid[0]
         log_2d = packed_log[0]
@@ -409,8 +412,17 @@ class PyTorchWrapper:
         )
         with torch.no_grad(), context:
             if eff_gate is not None and not char_head.training:
-                tok_pass = token_logits.max(dim=-1).values > eff_gate
-                if not bool(tok_pass.any()):
+                # Preparation may already have synchronized this exact batch's
+                # gate to decide whether hashes are needed. Consume it once;
+                # unrelated callers or thresholds compute their own decision.
+                gate_state = char_inputs.gate_state if isinstance(char_inputs, CharInputs) else None
+                if isinstance(char_inputs, CharInputs):
+                    char_inputs.gate_state = None
+                if gate_state is not None and gate_state.logits is token_logits and gate_state.threshold == eff_gate:
+                    gate_active = gate_state.active
+                else:
+                    gate_active = bool((token_logits.max(dim=-1).values > eff_gate).any())
+                if not gate_active:
                     c2t = self._as_device_tensor(char_inputs.char_to_token, "char_to_token")
                     fin = self._as_device_tensor(char_inputs.is_token_final, "char_is_token_final")
                     msk = self._as_device_tensor(char_inputs.mask, "char_mask")
@@ -465,18 +477,8 @@ class PyTorchWrapper:
         except ImportError:
             raise ImportError("`torch` must be installed to use PyTorch models!")
 
-        attn_all_ones = (
-            attention_mask is not None
-            and isinstance(attention_mask, np.ndarray)
-            and attention_mask.ndim == 2
-            and attention_mask.size > 0
-            and bool(attention_mask[:, -1].all())
-            and bool((attention_mask == 1).all())
-        )
         attn_tensor = self._as_device_tensor(attention_mask, "attention_mask")
-        if attn_tensor is not None and attn_all_ones:
-            attn_tensor._sat_all_ones = True
-        model_kwargs = {"attention_mask": attn_tensor}
+        model_kwargs = {"attention_mask": attn_tensor, **self._mask_metadata_kwargs(attention_mask)}
         optional_inputs = {
             "input_ids": input_ids,
             "hashed_ids": hashed_ids,
@@ -561,6 +563,7 @@ def extract_character_head(
     verbose=False,
     tokenizer,
     trim_padding=True,
+    _encoded=None,
 ):
     """Extract and stitch character logits from overlapping token windows."""
     import torch
@@ -568,7 +571,8 @@ def extract_character_head(
     if stride < 1:
         raise ValueError(f"`stride` must be at least 1, got {stride}.")
 
-    encoded = tokenizer(texts, return_offsets_mapping=True, verbose=False, add_special_tokens=False)
+    encoded = (_encoded if _encoded is not None else
+               tokenizer(texts, return_offsets_mapping=True, verbose=False, add_special_tokens=False))
     token_ids = encoded["input_ids"]
     offset_mappings = encoded["offset_mapping"]
     content_block_size = min(max_block_size, max_content_block_size(model.config))
@@ -761,6 +765,7 @@ def extract(
             verbose=verbose,
             tokenizer=tokenizer,
             trim_padding=trim_padding,
+            **({"_encoded": prepared_chunk} if prepared_chunk is not None and character_preprocessing == "reference" else {}),
         )
 
     if model.config.model_type not in CHAR_MODEL_TYPES:
@@ -774,7 +779,8 @@ def extract(
                 )
             tokenizer = AutoTokenizer.from_pretrained(default_tokenizer)
         # tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken("\n")]})
-        tokens = tokenizer(batch_of_texts, return_offsets_mapping=True, verbose=False, add_special_tokens=False)
+        tokens = (prepared_chunk if prepared_chunk is not None else
+                  tokenizer(batch_of_texts, return_offsets_mapping=True, verbose=False, add_special_tokens=False))
         # remove CLS and SEP tokens, they are added later anyhow
         # batch_of_texts = [text[1:-1] for text in tokens["input_ids"]]
         batch_of_texts = tokens["input_ids"]

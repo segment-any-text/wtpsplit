@@ -3084,6 +3084,7 @@ def test_tier_d_optimizations_parity(tmp_path: Any) -> None:
                 pre_c = torch.nn.functional.gelu(head.project(torch.cat([g_hid, cf], dim=-1)))
             k_sz = head.context.kernel_size[0]
             pad_sz = k_sz // 2
+            pre_c = pre_c.masked_fill(mask.unsqueeze(-1) == 0, 0.0)
             padded_c = torch.nn.functional.pad(pre_c, (0, 0, pad_sz, pad_sz))
             w_c = head.context.weight.squeeze(1)
             assert head.context.bias is not None
@@ -3109,6 +3110,7 @@ def test_tier_d_optimizations_parity(tmp_path: Any) -> None:
                 else:
                     g_hid_ac = tok_hid.gather(1, idx_t.expand(-1, -1, 32))
                     pre_c_ac = torch.nn.functional.gelu(head.project(torch.cat([g_hid_ac, cf], dim=-1)))
+                pre_c_ac = pre_c_ac.masked_fill(mask.unsqueeze(-1) == 0, 0.0)
                 padded_c_ac = torch.nn.functional.pad(pre_c_ac, (0, 0, pad_sz, pad_sz))
                 dw_ref_ac = head.context.bias.view(1, 1, -1).expand_as(pre_c_ac).clone()
                 for off_i in range(k_sz):

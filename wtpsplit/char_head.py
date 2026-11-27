@@ -31,6 +31,7 @@ import torch
 from torch import nn
 from transformers import default_data_collator
 
+from wtpsplit._inference_metadata import GateState
 from wtpsplit.utils import PRIMES
 
 __all__ = [
@@ -75,6 +76,7 @@ class CharInputs:
     position_in_token: torch.Tensor  # offset of the character within its token, clamped
     hashes: torch.Tensor  # CANINE-style hashed codepoints
     mask: torch.Tensor  # 1 for real characters
+    gate_state: GateState | None = None  # Request-local hand-off; never a tensor/model attribute.
 
 
 def build_char_inputs(
@@ -646,7 +648,9 @@ class CharacterResolutionHead(nn.Module):
                     can_inplace=can_sp_inplace,
                 )
 
-        pre_conv.masked_fill_(~in_bounds.unsqueeze(-1), 0.0)
+        valid_halo = in_bounds & (char_inputs.mask[halo_b, safe_c] != 0)
+        pad_mask = ~valid_halo.unsqueeze(-1)
+        pre_conv = pre_conv.masked_fill_(pad_mask, 0.0) if not torch.is_grad_enabled() else pre_conv.masked_fill(pad_mask, 0.0)
 
         h_idx = padded_target[halo_b, halo_c_pad].nonzero(as_tuple=True)[0]
         if self.fuse_depthwise_delta and not self.training and not bool(getattr(torch.jit, "is_tracing")()):
@@ -889,6 +893,9 @@ class CharacterResolutionHead(nn.Module):
             self.project(torch.cat([gathered_hidden, char_features], dim=-1)),
             can_inplace=can_inplace,
         )
+        # Treat masked slots exactly like implicit padding at the convolution edge.
+        pad_mask = char_inputs.mask.unsqueeze(-1) == 0
+        hidden = hidden.masked_fill_(pad_mask, 0.0) if can_inplace else hidden.masked_fill(pad_mask, 0.0)
         if self.fuse_depthwise_delta and can_inplace:
             delta = self._fused_depthwise_delta(hidden)
         else:
@@ -903,6 +910,7 @@ class CharacterResolutionHead(nn.Module):
 
     def _projected_pre_conv(self, token_hidden: torch.Tensor, char_inputs: CharInputs, projected: torch.Tensor | None = None) -> torch.Tensor:
         index = char_inputs.char_to_token.unsqueeze(-1)
+        pad_mask = char_inputs.mask.unsqueeze(-1) == 0
         token_width = token_hidden.shape[-1]
         can_inplace = (
             not self.training
@@ -942,7 +950,7 @@ class CharacterResolutionHead(nn.Module):
                 bag_indices, combined_table, mode="sum"
             ).view(b_sz, c_sz, -1)
             out_fused: torch.Tensor = self._apply_activation(gathered_projection, can_inplace=True)
-            return out_fused
+            return out_fused.masked_fill_(pad_mask, 0.0)
 
         projected_tokens = nn.functional.linear(token_hidden, self.project.weight[:, :token_width]) if projected is None else projected
         gathered_projection = projected_tokens.gather(1, index.expand(-1, -1, projected_tokens.shape[-1]))
@@ -956,7 +964,7 @@ class CharacterResolutionHead(nn.Module):
             )
             gathered_projection.add_(projected_chars)
             out_inplace: torch.Tensor = self._apply_activation(gathered_projection, can_inplace=True)
-            return out_inplace
+            return out_inplace.masked_fill_(pad_mask, 0.0)
 
         char_features = (
             char_features
@@ -967,7 +975,7 @@ class CharacterResolutionHead(nn.Module):
             char_features, self.project.weight[:, token_width:], self.project.bias
         )
         out: torch.Tensor = self.activation(gathered_projection + projected_chars)
-        return out
+        return out.masked_fill(pad_mask, 0.0)
 
     def _forward_project_tokens(
         self,

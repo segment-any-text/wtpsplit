@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union, cast
 
 import torch
 from torch import Tensor, nn
@@ -15,6 +15,7 @@ from transformers.models.xlm_roberta.modeling_xlm_roberta import (
     XLMRobertaPooler,
 )
 
+from wtpsplit._inference_metadata import MaskMetadata
 from wtpsplit._training_loss import boundary_loss_balancing, masked_binary_token_loss
 from wtpsplit.char_head import CharacterResolutionHead, CharInputs
 from wtpsplit.configs import SubwordXLMConfig
@@ -64,6 +65,27 @@ def _get_cached_flex_block_mask(
         _FLEX_BLOCK_MASK_CACHE.pop(next(iter(_FLEX_BLOCK_MASK_CACHE)))
     _FLEX_BLOCK_MASK_CACHE[key] = block_mask
     return block_mask
+
+
+_PATTERN_FLEX_CACHE: dict[tuple[Any, ...], Any] = {}
+_MAX_PATTERN_FLEX_CACHE_ENTRIES = 128
+
+
+def _reuse_pattern_mask(key: tuple[Any, ...] | None, build: Callable[[], Any]) -> Any:
+    """Reuse at most 128 exact host-described patterns; unknown patterns bypass caching.
+
+    The builder must capture private immutable tensors: BlockMask retains its
+    mask callback and uses it again for partially populated attention blocks.
+    """
+    if key is None:
+        return build()
+    if key in _PATTERN_FLEX_CACHE:
+        return _PATTERN_FLEX_CACHE[key]
+    mask = build()
+    if len(_PATTERN_FLEX_CACHE) >= _MAX_PATTERN_FLEX_CACHE_ENTRIES:
+        _PATTERN_FLEX_CACHE.pop(next(iter(_PATTERN_FLEX_CACHE)))
+    _PATTERN_FLEX_CACHE[key] = mask
+    return mask
 
 
 def _get_cached_additive_mask(
@@ -183,23 +205,6 @@ class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
         token_logits: Tensor = self.classifier(self.dropout(token_hidden))
         return token_hidden, token_logits
 
-    def forward_features(self, **inputs: Tensor) -> tuple[Tensor, dict[str, Tensor]]:
-        """Run the encoder once and expose the character head's distillation taps."""
-        head = self.character_head
-        if head is None or not head.project_tokens_first:
-            raise ValueError("feature distillation requires a project_tokens_first character head")
-        token_inputs = {k: v for k, v in inputs.items() if not k.startswith("char_")}
-        hidden, token_logits = self.encode_tokens(**token_inputs)
-        chars = CharInputs(
-            char_to_token=inputs["char_to_token"], is_token_final=inputs["char_is_token_final"],
-            position_in_token=inputs["char_position_in_token"], hashes=inputs["char_hashes"],
-            mask=inputs["char_mask"],
-        )
-        projected = torch.nn.functional.linear(hidden, head.project.weight[:, :hidden.shape[-1]])
-        logits, trunk = head.forward_bottleneck(projected, token_logits, chars, hidden.shape[-1])
-        return logits, {"token_hidden": hidden, "projected_tokens": projected,
-                        "token_logits": token_logits, "char_trunk": trunk}
-
     def encode_tokens_varlen(
         self,
         packed_input_ids: Tensor,
@@ -207,6 +212,7 @@ class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
         doc_ids: Tensor,
         *,
         doc_runs: Optional[list[Tuple[int, int, int, int]]] = None,
+        _mask_metadata: MaskMetadata | None = None,
     ) -> Tuple[Tensor, Tensor]:
         """Run the subword backbone and token classifier on a 1D packed sequence ``[1, N_valid]``."""
         n_valid = packed_input_ids.size(1)
@@ -285,31 +291,19 @@ class SubwordXLMForTokenClassification(XLMRobertaForTokenClassification):
             if attn_impl == "flex_attention" and (la is None or la >= 0):
                 from torch.nn.attention.flex_attention import create_block_mask
 
-                if la is None:
-                    return cast(
-                        Tensor,
-                        create_block_mask(
-                            lambda b, h, q_idx, kv_idx: doc_ids[q_idx] == doc_ids[kv_idx],
-                            B=1,
-                            H=None,
-                            Q_LEN=n_valid,
-                            KV_LEN=n_valid,
-                            device=device,
-                        ),
+                pattern = _mask_metadata.document_pattern if _mask_metadata is not None else None
+                key = None if pattern is None else (device, "packed", n_valid, la, pattern)
+
+                def build() -> Any:
+                    # Retained callbacks must not observe another batch's storage.
+                    ids = doc_ids.clone()
+                    return create_block_mask(
+                        lambda b, h, q_idx, kv_idx: (ids[q_idx] == ids[kv_idx])
+                        & ((q_idx >= 0) if la is None else (kv_idx <= q_idx + int(la))),
+                        B=1, H=None, Q_LEN=n_valid, KV_LEN=n_valid, device=device,
                     )
-                la_int = int(la)
-                return cast(
-                    Tensor,
-                    create_block_mask(
-                        lambda b, h, q_idx, kv_idx: (doc_ids[q_idx] == doc_ids[kv_idx])
-                        & (kv_idx <= q_idx + la_int),
-                        B=1,
-                        H=None,
-                        Q_LEN=n_valid,
-                        KV_LEN=n_valid,
-                        device=device,
-                    ),
-                )
+
+                return cast(Tensor, _reuse_pattern_mask(key, build))
             same_doc = doc_ids[:, None] == doc_ids[None, :]
             if la is not None:
                 idx = torch.arange(n_valid, device=device)
@@ -464,6 +458,7 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         cache_position: Optional[torch.Tensor] = None,
+        _mask_metadata: MaskMetadata | None = None,
     ) -> Union[Tuple[torch.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
         encoder_hidden_states  (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
@@ -513,7 +508,7 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
 
         if attention_mask is None:
             attention_mask = torch.ones(((batch_size, seq_length + past_key_values_length)), device=device)
-            attention_mask._sat_all_ones = True  # type: ignore[attr-defined]
+            _mask_metadata = MaskMetadata(all_ones=True)
 
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
@@ -554,7 +549,7 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
                 and (
                     (
                         device.type != "cpu"
-                        and bool(getattr(attention_mask, "_sat_all_ones", False))
+                        and bool(_mask_metadata is not None and _mask_metadata.all_ones)
                     )
                     or (
                         device.type == "cpu"
@@ -590,7 +585,8 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
         extended_attention_mask: torch.Tensor = get_extended_attention_mask(
-            self.config, attention_mask, input_shape, self.effective_lookahead, device, self.dtype
+            self.config, attention_mask, input_shape, self.effective_lookahead, device, self.dtype,
+            **({"_mask_metadata": _mask_metadata} if _mask_metadata is not None else {}),
         )
 
         encoder_outputs = self.encoder(
@@ -605,6 +601,7 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
             init_attention_mask=attention_mask,
+            _mask_metadata=_mask_metadata,
             dtype=self.dtype,
             cache_position=cache_position,
         )
@@ -632,6 +629,8 @@ def get_extended_attention_mask(
     lookahead: Optional[int] = None,
     device: Optional[torch.device] = None,
     dtype: Optional[torch.dtype] = None,
+    *,
+    _mask_metadata: MaskMetadata | None = None,
 ) -> Tensor:
     """
     Makes broadcastable attention and causal masks so that future and masked tokens are ignored.
@@ -681,7 +680,7 @@ def get_extended_attention_mask(
             inv_mask = (1.0 - mask_4d) * min_val
             return inv_mask.expand(batch_size, 1, seq_length, seq_length)
 
-        is_all_ones = bool(getattr(attention_mask, "_sat_all_ones", False)) or (
+        is_all_ones = bool(_mask_metadata is not None and _mask_metadata.all_ones) or (
             mask_device.type == "cpu"
             and seq_length > 0
             and bool((attention_mask[:, -1] == 1).all())
@@ -697,31 +696,18 @@ def get_extended_attention_mask(
                 return cast(Tensor, _get_cached_flex_block_mask(seq_length, lookahead, mask_device))
             from torch.nn.attention.flex_attention import create_block_mask
 
-            pad_bool = attention_mask.to(dtype=torch.bool)
-            if lookahead is None:
-                return cast(
-                    Tensor,
-                    create_block_mask(
-                        lambda b, h, q_idx, kv_idx: pad_bool[b, kv_idx],
-                        B=batch_size,
-                        H=None,
-                        Q_LEN=seq_length,
-                        KV_LEN=seq_length,
-                        device=mask_device,
-                    ),
+            pattern = _mask_metadata.padding_pattern if _mask_metadata is not None else None
+            key = None if pattern is None else (mask_device, "padded", batch_size, seq_length, lookahead, pattern)
+
+            def build() -> Any:
+                pad_bool = attention_mask.to(dtype=torch.bool).clone()
+                return create_block_mask(
+                    lambda b, h, q_idx, kv_idx: pad_bool[b, kv_idx]
+                    & ((q_idx >= 0) if lookahead is None else (kv_idx <= q_idx + int(lookahead))),
+                    B=batch_size, H=None, Q_LEN=seq_length, KV_LEN=seq_length, device=mask_device,
                 )
-            la = int(lookahead)
-            return cast(
-                Tensor,
-                create_block_mask(
-                    lambda b, h, q_idx, kv_idx: (kv_idx <= q_idx + la) & pad_bool[b, kv_idx],
-                    B=batch_size,
-                    H=None,
-                    Q_LEN=seq_length,
-                    KV_LEN=seq_length,
-                    device=mask_device,
-                ),
-            )
+
+            return cast(Tensor, _reuse_pattern_mask(key, build))
         if lookahead is not None:
             # Lookahead mask of shape [batch_size, 1, seq_length, seq_length]:
             # query token i attends to key tokens j <= i + lookahead.
@@ -829,12 +815,6 @@ class SubwordXLMRobertaEncoder(nn.Module):
         self.config = config
         self.layer = nn.ModuleList([XLMRobertaLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
-        compression = getattr(config, "experimental_token_compression", None)
-        if compression is not None:
-            from wtpsplit.experiment.token_compression import TokenCompression
-            if config.num_hidden_layers < 2:
-                raise ValueError("Compression needs at least two encoder layers")
-            self.token_compressor = TokenCompression(config.hidden_size, compression)
 
     def forward(
         self,
@@ -851,13 +831,8 @@ class SubwordXLMRobertaEncoder(nn.Module):
         init_attention_mask: Optional[torch.Tensor] = None,
         dtype: torch.float = None,
         cache_position: Optional[torch.Tensor] = None,
+        _mask_metadata: MaskMetadata | None = None,
     ) -> Union[Tuple[torch.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
-        if hasattr(self, "token_compressor"):
-            from wtpsplit.experiment.token_compression import compressed_forward
-            if output_attentions or encoder_hidden_states is not None or past_key_values is not None or use_cache:
-                raise ValueError("Compression pilot supports encoder-only inference without attention outputs/cache")
-            return compressed_forward(self, hidden_states, attention_mask, head_mask,
-                                      init_attention_mask, output_hidden_states, return_dict)
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
         all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
@@ -895,7 +870,7 @@ class SubwordXLMRobertaEncoder(nn.Module):
                 hidden_states.device.type == "cpu"
                 and init_attention_mask is not None
                 and (
-                    bool(getattr(init_attention_mask, "_sat_all_ones", False))
+                    bool(_mask_metadata is not None and _mask_metadata.all_ones)
                     or (init_attention_mask.numel() > 0 and bool((init_attention_mask == 1).all()))
                 )
             )
@@ -906,7 +881,8 @@ class SubwordXLMRobertaEncoder(nn.Module):
                     cur_la = 0
                     if not is_unpadded_cpu and init_attention_mask is not None:
                         attention_mask = get_extended_attention_mask(
-                            self.config, init_attention_mask, init_attention_mask.shape, 0, hidden_states.device, dtype
+                            self.config, init_attention_mask, init_attention_mask.shape, 0, hidden_states.device, dtype,
+                            **({"_mask_metadata": _mask_metadata} if _mask_metadata is not None else {}),
                         )
                 self_attn = layer_module.attention.self
                 num_heads = self_attn.num_attention_heads
@@ -945,7 +921,8 @@ class SubwordXLMRobertaEncoder(nn.Module):
             if self.config.lookahead_split_layers is not None:
                 if i == self.config.lookahead_split_layers:
                     attention_mask = get_extended_attention_mask(
-                        self.config, init_attention_mask, init_attention_mask.shape, 0, hidden_states.device, dtype
+                        self.config, init_attention_mask, init_attention_mask.shape, 0, hidden_states.device, dtype,
+                        **({"_mask_metadata": _mask_metadata} if _mask_metadata is not None else {}),
                     )
 
             if output_hidden_states:
@@ -1079,7 +1056,6 @@ def __getattr__(name: str):
 
 # Preserve the historical ``import wtpsplit.models`` registration behavior while
 # keeping all Auto* mutations behind one documented internal boundary.
-from wtpsplit.models_modernbert import SubwordModernBertForTokenClassification  # noqa: E402,F401
 from wtpsplit.model_registry import register_sat_models  # noqa: E402
 
 register_sat_models()

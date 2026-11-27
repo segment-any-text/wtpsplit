@@ -35,6 +35,7 @@ classifiers = [
     "Topic :: Text Processing :: Linguistic",
 ]
 dependencies = [
+    "regex>=2026.7.19",
     "PyYAML>=6.0.3",
     "transformers>=5,<6",
     "huggingface-hub>=1,<2",
@@ -76,6 +77,9 @@ conflicts = [[{ extra = "onnx-cpu" }, { extra = "onnx-gpu" }]]
 module-root = ""
 wheel-exclude = [
     "wtpsplit/.cache/**",
+    "wtpsplit/train/**",
+    "wtpsplit/evaluation/**",
+    "wtpsplit/data_acquisition/**",
 ]
 
 [tool.pytest.ini_options]

@@ -102,3 +102,21 @@ seg = sat.segment(text_or_stream)                        # seg.sentences, seg.sp
 with InferenceSession(sat, InferenceSettings(batch_size=64, workers=4, pinned_inputs=True)) as session:
     char_probs = session.probabilities(documents)
 ```
+
+## Length budgets
+
+Use `split` to keep sentence boundaries and split overlong sentences. Use
+`chunk` to pack successive sentences up to the same budget. The default unit
+is characters. To count tokens, pass the downstream tokenizer.
+
+```python
+from transformers import AutoTokenizer
+from wtpsplit import SaT, TokenLength
+
+sat = SaT("sat-3l-sm")
+count = TokenLength(AutoTokenizer.from_pretrained("facebook/nllb-200-distilled-600M"))
+sentences = sat.split(text, max_length=1024, length_fn=count)
+chunks = sat.chunk(text, max_length=1024, length_fn=count)
+```
+
+The counter includes special tokens by default and measures each output independently.
