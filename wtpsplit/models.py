@@ -1123,6 +1123,10 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
         self.config = config
 
         self.embeddings = XLMRobertaEmbeddings(config)
+        # transformers 5.24 renamed the embeddings' past_key_values_length kwarg to cache_length.
+        self._embeddings_cache_length_key = (
+            "cache_length" if _supports_kwarg(self.embeddings.forward, "cache_length") else "past_key_values_length"
+        )
         self.encoder = SubwordXLMRobertaEncoder(config)
         self.lookahead_split_layers = config.lookahead_split_layers
         self.pooler = XLMRobertaPooler(config) if add_pooling_layer else None
@@ -1233,7 +1237,7 @@ class SubwordXLMRobertaModel(XLMRobertaModel):
             position_ids=position_ids,
             token_type_ids=token_type_ids,
             inputs_embeds=inputs_embeds,
-            past_key_values_length=past_key_values_length,
+            **{self._embeddings_cache_length_key: past_key_values_length},
         )
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
