@@ -64,7 +64,7 @@ from wtpsplit.model_registry import register_sat_configs, register_sat_models
 from wtpsplit.segmentation import Segmentation, boundary_confidences, sentence_spans
 from wtpsplit.utils import Constants, sigmoid, token_to_char_probs
 
-__version__ = "3.0.0"
+__version__ = "3.0.1.dev20261126"
 __all__ = [
     "DEFAULT_STRIDE",
     "SaT",

@@ -14,13 +14,10 @@ The namesake WtP is maintained for consistency. Our new followup SaT provides ro
 
 ## Installation
 
+Install the downloaded preview wheel from its directory.
+
 ```bash
-pip install wtpsplit
-```
-Or one of the following for ONNX support:
-```bash
-pip install wtpsplit[onnx-gpu]
-pip install wtpsplit[onnx-cpu]
+python -m pip install ./wtpsplit-3.0.1.dev20261126-py3-none-any.whl
 ```
 
 ## Usage
@@ -31,99 +28,46 @@ from wtpsplit import SaT
 sat = SaT("sat-3l")
 # optionally run on GPU for better performance
 # also supports TPUs via e.g. sat.to("xla:0"), in that case pass `pad_last_batch=True` to sat.split
-sat.half().to("cuda")
+# sat.half().to("cuda")
 
 sat.split("This is a test This is another test.")
 # returns ["This is a test ", "This is another test."]
 
 # do this instead of calling sat.split on every text individually for much better performance
 sat.split(["This is a test This is another test.", "And some more texts..."])
-# returns an iterator yielding lists of sentences for every text
+# returns one sentence list per input text
 
 # use our '-sm' models for general sentence segmentation tasks
 sat_sm = SaT("sat-3l-sm")
-sat_sm.half().to("cuda") # optional, see above
+# sat_sm.half().to("cuda") # optional, see above
 sat_sm.split("this is a test this is another test")
 # returns ["this is a test ", "this is another test"]
 
 # use trained lora modules for strong adaptation to language & domain/style
-sat_adapted = SaT("sat-3l", style_or_domain="ud", language="en")
-sat_adapted.half().to("cuda") # optional, see above
+sat_adapted = SaT("sat-3l", domain="ud", language="en")
+# sat_adapted.half().to("cuda") # optional, see above
 sat_adapted.split("This is a test This is another test.")
 # returns ['This is a test ', 'This is another test']
 ```
 
-## Faster PyTorch inference (`torch.compile` / TorchInductor)
+## Compiled and ONNX inference
 
-For repeated inference without exporting to ONNX, compile the PyTorch model with [TorchInductor](https://pytorch.org/docs/stable/torch.compiler.html) via `optimize()` (PyTorch 2.0+). This is **optional** - the first `split` after `optimize()` can be slow while graphs are built. Call `optimize()` **after** `to()` / `half()` so the compiled graph matches *your* device and dtype.
+For repeated PyTorch inference, enable compilation when constructing the model.
 
 ```python
 from wtpsplit import SaT
 
-sat = SaT("sat-3l-sm")
-sat.half().to("cuda")
-sat.optimize()  # backend="inductor" (default); dynamic shapes on
-
-sat.split("This is a test This is another test.")
+sat = SaT("sat-3l-sm", compile=True)
+sentences = sat.split("This is a test. This is another test.")
 ```
 
-- **SaT** and **WtP** PyTorch checkpoints only — not available with `ort_providers` / ONNX.
-- `backend` synonyms: `"inductor"`, `"torchinductor"`.
-- Chunk length and the last batch size change between calls, so `dynamic=True` is the default. `mode="reduce-overhead"` (CUDA graphs) is faster only when every forward uses the same shapes; otherwise use the default or `mode="max-autotune-no-cudagraphs"`.
-- Optional on NVIDIA Ampere+: `torch.set_float32_matmul_precision("high")` before inference (faster fp32 matmuls).
-
-### NVIDIA AITune (auto backend selection, CUDA)
-
-[NVIDIA AITune](https://github.com/ai-dynamo/aitune) benchmarks backends (TensorRT, Torch-TensorRT, Torch Inductor, …) on your GPU and picks a fast path. Requires Linux, CUDA, and a separate install:
-
-```bash
-pip install wtpsplit[aitune] --extra-index-url https://pypi.nvidia.com
-```
+For ONNX inference, install the optional CPU or GPU runtime and select an available provider.
 
 ```python
-sat = SaT("sat-3l-sm")
-sat.half().to("cuda")
-# first_wins tries TensorRT → Torch-TensorRT → Inductor when available
-sat.optimize(backend="aitune")
-# or only Inductor via AITune (faster tuning, no TensorRT dependency):
-# sat.optimize(backend="aitune", aitune_strategy="inductor_only", aitune_max_batches=4)
+from wtpsplit import SaT
 
-sat.split("This is a test This is another test.")
+sat = SaT("sat-3l-sm", ort_providers=["CPUExecutionProvider"])
 ```
-
-## ONNX Support
-
-🚀 You can now enable even faster ONNX inference for `sat` and `sat-sm` models! 🚀
-
-```python
-sat = SaT("sat-3l-sm", ort_providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
-```
-
-```python
->>> from wtpsplit import SaT
->>> texts = ["This is a sentence. This is another sentence."] * 1000
-
-# PyTorch GPU
->>> model_pytorch = SaT("sat-3l-sm")
->>> model_pytorch.half().to("cuda");
->>> %timeit list(model_pytorch.split(texts))
-# 144 ms ± 252 μs per loop (mean ± std. dev. of 7 runs, 10 loops each)
-# quite fast already, but...
-
-# onnxruntime GPU
->>> model_ort = SaT("sat-3l-sm", ort_providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
->>> %timeit list(model_ort.split(texts))
-# 94.9 ms ± 165 μs per loop (mean ± std. dev. of 7 runs, 10 loops each
-# ...this should be ~50% faster! (tested on RTX 3090)
-```
-
-If you wish to use LoRA in combination with an ONNX model:
-
-- Run `scripts/export_to_onnx_sat.py` with `use_lora: True` and an appropriate `output_dir: <OUTPUT_DIR>`.
-  - If you have a local LoRA module, use `lora_path`.
-  - If you wish to load a LoRA module from the HuggingFace hub, use `style_or_domain` and `language`.
-- Load the ONNX model with merged LoRA weights:
-  `sat = SaT(<OUTPUT_DIR>, onnx_providers=["CUDAExecutionProvider", "CPUExecutionProvider"])`
 
 ## Available Models
 
@@ -159,7 +103,7 @@ For comparison, here the English scores of some other tools:
 | [WtP (3l)](https://huggingface.co/benjamin/wtp-canine-s-3l) |          93.9 |
 
 Note that this library also supports previous [`WtP`](https://arxiv.org/abs/2305.18893) models.
-You can use them in essentially the same way as `SaT`models:
+Install the optional legacy dependencies (`scikit-learn` and `skops`) before loading WtP models.
 
 ```python
 from wtpsplit import WtP
@@ -178,115 +122,14 @@ Since SaT are trained to predict newline probablity, they can segment text into 
 ```python
 # returns a list of paragraphs, each containing a list of sentences
 # adjust the paragraph threshold via the `paragraph_threshold` argument.
+text = "First sentence. Second sentence."
 sat.split(text, do_paragraph_segmentation=True)
 ```
 
-## (NEW! v2.2+) Length-Constrained Segmentation
+## Length budgets
 
-Control segment lengths with `min_length` and `max_length` parameters. This is useful when you need segments within specific size limits (e.g., for embedding models, storage, or downstream processing).
-
-### Basic Usage
-
-```python
-from wtpsplit import SaT
-
-sat = SaT("sat-3l-sm")
-
-text = (
-    "In the beginning God created the heaven and the earth. "
-    "And the earth was without form, and void; and darkness was upon the face of the deep. "
-    "And the Spirit of God moved upon the face of the waters. "
-    "And God said, Let there be light: and there was light. "
-    "And God saw the light, that it was good: and God divided the light from the darkness. "
-    "And God called the light Day, and the darkness he called Night. "
-    "And the evening and the morning were the first day."
-)
-
-# Split with a maximum segment length of 120 characters
-segments = sat.split(text, max_length=120)
-for i, s in enumerate(segments):
-    print(f"[{len(s):3d} chars] {s}")
-# [ 55 chars] In the beginning God created the heaven and the earth. 
-# [ 86 chars] And the earth was without form, and void; and darkness was upon the face of the deep. 
-# [112 chars] And the Spirit of God moved upon the face of the waters. And God said, Let there be light: and there was light. 
-# [ 86 chars] And God saw the light, that it was good: and God divided the light from the darkness. 
-# [115 chars] And God called the light Day, and the darkness he called Night. And the evening and the morning were the first day.
-
-assert "".join(segments) == text  # text is perfectly preserved
-
-# Enforce both min and max length
-sat.split(text, min_length=80, max_length=200)
-
-# Use the greedy algorithm for minimally faster (but less optimal) results
-sat.split(text, max_length=120, algorithm="greedy")
-```
-
-### Priors for Length Preference
-
-Use priors to influence segment length distribution. Available priors:
-
-| Prior | Best For |
-|-------|----------|
-| `"uniform"` (default) | Just enforce max_length, let model decide |
-| `"gaussian"` | Prefer segments around a target length (intuitive) |
-| `"lognormal"` | Right-skewed preference (more tolerant of longer segments) |
-| `"clipped_polynomial"` | Must be very close to target length |
-
-```python
-# Gaussian prior (recommended): prefer segments around target_length
-sat.split(text, max_length=100, prior_type="gaussian", 
-          prior_kwargs={"target_length": 50, "spread": 10})
-
-# Log-normal prior: right-skewed (more tolerant of longer segments)
-sat.split(text, max_length=100, prior_type="lognormal", 
-          prior_kwargs={"target_length": 70, "spread": 25})
-
-# Clipped polynomial: hard cutoff at ±spread from target
-sat.split(text, max_length=100, prior_type="clipped_polynomial", 
-          prior_kwargs={"target_length": 60, "spread": 25})
-```
-
-### Language-Aware Defaults
-
-Pass `lang_code` to use language-specific defaults for `target_length` and `spread` (based on language-specific corpus statistics):
-
-```python
-# German has longer average sentences → auto-uses target_length=90, spread=35
-sat.split(text, max_length=150, prior_type="gaussian", 
-          prior_kwargs={"lang_code": "de"})
-
-# Chinese has shorter sentences → auto-uses target_length=45, spread=15
-sat.split(text, max_length=100, prior_type="gaussian", 
-          prior_kwargs={"lang_code": "zh"})
-```
-
-When using LoRA with a language, this happens automatically:
-
-```python
-sat = SaT("sat-3l", style_or_domain="ud", language="de")
-sat.split(text, max_length=150, prior_type="gaussian")  # auto-uses German defaults
-```
-
-### How It Works
-
-The Viterbi algorithm finds globally optimal segmentation points that balance:
-- The model's sentence boundary predictions (where natural splits occur)
-- Your length preferences (via the prior; if provided)
-
-**Text Reconstruction:**
-```python
-# With constraints (max_length or min_length):
-original_text = "".join(segments)  # segments may contain newlines
-
-# Without constraints (SaT default with split_on_input_newlines=True):
-original_text = "\n".join(segments)
-```
-
-> **Note**: When using length constraints, segments may contain newlines. If you want to remove them, you can just post-process the output.
-
-> **Note**: When `max_length` is set, the `threshold` parameter is ignored. The Viterbi/greedy algorithms use raw model probabilities directly instead of threshold-based filtering.
-
-For more details, see the [Length Constraints Documentation](./docs/LENGTH_CONSTRAINTS.md).
+Use `sat.split(text, max_length=120)` for a character budget. See the
+[preview examples](OVERVIEW.md#length-budgets) for token budgets and chunking.
 
 ## Adaptation
 
@@ -298,12 +141,12 @@ Load LoRA modules like this:
 
 ```python
 
-# requires both lang_code and style_or_domain
+# requires both language and domain
 # for available ones, check the <model_repository>/loras folder
-sat_lora = SaT("sat-3l", style_or_domain="ud", language="en")
+sat_lora = SaT("sat-3l", domain="ud", language="en")
 sat_lora.split("Hello this is a test But this is different now Now the next one starts looool")
 # now for a highly distinct domain
-sat_lora_distinct = SaT("sat-12l", style_or_domain="code-switching", language="es-en")
+sat_lora_distinct = SaT("sat-12l", domain="code-switching", language="es-en")
 sat_lora_distinct.split("in the morning over there cada vez que yo decía algo él me decía algo")
 ```
 
@@ -335,96 +178,7 @@ from transformers import AutoModelForTokenClassification
 model = AutoModelForTokenClassification.from_pretrained("segment-any-text/sat-3l-sm") # or some other model name; see https://huggingface.co/segment-any-text
 ```
 
-### Adapt to your own corpus via LoRA
-
-Our models can be efficiently adapted via LoRA in a powerful way. Only 10-100 training segmented training sentences should already improve performance considerably. To do so:
-
-Clone the repository and install requirements:
-
-```
-git clone https://github.com/segment-any-text/wtpsplit
-cd wtpsplit
-pip install -r requirements.txt
-pip install adapters==0.2.1 --no-dependencies
-cd ..
-```
-
-1. Create data in this format:
-
-```python
-import torch
-
-torch.save(
-    {
-        "language_code": {
-            "sentence": {
-                "dummy-dataset": {
-                    "meta": {
-                        "train_data": ["train sentence 1", "train sentence 2"],
-                    },
-                    "data": [
-                        "test sentence 1",
-                        "test sentence 2",
-                    ]
-                }
-            }
-        }
-    },
-    "dummy-dataset.pth"
-)
-```
-
-Note that there should not be any newlines within individual sentences! This now raises an error. Instead, each entry of a list should be a sentence, and there should be no "\n" characters. So your corpus should already be well-split.
-
-2. Create/adapt config; provide base model via `model_name_or_path` and training data .pth via `text_path`:
-
-`configs/lora/lora_dummy_config.json`
-
-We recommend starting using this config, and adapting `model_name_or_path`, `output_dir`, and `text_path` if needed.
-You may also wish to adapt other aspects such as `adapter_config` and batch sizes, but this is more experimental.
-
-3. Train LoRA:
-
-```
-python3 wtpsplit/train/train_lora.py configs/lora/lora_dummy_config.json
-```
-
-4. Once training is done, provide your saved module's path to SaT:
-
-```python
-
-sat_lora_adapted = SaT("model-used", lora_path="dummy_lora_path")
-sat_lora_adapted.split("Some domains-specific or styled text")
-```
-
-**Important:** Use the **same model variant** for inference as for training (e.g. `sat-12l-sm` and `sat-12l` have different configs; an adapter trained on one cannot be loaded on the other).
-
-Adjust the dataset name, language and model in the above to your needs.
-
-## Reproducing the paper
-
-`configs/` contains the configs for the runs from the paper for base and sm models as well as LoRA modules. Launch training for each of them like this:
-
-```
-python3 wtpsplit/train/train.py configs/<config_name>.json
-python3 wtpsplit/train/train_sm.py configs/<config_name>.json
-python3 wtpsplit/train/train_lora.py configs/<config_name>.json
-```
-
-In addition:
-
-- `wtpsplit/data_acquisition` contains the code for obtaining evaluation data and raw text from the mC4 corpus.
-- `wtpsplit/evaluation` contains the code for:
-  - evaluation (i.e. sentence segmentation results) via `intrinsic.py`.
-  - short-sequence evaluation (i.e. sentence segmentation results for pairs/k-mers of sentences) via `intrinsic_pairwise.py`.
-  - LLM baseline evaluation (`llm_sentence.py`), legal baseline evaluation (`legal_baselines.py`)
-  - baseline (PySBD, nltk, etc.) evaluation results in `intrinsic_baselines.py` and `intrinsic_baselines_multi.py`
-  - Raw results in JSON format are also in `evaluation_results/`
-  - Statistical significane testing code and results ara in `stat_tests/`
-  - punctuation annotation experiments in `punct_annotation.py` and `punct_annotation_wtp.py` (WtP only)
-  - extrinsic evaluation on Machine Translation in `extrinsic.py` (WtP only)
-
-Ensure to install packages from `requirements.txt` beforehand.
+Training and paper reproduction instructions are in the [main repository](https://github.com/segment-any-text/wtpsplit).
 
 ## Supported Languages
 

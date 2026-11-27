@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "wtpsplit"
-version = "3.0.0"
+version = "3.0.1.dev20261126"
 description = "Universal Robust, Efficient and Adaptable Sentence Segmentation"
 readme = "README.md"
 requires-python = ">=3.10"

@@ -71,39 +71,24 @@ Each language panel below compares **Subword (`SaT-3L-SM`, left 6 bars)** and **
 
 ## 3. Installation and usage
 
-Install the v3 inference branch from GitHub:
+Install the downloaded preview wheel from its directory.
 
 ```bash
-pip install "git+https://github.com/segment-any-text/wtpsplit.git@v3/inference-preview"
+python -m pip install ./wtpsplit-3.0.1.dev20261126-py3-none-any.whl
 ```
 
 ```python
 from wtpsplit import SaT
-from wtpsplit._inference_session import InferenceSession, InferenceSettings
 
-# 1. Default bit-exact mode (mode="bitwise", 0.0 ULP; works identically on v3, "sat-3l-sm", and "sat-3l")
-sat = SaT("/path/to/checkpoint", device="cuda")          # or device="cpu"
-sentences = sat.split(text_or_stream)                    # uses checkpoint default τ (0.35 for 3L, 0.40 for 12L), 512/64
-
-# 2. Switch modes in-place without reloading weights: "bitwise" -> "equivalent" -> "sparse"
-sat.set_mode("equivalent")                               # unpadded varlen packing + fused conv/readout + pre-projected LUTs
-sat.set_mode("sparse")                                   # + two-stage r=2 token-gated character head (recommended for v3)
-sentences = sat.split(text_or_stream)
-
-# 3. Maximum hardware throughput: torch.compile / FlexAttention, GPU FP16/FP8, or CPU INT8/BF16
-sat_gpu_fast = SaT("/path/to/checkpoint", device="cuda", mode="sparse", compile=True)
-sat_gpu_fp8  = SaT("/path/to/checkpoint", device="cuda", mode="sparse", precision="fp8")     # Ada (L40S) / Hopper (H100)
-sat_cpu_int8 = SaT("/path/to/checkpoint", device="cpu",  mode="sparse", quantization="int8") # CPU INT8
-
-# 4. Structured output (sentences, half-open character spans, probabilities, boundary confidences)
-seg = sat.segment(text_or_stream)                        # seg.sentences, seg.spans, seg.probabilities, seg.confidences
-
-# 5. Explicit multiprocess session (bounded worker pool + double-buffered pinned GPU transfer)
-with InferenceSession(sat, InferenceSettings(batch_size=64, workers=4, pinned_inputs=True)) as session:
-    char_probs = session.probabilities(documents)
+sat = SaT("sat-3l-sm", device="cpu")
+text = "First sentence. Second sentence."
+sentences = sat.split(text)
+segmentation = sat.segment(text)
 ```
 
 ## Length budgets
+
+The 3.0 API removed `prior_type` and `prior_kwargs`. For a token limit, use `split(max_length=..., length_fn=TokenLength(...))`.
 
 Use `split` to keep sentence boundaries and split overlong sentences. Use
 `chunk` to pack successive sentences up to the same budget. The default unit
@@ -115,6 +100,7 @@ from wtpsplit import SaT, TokenLength
 
 sat = SaT("sat-3l-sm")
 count = TokenLength(AutoTokenizer.from_pretrained("facebook/nllb-200-distilled-600M"))
+text = "First sentence. Second sentence."
 sentences = sat.split(text, max_length=1024, length_fn=count)
 chunks = sat.chunk(text, max_length=1024, length_fn=count)
 ```
